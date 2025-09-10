@@ -42,26 +42,26 @@ export function HowItWorksSection({ onAssistantClick }: HowItWorksSectionProps) 
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-12">
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
-              <div key={step.title} className="text-center space-y-4 group">
-                <div className="relative">
-                  <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
-                    <Icon className="h-8 w-8 text-accent-foreground" />
+              <div key={step.title} className="text-center space-y-4">
+                <div className="relative mb-6">
+                  <div className="w-20 h-20 bg-accent/10 border-2 border-accent rounded-full flex items-center justify-center mx-auto">
+                    <Icon className="h-8 w-8 text-accent" />
                   </div>
-                  {index < steps.length - 1 && (
-                    <div className="hidden lg:block absolute top-8 left-full w-full h-0.5 bg-border -translate-x-8"></div>
-                  )}
-                  <div className="absolute -top-2 -left-2 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+                  <div className="absolute -top-1 -right-1 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
                     {index + 1}
                   </div>
+                  {index < steps.length - 1 && (
+                    <div className="hidden lg:block absolute top-10 left-full w-12 h-0.5 bg-accent/30"></div>
+                  )}
                 </div>
-                <h3 className="text-lg font-semibold text-primary font-serif">
+                <h3 className="text-xl font-semibold text-primary font-serif mb-3">
                   {step.title}
                 </h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
+                <p className="text-muted-foreground leading-relaxed">
                   {step.description}
                 </p>
               </div>
