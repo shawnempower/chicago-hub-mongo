@@ -17,7 +17,7 @@ export function HeroSection({
                 Connect with Every{" "}
                 <span className="text-accent">Chicago Community</span>
               </h1>
-              <p className="body-large max-w-xl">35+ trusted media outlets. One stop to build the perfect Chicago media campaign.</p>
+              <p className="body-large max-w-xl">35+ trusted media outlets. Your one-stop-shop to build the perfect Chicago media campaign.</p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
