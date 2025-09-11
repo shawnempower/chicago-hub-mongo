@@ -5,7 +5,7 @@ interface HowItWorksSectionProps {
 }
 const steps = [{
   icon: MessageSquare,
-  title: "Start a chat with Lassie, your media assistant.",
+  title: "Chat with Lassie, Your Local Media Assistant",
   description: "Tell Lassie about your brand, goals, and target audience in a simple conversation."
 }, {
   icon: Search,
