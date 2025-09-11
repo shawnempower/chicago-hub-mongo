@@ -1,14 +1,13 @@
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/chicago-hero.jpg";
 import { mediaOutlets } from "@/data/mediaOutlets";
-
 interface HeroSectionProps {
   onAssistantClick: () => void;
 }
-
-export function HeroSection({ onAssistantClick }: HeroSectionProps) {
-  return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-background via-brand-cream to-brand-light-gray">
+export function HeroSection({
+  onAssistantClick
+}: HeroSectionProps) {
+  return <section className="relative overflow-hidden bg-gradient-to-br from-background via-brand-cream to-brand-light-gray">
       <div className="container mx-auto px-6 py-16 lg:py-24">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Column - Content */}
@@ -24,19 +23,8 @@ export function HeroSection({ onAssistantClick }: HeroSectionProps) {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                variant="hero" 
-                size="xl"
-                onClick={onAssistantClick}
-                className="sm:w-auto"
-              >
-                Talk to Lassie, Your Media Assistant
-              </Button>
-              <Button 
-                variant="link" 
-                size="lg"
-                className="text-primary hover:text-accent"
-              >
+              <Button variant="hero" size="xl" onClick={onAssistantClick} className="sm:w-auto">Plan Your Campaign</Button>
+              <Button variant="link" size="lg" className="text-primary hover:text-accent">
                 Browse Media Partners →
               </Button>
             </div>
@@ -60,24 +48,15 @@ export function HeroSection({ onAssistantClick }: HeroSectionProps) {
           {/* Right Column - Visual Grid */}
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-t from-background/50 to-transparent z-10 rounded-2xl"></div>
-            <img 
-              src={heroImage} 
-              alt="Chicago skyline representing diverse media connections"
-              className="w-full h-[500px] object-cover rounded-2xl shadow-2xl"
-            />
+            <img src={heroImage} alt="Chicago skyline representing diverse media connections" className="w-full h-[500px] object-cover rounded-2xl shadow-2xl" />
             
             {/* Floating Media Outlet Cards */}
             <div className="absolute inset-0 z-20 p-6 flex flex-col justify-end">
               <div className="grid grid-cols-2 gap-3 opacity-90">
-                {mediaOutlets.slice(0, 4).map((outlet, index) => (
-                  <div 
-                    key={outlet.id}
-                    className="bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg transform transition-all duration-300 hover:scale-105"
-                    style={{
-                      animationDelay: `${index * 0.2}s`,
-                      animation: 'fade-in 0.6s ease-out forwards'
-                    }}
-                  >
+                {mediaOutlets.slice(0, 4).map((outlet, index) => <div key={outlet.id} className="bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg transform transition-all duration-300 hover:scale-105" style={{
+                animationDelay: `${index * 0.2}s`,
+                animation: 'fade-in 0.6s ease-out forwards'
+              }}>
                     <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
                       {outlet.type}
                     </p>
@@ -85,13 +64,11 @@ export function HeroSection({ onAssistantClick }: HeroSectionProps) {
                       {outlet.name}
                     </h3>
                     <p className="text-xs text-accent italic">"{outlet.tagline}"</p>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 }
