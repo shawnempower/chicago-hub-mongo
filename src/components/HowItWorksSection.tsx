@@ -9,7 +9,7 @@ const steps = [{
   description: "Tell Lassie about your brand, goals, and target audience in a simple conversation."
 }, {
   icon: Search,
-  title: "Get Personalized Recommendations",
+  title: "Get personalized recommendations.",
   description: "Receive curated Chicago media outlets perfectly matched to your campaign needs."
 }, {
   icon: Calendar,
