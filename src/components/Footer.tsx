@@ -1,6 +1,5 @@
 export function Footer() {
-  return (
-    <footer className="bg-primary text-primary-foreground py-12">
+  return <footer className="bg-primary text-primary-foreground py-12">
       <div className="container mx-auto px-6">
         <div className="grid md:grid-cols-4 gap-8">
           <div className="space-y-4">
@@ -42,9 +41,7 @@ export function Footer() {
         </div>
         
         <div className="border-t border-primary-foreground/20 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-primary-foreground/60 text-sm">
-            © 2024 Chicago Media Hub. Connecting communities through trusted media.
-          </p>
+          <p className="text-primary-foreground/60 text-sm">© 2025 EmpowerLocal. Empowering communities through trusted media.</p>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground text-sm transition-colors">Privacy</a>
             <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground text-sm transition-colors">Terms</a>
@@ -52,6 +49,5 @@ export function Footer() {
           </div>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 }
