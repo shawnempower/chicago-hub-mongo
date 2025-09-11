@@ -57,7 +57,7 @@ export function HowItWorksSection({
               Ready to Start Your Discovery?
             </h3>
             
-            <Button variant="hero" size="lg" onClick={onAssistantClick}>Chat with Lassie!</Button>
+            <Button variant="hero" size="lg" onClick={onAssistantClick}>Get Started</Button>
           </div>
           
           <p className="text-sm text-muted-foreground">
