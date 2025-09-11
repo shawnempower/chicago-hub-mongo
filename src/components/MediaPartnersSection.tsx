@@ -87,35 +87,7 @@ export function MediaPartnersSection({
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mediaOutlets.slice(0, 6).map(outlet => <div key={outlet.id} className="outlet-card group">
-                <div className="relative h-48 overflow-hidden rounded-t-xl">
-                  <img src={outlet.image} alt={outlet.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <Button variant="ghost" size="icon" onClick={() => handleSaveOutlet(outlet.id)} className="absolute top-3 right-3 bg-white/90 hover:bg-white">
-                    <Heart className={`h-5 w-5 ${savedOutlets.has(outlet.id) ? 'fill-accent text-accent' : 'text-muted-foreground'}`} />
-                  </Button>
-                </div>
-                
-                <div className="p-6">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-2">
-                    {outlet.type}
-                  </p>
-                  <h3 className="text-xl font-semibold text-primary font-serif mb-2">
-                    {outlet.name}
-                  </h3>
-                  <p className="text-accent italic mb-4">"{outlet.tagline}"</p>
-                  <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
-                    {outlet.description}
-                  </p>
-                  <div className="flex space-x-3">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      Learn More →
-                    </Button>
-                    <Button variant={savedOutlets.has(outlet.id) ? "default" : "ghost"} size="sm" onClick={() => handleSaveOutlet(outlet.id)}>
-                      {savedOutlets.has(outlet.id) ? "Saved ♡" : "Save ♡"}
-                    </Button>
-                  </div>
-                </div>
-              </div>)}
+            {mediaOutlets.slice(0, 6).map(outlet => {})}
           </div>
 
           <div className="text-center pt-8">
