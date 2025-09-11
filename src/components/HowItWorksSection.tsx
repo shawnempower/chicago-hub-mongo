@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Search, Heart, Calendar } from "lucide-react";
+import { MessageSquare, Search, Calendar } from "lucide-react";
 
 interface HowItWorksSectionProps {
   onAssistantClick: () => void;
@@ -8,23 +8,18 @@ interface HowItWorksSectionProps {
 const steps = [
   {
     icon: MessageSquare,
-    title: "Talk with Lassie",
-    description: "Share your goals, target audiences, and campaign objectives with our AI assistant in a natural conversation."
+    title: "Chat with Lassie, Our AI Media Planner",
+    description: "Tell Lassie about your brand, goals, and target audience in a simple conversation."
   },
   {
     icon: Search,
-    title: "Discover Perfect Matches",
-    description: "Get personalized recommendations for Chicago media outlets that align with your brand and reach your communities."
-  },
-  {
-    icon: Heart,
-    title: "Save Your Favorites",
-    description: "Build your ideal media portfolio by saving outlets that resonate with your strategy and goals."
+    title: "Get Personalized Recommendations",
+    description: "Receive curated Chicago media outlets perfectly matched to your campaign needs."
   },
   {
     icon: Calendar,
-    title: "Connect with Experts",
-    description: "Schedule a strategy session with our team to bring your media plan to life and maximize your impact."
+    title: "Book and Launch the Perfect Campaign!",
+    description: "Connect with our team to bring your media strategy to life and maximize your impact."
   }
 ];
 
@@ -42,26 +37,23 @@ export function HowItWorksSection({ onAssistantClick }: HowItWorksSectionProps) 
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-12">
+        <div className="grid md:grid-cols-3 gap-8 lg:gap-16 mb-12 max-w-4xl mx-auto">
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
-              <div key={step.title} className="text-center space-y-4">
-                <div className="relative mb-6">
-                  <div className="w-20 h-20 bg-accent/10 border-2 border-accent rounded-full flex items-center justify-center mx-auto">
-                    <Icon className="h-8 w-8 text-accent" />
+              <div key={step.title} className="text-center space-y-6">
+                <div className="relative">
+                  <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Icon className="h-7 w-7 text-white" />
                   </div>
-                  <div className="absolute -top-1 -right-1 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+                  <div className="text-2xl font-bold text-primary mb-2">
                     {index + 1}
                   </div>
-                  {index < steps.length - 1 && (
-                    <div className="hidden lg:block absolute top-10 left-full w-12 h-0.5 bg-accent/30"></div>
-                  )}
                 </div>
-                <h3 className="text-xl font-semibold text-primary font-serif mb-3">
+                <h3 className="text-lg font-semibold text-primary font-serif">
                   {step.title}
                 </h3>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   {step.description}
                 </p>
               </div>
