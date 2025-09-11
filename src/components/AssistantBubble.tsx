@@ -36,7 +36,7 @@ export function AssistantBubble({ onAssistantClick, isModalOpen }: AssistantBubb
     <div className="fixed bottom-6 right-6 z-40">
       {/* Tooltip */}
       {showTooltip && (
-        <div className="absolute bottom-16 right-0 mb-2 mr-2 bg-white rounded-lg shadow-lg border border-border p-3 max-w-48 animate-fade-in">
+        <div className="absolute bottom-16 right-0 mb-2 mr-2 bg-white rounded-lg shadow-lg border border-border p-3 max-w-64 animate-fade-in">
           <p className="text-sm text-muted-foreground">{helpMessages[currentMessage]}</p>
           <div className="absolute bottom-0 right-4 transform translate-y-1/2 rotate-45 w-2 h-2 bg-white border-r border-b border-border"></div>
         </div>
