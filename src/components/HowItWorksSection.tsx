@@ -13,7 +13,7 @@ const steps = [{
   description: "Receive curated Chicago media outlets perfectly matched to your campaign needs."
 }, {
   icon: Calendar,
-  title: "Launch the Perfect Chicago Campaign!",
+  title: "Launch the Perfect Campaign!",
   description: "Connect with our team to bring your media strategy to life and maximize your impact."
 }];
 export function HowItWorksSection({
