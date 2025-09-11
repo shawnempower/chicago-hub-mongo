@@ -87,7 +87,39 @@ export function MediaPartnersSection({
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mediaOutlets.slice(0, 6).map(outlet => {})}
+            {mediaOutlets.slice(0, 6).map(outlet => (
+              <div key={outlet.id} className="outlet-card group">
+                <div className="relative h-40 overflow-hidden rounded-t-xl">
+                  <img 
+                    src={outlet.image} 
+                    alt={outlet.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                  />
+                  <button
+                    onClick={() => handleSaveOutlet(outlet.id)}
+                    className="absolute top-3 right-3 p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+                  >
+                    <Heart 
+                      className={`w-4 h-4 transition-colors ${
+                        savedOutlets.has(outlet.id) 
+                          ? 'fill-red-500 text-red-500' 
+                          : 'text-white'
+                      }`} 
+                    />
+                  </button>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-primary">{outlet.name}</h4>
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                      {outlet.type}
+                    </span>
+                  </div>
+                  <p className="text-sm text-accent font-medium mb-2">{outlet.tagline}</p>
+                  <p className="text-sm text-muted-foreground">{outlet.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="text-center pt-8">
