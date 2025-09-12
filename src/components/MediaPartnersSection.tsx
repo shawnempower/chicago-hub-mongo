@@ -106,7 +106,7 @@ export function MediaPartnersSection({
 
           <div className="text-center pt-8">
             <Button variant="assistant" size="lg" asChild>
-              <Link to="/partners">Explore Media Partners</Link>
+              <Link to="/partners">Explore All Media Partners</Link>
             </Button>
             <p className="text-sm text-muted-foreground mt-4">
               Discover our full network of trusted Chicago media outlets
