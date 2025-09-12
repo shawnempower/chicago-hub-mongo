@@ -41,8 +41,8 @@ export function MediaPartnersSection({
             From the Loop to Little Village, reach every community that matters to your brand. 
             Our AI assistant knows exactly which outlets will connect you with your audience.
           </p>
-          <Button variant="assistant" size="lg" onClick={onAssistantClick}>
-            Let Lassie Guide Your Discovery
+          <Button variant="assistant" size="lg" asChild>
+            <a href="/packages">Explore Advertising Packages</a>
           </Button>
         </div>
 
