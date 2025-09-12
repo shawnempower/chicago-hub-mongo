@@ -28,7 +28,8 @@ const collections = [{
 export function MediaPartnersSection({
   onAssistantClick
 }: MediaPartnersSectionProps) {
-  return <section id="media-partners" className="py-16 lg:py-24 bg-background">
+  return (
+    <section id="media-partners" className="py-16 lg:py-24 bg-background">
       <div className="container mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -112,5 +113,6 @@ export function MediaPartnersSection({
           </div>
         </div>
       </div>
-    </section>;
+    </section>
+  );
 }
