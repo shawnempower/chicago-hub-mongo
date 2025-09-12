@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { mediaOutlets } from "@/data/mediaOutlets";
 import communitiesImage from "@/assets/chicago-communities.jpg";
+import { Link } from "react-router-dom";
 interface MediaPartnersSectionProps {
   onAssistantClick: () => void;
 }
@@ -104,11 +105,11 @@ export function MediaPartnersSection({
           </div>
 
           <div className="text-center pt-8">
-            <Button variant="hero" size="lg" onClick={onAssistantClick}>
-              Find Your Perfect Media Mix
+            <Button variant="assistant" size="lg" asChild>
+              <Link to="/partners">Explore Media Partners</Link>
             </Button>
             <p className="text-sm text-muted-foreground mt-4">
-              Let Lassie recommend the ideal combination for your goals
+              Discover our full network of trusted Chicago media outlets
             </p>
           </div>
         </div>
