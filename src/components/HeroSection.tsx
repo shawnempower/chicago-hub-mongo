@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import heroImage from "@/assets/chicago-hero.jpg";
 import { mediaOutlets } from "@/data/mediaOutlets";
 interface HeroSectionProps {
@@ -21,8 +22,8 @@ export function HeroSection({
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="hero" size="xl" onClick={onAssistantClick} className="sm:w-auto">Plan Your Campaign</Button>
-              <Button variant="link" size="lg" className="text-primary hover:text-accent">
-                Browse Ad Packages →
+              <Button variant="link" size="lg" className="text-primary hover:text-accent" asChild>
+                <Link to="/packages">Browse Ad Packages →</Link>
               </Button>
             </div>
 
