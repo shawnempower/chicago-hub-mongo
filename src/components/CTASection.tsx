@@ -12,7 +12,7 @@ export function CTASection({ onAssistantClick }: CTASectionProps) {
           Ready to Plan the Perfect Campaign?
         </h2>
         <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-          Our AI assistant can help you identify the perfect media mix for your campaign goals and budget.
+          Let us know your goals and budget and we'll do the rest!
         </p>
         <Button 
           variant="secondary" 
