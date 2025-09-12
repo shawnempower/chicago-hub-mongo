@@ -16,6 +16,9 @@ export function Header({ onAssistantClick }: HeaderProps) {
             <a href="#how-it-works" className="text-muted-foreground hover:text-primary transition-colors">
               How It Works
             </a>
+            <a href="/partners" className="text-muted-foreground hover:text-primary transition-colors">
+              Media Partners
+            </a>
             <a href="/packages" className="text-muted-foreground hover:text-primary transition-colors">
               Advertising Packages
             </a>
