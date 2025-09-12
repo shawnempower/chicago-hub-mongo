@@ -93,20 +93,6 @@ const Packages = () => {
     <div className="min-h-screen bg-background">
       <Header onAssistantClick={handleAssistantClick} />
       
-      {/* Breadcrumb */}
-      <div className="border-b bg-muted/30">
-        <div className="container mx-auto px-6 py-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <a href="/" className="hover:text-primary transition-colors flex items-center gap-1">
-              <ChevronLeft className="h-4 w-4" />
-              Home
-            </a>
-            <span>•</span>
-            <span className="text-foreground">Advertising Packages</span>
-          </div>
-        </div>
-      </div>
-
       <main>
         {/* Hero Section */}
         <section className="py-16 lg:py-20 bg-gradient-to-br from-background via-brand-cream to-brand-light-gray">

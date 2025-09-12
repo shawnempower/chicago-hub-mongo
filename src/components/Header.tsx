@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 interface HeaderProps {
   onAssistantClick: () => void;
 }
 
 export function Header({ onAssistantClick }: HeaderProps) {
+  const location = useLocation();
+  
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -16,10 +18,24 @@ export function Header({ onAssistantClick }: HeaderProps) {
             </h1>
           </Link>
           <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/partners" className="text-muted-foreground hover:text-primary transition-colors">
+            <Link 
+              to="/partners" 
+              className={`transition-colors ${
+                location.pathname === '/partners' 
+                  ? 'text-primary font-medium' 
+                  : 'text-muted-foreground hover:text-primary'
+              }`}
+            >
               Media Partners
             </Link>
-            <Link to="/packages" className="text-muted-foreground hover:text-primary transition-colors">
+            <Link 
+              to="/packages" 
+              className={`transition-colors ${
+                location.pathname === '/packages' 
+                  ? 'text-primary font-medium' 
+                  : 'text-muted-foreground hover:text-primary'
+              }`}
+            >
               Advertising Packages
             </Link>
           </nav>
