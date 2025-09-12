@@ -22,7 +22,7 @@ export function HeroSection({
             <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="hero" size="xl" onClick={onAssistantClick} className="sm:w-auto">Plan Your Campaign</Button>
               <Button variant="link" size="lg" className="text-primary hover:text-accent">
-                Browse Media Partners →
+                Browse Ad Packages →
               </Button>
             </div>
 
