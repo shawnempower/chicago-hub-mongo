@@ -31,15 +31,13 @@ export function HeroSection({
                 Trusted by Chicago's leading brands:
               </p>
               <div className="flex items-center space-x-6 text-muted-foreground">
-                <span className="text-sm">Healthcare Systems</span>
+                <span className="text-sm">Healthcare</span>
                 <span className="text-sm">•</span>
                 <span className="text-sm">Financial Services</span>
                 <span className="text-sm">•</span>
-                <span className="text-sm">Retail Brands</span>
+                <span className="text-sm">Retail</span>
                 <span className="text-sm">•</span>
-                <span className="text-sm">Real Estate</span>
-                <span className="text-sm">•</span>
-                <span className="text-sm">B2B Leaders</span>
+                <span className="text-sm">B2B</span>
               </div>
             </div>
           </div>
