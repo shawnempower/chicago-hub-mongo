@@ -3,6 +3,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AssistantModal } from "@/components/AssistantModal";
 import { AssistantBubble } from "@/components/AssistantBubble";
+import { CTASection } from "@/components/CTASection";
 import { PackageCard } from "@/components/PackageCard";
 import { FilterButton } from "@/components/FilterButton";
 import { ActiveFilters } from "@/components/ActiveFilters";
@@ -208,6 +209,8 @@ const Packages = () => {
           </div>
         </section>
       </main>
+
+      <CTASection onAssistantClick={handleAssistantClick} />
 
       <Footer />
 

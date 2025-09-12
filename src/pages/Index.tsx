@@ -5,6 +5,7 @@ import { HowItWorksSection } from "@/components/HowItWorksSection";
 import { MediaPartnersSection } from "@/components/MediaPartnersSection";
 import { AssistantModal } from "@/components/AssistantModal";
 import { AssistantBubble } from "@/components/AssistantBubble";
+import { CTASection } from "@/components/CTASection";
 import { Footer } from "@/components/Footer";
 
 const Index = () => {
@@ -28,6 +29,8 @@ const Index = () => {
         <MediaPartnersSection onAssistantClick={handleAssistantClick} />
       </main>
 
+      <CTASection onAssistantClick={handleAssistantClick} />
+      
       <Footer />
 
       <AssistantBubble 
