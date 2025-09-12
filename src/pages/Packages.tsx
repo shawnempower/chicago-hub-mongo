@@ -1,0 +1,248 @@
+import { useState, useMemo } from "react";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { AssistantModal } from "@/components/AssistantModal";
+import { AssistantBubble } from "@/components/AssistantBubble";
+import { PackageCard } from "@/components/PackageCard";
+import { PackageFilters } from "@/components/PackageFilters";
+import { PackageModal } from "@/components/PackageModal";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { packages, Package } from "@/data/packages";
+import { Grid, List, ChevronLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const Packages = () => {
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [browseMode, setBrowseMode] = useState("all");
+  const [savedPackages, setSavedPackages] = useState<number[]>([]);
+  
+  // Filter states
+  const [selectedBudget, setSelectedBudget] = useState<string[]>([]);
+  const [selectedAudience, setSelectedAudience] = useState<string[]>([]);
+  const [selectedComplexity, setSelectedComplexity] = useState<string[]>([]);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+
+  const handleAssistantClick = () => {
+    setIsAssistantOpen(true);
+  };
+
+  const handleAssistantClose = () => {
+    setIsAssistantOpen(false);
+  };
+
+  const handleSavePackage = (id: number) => {
+    setSavedPackages(prev => 
+      prev.includes(id) 
+        ? prev.filter(pid => pid !== id)
+        : [...prev, id]
+    );
+  };
+
+  const toggleFilter = (currentFilters: string[], value: string) => {
+    return currentFilters.includes(value)
+      ? currentFilters.filter(f => f !== value)
+      : [...currentFilters, value];
+  };
+
+  const clearAllFilters = () => {
+    setSelectedBudget([]);
+    setSelectedAudience([]);
+    setSelectedComplexity([]);
+    setSelectedChannels([]);
+  };
+
+  const filteredPackages = useMemo(() => {
+    return packages.filter(pkg => {
+      // Budget filter
+      if (selectedBudget.length > 0 && !selectedBudget.includes(pkg.priceRange)) {
+        return false;
+      }
+
+      // Audience filter (OR logic within category)
+      if (selectedAudience.length > 0) {
+        const hasMatchingAudience = selectedAudience.some(audience => 
+          pkg.audience.includes(audience) || pkg.audience.includes("all")
+        );
+        if (!hasMatchingAudience) return false;
+      }
+
+      // Complexity filter
+      if (selectedComplexity.length > 0 && !selectedComplexity.includes(pkg.complexity)) {
+        return false;
+      }
+
+      // Channels filter (OR logic within category)
+      if (selectedChannels.length > 0) {
+        const hasMatchingChannel = selectedChannels.some(channel => 
+          pkg.channels.includes(channel) || pkg.channels.includes("all") || pkg.channels.includes("flexible")
+        );
+        if (!hasMatchingChannel) return false;
+      }
+
+      return true;
+    });
+  }, [packages, selectedBudget, selectedAudience, selectedComplexity, selectedChannels]);
+
+  const browseOptions = [
+    { id: "all", label: "View All Packages" },
+    { id: "audience", label: "By Audience" },
+    { id: "budget", label: "By Budget" },
+    { id: "channel", label: "By Channel" },
+    { id: "simplicity", label: "By Simplicity" },
+    { id: "objective", label: "By Objective" }
+  ];
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header onAssistantClick={handleAssistantClick} />
+      
+      {/* Breadcrumb */}
+      <div className="border-b bg-muted/30">
+        <div className="container mx-auto px-6 py-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <a href="/" className="hover:text-primary transition-colors flex items-center gap-1">
+              <ChevronLeft className="h-4 w-4" />
+              Home
+            </a>
+            <span>•</span>
+            <span className="text-foreground">Advertising Packages</span>
+          </div>
+        </div>
+      </div>
+
+      <main>
+        {/* Hero Section */}
+        <section className="py-16 lg:py-20 bg-gradient-to-br from-background via-brand-cream to-brand-light-gray">
+          <div className="container mx-auto px-6 text-center">
+            <h1 className="hero-title mb-4">
+              Discover Your Perfect <span className="text-accent">Media Package</span>
+            </h1>
+            <p className="body-large max-w-2xl mx-auto mb-8">
+              50+ strategic packages. Multiple ways to explore. One perfect solution.
+            </p>
+            
+            {/* Browse Options */}
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
+              {browseOptions.map(option => (
+                <Badge
+                  key={option.id}
+                  variant={browseMode === option.id ? "default" : "outline"}
+                  className={cn(
+                    "cursor-pointer px-4 py-2 text-sm transition-colors",
+                    browseMode === option.id 
+                      ? "bg-primary text-primary-foreground" 
+                      : "hover:bg-muted"
+                  )}
+                  onClick={() => setBrowseMode(option.id)}
+                >
+                  {option.label}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Filters */}
+        <PackageFilters
+          selectedBudget={selectedBudget}
+          selectedAudience={selectedAudience}
+          selectedComplexity={selectedComplexity}
+          selectedChannels={selectedChannels}
+          onBudgetChange={(budget) => setSelectedBudget(prev => toggleFilter(prev, budget))}
+          onAudienceChange={(audience) => setSelectedAudience(prev => toggleFilter(prev, audience))}
+          onComplexityChange={(complexity) => setSelectedComplexity(prev => toggleFilter(prev, complexity))}
+          onChannelChange={(channel) => setSelectedChannels(prev => toggleFilter(prev, channel))}
+          onClearAll={clearAllFilters}
+        />
+
+        {/* Results Section */}
+        <section className="py-8 lg:py-12">
+          <div className="container mx-auto px-6">
+            {/* Results Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+              <div className="flex items-center gap-4">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Showing {filteredPackages.length} packages
+                </h2>
+                {savedPackages.length > 0 && (
+                  <Badge variant="outline" className="text-accent">
+                    {savedPackages.length} saved
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Package Grid */}
+            <div className={cn(
+              "grid gap-6",
+              viewMode === "grid" 
+                ? "md:grid-cols-2 lg:grid-cols-3" 
+                : "grid-cols-1 max-w-4xl mx-auto"
+            )}>
+              {filteredPackages.map(pkg => (
+                <PackageCard
+                  key={pkg.id}
+                  packageData={pkg}
+                  onSave={handleSavePackage}
+                  isSaved={savedPackages.includes(pkg.id)}
+                  onDetails={setSelectedPackage}
+                />
+              ))}
+            </div>
+
+            {filteredPackages.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground mb-4">No packages match your current filters.</p>
+                <Button variant="outline" onClick={clearAllFilters}>
+                  Clear All Filters
+                </Button>
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+
+      <AssistantBubble 
+        onAssistantClick={handleAssistantClick}
+        isModalOpen={isAssistantOpen}
+      />
+
+      <AssistantModal 
+        isOpen={isAssistantOpen}
+        onClose={handleAssistantClose}
+      />
+
+      <PackageModal
+        packageData={selectedPackage}
+        isOpen={!!selectedPackage}
+        onClose={() => setSelectedPackage(null)}
+        onSave={handleSavePackage}
+        isSaved={selectedPackage ? savedPackages.includes(selectedPackage.id) : false}
+      />
+    </div>
+  );
+};
+
+export default Packages;
