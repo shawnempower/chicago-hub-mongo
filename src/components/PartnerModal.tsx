@@ -17,31 +17,21 @@ export function PartnerModal({ partner, isOpen, onClose }: PartnerModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div 
-                className="w-16 h-16 rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                style={{ backgroundColor: partner.logoColor }}
-              >
-                {partner.logo}
-              </div>
-              <div>
-                <DialogTitle className="text-2xl font-serif text-primary">
-                  {partner.name}
-                </DialogTitle>
-                <Badge variant="secondary" className="mt-1">
-                  {partner.category}
-                </Badge>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8"
+          <div className="flex items-center gap-4">
+            <div 
+              className="w-16 h-16 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+              style={{ backgroundColor: partner.logoColor }}
             >
-              <X className="h-4 w-4" />
-            </Button>
+              {partner.logo}
+            </div>
+            <div>
+              <DialogTitle className="text-2xl font-serif text-primary">
+                {partner.name}
+              </DialogTitle>
+              <Badge variant="secondary" className="mt-1">
+                {partner.category}
+              </Badge>
+            </div>
           </div>
         </DialogHeader>
 
