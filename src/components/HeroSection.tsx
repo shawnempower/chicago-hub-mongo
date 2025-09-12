@@ -16,7 +16,7 @@ export function HeroSection({
               <h1 className="hero-title">
                 Reach 5 Million Chicagoans Through <span className="text-accent">Voices They Trust.</span>
               </h1>
-              <p className="body-large max-w-xl">35+ trusted local voices. One powerful partnership. Real Chicago connection.</p>
+              <p className="body-large max-w-xl">35+ trusted local voices. One powerful platform. Authentic Chicago connections.</p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
