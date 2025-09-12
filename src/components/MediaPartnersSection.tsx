@@ -42,7 +42,7 @@ export function MediaPartnersSection({
             Our AI assistant knows exactly which outlets will connect you with your audience.
           </p>
           <Button variant="assistant" size="lg" asChild>
-            <a href="/packages">Explore Advertising Packages</a>
+            <a href="/packages">Explore Ad Packages</a>
           </Button>
         </div>
 
