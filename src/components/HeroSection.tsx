@@ -14,8 +14,7 @@ export function HeroSection({
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="hero-title">
-                Connect with Every{" "}
-                <span className="text-accent">Chicago Community</span>
+                Your Brand. <span className="text-accent">Chicago's Voice.</span> Real Connection.
               </h1>
               <p className="body-large max-w-xl">35+ trusted media outlets. Your one-stop-shop to build the perfect Chicago media campaign.</p>
             </div>
