@@ -1,6 +1,4 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Heart } from "lucide-react";
 import { mediaOutlets } from "@/data/mediaOutlets";
 import communitiesImage from "@/assets/chicago-communities.jpg";
 interface MediaPartnersSectionProps {
@@ -30,18 +28,6 @@ const collections = [{
 export function MediaPartnersSection({
   onAssistantClick
 }: MediaPartnersSectionProps) {
-  const [savedOutlets, setSavedOutlets] = useState<Set<string>>(new Set());
-  const handleSaveOutlet = (outletId: string) => {
-    setSavedOutlets(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(outletId)) {
-        newSet.delete(outletId);
-      } else {
-        newSet.add(outletId);
-      }
-      return newSet;
-    });
-  };
   return <section id="media-partners" className="py-16 lg:py-24 bg-background">
       <div className="container mx-auto px-6">
         {/* Section Header */}
@@ -93,9 +79,6 @@ export function MediaPartnersSection({
             {mediaOutlets.slice(0, 6).map(outlet => <div key={outlet.id} className="outlet-card group">
                 <div className="relative h-48 overflow-hidden rounded-t-xl">
                   <img src={outlet.image} alt={outlet.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <Button variant="ghost" size="icon" onClick={() => handleSaveOutlet(outlet.id)} className="absolute top-3 right-3 bg-white/90 hover:bg-white">
-                    <Heart className={`h-5 w-5 ${savedOutlets.has(outlet.id) ? 'fill-accent text-accent' : 'text-muted-foreground'}`} />
-                  </Button>
                 </div>
                 
                 <div className="p-6">
