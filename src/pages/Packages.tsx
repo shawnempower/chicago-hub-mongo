@@ -4,7 +4,8 @@ import { Footer } from "@/components/Footer";
 import { AssistantModal } from "@/components/AssistantModal";
 import { AssistantBubble } from "@/components/AssistantBubble";
 import { PackageCard } from "@/components/PackageCard";
-import { PackageFilters } from "@/components/PackageFilters";
+import { FilterButton } from "@/components/FilterButton";
+import { ActiveFilters } from "@/components/ActiveFilters";
 import { PackageModal } from "@/components/PackageModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,7 @@ const Packages = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [browseMode, setBrowseMode] = useState("all");
+  
   const [savedPackages, setSavedPackages] = useState<number[]>([]);
   
   // Filter states
@@ -86,14 +87,6 @@ const Packages = () => {
     });
   }, [packages, selectedBudget, selectedAudience, selectedComplexity, selectedChannels]);
 
-  const browseOptions = [
-    { id: "all", label: "View All Packages" },
-    { id: "audience", label: "By Audience" },
-    { id: "budget", label: "By Budget" },
-    { id: "channel", label: "By Channel" },
-    { id: "simplicity", label: "By Simplicity" },
-    { id: "objective", label: "By Objective" }
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -120,33 +113,14 @@ const Packages = () => {
             <h1 className="hero-title mb-4">
               Discover Your Perfect <span className="text-accent">Media Package</span>
             </h1>
-            <p className="body-large max-w-2xl mx-auto mb-8">
+            <p className="body-large max-w-2xl mx-auto">
               50+ strategic packages. Multiple ways to explore. One perfect solution.
             </p>
-            
-            {/* Browse Options */}
-            <div className="flex flex-wrap justify-center gap-3 mb-8">
-              {browseOptions.map(option => (
-                <Badge
-                  key={option.id}
-                  variant={browseMode === option.id ? "default" : "outline"}
-                  className={cn(
-                    "cursor-pointer px-4 py-2 text-sm transition-colors",
-                    browseMode === option.id 
-                      ? "bg-primary text-primary-foreground" 
-                      : "hover:bg-muted"
-                  )}
-                  onClick={() => setBrowseMode(option.id)}
-                >
-                  {option.label}
-                </Badge>
-              ))}
-            </div>
           </div>
         </section>
 
-        {/* Filters */}
-        <PackageFilters
+        {/* Active Filters Summary */}
+        <ActiveFilters
           selectedBudget={selectedBudget}
           selectedAudience={selectedAudience}
           selectedComplexity={selectedComplexity}
@@ -155,7 +129,6 @@ const Packages = () => {
           onAudienceChange={(audience) => setSelectedAudience(prev => toggleFilter(prev, audience))}
           onComplexityChange={(complexity) => setSelectedComplexity(prev => toggleFilter(prev, complexity))}
           onChannelChange={(channel) => setSelectedChannels(prev => toggleFilter(prev, channel))}
-          onClearAll={clearAllFilters}
         />
 
         {/* Results Section */}
@@ -174,21 +147,35 @@ const Packages = () => {
                 )}
               </div>
               
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
+              <div className="flex items-center gap-3">
+                <FilterButton
+                  selectedBudget={selectedBudget}
+                  selectedAudience={selectedAudience}
+                  selectedComplexity={selectedComplexity}
+                  selectedChannels={selectedChannels}
+                  onBudgetChange={(budget) => setSelectedBudget(prev => toggleFilter(prev, budget))}
+                  onAudienceChange={(audience) => setSelectedAudience(prev => toggleFilter(prev, audience))}
+                  onComplexityChange={(complexity) => setSelectedComplexity(prev => toggleFilter(prev, complexity))}
+                  onChannelChange={(channel) => setSelectedChannels(prev => toggleFilter(prev, channel))}
+                  onClearAll={clearAllFilters}
+                />
+                
+                <div className="flex items-center gap-1 border-l pl-3">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
