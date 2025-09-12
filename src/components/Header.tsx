@@ -13,6 +13,9 @@ export function Header({ onAssistantClick }: HeaderProps) {
             Chicago Media Hub
           </h1>
           <nav className="hidden md:flex items-center space-x-6">
+            <a href="#how-it-works" className="text-muted-foreground hover:text-primary transition-colors">
+              How It Works
+            </a>
             <a href="/partners" className="text-muted-foreground hover:text-primary transition-colors">
               Media Partners
             </a>
