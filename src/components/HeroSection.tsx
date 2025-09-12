@@ -28,7 +28,7 @@ export function HeroSection({
 
             <div className="pt-8">
               <p className="text-sm text-muted-foreground mb-4">
-                Trusted by brands reaching diverse communities:
+                Trusted by Chicago's leading brands:
               </p>
               <div className="flex items-center space-x-6 text-muted-foreground">
                 <span className="text-sm">Healthcare</span>
