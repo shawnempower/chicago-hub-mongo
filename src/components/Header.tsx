@@ -36,7 +36,7 @@ export function Header({ onAssistantClick }: HeaderProps) {
                   : 'text-muted-foreground hover:text-primary'
               }`}
             >
-              Advertising Packages
+              Ad Packages
             </Link>
           </nav>
         </div>
