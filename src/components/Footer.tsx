@@ -41,7 +41,7 @@ export function Footer() {
         </div>
         
         <div className="border-t border-primary-foreground/20 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-primary-foreground/60 text-sm">© 2025 EmpowerLocal. Empowering communities through trusted media.</p>
+          <p className="text-primary-foreground/60 text-sm">© 2025 EmpowerLocal. Connecting communities through trusted local media.</p>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground text-sm transition-colors">Privacy</a>
             <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground text-sm transition-colors">Terms</a>
