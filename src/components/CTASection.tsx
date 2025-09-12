@@ -19,7 +19,7 @@ export function CTASection({ onAssistantClick }: CTASectionProps) {
           size="xl"
           onClick={onAssistantClick}
         >
-          Get Custom Recommendations
+          Get Started!
         </Button>
       </div>
     </section>
