@@ -37,6 +37,8 @@ export function HeroSection({
                 <span className="text-sm">•</span>
                 <span className="text-sm">Retail</span>
                 <span className="text-sm">•</span>
+                <span className="text-sm">Real Estate</span>
+                <span className="text-sm">•</span>
                 <span className="text-sm">B2B</span>
               </div>
             </div>
