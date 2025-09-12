@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 interface HeaderProps {
   onAssistantClick: () => void;
@@ -13,15 +14,12 @@ export function Header({ onAssistantClick }: HeaderProps) {
             Chicago Media Hub
           </h1>
           <nav className="hidden md:flex items-center space-x-6">
-            <a href="#how-it-works" className="text-muted-foreground hover:text-primary transition-colors">
-              How It Works
-            </a>
-            <a href="/partners" className="text-muted-foreground hover:text-primary transition-colors">
+            <Link to="/partners" className="text-muted-foreground hover:text-primary transition-colors">
               Media Partners
-            </a>
-            <a href="/packages" className="text-muted-foreground hover:text-primary transition-colors">
+            </Link>
+            <Link to="/packages" className="text-muted-foreground hover:text-primary transition-colors">
               Advertising Packages
-            </a>
+            </Link>
           </nav>
         </div>
         
