@@ -21,26 +21,14 @@ export function HeroSection({
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="hero" size="xl" onClick={onAssistantClick} className="sm:w-auto">Plan Your Campaign</Button>
-              <Button variant="link" size="lg" className="text-primary hover:text-accent" asChild>
-                <a href="/packages">Browse Ad Packages →</a>
+              <Button variant="link" size="lg" className="text-primary hover:text-accent">
+                Browse Media Partners →
               </Button>
             </div>
 
             <div className="pt-8">
-              <p className="text-sm text-muted-foreground mb-4">
-                Trusted by Chicago's leading brands:
-              </p>
-              <div className="flex items-center space-x-6 text-muted-foreground">
-                <span className="text-sm">Healthcare</span>
-                <span className="text-sm">•</span>
-                <span className="text-sm">Financial Services</span>
-                <span className="text-sm">•</span>
-                <span className="text-sm">Retail</span>
-                <span className="text-sm">•</span>
-                <span className="text-sm">Real Estate</span>
-                <span className="text-sm">•</span>
-                <span className="text-sm">B2B</span>
-              </div>
+              
+              
             </div>
           </div>
 
