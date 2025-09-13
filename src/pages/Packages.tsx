@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 const Packages = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   
   const [savedPackages, setSavedPackages] = useState<number[]>([]);
   
