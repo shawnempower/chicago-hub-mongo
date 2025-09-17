@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      assistant_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          message_content: string
+          message_type: string
+          metadata: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_content: string
+          message_type: string
+          metadata?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_content?: string
+          message_type?: string
+          metadata?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -46,6 +76,27 @@ export type Database = {
           phone?: string | null
           role?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      saved_outlets: {
+        Row: {
+          id: string
+          outlet_id: string
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          outlet_id: string
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          outlet_id?: string
+          saved_at?: string
           user_id?: string
         }
         Relationships: []
@@ -100,7 +151,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      sanitize_input: {
+        Args: { input_text: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
