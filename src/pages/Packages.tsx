@@ -20,7 +20,7 @@ const Packages = () => {
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   
-  const { savedPackages, toggleSavedPackage, isPackageSaved } = useSavedPackages();
+  const { savedPackages, toggleSavePackage, isSaved } = useSavedPackages();
   
   // Filter states
   const [selectedBudget, setSelectedBudget] = useState<string[]>([]);
@@ -37,7 +37,7 @@ const Packages = () => {
   };
 
   const handleSavePackage = (id: number) => {
-    toggleSavedPackage(id);
+    toggleSavePackage(id);
   };
 
   const toggleFilter = (currentFilters: string[], value: string) => {
@@ -175,7 +175,7 @@ const Packages = () => {
                   key={pkg.id}
                   packageData={pkg}
                   onSave={handleSavePackage}
-                  isSaved={isPackageSaved(pkg.id)}
+                  isSaved={isSaved(pkg.id)}
                   onDetails={setSelectedPackage}
                 />
               ))}
@@ -212,7 +212,7 @@ const Packages = () => {
         isOpen={!!selectedPackage}
         onClose={() => setSelectedPackage(null)}
         onSave={handleSavePackage}
-        isSaved={selectedPackage ? isPackageSaved(selectedPackage.id) : false}
+        isSaved={selectedPackage ? isSaved(selectedPackage.id) : false}
       />
     </div>
   );
