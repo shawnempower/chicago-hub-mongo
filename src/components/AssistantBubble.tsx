@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, X } from "lucide-react";
 
+// Feature flag to enable/disable automatic tooltip popups
+const SHOW_AUTO_TOOLTIPS = false;
+
 interface AssistantBubbleProps {
   onAssistantClick: () => void;
   isModalOpen: boolean;
@@ -19,7 +22,7 @@ export function AssistantBubble({ onAssistantClick, isModalOpen }: AssistantBubb
   const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
-    if (isModalOpen) return;
+    if (isModalOpen || !SHOW_AUTO_TOOLTIPS) return;
 
     const interval = setInterval(() => {
       setShowTooltip(true);
