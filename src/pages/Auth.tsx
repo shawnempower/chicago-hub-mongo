@@ -15,8 +15,9 @@ export default function Auth() {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [role, setRole] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -52,8 +53,9 @@ export default function Auth() {
     setLoading(true);
     
     const { error } = await signUp(email, password, {
-      company_name: companyName,
-      role: role
+      first_name: firstName,
+      last_name: lastName,
+      company_name: companyName
     });
     
     if (error) {
@@ -138,6 +140,30 @@ export default function Auth() {
               
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="first-name">First Name</Label>
+                      <Input
+                        id="first-name"
+                        type="text"
+                        placeholder="First name"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="last-name">Last Name</Label>
+                      <Input
+                        id="last-name"
+                        type="text"
+                        placeholder="Last name"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
                     <Input
@@ -161,23 +187,13 @@ export default function Auth() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="company-name">Company Name</Label>
+                    <Label htmlFor="company-name">Company Name (optional)</Label>
                     <Input
                       id="company-name"
                       type="text"
                       placeholder="Your company name"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Your Role</Label>
-                    <Input
-                      id="role"
-                      type="text"
-                      placeholder="e.g. Marketing Manager"
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
                     />
                   </div>
                   <Button
