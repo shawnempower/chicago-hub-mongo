@@ -1,5 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { User, LogOut } from "lucide-react";
 
 interface HeaderProps {
   onAssistantClick: () => void;
@@ -7,6 +15,7 @@ interface HeaderProps {
 
 export function Header({ onAssistantClick }: HeaderProps) {
   const location = useLocation();
+  const { user, signOut } = useAuth();
   
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-border">
@@ -41,14 +50,36 @@ export function Header({ onAssistantClick }: HeaderProps) {
           </nav>
         </div>
         
-        <Button 
-          variant="assistant" 
-          onClick={onAssistantClick}
-          className="relative"
-        >
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full animate-pulse"></div>
-          🟢 Assistant Available
-        </Button>
+        <div className="flex items-center space-x-4">
+          <Button 
+            variant="assistant" 
+            onClick={onAssistantClick}
+            className="relative"
+          >
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full animate-pulse"></div>
+            🟢 Assistant Available
+          </Button>
+          
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <User className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button asChild variant="outline">
+              <Link to="/auth">Sign In</Link>
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   );

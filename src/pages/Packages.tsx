@@ -13,13 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { packages, Package } from "@/data/packages";
 import { Grid, List, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSavedPackages } from "@/hooks/useSavedPackages";
 
 const Packages = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   
-  const [savedPackages, setSavedPackages] = useState<number[]>([]);
+  const { savedPackages, toggleSavedPackage, isPackageSaved } = useSavedPackages();
   
   // Filter states
   const [selectedBudget, setSelectedBudget] = useState<string[]>([]);
@@ -36,11 +37,7 @@ const Packages = () => {
   };
 
   const handleSavePackage = (id: number) => {
-    setSavedPackages(prev => 
-      prev.includes(id) 
-        ? prev.filter(pid => pid !== id)
-        : [...prev, id]
-    );
+    toggleSavedPackage(id);
   };
 
   const toggleFilter = (currentFilters: string[], value: string) => {
@@ -178,7 +175,7 @@ const Packages = () => {
                   key={pkg.id}
                   packageData={pkg}
                   onSave={handleSavePackage}
-                  isSaved={savedPackages.includes(pkg.id)}
+                  isSaved={isPackageSaved(pkg.id)}
                   onDetails={setSelectedPackage}
                 />
               ))}
@@ -215,7 +212,7 @@ const Packages = () => {
         isOpen={!!selectedPackage}
         onClose={() => setSelectedPackage(null)}
         onSave={handleSavePackage}
-        isSaved={selectedPackage ? savedPackages.includes(selectedPackage.id) : false}
+        isSaved={selectedPackage ? isPackageSaved(selectedPackage.id) : false}
       />
     </div>
   );
