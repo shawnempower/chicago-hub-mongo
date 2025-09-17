@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Send, Heart } from "lucide-react";
+import { X, Send, Heart, Trash2 } from "lucide-react";
 import { mediaOutlets } from "@/data/mediaOutlets";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSavedOutlets } from "@/hooks/useSavedOutlets";
+import { useAssistantConversation } from "@/hooks/useAssistantConversation";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -17,25 +21,20 @@ interface AssistantModalProps {
   onClose: () => void;
 }
 
-const initialMessage: Message = {
-  id: '1',
-  type: 'assistant',
-  content: "Hi! I'm Lassie, your Chicago media assistant. I help brands discover the perfect combination of Chicago media outlets for their goals. What brings you to Chicago media today?",
-  timestamp: new Date()
-};
-
 const responseOptions = [
   "I'm new to Chicago media",
-  "Looking for specific communities",
+  "Looking for specific communities", 
   "Need help with my campaign strategy",
   "Want to explore my options"
 ];
 
 export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
-  const [messages, setMessages] = useState<Message[]>([initialMessage]);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { savedOutlets, toggleSaveOutlet, isSaved } = useSavedOutlets();
+  const { messages, addMessage, clearConversation, loading } = useAssistantConversation();
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [savedOutlets, setSavedOutlets] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -46,22 +45,25 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
     scrollToBottom();
   }, [messages]);
 
-  const handleSaveOutlet = (outletId: string) => {
-    setSavedOutlets(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(outletId)) {
-        newSet.delete(outletId);
-      } else {
-        newSet.add(outletId);
-      }
-      return newSet;
-    });
+  const validateInput = (input: string): string | null => {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    if (trimmed.length > 500) {
+      toast({
+        title: "Input too long",
+        description: "Please limit your message to 500 characters",
+        variant: "destructive"
+      });
+      return null;
+    }
+    // Basic sanitization - remove potentially harmful characters
+    return trimmed.replace(/[<>'"]/g, '');
   };
 
   const simulateAssistantResponse = (userMessage: string) => {
     setIsTyping(true);
     
-    setTimeout(() => {
+    setTimeout(async () => {
       let response = "";
       let outletsToShow: typeof mediaOutlets | undefined;
 
@@ -100,38 +102,58 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
         timestamp: new Date()
       };
 
-      setMessages(prev => [...prev, assistantMessage, outletsMessage]);
+      await addMessage(assistantMessage);
+      await addMessage(outletsMessage);
       setIsTyping(false);
 
       // Follow up question
-      setTimeout(() => {
+      setTimeout(async () => {
         const followUp: Message = {
           id: (Date.now() + 2).toString(),
           type: 'assistant',
           content: "Would you like to explore any of these in detail, or shall we look at other options? I can also help you understand which communities each outlet serves best.",
           timestamp: new Date()
         };
-        setMessages(prev => [...prev, followUp]);
+        await addMessage(followUp);
       }, 1500);
     }, 2000);
   };
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
+  const handleSendMessage = async () => {
+    const validatedInput = validateInput(inputValue);
+    if (!validatedInput) return;
+
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to chat with the assistant",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputValue,
+      content: validatedInput,
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    simulateAssistantResponse(inputValue);
+    await addMessage(userMessage);
+    simulateAssistantResponse(validatedInput);
     setInputValue("");
   };
 
-  const handleOptionClick = (option: string) => {
+  const handleOptionClick = async (option: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required", 
+        description: "Please sign in to chat with the assistant",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
@@ -139,7 +161,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    await addMessage(userMessage);
     simulateAssistantResponse(option);
   };
 
@@ -159,9 +181,16 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
               Lassie - Your Media Assistant
             </h2>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center space-x-2">
+            {user && (
+              <Button variant="ghost" size="icon" onClick={clearConversation} title="Clear conversation">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Messages */}
@@ -207,12 +236,12 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleSaveOutlet(outlet.id)}
+                          onClick={() => toggleSaveOutlet(outlet.id)}
                           className="shrink-0"
                         >
                           <Heart 
                             className={`h-5 w-5 ${
-                              savedOutlets.has(outlet.id) 
+                              isSaved(outlet.id) 
                                 ? 'fill-accent text-accent' 
                                 : 'text-muted-foreground'
                             }`} 
@@ -224,10 +253,10 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
                         <Button size="sm" variant="outline">Learn More</Button>
                         <Button
                           size="sm"
-                          variant={savedOutlets.has(outlet.id) ? "default" : "ghost"}
-                          onClick={() => handleSaveOutlet(outlet.id)}
+                          variant={isSaved(outlet.id) ? "default" : "ghost"}
+                          onClick={() => toggleSaveOutlet(outlet.id)}
                         >
-                          {savedOutlets.has(outlet.id) ? "Saved ♡" : "Save ♡"}
+                          {isSaved(outlet.id) ? "Saved ♡" : "Save ♡"}
                         </Button>
                       </div>
                     </div>
@@ -256,7 +285,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
         </div>
 
         {/* Quick response options */}
-        {messages.length === 1 && (
+        {messages.length === 1 && user && (
           <div className="px-6 pb-4">
             <div className="flex flex-wrap gap-2">
               {responseOptions.map((option) => (
@@ -269,6 +298,20 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
                   {option}
                 </Button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Authentication prompt */}
+        {!user && (
+          <div className="px-6 pb-4">
+            <div className="bg-muted rounded-lg p-4 text-center">
+              <p className="text-muted-foreground mb-2">
+                Please sign in to start chatting with Lassie and save your favorite outlets.
+              </p>
+              <Button variant="outline" onClick={onClose}>
+                Sign In
+              </Button>
             </div>
           </div>
         )}
