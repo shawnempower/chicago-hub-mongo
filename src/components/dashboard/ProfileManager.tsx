@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { User, Building2, Mail, Phone } from "lucide-react";
+import { User, Building2, Mail, Phone, Globe, Target, Palette, TrendingUp } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -15,7 +18,30 @@ interface Profile {
   company_name: string | null;
   role: string | null;
   phone: string | null;
+  company_website: string | null;
+  industry: string | null;
+  company_size: string | null;
+  marketing_goals: string[] | null;
+  target_audience: string | null;
+  brand_voice: string | null;
+  profile_completion_score: number | null;
 }
+
+const INDUSTRY_OPTIONS = [
+  "Technology", "Healthcare", "Finance", "Education", "Retail", "Manufacturing",
+  "Real Estate", "Food & Beverage", "Fashion", "Automotive", "Entertainment",
+  "Non-profit", "Professional Services", "Other"
+];
+
+const COMPANY_SIZE_OPTIONS = [
+  "1-10 employees", "11-50 employees", "51-200 employees", 
+  "201-500 employees", "501-1000 employees", "1000+ employees"
+];
+
+const MARKETING_GOALS_OPTIONS = [
+  "Brand Awareness", "Lead Generation", "Customer Acquisition", "Customer Retention",
+  "Product Launch", "Event Promotion", "Thought Leadership", "Crisis Management"
+];
 
 export function ProfileManager() {
   const { user } = useAuth();
@@ -46,7 +72,14 @@ export function ProfileManager() {
         last_name: user.user_metadata?.last_name || '',
         company_name: user.user_metadata?.company_name || '',
         role: null,
-        phone: null
+        phone: null,
+        company_website: null,
+        industry: null,
+        company_size: null,
+        marketing_goals: null,
+        target_audience: null,
+        brand_voice: null,
+        profile_completion_score: 0
       });
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -60,11 +93,25 @@ export function ProfileManager() {
     }
   };
 
+  const calculateCompletionScore = (profile: Profile): number => {
+    const fields = [
+      profile.first_name, profile.last_name, profile.company_name, 
+      profile.role, profile.phone, profile.company_website, 
+      profile.industry, profile.company_size, profile.target_audience, 
+      profile.brand_voice
+    ];
+    const marketingGoalsScore = profile.marketing_goals && profile.marketing_goals.length > 0 ? 1 : 0;
+    const filledFields = fields.filter(field => field && field.trim() !== '').length + marketingGoalsScore;
+    return Math.round((filledFields / (fields.length + 1)) * 100);
+  };
+
   const saveProfile = async () => {
     if (!user || !profile) return;
 
     setSaving(true);
     try {
+      const completionScore = calculateCompletionScore(profile);
+      
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -73,11 +120,20 @@ export function ProfileManager() {
           last_name: profile.last_name,
           company_name: profile.company_name,
           role: profile.role,
-          phone: profile.phone
+          phone: profile.phone,
+          company_website: profile.company_website,
+          industry: profile.industry,
+          company_size: profile.company_size,
+          marketing_goals: profile.marketing_goals,
+          target_audience: profile.target_audience,
+          brand_voice: profile.brand_voice,
+          profile_completion_score: completionScore
         });
 
       if (error) throw error;
 
+      setProfile({ ...profile, profile_completion_score: completionScore });
+      
       toast({
         title: "Success",
         description: "Profile updated successfully."
@@ -94,9 +150,18 @@ export function ProfileManager() {
     }
   };
 
-  const updateProfile = (field: keyof Profile, value: string) => {
+  const updateProfile = (field: keyof Profile, value: string | string[] | null) => {
     if (!profile) return;
-    setProfile({ ...profile, [field]: value || null });
+    setProfile({ ...profile, [field]: value });
+  };
+
+  const toggleMarketingGoal = (goal: string) => {
+    if (!profile) return;
+    const currentGoals = profile.marketing_goals || [];
+    const newGoals = currentGoals.includes(goal)
+      ? currentGoals.filter(g => g !== goal)
+      : [...currentGoals, goal];
+    updateProfile('marketing_goals', newGoals);
   };
 
   if (loading) {
@@ -107,14 +172,24 @@ export function ProfileManager() {
     );
   }
 
+  const completionScore = profile ? calculateCompletionScore(profile) : 0;
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="section-title mb-2">Profile Management</h2>
-        <p className="body-large">Update your personal and company information.</p>
+        <h2 className="section-title mb-2">Brand Profile Management</h2>
+        <p className="body-large">Complete your brand profile to help our AI create better campaigns for you.</p>
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Profile Completion</span>
+            <span className="text-sm text-muted-foreground">{completionScore}%</span>
+          </div>
+          <Progress value={completionScore} className="h-2" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Personal Information */}
         <Card className="outlet-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -167,6 +242,7 @@ export function ProfileManager() {
           </CardContent>
         </Card>
 
+        {/* Company Information */}
         <Card className="outlet-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -195,17 +271,130 @@ export function ProfileManager() {
               />
             </div>
 
-            <div className="pt-4">
-              <Button 
-                onClick={saveProfile} 
-                disabled={saving}
-                className="w-full"
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
+            <div>
+              <Label htmlFor="companyWebsite">Company Website</Label>
+              <div className="relative">
+                <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="companyWebsite"
+                  value={profile?.company_website || ''}
+                  onChange={(e) => updateProfile('company_website', e.target.value)}
+                  placeholder="https://yourcompany.com"
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="industry">Industry</Label>
+                <Select 
+                  value={profile?.industry || ''} 
+                  onValueChange={(value) => updateProfile('industry', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select industry" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INDUSTRY_OPTIONS.map((industry) => (
+                      <SelectItem key={industry} value={industry}>{industry}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="companySize">Company Size</Label>
+                <Select 
+                  value={profile?.company_size || ''} 
+                  onValueChange={(value) => updateProfile('company_size', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMPANY_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={size}>{size}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Marketing Goals */}
+        <Card className="outlet-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Marketing Goals
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Primary Marketing Objectives</Label>
+              <p className="text-sm text-muted-foreground mb-3">Select all that apply</p>
+              <div className="grid grid-cols-2 gap-2">
+                {MARKETING_GOALS_OPTIONS.map((goal) => (
+                  <Button
+                    key={goal}
+                    variant={profile?.marketing_goals?.includes(goal) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleMarketingGoal(goal)}
+                    className="justify-start text-left h-auto p-3"
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="text-xs">{goal}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Brand Profile */}
+        <Card className="outlet-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5 text-accent" />
+              Brand Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="targetAudience">Target Audience</Label>
+              <Textarea
+                id="targetAudience"
+                value={profile?.target_audience || ''}
+                onChange={(e) => updateProfile('target_audience', e.target.value)}
+                placeholder="Describe your ideal customers, demographics, interests..."
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="brandVoice">Brand Voice & Personality</Label>
+              <Textarea
+                id="brandVoice"
+                value={profile?.brand_voice || ''}
+                onChange={(e) => updateProfile('brand_voice', e.target.value)}
+                placeholder="Describe your brand's tone, personality, values, and communication style..."
+                rows={3}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex justify-center pt-4">
+        <Button 
+          onClick={saveProfile} 
+          disabled={saving}
+          size="lg"
+          className="px-8"
+        >
+          {saving ? 'Saving Profile...' : 'Save Brand Profile'}
+        </Button>
       </div>
     </div>
   );
