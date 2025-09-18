@@ -44,37 +44,100 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      brand_documents: {
         Row: {
-          company_name: string | null
           created_at: string
-          first_name: string | null
+          description: string | null
+          document_name: string
+          document_type: string
+          external_url: string | null
+          file_size: number | null
+          file_url: string | null
           id: string
-          last_name: string | null
-          phone: string | null
-          role: string | null
+          mime_type: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          company_name?: string | null
           created_at?: string
-          first_name?: string | null
+          description?: string | null
+          document_name: string
+          document_type: string
+          external_url?: string | null
+          file_size?: number | null
+          file_url?: string | null
           id?: string
-          last_name?: string | null
-          phone?: string | null
-          role?: string | null
+          mime_type?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          created_at?: string
+          description?: string | null
+          document_name?: string
+          document_type?: string
+          external_url?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          mime_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          brand_voice: string | null
+          company_name: string | null
+          company_size: string | null
+          company_website: string | null
+          created_at: string
+          first_name: string | null
+          id: string
+          industry: string | null
+          last_name: string | null
+          marketing_goals: string[] | null
+          phone: string | null
+          profile_completion_score: number | null
+          role: string | null
+          target_audience: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_voice?: string | null
           company_name?: string | null
+          company_size?: string | null
+          company_website?: string | null
           created_at?: string
           first_name?: string | null
           id?: string
+          industry?: string | null
           last_name?: string | null
+          marketing_goals?: string[] | null
           phone?: string | null
+          profile_completion_score?: number | null
           role?: string | null
+          target_audience?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_voice?: string | null
+          company_name?: string | null
+          company_size?: string | null
+          company_website?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          industry?: string | null
+          last_name?: string | null
+          marketing_goals?: string[] | null
+          phone?: string | null
+          profile_completion_score?: number | null
+          role?: string | null
+          target_audience?: string | null
           updated_at?: string
           user_id?: string
         }
