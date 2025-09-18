@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Send, Heart, Trash2 } from "lucide-react";
@@ -387,8 +388,8 @@ export function AssistantModal({ isOpen, onClose, onViewPackage }: AssistantModa
               <p className="text-muted-foreground mb-2">
                 Please sign in to start chatting with Lassie and save your favorite outlets.
               </p>
-              <Button variant="outline" onClick={onClose}>
-                Sign In
+              <Button asChild variant="outline" onClick={onClose}>
+                <Link to="/auth">Sign In</Link>
               </Button>
             </div>
           </div>
