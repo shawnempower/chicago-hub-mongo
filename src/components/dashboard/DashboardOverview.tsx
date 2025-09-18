@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Package, Building2, MessageCircle, TrendingUp, Sparkles } from "lucide-react";
 import { WelcomeModal } from "@/components/WelcomeModal";
-import { QuickStartChecklist } from "@/components/QuickStartChecklist";
+
 import { EmptyStates } from "@/components/EmptyStates";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,11 +19,9 @@ export function DashboardOverview() {
   const { messages } = useAssistantConversation();
   const [showWelcome, setShowWelcome] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
-  const [profileCompletion, setProfileCompletion] = useState(0);
 
   useEffect(() => {
     checkIfNewUser();
-    loadProfileCompletion();
   }, [user]);
 
   const checkIfNewUser = async () => {
@@ -42,22 +40,6 @@ export function DashboardOverview() {
       }
     } catch (error) {
       console.error('Error checking user status:', error);
-    }
-  };
-
-  const loadProfileCompletion = async () => {
-    if (!user) return;
-    
-    try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('profile_completion_score')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      setProfileCompletion(data?.profile_completion_score || 0);
-    } catch (error) {
-      console.error('Error loading profile completion:', error);
     }
   };
 
@@ -93,7 +75,6 @@ export function DashboardOverview() {
   ];
 
   const firstName = user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'there';
-  const shouldShowQuickStart = profileCompletion < 60 || savedPackages.length === 0 || savedOutlets.size === 0;
 
   return (
     <>
@@ -118,9 +99,6 @@ export function DashboardOverview() {
           </p>
         </div>
 
-        {shouldShowQuickStart && (
-          <QuickStartChecklist profileCompletion={profileCompletion} />
-        )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
@@ -195,16 +173,6 @@ export function DashboardOverview() {
                 <p className="text-sm text-muted-foreground">
                   Keep exploring to build your perfect media strategy!
                 </p>
-                {profileCompletion < 60 && (
-                  <div className="mt-3 p-3 bg-muted/50 rounded-lg">
-                    <p className="text-sm font-medium text-foreground">
-                      💡 Complete your profile to get better recommendations
-                    </p>
-                    <Button size="sm" variant="link" className="p-0 h-auto" asChild>
-                      <Link to="/dashboard?tab=profile">Complete Profile ({profileCompletion}%)</Link>
-                    </Button>
-                  </div>
-                )}
               </div>
             )}
           </CardContent>
