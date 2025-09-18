@@ -8,6 +8,7 @@ import { useSavedOutlets } from "@/hooks/useSavedOutlets";
 import { useAssistantConversation } from "@/hooks/useAssistantConversation";
 import { useToast } from "@/hooks/use-toast";
 import { generateBrandContextSummary } from "@/utils/documentUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -62,105 +63,45 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
     return trimmed.replace(/[<>'"]/g, '');
   };
 
-  const simulateAssistantResponse = (userMessage: string) => {
+  const getAssistantResponse = async (userMessage: string): Promise<Message> => {
     setIsTyping(true);
     
-    setTimeout(async () => {
-      let response = "";
-      let outletsToShow: typeof mediaOutlets | undefined;
-      const usingBrandContext = hasBrandContext;
+    try {
+      const response = await supabase.functions.invoke('ai-assistant', {
+        body: {
+          prompt: userMessage,
+          brandContext: brandContext || undefined,
+          userId: user?.id
+        }
+      });
 
-      // Enhanced responses with brand context
-      if (hasBrandContext && brandContext) {
-        // Parse user's brand info for personalized responses
-        const hasTargetAudience = brandContext.includes("Target Audience:");
-        const hasIndustry = brandContext.includes("Industry:");
-        const hasBrandVoice = brandContext.includes("Brand Voice:");
-        
-        if (userMessage.toLowerCase().includes("hispanic") || userMessage.toLowerCase().includes("latino")) {
-          response = hasTargetAudience 
-            ? "Perfect! Based on your target audience and brand profile, here are Hispanic community outlets that align with your brand voice:"
-            : "Excellent! For reaching Hispanic families in Chicago, I recommend these trusted community voices:";
-          outletsToShow = mediaOutlets.filter(outlet => 
-            outlet.id === "la-raza" || outlet.id === "univision-chicago" || outlet.id === "wbez"
-          );
-        } else if (userMessage.toLowerCase().includes("business") || userMessage.toLowerCase().includes("professional")) {
-          response = hasIndustry
-            ? "Great! Considering your industry background, these business-focused outlets will resonate with your brand:"
-            : "Great choice! For connecting with Chicago's business community, these outlets are essential:";
-          outletsToShow = mediaOutlets.filter(outlet => 
-            outlet.id === "crains" || outlet.id === "chicago-business" || outlet.id === "wbez"
-          );
-        } else if (userMessage.toLowerCase().includes("families") || userMessage.toLowerCase().includes("parents")) {
-          response = hasTargetAudience
-            ? "Wonderful! These family-focused outlets align perfectly with your target audience and marketing goals:"
-            : "Wonderful! For reaching Chicago families, these media partners understand what matters to parents:";
-          outletsToShow = mediaOutlets.filter(outlet => 
-            outlet.id === "chicago-parent" || outlet.id === "red-eye" || outlet.id === "wbez"
-          );
-        } else {
-          response = "Based on your brand profile and marketing goals, here are Chicago media partners that align with your specific needs:";
-          outletsToShow = mediaOutlets.slice(0, 3);
-        }
-      } else {
-        // Generic responses without brand context
-        if (userMessage.toLowerCase().includes("hispanic") || userMessage.toLowerCase().includes("latino")) {
-          response = "Perfect! For reaching Hispanic families in Chicago, I recommend these trusted community voices:";
-          outletsToShow = mediaOutlets.filter(outlet => 
-            outlet.id === "la-raza" || outlet.id === "univision-chicago" || outlet.id === "wbez"
-          );
-        } else if (userMessage.toLowerCase().includes("business") || userMessage.toLowerCase().includes("professional")) {
-          response = "Great choice! For connecting with Chicago's business community, these outlets are essential:";
-          outletsToShow = mediaOutlets.filter(outlet => 
-            outlet.id === "crains" || outlet.id === "chicago-business" || outlet.id === "wbez"
-          );
-        } else if (userMessage.toLowerCase().includes("families") || userMessage.toLowerCase().includes("parents")) {
-          response = "Wonderful! For reaching Chicago families, these media partners understand what matters to parents:";
-          outletsToShow = mediaOutlets.filter(outlet => 
-            outlet.id === "chicago-parent" || outlet.id === "red-eye" || outlet.id === "wbez"
-          );
-        } else {
-          response = "Based on what you've shared, here are some excellent Chicago media partners that might be perfect for your goals:";
-          outletsToShow = mediaOutlets.slice(0, 3);
-        }
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to get AI response');
       }
 
-      const assistantMessage: Message = {
+      const { response: aiResponse, outlets } = response.data;
+
+      return {
+        id: Date.now().toString(),
+        type: outlets && outlets.length > 0 ? 'outlets' : 'assistant',
+        content: aiResponse,
+        outlets: outlets && outlets.length > 0 ? outlets : undefined,
+        timestamp: new Date(),
+        hasBrandContext: !!brandContext
+      };
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      // Fallback to a generic error message
+      return {
         id: Date.now().toString(),
         type: 'assistant',
-        content: response,
+        content: "I'm having trouble connecting right now. Please try again in a moment, or feel free to browse our curated packages in the meantime.",
         timestamp: new Date(),
-        hasBrandContext: usingBrandContext
+        hasBrandContext: !!brandContext
       };
-
-      const outletsMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'outlets',
-        content: "",
-        outlets: outletsToShow,
-        timestamp: new Date()
-      };
-
-      await addMessage(assistantMessage);
-      await addMessage(outletsMessage);
+    } finally {
       setIsTyping(false);
-
-      // Enhanced follow-up based on brand context
-      setTimeout(async () => {
-        const followUpContent = hasBrandContext
-          ? "Would you like me to explain how these outlets align with your brand voice and marketing goals, or shall we explore other options? I can also suggest specific campaign strategies based on your brand assets."
-          : "Would you like to explore any of these in detail, or shall we look at other options? I can also help you understand which communities each outlet serves best. For more personalized recommendations, consider completing your brand profile in the dashboard.";
-
-        const followUp: Message = {
-          id: (Date.now() + 2).toString(),
-          type: 'assistant',
-          content: followUpContent,
-          timestamp: new Date(),
-          hasBrandContext: usingBrandContext
-        };
-        await addMessage(followUp);
-      }, 1500);
-    }, 2000);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -184,7 +125,11 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
     };
 
     await addMessage(userMessage);
-    simulateAssistantResponse(validatedInput);
+    
+    // Get assistant response
+    const assistantResponse = await getAssistantResponse(validatedInput);
+    await addMessage(assistantResponse);
+    
     setInputValue("");
   };
 
@@ -206,7 +151,10 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
     };
 
     await addMessage(userMessage);
-    simulateAssistantResponse(option);
+    
+    // Get assistant response
+    const assistantResponse = await getAssistantResponse(option);
+    await addMessage(assistantResponse);
   };
 
   if (!isOpen) return null;
