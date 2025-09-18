@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AssistantModal } from "@/components/AssistantModal";
-import { AssistantBubble } from "@/components/AssistantBubble";
+
 import { CTASection } from "@/components/CTASection";
 import { PartnerModal } from "@/components/PartnerModal";
 import { Button } from "@/components/ui/button";
@@ -130,7 +130,7 @@ export default function Partners() {
       </main>
 
       <Footer />
-      <AssistantBubble onAssistantClick={() => setIsAssistantOpen(true)} isModalOpen={isAssistantOpen} />
+      
       <AssistantModal isOpen={isAssistantOpen} onClose={() => setIsAssistantOpen(false)} />
       <PartnerModal 
         partner={selectedPartner} 

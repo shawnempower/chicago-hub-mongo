@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AssistantModal } from "@/components/AssistantModal";
-import { AssistantBubble } from "@/components/AssistantBubble";
+
 import { CTASection } from "@/components/CTASection";
 import { PackageCard } from "@/components/PackageCard";
 import { FilterButton } from "@/components/FilterButton";
@@ -248,10 +248,6 @@ const Packages = () => {
 
       <Footer />
 
-      <AssistantBubble 
-        onAssistantClick={handleAssistantClick}
-        isModalOpen={isAssistantOpen}
-      />
 
       <AssistantModal 
         isOpen={isAssistantOpen}
