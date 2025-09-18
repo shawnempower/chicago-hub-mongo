@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { MarketingLayout } from "@/components/layout/MarketingLayout";
 import { CTASection } from "@/components/CTASection";
 import { PackageCard } from "@/components/PackageCard";
 import { FilterButton } from "@/components/FilterButton";
@@ -117,7 +117,7 @@ const Packages = () => {
 
 
   return (
-    <DashboardLayout onViewPackage={handleViewPackage}>
+    <MarketingLayout onViewPackage={handleViewPackage}>
       <main>
         {/* Hero Section */}
         <section className="py-16 lg:py-20 bg-gradient-to-br from-background via-brand-cream to-brand-light-gray">
@@ -238,7 +238,7 @@ const Packages = () => {
         onSave={handleSavePackage}
         isSaved={selectedPackage ? isSaved(selectedPackage.id) : false}
       />
-    </DashboardLayout>
+    </MarketingLayout>
   );
 };
 

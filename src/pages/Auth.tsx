@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { MarketingLayout } from '@/components/layout/MarketingLayout';
+import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -76,9 +76,8 @@ export default function Auth() {
   };
 
   return (
-    <MarketingLayout showHeaderFooter={false}>
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center px-4">
-        <div className="w-full max-w-md">
+    <AuthLayout>
+      <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <Link to="/" className="inline-block hover:opacity-80 transition-opacity">
               <h1 className="text-2xl font-bold text-primary font-serif mb-2">
@@ -220,7 +219,6 @@ export default function Auth() {
             </Link>
           </div>
         </div>
-      </div>
-    </MarketingLayout>
+    </AuthLayout>
   );
 }
