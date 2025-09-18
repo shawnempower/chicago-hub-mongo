@@ -52,11 +52,6 @@ export default function Dashboard() {
       <Header onAssistantClick={handleAssistantClick} />
       
       <main className="container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="hero-title mb-4">Dashboard</h1>
-          <p className="body-large">Welcome back! Here's your personalized overview.</p>
-        </div>
-
         <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
