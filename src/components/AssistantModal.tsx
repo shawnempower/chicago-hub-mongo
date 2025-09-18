@@ -9,19 +9,25 @@ import { useAssistantConversation } from "@/hooks/useAssistantConversation";
 import { useToast } from "@/hooks/use-toast";
 import { generateBrandContextSummary } from "@/utils/documentUtils";
 import { supabase } from "@/integrations/supabase/client";
+import { PackageRecommendationCard } from "@/components/PackageRecommendationCard";
+import { AdminHandoffButton } from "@/components/AdminHandoffButton";
 
 interface Message {
   id: string;
-  type: 'user' | 'assistant' | 'outlets';
+  type: 'user' | 'assistant' | 'outlets' | 'packages';
   content: string;
   outlets?: typeof mediaOutlets;
+  packages?: any[];
   timestamp: Date;
   hasBrandContext?: boolean;
+  conversationScore?: number;
+  triggerKeywords?: string[];
 }
 
 interface AssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onViewPackage?: (packageId: number) => void;
 }
 
 const responseOptions = [
@@ -31,11 +37,11 @@ const responseOptions = [
   "Want to explore my options"
 ];
 
-export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
+export function AssistantModal({ isOpen, onClose, onViewPackage }: AssistantModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { savedOutlets, toggleSaveOutlet, isSaved } = useSavedOutlets();
-  const { messages, addMessage, clearConversation, loading, brandContext, hasBrandContext } = useAssistantConversation();
+  const { messages, addMessage, clearConversation, loading, brandContext, hasBrandContext, getConversationHistory } = useAssistantConversation();
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -63,15 +69,48 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
     return trimmed.replace(/[<>'"]/g, '');
   };
 
+  const detectTriggerKeywords = (text: string): string[] => {
+    const keywords = [
+      'enterprise', 'large budget', 'custom', 'complex', 'consultation',
+      'expert', 'specialist', 'meeting', 'call', 'discuss', 'budget over',
+      'multi-market', 'campaign manager', 'dedicated', 'strategy'
+    ];
+    
+    return keywords.filter(keyword => 
+      text.toLowerCase().includes(keyword.toLowerCase())
+    );
+  };
+
+  const calculateConversationScore = (userMessage: string, history: any[]): number => {
+    let score = 0;
+    
+    // Budget mentions increase score
+    if (/(\$\d+k|\$\d+,\d+|\d+k budget|large budget)/i.test(userMessage)) score += 3;
+    
+    // Enterprise keywords
+    if (/enterprise|corporation|organization|company size/i.test(userMessage)) score += 2;
+    
+    // Urgency indicators
+    if (/urgent|asap|quickly|soon|deadline/i.test(userMessage)) score += 2;
+    
+    // Multiple message exchanges
+    score += Math.min(history.length * 0.5, 3);
+    
+    return score;
+  };
+
   const getAssistantResponse = async (userMessage: string): Promise<Message> => {
     setIsTyping(true);
     
     try {
+      const conversationHistory = getConversationHistory();
+      
       const response = await supabase.functions.invoke('ai-assistant', {
         body: {
           prompt: userMessage,
           brandContext: brandContext || undefined,
-          userId: user?.id
+          userId: user?.id,
+          conversationHistory
         }
       });
 
@@ -79,15 +118,27 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
         throw new Error(response.error.message || 'Failed to get AI response');
       }
 
-      const { response: aiResponse, outlets } = response.data;
+      const { response: aiResponse, packages, outlets } = response.data;
+      const triggerKeywords = detectTriggerKeywords(userMessage);
+      const conversationScore = calculateConversationScore(userMessage, conversationHistory);
+
+      let messageType: 'assistant' | 'packages' | 'outlets' = 'assistant';
+      if (packages && packages.length > 0) {
+        messageType = 'packages';
+      } else if (outlets && outlets.length > 0) {
+        messageType = 'outlets';
+      }
 
       return {
         id: Date.now().toString(),
-        type: outlets && outlets.length > 0 ? 'outlets' : 'assistant',
+        type: messageType,
         content: aiResponse,
+        packages: packages && packages.length > 0 ? packages : undefined,
         outlets: outlets && outlets.length > 0 ? outlets : undefined,
         timestamp: new Date(),
-        hasBrandContext: !!brandContext
+        hasBrandContext: !!brandContext,
+        conversationScore,
+        triggerKeywords
       };
     } catch (error) {
       console.error('Error getting AI response:', error);
@@ -181,9 +232,15 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
           </div>
           <div className="flex items-center space-x-2">
             {user && (
-              <Button variant="ghost" size="icon" onClick={clearConversation} title="Clear conversation">
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <>
+                <AdminHandoffButton 
+                  conversationContext={messages.map(m => `${m.type}: ${m.content}`).join('\n')}
+                  triggerKeywords={messages.flatMap(m => m.triggerKeywords || [])}
+                />
+                <Button variant="ghost" size="icon" onClick={clearConversation} title="Clear conversation">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
             )}
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-5 w-5" />
@@ -225,6 +282,18 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
                   <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
                     You
                   </div>
+                </div>
+              )}
+
+              {message.type === 'packages' && message.packages && (
+                <div className="ml-11 space-y-4">
+                  {message.packages.map((packageRec, index) => (
+                    <PackageRecommendationCard
+                      key={`${packageRec.id}-${index}`}
+                      recommendation={packageRec}
+                      onViewPackage={onViewPackage}
+                    />
+                  ))}
                 </div>
               )}
 

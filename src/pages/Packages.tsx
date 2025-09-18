@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AssistantModal } from "@/components/AssistantModal";
@@ -16,11 +17,35 @@ import { cn } from "@/lib/utils";
 import { useSavedPackages } from "@/hooks/useSavedPackages";
 
 const Packages = () => {
+  const [searchParams] = useSearchParams();
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [highlightedPackageId, setHighlightedPackageId] = useState<number | null>(null);
   
   const { savedPackages, toggleSavePackage, isSaved } = useSavedPackages();
+
+  // Handle highlighting from AI recommendations
+  useEffect(() => {
+    const highlightParam = searchParams.get('highlight');
+    if (highlightParam) {
+      const packageId = parseInt(highlightParam);
+      setHighlightedPackageId(packageId);
+      
+      // Scroll to the highlighted package after a brief delay
+      setTimeout(() => {
+        const element = document.getElementById(`package-${packageId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+
+      // Clear highlight after 5 seconds
+      setTimeout(() => {
+        setHighlightedPackageId(null);
+      }, 5000);
+    }
+  }, [searchParams]);
   
   // Filter states
   const [selectedBudget, setSelectedBudget] = useState<string[]>([]);
@@ -34,6 +59,24 @@ const Packages = () => {
 
   const handleAssistantClose = () => {
     setIsAssistantOpen(false);
+  };
+
+  const handleViewPackage = (packageId: number) => {
+    setIsAssistantOpen(false);
+    setHighlightedPackageId(packageId);
+    
+    // Scroll to the package
+    setTimeout(() => {
+      const element = document.getElementById(`package-${packageId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+
+    // Clear highlight after 5 seconds
+    setTimeout(() => {
+      setHighlightedPackageId(null);
+    }, 5000);
   };
 
   const handleSavePackage = (id: number) => {
@@ -171,13 +214,21 @@ const Packages = () => {
                 : "grid-cols-1 max-w-4xl mx-auto"
             )}>
               {filteredPackages.map(pkg => (
-                <PackageCard
+                <div
                   key={pkg.id}
-                  packageData={pkg}
-                  onSave={handleSavePackage}
-                  isSaved={isSaved(pkg.id)}
-                  onDetails={setSelectedPackage}
-                />
+                  id={`package-${pkg.id}`}
+                  className={cn(
+                    "transition-all duration-300",
+                    highlightedPackageId === pkg.id && "ring-2 ring-accent shadow-lg"
+                  )}
+                >
+                  <PackageCard
+                    packageData={pkg}
+                    onSave={handleSavePackage}
+                    isSaved={isSaved(pkg.id)}
+                    onDetails={setSelectedPackage}
+                  />
+                </div>
               ))}
             </div>
 
@@ -205,6 +256,7 @@ const Packages = () => {
       <AssistantModal 
         isOpen={isAssistantOpen}
         onClose={handleAssistantClose}
+        onViewPackage={handleViewPackage}
       />
 
       <PackageModal

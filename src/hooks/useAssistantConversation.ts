@@ -6,11 +6,14 @@ import { generateBrandContextSummary, hasBrandContext } from '@/utils/documentUt
 
 interface Message {
   id: string;
-  type: 'user' | 'assistant' | 'outlets';
+  type: 'user' | 'assistant' | 'outlets' | 'packages';
   content: string;
   outlets?: any[];
+  packages?: any[];
   timestamp: Date;
   hasBrandContext?: boolean;
+  conversationScore?: number;
+  triggerKeywords?: string[];
 }
 
 export function useAssistantConversation() {
@@ -61,11 +64,14 @@ export function useAssistantConversation() {
       if (conversationResult.data && conversationResult.data.length > 0) {
         const loadedMessages: Message[] = conversationResult.data.map(conv => ({
           id: conv.id,
-          type: conv.message_type as 'user' | 'assistant' | 'outlets',
+          type: conv.message_type as 'user' | 'assistant' | 'outlets' | 'packages',
           content: conv.message_content,
           outlets: (conv.metadata as any)?.outlets,
+          packages: (conv.metadata as any)?.packages,
           timestamp: new Date(conv.created_at),
-          hasBrandContext: (conv.metadata as any)?.hasBrandContext
+          hasBrandContext: (conv.metadata as any)?.hasBrandContext,
+          conversationScore: (conv.metadata as any)?.conversationScore,
+          triggerKeywords: (conv.metadata as any)?.triggerKeywords
         }));
         setMessages([initialMessage, ...loadedMessages]);
       } else {
@@ -90,7 +96,10 @@ export function useAssistantConversation() {
     try {
       const metadata: any = {};
       if (message.outlets) metadata.outlets = message.outlets;
+      if (message.packages) metadata.packages = message.packages;
       if (message.hasBrandContext) metadata.hasBrandContext = message.hasBrandContext;
+      if (message.conversationScore) metadata.conversationScore = message.conversationScore;
+      if (message.triggerKeywords) metadata.triggerKeywords = message.triggerKeywords;
 
       const { error } = await supabase
         .from('assistant_conversations')
@@ -149,12 +158,23 @@ export function useAssistantConversation() {
     }
   };
 
+  const getConversationHistory = () => {
+    return messages
+      .filter(m => m.id !== '1' && (m.type === 'user' || m.type === 'assistant'))
+      .slice(-10) // Last 10 messages for context
+      .map(m => ({
+        role: m.type === 'user' ? 'user' : 'assistant',
+        content: m.content
+      }));
+  };
+
   return {
     messages,
     addMessage,
     clearConversation,
     loading,
     brandContext,
-    hasBrandContext: hasBrand
+    hasBrandContext: hasBrand,
+    getConversationHistory
   };
 }

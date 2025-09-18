@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { HowItWorksSection } from "@/components/HowItWorksSection";
@@ -9,6 +10,7 @@ import { CTASection } from "@/components/CTASection";
 import { Footer } from "@/components/Footer";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
 
   const handleAssistantClick = () => {
@@ -17,6 +19,11 @@ const Index = () => {
 
   const handleAssistantClose = () => {
     setIsAssistantOpen(false);
+  };
+
+  const handleViewPackage = (packageId: number) => {
+    setIsAssistantOpen(false);
+    navigate(`/packages?highlight=${packageId}`);
   };
 
   return (
@@ -41,6 +48,7 @@ const Index = () => {
       <AssistantModal 
         isOpen={isAssistantOpen}
         onClose={handleAssistantClose}
+        onViewPackage={handleViewPackage}
       />
     </div>
   );
