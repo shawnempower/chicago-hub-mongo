@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { AssistantModal } from "@/components/AssistantModal";
+import { ChatContainer } from "@/components/chat/ChatContainer";
 import { AssistantBubble } from "@/components/AssistantBubble";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { ProfileManager } from "@/components/dashboard/ProfileManager";
@@ -87,10 +87,10 @@ export default function Dashboard() {
 
       <AssistantBubble 
         onAssistantClick={handleAssistantClick}
-        isModalOpen={isAssistantOpen}
+        isChatOpen={isAssistantOpen}
       />
 
-      <AssistantModal 
+      <ChatContainer 
         isOpen={isAssistantOpen}
         onClose={handleAssistantClose}
       />

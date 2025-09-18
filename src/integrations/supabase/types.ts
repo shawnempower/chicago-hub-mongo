@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       assistant_conversations: {
         Row: {
+          conversation_thread_id: string | null
           created_at: string
           id: string
           message_content: string
@@ -25,6 +26,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          conversation_thread_id?: string | null
           created_at?: string
           id?: string
           message_content: string
@@ -34,6 +36,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          conversation_thread_id?: string | null
           created_at?: string
           id?: string
           message_content?: string
@@ -42,7 +45,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "assistant_conversations_conversation_thread_id_fkey"
+            columns: ["conversation_thread_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_threads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       brand_documents: {
         Row: {
@@ -81,6 +92,42 @@ export type Database = {
           file_url?: string | null
           id?: string
           mime_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      conversation_threads: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_archived: boolean | null
+          message_count: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_archived?: boolean | null
+          message_count?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_archived?: boolean | null
+          message_count?: number | null
+          title?: string
           updated_at?: string
           user_id?: string
         }

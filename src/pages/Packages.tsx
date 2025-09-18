@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { AssistantModal } from "@/components/AssistantModal";
+import { ChatContainer } from "@/components/chat/ChatContainer";
 import { AssistantBubble } from "@/components/AssistantBubble";
 import { CTASection } from "@/components/CTASection";
 import { PackageCard } from "@/components/PackageCard";
@@ -250,10 +250,10 @@ const Packages = () => {
 
       <AssistantBubble 
         onAssistantClick={handleAssistantClick}
-        isModalOpen={isAssistantOpen}
+        isChatOpen={isAssistantOpen}
       />
 
-      <AssistantModal 
+      <ChatContainer 
         isOpen={isAssistantOpen}
         onClose={handleAssistantClose}
         onViewPackage={handleViewPackage}

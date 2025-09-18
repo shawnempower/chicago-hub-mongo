@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { HowItWorksSection } from "@/components/HowItWorksSection";
 import { MediaPartnersSection } from "@/components/MediaPartnersSection";
-import { AssistantModal } from "@/components/AssistantModal";
+import { ChatContainer } from "@/components/chat/ChatContainer";
 import { AssistantBubble } from "@/components/AssistantBubble";
 import { CTASection } from "@/components/CTASection";
 import { Footer } from "@/components/Footer";
@@ -42,10 +42,10 @@ const Index = () => {
 
       <AssistantBubble 
         onAssistantClick={handleAssistantClick}
-        isModalOpen={isAssistantOpen}
+        isChatOpen={isAssistantOpen}
       />
 
-      <AssistantModal 
+      <ChatContainer 
         isOpen={isAssistantOpen}
         onClose={handleAssistantClose}
         onViewPackage={handleViewPackage}

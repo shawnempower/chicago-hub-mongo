@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { generateBrandContextSummary, hasBrandContext } from '@/utils/documentUtils';
 
-interface Message {
+export interface ThreadMessage {
   id: string;
   type: 'user' | 'assistant' | 'outlets' | 'packages';
   content: string;
@@ -16,16 +16,16 @@ interface Message {
   triggerKeywords?: string[];
 }
 
-export function useAssistantConversation() {
+export function useThreadMessages(threadId: string | null) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [brandContext, setBrandContext] = useState<string>('');
   const [hasBrand, setHasBrand] = useState(false);
 
-  const getInitialMessage = (hasBrandContext: boolean): Message => ({
-    id: '1',
+  const getInitialMessage = (hasBrandContext: boolean): ThreadMessage => ({
+    id: 'initial',
     type: 'assistant',
     content: hasBrandContext 
       ? "Hi! I'm Lassie, your brand-aware Chicago media assistant. I can see you've set up your brand profile, so I'm ready to provide personalized recommendations that align with your specific goals and brand voice. What would you like to explore today?"
@@ -34,8 +34,8 @@ export function useAssistantConversation() {
     hasBrandContext: hasBrandContext
   });
 
-  const loadConversation = async () => {
-    if (!user) {
+  const loadMessages = async () => {
+    if (!user || !threadId) {
       const initialMessage = getInitialMessage(false);
       setMessages([initialMessage]);
       setLoading(false);
@@ -43,13 +43,14 @@ export function useAssistantConversation() {
     }
 
     try {
-      // Load brand context and conversation in parallel
-      const [contextResult, conversationResult, hasBrandResult] = await Promise.all([
+      // Load brand context and messages in parallel
+      const [contextResult, messagesResult, hasBrandResult] = await Promise.all([
         generateBrandContextSummary(user.id),
         supabase
           .from('assistant_conversations')
           .select('*')
           .eq('user_id', user.id)
+          .eq('conversation_thread_id', threadId)
           .order('created_at', { ascending: true }),
         hasBrandContext(user.id)
       ]);
@@ -59,10 +60,10 @@ export function useAssistantConversation() {
       
       const initialMessage = getInitialMessage(hasBrandResult);
 
-      if (conversationResult.error) throw conversationResult.error;
+      if (messagesResult.error) throw messagesResult.error;
 
-      if (conversationResult.data && conversationResult.data.length > 0) {
-        const loadedMessages: Message[] = conversationResult.data.map(conv => ({
+      if (messagesResult.data && messagesResult.data.length > 0) {
+        const loadedMessages: ThreadMessage[] = messagesResult.data.map(conv => ({
           id: conv.id,
           type: conv.message_type as 'user' | 'assistant' | 'outlets' | 'packages',
           content: conv.message_content,
@@ -78,7 +79,7 @@ export function useAssistantConversation() {
         setMessages([initialMessage]);
       }
     } catch (error) {
-      console.error('Error loading conversation:', error);
+      console.error('Error loading messages:', error);
       const initialMessage = getInitialMessage(false);
       setMessages([initialMessage]);
     } finally {
@@ -87,11 +88,11 @@ export function useAssistantConversation() {
   };
 
   useEffect(() => {
-    loadConversation();
-  }, [user]);
+    loadMessages();
+  }, [user, threadId]);
 
-  const saveMessage = async (message: Message) => {
-    if (!user || message.id === '1') return; // Don't save the initial message
+  const saveMessage = async (message: ThreadMessage) => {
+    if (!user || !threadId || message.id === 'initial') return;
 
     try {
       const metadata: any = {};
@@ -105,7 +106,7 @@ export function useAssistantConversation() {
         .from('assistant_conversations')
         .insert({
           user_id: user.id,
-          conversation_thread_id: null, // Legacy conversations don't have thread IDs
+          conversation_thread_id: threadId,
           message_content: message.content,
           message_type: message.type,
           metadata
@@ -114,16 +115,14 @@ export function useAssistantConversation() {
       if (error) throw error;
     } catch (error) {
       console.error('Error saving message:', error);
-      // Don't show error to user as it's not critical for chat functionality
     }
   };
 
-  const addMessage = async (message: Message) => {
+  const addMessage = async (message: ThreadMessage) => {
     // Validate and sanitize input
     if (message.type === 'user') {
       const sanitizedContent = message.content.trim().slice(0, 500);
       if (!sanitizedContent) return;
-      
       message.content = sanitizedContent;
     }
 
@@ -131,14 +130,15 @@ export function useAssistantConversation() {
     await saveMessage(message);
   };
 
-  const clearConversation = async () => {
-    if (!user) return;
+  const clearMessages = async () => {
+    if (!user || !threadId) return;
 
     try {
       const { error } = await supabase
         .from('assistant_conversations')
         .delete()
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('conversation_thread_id', threadId);
 
       if (error) throw error;
 
@@ -146,14 +146,14 @@ export function useAssistantConversation() {
       setMessages([initialMessage]);
       
       toast({
-        title: "Conversation Cleared",
-        description: "Your conversation history has been cleared"
+        title: "Messages Cleared",
+        description: "Conversation messages have been cleared"
       });
     } catch (error) {
-      console.error('Error clearing conversation:', error);
+      console.error('Error clearing messages:', error);
       toast({
         title: "Error",
-        description: "Failed to clear conversation",
+        description: "Failed to clear messages",
         variant: "destructive"
       });
     }
@@ -161,7 +161,7 @@ export function useAssistantConversation() {
 
   const getConversationHistory = () => {
     return messages
-      .filter(m => m.id !== '1' && (m.type === 'user' || m.type === 'assistant'))
+      .filter(m => m.id !== 'initial' && (m.type === 'user' || m.type === 'assistant'))
       .slice(-10) // Last 10 messages for context
       .map(m => ({
         role: m.type === 'user' ? 'user' : 'assistant',
@@ -172,7 +172,7 @@ export function useAssistantConversation() {
   return {
     messages,
     addMessage,
-    clearConversation,
+    clearMessages,
     loading,
     brandContext,
     hasBrandContext: hasBrand,
