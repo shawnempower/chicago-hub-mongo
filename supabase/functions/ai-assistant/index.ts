@@ -90,11 +90,10 @@ Guidelines for recommendations:
 - Include package pricing when mentioning packages
 - Ask clarifying questions about budget, audience, and goals
 - Keep responses conversational and concise (2-3 paragraphs)
-- When recommending packages, provide reasoning for each suggestion
+- When recommending packages, provide reasoning for each suggestion`;
 
     if (brandContext) {
-      systemMessage += `\n\nBrand Context: ${brandContext}
-Use this context to provide personalized recommendations that align with their brand voice, target audience, and goals.`;
+      systemMessage += `\n\nBrand Context: ${brandContext}\nUse this context to provide personalized recommendations that align with their brand voice, target audience, and goals.`;
     } else {
       systemMessage += `\n\nNote: This user hasn't completed their brand profile yet, so provide general guidance and encourage them to complete their profile for more personalized recommendations.`;
     }
