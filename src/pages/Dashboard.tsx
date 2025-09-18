@@ -1,8 +1,4 @@
-import { useState, useEffect } from "react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { ChatContainer } from "@/components/chat/ChatContainer";
-import { AssistantBubble } from "@/components/AssistantBubble";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { ProfileManager } from "@/components/dashboard/ProfileManager";
 import { SavedItemsOverview } from "@/components/dashboard/SavedItemsOverview";
@@ -12,25 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, useSearchParams } from "react-router-dom";
 
 export default function Dashboard() {
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const { user, loading } = useAuth();
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'overview';
-
-  useEffect(() => {
-    // Listen for custom events to open assistant
-    const handleOpenAssistant = () => setIsAssistantOpen(true);
-    window.addEventListener('openAssistant', handleOpenAssistant);
-    return () => window.removeEventListener('openAssistant', handleOpenAssistant);
-  }, []);
-
-  const handleAssistantClick = () => {
-    setIsAssistantOpen(true);
-  };
-
-  const handleAssistantClose = () => {
-    setIsAssistantOpen(false);
-  };
 
   if (loading) {
     return (
@@ -48,10 +28,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header onAssistantClick={handleAssistantClick} />
-      
-      <main className="container mx-auto px-6 py-8">
+    <DashboardLayout>
+      <div className="container mx-auto px-6 py-8">
         <div className="mb-8">
           <h1 className="hero-title mb-4">Dashboard</h1>
           <p className="body-large">Welcome back! Here's your personalized overview.</p>
@@ -81,19 +59,7 @@ export default function Dashboard() {
             <ProfileManager />
           </TabsContent>
         </Tabs>
-      </main>
-
-      <Footer />
-
-      <AssistantBubble 
-        onAssistantClick={handleAssistantClick}
-        isChatOpen={isAssistantOpen}
-      />
-
-      <ChatContainer 
-        isOpen={isAssistantOpen}
-        onClose={handleAssistantClose}
-      />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

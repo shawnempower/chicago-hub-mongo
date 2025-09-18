@@ -1,8 +1,5 @@
 import { useState } from "react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { ChatContainer } from "@/components/chat/ChatContainer";
-import { AssistantBubble } from "@/components/AssistantBubble";
+import { MarketingLayout } from "@/components/layout/MarketingLayout";
 import { CTASection } from "@/components/CTASection";
 import { PartnerModal } from "@/components/PartnerModal";
 import { Button } from "@/components/ui/button";
@@ -12,7 +9,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { mediaPartners, categories, MediaPartner } from "@/data/mediaPartners";
 
 export default function Partners() {
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<MediaPartner | null>(null);
   const [activeCategory, setActiveCategory] = useState("all");
 
@@ -21,9 +17,7 @@ export default function Partners() {
     : mediaPartners.filter(partner => partner.categoryTag === activeCategory);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header onAssistantClick={() => setIsAssistantOpen(true)} />
-      
+    <MarketingLayout>
       <main>
         {/* Hero Section */}
         <section className="bg-gradient-to-br from-background via-brand-cream to-brand-light-gray py-16 lg:py-24">
@@ -126,17 +120,14 @@ export default function Partners() {
           </div>
         </section>
 
-        <CTASection onAssistantClick={() => setIsAssistantOpen(true)} />
+        <CTASection />
       </main>
 
-      <Footer />
-      <AssistantBubble onAssistantClick={() => setIsAssistantOpen(true)} isChatOpen={isAssistantOpen} />
-      <ChatContainer isOpen={isAssistantOpen} onClose={() => setIsAssistantOpen(false)} />
       <PartnerModal 
         partner={selectedPartner} 
         isOpen={!!selectedPartner} 
         onClose={() => setSelectedPartner(null)} 
       />
-    </div>
+    </MarketingLayout>
   );
 }
