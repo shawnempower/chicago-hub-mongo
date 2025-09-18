@@ -22,6 +22,18 @@ export function Header({ onAssistantClick }: HeaderProps) {
             </h1>
           </Link>
           <nav className="hidden md:flex items-center space-x-6">
+            {user && (
+              <Link 
+                to="/dashboard" 
+                className={`transition-colors ${
+                  location.pathname === '/dashboard' 
+                    ? 'text-primary font-medium' 
+                    : 'text-muted-foreground hover:text-primary'
+                }`}
+              >
+                Dashboard
+              </Link>
+            )}
             <Link 
               to="/partners" 
               className={`transition-colors ${
@@ -65,6 +77,9 @@ export function Header({ onAssistantClick }: HeaderProps) {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem disabled className="font-medium">
                   {user.email}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={signOut}>
                   Sign Out
