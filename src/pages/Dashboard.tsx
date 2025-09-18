@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AssistantModal } from "@/components/AssistantModal";
@@ -9,11 +9,20 @@ import { SavedItemsOverview } from "@/components/dashboard/SavedItemsOverview";
 import { ConversationHistory } from "@/components/dashboard/ConversationHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 
 export default function Dashboard() {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const { user, loading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get('tab') || 'overview';
+
+  useEffect(() => {
+    // Listen for custom events to open assistant
+    const handleOpenAssistant = () => setIsAssistantOpen(true);
+    window.addEventListener('openAssistant', handleOpenAssistant);
+    return () => window.removeEventListener('openAssistant', handleOpenAssistant);
+  }, []);
 
   const handleAssistantClick = () => {
     setIsAssistantOpen(true);
@@ -48,7 +57,7 @@ export default function Dashboard() {
           <p className="body-large">Welcome back! Here's your personalized overview.</p>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="saved">Saved Items</TabsTrigger>

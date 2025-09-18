@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Bot, User, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { EmptyStates } from "@/components/EmptyStates";
 
 export function ConversationHistory() {
   const { messages, clearConversation, loading } = useAssistantConversation();
@@ -14,6 +15,18 @@ export function ConversationHistory() {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (userMessages.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="section-title mb-2">Conversation History</h2>
+          <p className="body-large">Review your interactions with the AI assistant.</p>
+        </div>
+        <EmptyStates.ConversationHistory />
       </div>
     );
   }
@@ -46,16 +59,7 @@ export function ConversationHistory() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {userMessages.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">No conversation history yet</p>
-              <p className="text-sm text-muted-foreground">
-                Start a conversation with the assistant to see your history here.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-96 overflow-y-auto">
+          <div className="space-y-4 max-h-96 overflow-y-auto">
               {userMessages.map((message) => (
                 <div
                   key={message.id}
@@ -105,7 +109,6 @@ export function ConversationHistory() {
                 </div>
               ))}
             </div>
-          )}
         </CardContent>
       </Card>
     </div>

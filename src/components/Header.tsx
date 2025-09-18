@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User } from "lucide-react";
+import { User, ChevronDown } from "lucide-react";
 
 interface HeaderProps {
   onAssistantClick: () => void;
@@ -11,6 +11,8 @@ interface HeaderProps {
 export function Header({ onAssistantClick }: HeaderProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
+  
+  const firstName = user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'User';
   
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-border">
@@ -70,18 +72,26 @@ export function Header({ onAssistantClick }: HeaderProps) {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" className="gap-2">
                   <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">{firstName}</span>
+                  <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem disabled className="font-medium">
                   {user.email}
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={signOut}>
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard?tab=profile">Profile Settings</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard?tab=saved">Saved Items</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={signOut} className="text-red-600">
                   Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
