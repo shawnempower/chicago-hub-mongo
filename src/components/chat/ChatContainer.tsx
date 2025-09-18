@@ -22,7 +22,7 @@ export function ChatContainer({ isOpen, onClose, onViewPackage }: ChatContainerP
   }, [threads, activeThreadId]);
 
   const handleNewThread = async () => {
-    const thread = await createThread("New Conversation", "A new conversation with Lassie");
+    const thread = await createThread();
     if (thread) {
       setActiveThreadId(thread.id);
     }
@@ -38,6 +38,7 @@ export function ChatContainer({ isOpen, onClose, onViewPackage }: ChatContainerP
         activeThreadId={activeThreadId}
         onThreadSelect={setActiveThreadId}
         onNewThread={handleNewThread}
+        onClose={onClose}
       />
       
       <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-80' : 'ml-16'}`}>
@@ -46,12 +47,6 @@ export function ChatContainer({ isOpen, onClose, onViewPackage }: ChatContainerP
           onViewPackage={onViewPackage}
         />
       </div>
-
-      {/* Overlay for mobile */}
-      <div 
-        className="fixed inset-0 bg-black/50 lg:hidden z-40"
-        onClick={onClose}
-      />
     </div>
   );
 }

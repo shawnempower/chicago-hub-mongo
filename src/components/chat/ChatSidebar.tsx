@@ -1,18 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { 
-  Plus, 
-  MessageCircle, 
-  ChevronRight, 
-  MoreVertical, 
-  Archive, 
-  Trash2, 
-  Edit3,
-  X
-} from "lucide-react";
-import { useConversationThreads, ConversationThread } from "@/hooks/useConversationThreads";
-import { formatDistanceToNow } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,13 +10,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  MessageSquare,
+  MoreVertical,
+  Edit2,
+  Archive,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useConversationThreads, ConversationThread } from "@/hooks/useConversationThreads";
+import { formatDistanceToNow } from "date-fns";
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -34,216 +29,226 @@ interface ChatSidebarProps {
   activeThreadId: string | null;
   onThreadSelect: (threadId: string) => void;
   onNewThread: () => void;
+  onClose: () => void;
 }
 
-export function ChatSidebar({ 
-  isOpen, 
-  onToggle, 
-  activeThreadId, 
+export function ChatSidebar({
+  isOpen,
+  onToggle,
+  activeThreadId,
   onThreadSelect,
-  onNewThread 
+  onNewThread,
+  onClose,
 }: ChatSidebarProps) {
-  const { threads, loading, createThread, updateThread, deleteThread, archiveThread } = useConversationThreads();
-  const [showNewThreadDialog, setShowNewThreadDialog] = useState(false);
-  const [newThreadTitle, setNewThreadTitle] = useState("");
-  const [newThreadDescription, setNewThreadDescription] = useState("");
-  const [editingThread, setEditingThread] = useState<ConversationThread | null>(null);
+  const [editingThread, setEditingThread] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const { threads, loading, updateThread, deleteThread, archiveThread } = useConversationThreads();
 
-  const handleCreateThread = async () => {
-    if (!newThreadTitle.trim()) return;
-    
-    const thread = await createThread(newThreadTitle, newThreadDescription);
-    if (thread) {
-      onThreadSelect(thread.id);
-      setShowNewThreadDialog(false);
-      setNewThreadTitle("");
-      setNewThreadDescription("");
+  const handleUpdateThread = async () => {
+    if (editingThread && editTitle.trim()) {
+      await updateThread(editingThread, { title: editTitle.trim() });
+      setEditingThread(null);
+      setEditTitle("");
     }
   };
 
-  const handleUpdateThread = async () => {
-    if (!editingThread || !editTitle.trim()) return;
-    
-    await updateThread(editingThread.id, { title: editTitle });
-    setEditingThread(null);
-    setEditTitle("");
-  };
-
   const startEditing = (thread: ConversationThread) => {
-    setEditingThread(thread);
+    setEditingThread(thread.id);
     setEditTitle(thread.title);
   };
 
+  // Collapsed sidebar
   if (!isOpen) {
     return (
-      <div className="fixed left-0 top-0 h-full z-50 bg-background border-r border-border p-4 w-16">
+      <div className="w-16 bg-muted/30 border-r flex flex-col items-center py-4 space-y-4">
         <Button
           variant="ghost"
           size="icon"
           onClick={onToggle}
-          className="mb-4"
+          className="h-8 w-8"
         >
-          <ChevronRight className="h-4 w-4" />
+          <PanelLeftOpen className="h-4 w-4" />
         </Button>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={onNewThread}
-          className="mb-4"
+          className="h-8 w-8"
         >
           <Plus className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="h-8 w-8 lg:hidden"
+        >
+          <X className="h-4 w-4" />
         </Button>
       </div>
     );
   }
 
+  // Full sidebar
   return (
-    <div className="fixed left-0 top-0 h-full z-50 bg-background border-r border-border p-4 w-80 flex flex-col">
+    <div className="w-80 bg-muted/30 border-r flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-primary font-serif">Conversations</h2>
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Conversations</h2>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8 lg:hidden"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggle}
+              className="h-8 w-8"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        
         <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
+          onClick={onNewThread}
+          className="w-full"
+          size="sm"
         >
-          <X className="h-4 w-4" />
+          <Plus className="h-4 w-4 mr-2" />
+          New Chat
         </Button>
       </div>
 
-      {/* New Thread Button */}
-      <Dialog open={showNewThreadDialog} onOpenChange={setShowNewThreadDialog}>
-        <DialogTrigger asChild>
-          <Button className="mb-4 w-full justify-start" variant="outline">
-            <Plus className="h-4 w-4 mr-2" />
-            New Conversation
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Start New Conversation</DialogTitle>
-            <DialogDescription>
-              Create a new conversation thread to organize your discussions with Lassie.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Title</label>
-              <Input
-                value={newThreadTitle}
-                onChange={(e) => setNewThreadTitle(e.target.value)}
-                placeholder="e.g., Campaign Strategy, Q4 Media Plan"
-              />
+      {/* Conversations List */}
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {loading ? (
+            <div className="text-center text-muted-foreground py-8">
+              Loading conversations...
             </div>
-            <div>
-              <label className="text-sm font-medium">Description (optional)</label>
-              <Input
-                value={newThreadDescription}
-                onChange={(e) => setNewThreadDescription(e.target.value)}
-                placeholder="Brief description of this conversation"
-              />
+          ) : threads.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-sm">No conversations yet</p>
+              <p className="text-xs mt-1">Start a new chat to begin</p>
             </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowNewThreadDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateThread} disabled={!newThreadTitle.trim()}>
-                Create
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Thread List */}
-      <div className="flex-1 overflow-y-auto space-y-2">
-        {loading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
-            ))}
-          </div>
-        ) : threads.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No conversations yet</p>
-            <p className="text-xs">Start a new conversation with Lassie</p>
-          </div>
-        ) : (
-          threads.map((thread) => (
-            <div
-              key={thread.id}
-              className={`group p-3 rounded-lg cursor-pointer transition-colors ${
-                activeThreadId === thread.id
-                  ? 'bg-accent'
-                  : 'hover:bg-muted'
-              }`}
-              onClick={() => onThreadSelect(thread.id)}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  {editingThread?.id === thread.id ? (
-                    <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                      <Input
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleUpdateThread()}
-                        className="text-sm h-8"
-                        autoFocus
-                      />
-                      <Button size="icon" variant="ghost" onClick={handleUpdateThread} className="h-8 w-8">
-                        <Edit3 className="h-3 w-3" />
-                      </Button>
+          ) : (
+            <div className="space-y-1">
+              {threads.map((thread) => (
+                <div
+                  key={thread.id}
+                  className={`group relative rounded-lg p-3 cursor-pointer transition-colors ${
+                    activeThreadId === thread.id
+                      ? "bg-primary/10 border border-primary/20"
+                      : "hover:bg-muted/50"
+                  }`}
+                  onClick={() => onThreadSelect(thread.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      {editingThread === thread.id ? (
+                        <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                          <Input
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleUpdateThread();
+                              } else if (e.key === "Escape") {
+                                setEditingThread(null);
+                                setEditTitle("");
+                              }
+                            }}
+                            placeholder="Thread title"
+                            className="h-8 text-sm"
+                            autoFocus
+                          />
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              onClick={handleUpdateThread}
+                              className="h-6 px-2 text-xs"
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingThread(null);
+                                setEditTitle("");
+                              }}
+                              className="h-6 px-2 text-xs"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <h3 className="font-medium text-sm truncate mb-1">
+                            {thread.title}
+                          </h3>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{thread.message_count} messages</span>
+                            <span>
+                              {formatDistanceToNow(new Date(thread.updated_at), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <h3 className="font-medium text-sm truncate">{thread.title}</h3>
-                  )}
-                  {thread.description && (
-                    <p className="text-xs text-muted-foreground truncate mt-1">
-                      {thread.description}
-                    </p>
-                  )}
-                  <div className="flex items-center space-x-2 mt-2 text-xs text-muted-foreground">
-                    <span>{thread.message_count} messages</span>
-                    <span>•</span>
-                    <span>{formatDistanceToNow(new Date(thread.updated_at), { addSuffix: true })}</span>
+
+                    {editingThread !== thread.id && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => startEditing(thread)}>
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => archiveThread(thread.id)}
+                          >
+                            <Archive className="h-4 w-4 mr-2" />
+                            Archive
+                          </DropdownMenuItem>
+                          <Separator />
+                          <DropdownMenuItem
+                            onClick={() => deleteThread(thread.id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => startEditing(thread)}>
-                      <Edit3 className="h-4 w-4 mr-2" />
-                      Rename
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => archiveThread(thread.id)}>
-                      <Archive className="h-4 w-4 mr-2" />
-                      Archive
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => deleteThread(thread.id)}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              ))}
             </div>
-          ))
-        )}
-      </div>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

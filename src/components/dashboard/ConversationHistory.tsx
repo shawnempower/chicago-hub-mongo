@@ -34,9 +34,7 @@ export function ConversationHistory() {
   }
 
   const handleCreateThread = async () => {
-    if (!newThreadTitle.trim()) return;
-    
-    const thread = await createThread(newThreadTitle);
+    const thread = await createThread();
     if (thread) {
       setSelectedThreadId(thread.id);
       setShowCreateForm(false);
@@ -73,26 +71,12 @@ export function ConversationHistory() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {showCreateForm && (
-            <div className="p-4 border rounded-lg bg-muted/20">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Thread title..."
-                  value={newThreadTitle}
-                  onChange={(e) => setNewThreadTitle(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreateThread()}
-                  className="flex-1 px-3 py-2 border rounded-md text-sm"
-                />
-                <Button size="sm" onClick={handleCreateThread} disabled={!newThreadTitle.trim()}>
-                  Create
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowCreateForm(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleCreateThread}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create New Chat
+            </Button>
+          </div>
 
           {threads.map((thread) => (
             <div key={thread.id} className="border rounded-lg">

@@ -52,17 +52,17 @@ export function useConversationThreads() {
     loadThreads();
   }, [user]);
 
-  const createThread = async (title: string, description?: string, category: string = 'general'): Promise<ConversationThread | null> => {
+  const createThread = async (): Promise<ConversationThread | null> => {
     if (!user) return null;
 
     try {
+      const timestamp = new Date().toLocaleString();
       const { data, error } = await supabase
         .from('conversation_threads')
         .insert({
           user_id: user.id,
-          title: title.trim(),
-          description: description?.trim(),
-          category
+          title: `Chat ${timestamp}`,
+          category: 'general'
         })
         .select()
         .single();
@@ -71,11 +71,6 @@ export function useConversationThreads() {
 
       const newThread = data as ConversationThread;
       setThreads(prev => [newThread, ...prev]);
-      
-      toast({
-        title: "New Conversation",
-        description: `Created "${title}"`
-      });
 
       return newThread;
     } catch (error) {
