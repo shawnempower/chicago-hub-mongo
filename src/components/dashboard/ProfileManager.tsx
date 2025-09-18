@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { User, Building2, Mail, Phone, Globe, Target, Palette, TrendingUp } from "lucide-react";
+import { DocumentManager } from "./DocumentManager";
+import { calculateDocumentCompletionScore } from "@/utils/documentUtils";
 
 interface Profile {
   id: string;
@@ -93,7 +95,7 @@ export function ProfileManager() {
     }
   };
 
-  const calculateCompletionScore = (profile: Profile): number => {
+  const calculateCompletionScore = async (profile: Profile): Promise<number> => {
     const fields = [
       profile.first_name, profile.last_name, profile.company_name, 
       profile.role, profile.phone, profile.company_website, 
@@ -102,7 +104,18 @@ export function ProfileManager() {
     ];
     const marketingGoalsScore = profile.marketing_goals && profile.marketing_goals.length > 0 ? 1 : 0;
     const filledFields = fields.filter(field => field && field.trim() !== '').length + marketingGoalsScore;
-    return Math.round((filledFields / (fields.length + 1)) * 100);
+    const profileScore = Math.round((filledFields / (fields.length + 1)) * 80); // Profile contributes 80%
+    
+    const documentScore = await calculateDocumentCompletionScore(user?.id || ""); // Documents contribute 20%
+    
+    return Math.min(100, profileScore + documentScore);
+  };
+
+  const refreshCompletionScore = async () => {
+    if (!profile || !user?.id) return;
+    
+    const newScore = await calculateCompletionScore(profile);
+    setProfile(prev => prev ? { ...prev, profile_completion_score: newScore } : null);
   };
 
   const saveProfile = async () => {
@@ -110,7 +123,7 @@ export function ProfileManager() {
 
     setSaving(true);
     try {
-      const completionScore = calculateCompletionScore(profile);
+      const completionScore = await calculateCompletionScore(profile);
       
       const { error } = await supabase
         .from('profiles')
@@ -172,7 +185,7 @@ export function ProfileManager() {
     );
   }
 
-  const completionScore = profile ? calculateCompletionScore(profile) : 0;
+  const completionScore = profile?.profile_completion_score || 0;
 
   return (
     <div className="space-y-6">
@@ -384,6 +397,9 @@ export function ProfileManager() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Document Management */}
+        <DocumentManager onDocumentChange={refreshCompletionScore} />
       </div>
 
       <div className="flex justify-center pt-4">
