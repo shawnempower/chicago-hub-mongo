@@ -95,7 +95,7 @@ export function ConversationHistory() {
                                 <div key={index} className="text-xs bg-background p-2 rounded border">
                                   <strong>{outlet.name}</strong> - {outlet.type}
                                   <br />
-                                  Audience: {outlet.audienceSize.toLocaleString()}
+                                  Audience: {outlet.audienceSize?.toLocaleString() || 'N/A'}
                                 </div>
                               ))}
                             </div>
