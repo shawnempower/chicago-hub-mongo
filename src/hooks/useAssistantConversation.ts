@@ -105,7 +105,6 @@ export function useAssistantConversation() {
         .from('assistant_conversations')
         .insert({
           user_id: user.id,
-          conversation_thread_id: null, // Legacy conversations don't have thread IDs
           message_content: message.content,
           message_type: message.type,
           metadata

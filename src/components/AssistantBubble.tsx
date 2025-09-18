@@ -9,7 +9,7 @@ const SHOW_AUTO_TOOLTIPS = false;
 
 interface AssistantBubbleProps {
   onAssistantClick: () => void;
-  isChatOpen: boolean;
+  isModalOpen: boolean;
 }
 
 const helpMessages = [
@@ -26,7 +26,7 @@ const brandAwareMessages = [
   "Brand-aware assistant ready to help! ✨"
 ];
 
-export function AssistantBubble({ onAssistantClick, isChatOpen }: AssistantBubbleProps) {
+export function AssistantBubble({ onAssistantClick, isModalOpen }: AssistantBubbleProps) {
   const { user } = useAuth();
   const [currentMessage, setCurrentMessage] = useState(0);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -39,7 +39,7 @@ export function AssistantBubble({ onAssistantClick, isChatOpen }: AssistantBubbl
   }, [user]);
 
   useEffect(() => {
-    if (isChatOpen || !SHOW_AUTO_TOOLTIPS) return;
+    if (isModalOpen || !SHOW_AUTO_TOOLTIPS) return;
 
     const messages = hasBrand ? brandAwareMessages : helpMessages;
     const interval = setInterval(() => {
@@ -49,9 +49,9 @@ export function AssistantBubble({ onAssistantClick, isChatOpen }: AssistantBubbl
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [isChatOpen, hasBrand]);
+  }, [isModalOpen, hasBrand]);
 
-  if (isChatOpen) return null;
+  if (isModalOpen) return null;
 
   const messages = hasBrand ? brandAwareMessages : helpMessages;
 

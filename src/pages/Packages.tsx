@@ -1,6 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { MarketingLayout } from "@/components/layout/MarketingLayout";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { AssistantModal } from "@/components/AssistantModal";
+import { AssistantBubble } from "@/components/AssistantBubble";
 import { CTASection } from "@/components/CTASection";
 import { PackageCard } from "@/components/PackageCard";
 import { FilterButton } from "@/components/FilterButton";
@@ -9,12 +12,13 @@ import { PackageModal } from "@/components/PackageModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { packages, Package } from "@/data/packages";
-import { Grid, List } from "lucide-react";
+import { Grid, List, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSavedPackages } from "@/hooks/useSavedPackages";
 
 const Packages = () => {
   const [searchParams] = useSearchParams();
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [highlightedPackageId, setHighlightedPackageId] = useState<number | null>(null);
@@ -49,7 +53,16 @@ const Packages = () => {
   const [selectedComplexity, setSelectedComplexity] = useState<string[]>([]);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
 
+  const handleAssistantClick = () => {
+    setIsAssistantOpen(true);
+  };
+
+  const handleAssistantClose = () => {
+    setIsAssistantOpen(false);
+  };
+
   const handleViewPackage = (packageId: number) => {
+    setIsAssistantOpen(false);
     setHighlightedPackageId(packageId);
     
     // Scroll to the package
@@ -117,7 +130,9 @@ const Packages = () => {
 
 
   return (
-    <MarketingLayout onViewPackage={handleViewPackage}>
+    <div className="min-h-screen bg-background">
+      <Header onAssistantClick={handleAssistantClick} />
+      
       <main>
         {/* Hero Section */}
         <section className="py-16 lg:py-20 bg-gradient-to-br from-background via-brand-cream to-brand-light-gray">
@@ -229,7 +244,20 @@ const Packages = () => {
         </section>
       </main>
 
-      <CTASection />
+      <CTASection onAssistantClick={handleAssistantClick} />
+
+      <Footer />
+
+      <AssistantBubble 
+        onAssistantClick={handleAssistantClick}
+        isModalOpen={isAssistantOpen}
+      />
+
+      <AssistantModal 
+        isOpen={isAssistantOpen}
+        onClose={handleAssistantClose}
+        onViewPackage={handleViewPackage}
+      />
 
       <PackageModal
         packageData={selectedPackage}
@@ -238,7 +266,7 @@ const Packages = () => {
         onSave={handleSavePackage}
         isSaved={selectedPackage ? isSaved(selectedPackage.id) : false}
       />
-    </MarketingLayout>
+    </div>
   );
 };
 

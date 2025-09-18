@@ -5,11 +5,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { User, ChevronDown } from "lucide-react";
 
 interface HeaderProps {
-  onAssistantClick?: () => void;
-  isChatOpen?: boolean;
+  onAssistantClick: () => void;
 }
 
-export function Header({ onAssistantClick = () => {}, isChatOpen = false }: HeaderProps) {
+export function Header({ onAssistantClick }: HeaderProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
   
@@ -62,14 +61,12 @@ export function Header({ onAssistantClick = () => {}, isChatOpen = false }: Head
         
         <div className="flex items-center space-x-4">
           <Button 
-            variant={isChatOpen ? "default" : "assistant"} 
+            variant="assistant" 
             onClick={onAssistantClick}
             className="relative"
           >
-            <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${
-              isChatOpen ? 'bg-primary' : 'bg-success animate-pulse'
-            }`}></div>
-            {isChatOpen ? '💬 Chat Open' : '🟢 Assistant Available'}
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full animate-pulse"></div>
+            🟢 Assistant Available
           </Button>
           
           {user ? (

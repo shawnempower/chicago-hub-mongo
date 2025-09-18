@@ -3,7 +3,7 @@ import { mediaOutlets } from "@/data/mediaOutlets";
 import communitiesImage from "@/assets/chicago-communities.jpg";
 import { Link } from "react-router-dom";
 interface MediaPartnersSectionProps {
-  onAssistantClick?: () => void;
+  onAssistantClick: () => void;
 }
 const collections = [{
   title: "Reach Diverse Communities",
@@ -27,7 +27,7 @@ const collections = [{
   outlets: ["block-club", "chicago-sun-times", "red-eye"]
 }];
 export function MediaPartnersSection({
-  onAssistantClick = () => {}
+  onAssistantClick
 }: MediaPartnersSectionProps) {
   return (
     <section id="media-partners" className="py-16 lg:py-24 bg-background">

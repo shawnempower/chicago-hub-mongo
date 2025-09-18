@@ -1,24 +1,56 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MarketingLayout } from "@/components/layout/MarketingLayout";
+import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { HowItWorksSection } from "@/components/HowItWorksSection";
 import { MediaPartnersSection } from "@/components/MediaPartnersSection";
+import { AssistantModal } from "@/components/AssistantModal";
+import { AssistantBubble } from "@/components/AssistantBubble";
 import { CTASection } from "@/components/CTASection";
+import { Footer } from "@/components/Footer";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+
+  const handleAssistantClick = () => {
+    setIsAssistantOpen(true);
+  };
+
+  const handleAssistantClose = () => {
+    setIsAssistantOpen(false);
+  };
 
   const handleViewPackage = (packageId: number) => {
+    setIsAssistantOpen(false);
     navigate(`/packages?highlight=${packageId}`);
   };
 
   return (
-    <MarketingLayout onViewPackage={handleViewPackage}>
-      <HeroSection />
-      <HowItWorksSection />
-      <MediaPartnersSection />
-      <CTASection />
-    </MarketingLayout>
+    <div className="min-h-screen bg-background">
+      <Header onAssistantClick={handleAssistantClick} />
+      
+      <main>
+        <HeroSection onAssistantClick={handleAssistantClick} />
+        <HowItWorksSection onAssistantClick={handleAssistantClick} />
+        <MediaPartnersSection onAssistantClick={handleAssistantClick} />
+      </main>
+
+      <CTASection onAssistantClick={handleAssistantClick} />
+      
+      <Footer />
+
+      <AssistantBubble 
+        onAssistantClick={handleAssistantClick}
+        isModalOpen={isAssistantOpen}
+      />
+
+      <AssistantModal 
+        isOpen={isAssistantOpen}
+        onClose={handleAssistantClose}
+        onViewPackage={handleViewPackage}
+      />
+    </div>
   );
 };
 
