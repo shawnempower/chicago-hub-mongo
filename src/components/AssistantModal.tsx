@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSavedOutlets } from "@/hooks/useSavedOutlets";
 import { useAssistantConversation } from "@/hooks/useAssistantConversation";
 import { useToast } from "@/hooks/use-toast";
+import { generateBrandContextSummary } from "@/utils/documentUtils";
 
 interface Message {
   id: string;
@@ -14,6 +15,7 @@ interface Message {
   content: string;
   outlets?: typeof mediaOutlets;
   timestamp: Date;
+  hasBrandContext?: boolean;
 }
 
 interface AssistantModalProps {
@@ -32,7 +34,7 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { savedOutlets, toggleSaveOutlet, isSaved } = useSavedOutlets();
-  const { messages, addMessage, clearConversation, loading } = useAssistantConversation();
+  const { messages, addMessage, clearConversation, loading, brandContext, hasBrandContext } = useAssistantConversation();
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -66,32 +68,69 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
     setTimeout(async () => {
       let response = "";
       let outletsToShow: typeof mediaOutlets | undefined;
+      const usingBrandContext = hasBrandContext;
 
-      if (userMessage.toLowerCase().includes("hispanic") || userMessage.toLowerCase().includes("latino")) {
-        response = "Perfect! For reaching Hispanic families in Chicago, I recommend these trusted community voices:";
-        outletsToShow = mediaOutlets.filter(outlet => 
-          outlet.id === "la-raza" || outlet.id === "univision-chicago" || outlet.id === "wbez"
-        );
-      } else if (userMessage.toLowerCase().includes("business") || userMessage.toLowerCase().includes("professional")) {
-        response = "Great choice! For connecting with Chicago's business community, these outlets are essential:";
-        outletsToShow = mediaOutlets.filter(outlet => 
-          outlet.id === "crains" || outlet.id === "chicago-business" || outlet.id === "wbez"
-        );
-      } else if (userMessage.toLowerCase().includes("families") || userMessage.toLowerCase().includes("parents")) {
-        response = "Wonderful! For reaching Chicago families, these media partners understand what matters to parents:";
-        outletsToShow = mediaOutlets.filter(outlet => 
-          outlet.id === "chicago-parent" || outlet.id === "red-eye" || outlet.id === "wbez"
-        );
+      // Enhanced responses with brand context
+      if (hasBrandContext && brandContext) {
+        // Parse user's brand info for personalized responses
+        const hasTargetAudience = brandContext.includes("Target Audience:");
+        const hasIndustry = brandContext.includes("Industry:");
+        const hasBrandVoice = brandContext.includes("Brand Voice:");
+        
+        if (userMessage.toLowerCase().includes("hispanic") || userMessage.toLowerCase().includes("latino")) {
+          response = hasTargetAudience 
+            ? "Perfect! Based on your target audience and brand profile, here are Hispanic community outlets that align with your brand voice:"
+            : "Excellent! For reaching Hispanic families in Chicago, I recommend these trusted community voices:";
+          outletsToShow = mediaOutlets.filter(outlet => 
+            outlet.id === "la-raza" || outlet.id === "univision-chicago" || outlet.id === "wbez"
+          );
+        } else if (userMessage.toLowerCase().includes("business") || userMessage.toLowerCase().includes("professional")) {
+          response = hasIndustry
+            ? "Great! Considering your industry background, these business-focused outlets will resonate with your brand:"
+            : "Great choice! For connecting with Chicago's business community, these outlets are essential:";
+          outletsToShow = mediaOutlets.filter(outlet => 
+            outlet.id === "crains" || outlet.id === "chicago-business" || outlet.id === "wbez"
+          );
+        } else if (userMessage.toLowerCase().includes("families") || userMessage.toLowerCase().includes("parents")) {
+          response = hasTargetAudience
+            ? "Wonderful! These family-focused outlets align perfectly with your target audience and marketing goals:"
+            : "Wonderful! For reaching Chicago families, these media partners understand what matters to parents:";
+          outletsToShow = mediaOutlets.filter(outlet => 
+            outlet.id === "chicago-parent" || outlet.id === "red-eye" || outlet.id === "wbez"
+          );
+        } else {
+          response = "Based on your brand profile and marketing goals, here are Chicago media partners that align with your specific needs:";
+          outletsToShow = mediaOutlets.slice(0, 3);
+        }
       } else {
-        response = "Based on what you've shared, here are some excellent Chicago media partners that might be perfect for your goals:";
-        outletsToShow = mediaOutlets.slice(0, 3);
+        // Generic responses without brand context
+        if (userMessage.toLowerCase().includes("hispanic") || userMessage.toLowerCase().includes("latino")) {
+          response = "Perfect! For reaching Hispanic families in Chicago, I recommend these trusted community voices:";
+          outletsToShow = mediaOutlets.filter(outlet => 
+            outlet.id === "la-raza" || outlet.id === "univision-chicago" || outlet.id === "wbez"
+          );
+        } else if (userMessage.toLowerCase().includes("business") || userMessage.toLowerCase().includes("professional")) {
+          response = "Great choice! For connecting with Chicago's business community, these outlets are essential:";
+          outletsToShow = mediaOutlets.filter(outlet => 
+            outlet.id === "crains" || outlet.id === "chicago-business" || outlet.id === "wbez"
+          );
+        } else if (userMessage.toLowerCase().includes("families") || userMessage.toLowerCase().includes("parents")) {
+          response = "Wonderful! For reaching Chicago families, these media partners understand what matters to parents:";
+          outletsToShow = mediaOutlets.filter(outlet => 
+            outlet.id === "chicago-parent" || outlet.id === "red-eye" || outlet.id === "wbez"
+          );
+        } else {
+          response = "Based on what you've shared, here are some excellent Chicago media partners that might be perfect for your goals:";
+          outletsToShow = mediaOutlets.slice(0, 3);
+        }
       }
 
       const assistantMessage: Message = {
         id: Date.now().toString(),
         type: 'assistant',
         content: response,
-        timestamp: new Date()
+        timestamp: new Date(),
+        hasBrandContext: usingBrandContext
       };
 
       const outletsMessage: Message = {
@@ -106,13 +145,18 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
       await addMessage(outletsMessage);
       setIsTyping(false);
 
-      // Follow up question
+      // Enhanced follow-up based on brand context
       setTimeout(async () => {
+        const followUpContent = hasBrandContext
+          ? "Would you like me to explain how these outlets align with your brand voice and marketing goals, or shall we explore other options? I can also suggest specific campaign strategies based on your brand assets."
+          : "Would you like to explore any of these in detail, or shall we look at other options? I can also help you understand which communities each outlet serves best. For more personalized recommendations, consider completing your brand profile in the dashboard.";
+
         const followUp: Message = {
           id: (Date.now() + 2).toString(),
           type: 'assistant',
-          content: "Would you like to explore any of these in detail, or shall we look at other options? I can also help you understand which communities each outlet serves best.",
-          timestamp: new Date()
+          content: followUpContent,
+          timestamp: new Date(),
+          hasBrandContext: usingBrandContext
         };
         await addMessage(followUp);
       }, 1500);
@@ -180,6 +224,12 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
             <h2 className="text-xl font-semibold text-primary font-serif">
               Lassie - Your Media Assistant
             </h2>
+            {hasBrandContext && (
+              <div className="flex items-center space-x-1 text-xs bg-accent/10 px-2 py-1 rounded-full">
+                <div className="w-2 h-2 bg-accent rounded-full"></div>
+                <span className="text-accent-foreground">Brand-Aware</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             {user && (
@@ -199,11 +249,22 @@ export function AssistantModal({ isOpen, onClose }: AssistantModalProps) {
             <div key={message.id}>
               {message.type === 'assistant' && (
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-success rounded-full flex items-center justify-center text-white text-sm font-medium">
-                    L
+                  <div className="relative">
+                    <div className="w-8 h-8 bg-success rounded-full flex items-center justify-center text-white text-sm font-medium">
+                      L
+                    </div>
+                    {message.hasBrandContext && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full border border-background"></div>
+                    )}
                   </div>
                   <div className="bg-muted rounded-lg p-4 max-w-[80%]">
                     <p className="text-muted-foreground">{message.content}</p>
+                    {message.hasBrandContext && (
+                      <div className="mt-2 text-xs text-accent-foreground/70 flex items-center space-x-1">
+                        <div className="w-1.5 h-1.5 bg-accent rounded-full"></div>
+                        <span>Personalized based on your brand profile</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

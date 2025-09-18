@@ -97,27 +97,90 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
 }
 
 /**
- * Generate a summary of brand context for AI consumption
+ * Generate comprehensive brand context for AI consumption
  */
 export async function generateBrandContextSummary(userId: string): Promise<string> {
   try {
     const documents = await getUserDocumentContext(userId);
     
-    if (documents.length === 0) {
-      return "No brand documents available.";
+    // Get user profile data
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Error fetching profile:', profileError);
     }
 
-    const summary = `Brand Assets Summary:
-${documents.map(doc => 
-  `- ${doc.name} (${doc.type})${doc.description ? ': ' + doc.description : ''}`
-).join('\n')}
+    // Create comprehensive brand context
+    let context = "=== BRAND CONTEXT ===\n\n";
+    
+    if (profile) {
+      context += "COMPANY PROFILE:\n";
+      if (profile.company_name) context += `Company: ${profile.company_name}\n`;
+      if (profile.industry) context += `Industry: ${profile.industry}\n`;
+      if (profile.company_size) context += `Company Size: ${profile.company_size}\n`;
+      if (profile.company_website) context += `Website: ${profile.company_website}\n`;
+      
+      context += "\nMARKETING STRATEGY:\n";
+      if (profile.target_audience) context += `Target Audience: ${profile.target_audience}\n`;
+      if (profile.brand_voice) context += `Brand Voice: ${profile.brand_voice}\n`;
+      if (profile.marketing_goals && profile.marketing_goals.length > 0) {
+        context += `Marketing Goals: ${profile.marketing_goals.join(', ')}\n`;
+      }
+      context += "\n";
+    }
+    
+    if (documents.length > 0) {
+      context += "BRAND ASSETS:\n";
+      context += `${documents.map(doc => 
+        `- ${doc.name} (${doc.type})${doc.description ? ': ' + doc.description : ''}`
+      ).join('\n')}\n\n`;
+      
+      const documentTypes = [...new Set(documents.map(d => d.type))];
+      context += `Available Asset Types: ${documentTypes.join(', ')}\n`;
+      context += `Total Brand Documents: ${documents.length}\n\n`;
+    }
 
-Total documents: ${documents.length}
-Document types: ${[...new Set(documents.map(d => d.type))].join(', ')}`;
+    context += "=== INSTRUCTIONS ===\n";
+    context += "Use this brand context to provide personalized, relevant media recommendations that align with the company's industry, target audience, brand voice, and marketing goals. Reference specific brand assets when suggesting campaign strategies.";
 
-    return summary;
+    return context;
   } catch (error) {
     console.error('Error generating brand context summary:', error);
     return "Error loading brand context.";
+  }
+}
+
+/**
+ * Check if user has sufficient brand context for personalized recommendations
+ */
+export async function hasBrandContext(userId: string): Promise<boolean> {
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_name, industry, target_audience, brand_voice, marketing_goals')
+      .eq('user_id', userId)
+      .single();
+
+    const documents = await getUserDocumentContext(userId);
+    
+    // Has context if they have basic profile info OR documents
+    const hasProfileInfo = profile && (
+      profile.company_name || 
+      profile.industry || 
+      profile.target_audience || 
+      profile.brand_voice || 
+      (profile.marketing_goals && profile.marketing_goals.length > 0)
+    );
+    
+    const hasDocuments = documents.length > 0;
+    
+    return !!(hasProfileInfo || hasDocuments);
+  } catch (error) {
+    console.error('Error checking brand context:', error);
+    return false;
   }
 }
