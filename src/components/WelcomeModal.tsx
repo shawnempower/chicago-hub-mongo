@@ -8,6 +8,7 @@ interface WelcomeModalProps {
   isOpen: boolean;
   onClose: () => void;
   userName: string;
+  userId?: string;
 }
 
 const onboardingSteps = [
@@ -37,7 +38,7 @@ const onboardingSteps = [
   }
 ];
 
-export function WelcomeModal({ isOpen, onClose, userName }: WelcomeModalProps) {
+export function WelcomeModal({ isOpen, onClose, userName, userId }: WelcomeModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const progress = ((currentStep + 1) / onboardingSteps.length) * 100;
 
@@ -45,6 +46,10 @@ export function WelcomeModal({ isOpen, onClose, userName }: WelcomeModalProps) {
     if (currentStep < onboardingSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
+      // Mark onboarding as completed
+      if (userId) {
+        localStorage.setItem(`onboarding_completed_${userId}`, 'true');
+      }
       onClose();
     }
   };

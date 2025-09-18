@@ -30,18 +30,15 @@ export function DashboardOverview() {
     if (!user) return;
     
     try {
-      // Check if user has any activity
-      const hasActivity = savedPackages.length > 0 || savedOutlets.size > 0 || messages.length > 1;
+      // Check if user has completed onboarding before
+      const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
       
-      // Check if this is their first visit today
-      const lastVisit = localStorage.getItem(`last_visit_${user.id}`);
-      const today = new Date().toDateString();
-      const isFirstVisitToday = lastVisit !== today;
+      // Check if user has any meaningful activity
+      const hasActivity = savedPackages.length > 0 || savedOutlets.size > 0 || messages.length > 2;
       
-      if (!hasActivity && isFirstVisitToday) {
+      if (!hasCompletedOnboarding && !hasActivity) {
         setIsNewUser(true);
         setShowWelcome(true);
-        localStorage.setItem(`last_visit_${user.id}`, today);
       }
     } catch (error) {
       console.error('Error checking user status:', error);
@@ -96,7 +93,7 @@ export function DashboardOverview() {
   ];
 
   const firstName = user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'there';
-  const shouldShowQuickStart = profileCompletion < 80 || savedPackages.length === 0 || savedOutlets.size === 0;
+  const shouldShowQuickStart = profileCompletion < 60 || savedPackages.length === 0 || savedOutlets.size === 0;
 
   return (
     <>
@@ -104,6 +101,7 @@ export function DashboardOverview() {
         isOpen={showWelcome}
         onClose={() => setShowWelcome(false)}
         userName={firstName}
+        userId={user?.id}
       />
       
       <div className="space-y-6">
@@ -197,7 +195,7 @@ export function DashboardOverview() {
                 <p className="text-sm text-muted-foreground">
                   Keep exploring to build your perfect media strategy!
                 </p>
-                {profileCompletion < 80 && (
+                {profileCompletion < 60 && (
                   <div className="mt-3 p-3 bg-muted/50 rounded-lg">
                     <p className="text-sm font-medium text-foreground">
                       💡 Complete your profile to get better recommendations

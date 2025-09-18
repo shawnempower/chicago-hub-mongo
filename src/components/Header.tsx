@@ -91,7 +91,7 @@ export function Header({ onAssistantClick }: HeaderProps) {
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard?tab=saved">Saved Items</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={signOut} className="text-red-600">
+                <DropdownMenuItem onClick={signOut} className="text-destructive">
                   Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>

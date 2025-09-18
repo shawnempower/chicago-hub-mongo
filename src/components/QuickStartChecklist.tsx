@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Circle, User, Package, Building2, MessageCircle } from "lucide-react";
+import { CheckCircle, Circle, User, Package, Building2, MessageCircle, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSavedPackages } from "@/hooks/useSavedPackages";
@@ -37,6 +37,8 @@ export function QuickStartChecklist({ profileCompletion }: QuickStartChecklistPr
       setHasDocuments((data?.length || 0) > 0);
     } catch (error) {
       console.error('Error checking documents:', error);
+      // If table doesn't exist, assume no documents
+      setHasDocuments(false);
     }
   };
 
@@ -45,7 +47,7 @@ export function QuickStartChecklist({ profileCompletion }: QuickStartChecklistPr
       id: 'profile',
       title: 'Complete Your Profile',
       description: 'Add your company info and marketing goals',
-      completed: profileCompletion >= 80,
+      completed: profileCompletion >= 60,
       icon: User,
       action: 'Go to Profile',
       link: '/dashboard?tab=profile'
@@ -55,7 +57,7 @@ export function QuickStartChecklist({ profileCompletion }: QuickStartChecklistPr
       title: 'Upload Brand Materials',
       description: 'Add logos, brand guidelines, or examples',
       completed: hasDocuments,
-      icon: Circle,
+      icon: FileText,
       action: 'Upload Documents',
       link: '/dashboard?tab=profile'
     },
