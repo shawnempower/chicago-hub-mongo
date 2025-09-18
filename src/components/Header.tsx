@@ -5,10 +5,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { User, ChevronDown } from "lucide-react";
 
 interface HeaderProps {
-  onAssistantClick: () => void;
+  onAssistantClick?: () => void;
+  isChatOpen?: boolean;
 }
 
-export function Header({ onAssistantClick }: HeaderProps) {
+export function Header({ onAssistantClick = () => {}, isChatOpen = false }: HeaderProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
   

@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import heroImage from "@/assets/chicago-hero.jpg";
 import { mediaOutlets } from "@/data/mediaOutlets";
 interface HeroSectionProps {
-  onAssistantClick: () => void;
+  onAssistantClick?: () => void;
 }
 export function HeroSection({
-  onAssistantClick
+  onAssistantClick = () => {}
 }: HeroSectionProps) {
   return <section className="relative overflow-hidden bg-gradient-to-br from-background via-brand-cream to-brand-light-gray">
       <div className="container mx-auto px-6 py-16 lg:py-24">

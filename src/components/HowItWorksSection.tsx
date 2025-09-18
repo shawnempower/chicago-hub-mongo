@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Search, Calendar } from "lucide-react";
 interface HowItWorksSectionProps {
-  onAssistantClick: () => void;
+  onAssistantClick?: () => void;
 }
 const steps = [{
   icon: MessageSquare,
@@ -17,7 +17,7 @@ const steps = [{
   description: "Connect with our team to bring your media strategy to life and maximize your impact."
 }];
 export function HowItWorksSection({
-  onAssistantClick
+  onAssistantClick = () => {}
 }: HowItWorksSectionProps) {
   return <section id="how-it-works" className="py-16 lg:py-24 bg-brand-light-gray">
       <div className="container mx-auto px-6">

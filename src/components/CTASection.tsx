@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 
 interface CTASectionProps {
-  onAssistantClick: () => void;
+  onAssistantClick?: () => void;
 }
 
-export function CTASection({ onAssistantClick }: CTASectionProps) {
+export function CTASection({ onAssistantClick = () => {} }: CTASectionProps) {
   return (
     <section className="bg-primary py-16">
       <div className="container mx-auto px-6 text-center">
