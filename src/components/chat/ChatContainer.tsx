@@ -31,21 +31,23 @@ export function ChatContainer({ isOpen, onClose, onViewPackage }: ChatContainerP
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex">
-      <ChatSidebar
-        isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-        activeThreadId={activeThreadId}
-        onThreadSelect={setActiveThreadId}
-        onNewThread={handleNewThread}
-        onClose={onClose}
-      />
-      
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-80' : 'ml-16'}`}>
-        <ChatInterface
-          threadId={activeThreadId}
-          onViewPackage={onViewPackage}
+    <div className="fixed inset-0 z-40 bg-background">
+      <div className="h-full w-full flex">
+        <ChatSidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          activeThreadId={activeThreadId}
+          onThreadSelect={setActiveThreadId}
+          onNewThread={handleNewThread}
+          onClose={onClose}
         />
+        
+        <div className="flex-1 h-full flex flex-col min-w-0">
+          <ChatInterface
+            threadId={activeThreadId}
+            onViewPackage={onViewPackage}
+          />
+        </div>
       </div>
     </div>
   );

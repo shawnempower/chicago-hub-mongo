@@ -60,7 +60,7 @@ export function ChatSidebar({
   // Collapsed sidebar
   if (!isOpen) {
     return (
-      <div className="w-16 bg-muted/30 border-r flex flex-col items-center py-4 space-y-4">
+      <div className="w-16 h-full bg-muted/30 border-r border-border flex flex-col items-center py-4 space-y-4 shrink-0">
         <Button
           variant="ghost"
           size="icon"
@@ -91,7 +91,7 @@ export function ChatSidebar({
 
   // Full sidebar
   return (
-    <div className="w-80 bg-muted/30 border-r flex flex-col">
+    <div className="w-80 h-full bg-muted/30 border-r border-border flex flex-col shrink-0">
       {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-4">
