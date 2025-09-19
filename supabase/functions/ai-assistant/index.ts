@@ -2,6 +2,10 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -63,8 +67,35 @@ serve(async (req) => {
       });
     }
 
+    // Fetch current system instructions from database
+    const { data: instructionsData, error: instructionsError } = await supabase
+      .from('assistant_instructions')
+      .select('instructions')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (instructionsError) {
+      console.warn('Failed to fetch instructions from database, using fallback:', instructionsError);
+    }
+
+    const baseInstructions = instructionsData?.instructions || 
+      `You are Lassie, a specialized AI assistant for media buying and public relations. Your role is to help users find the most relevant media packages and outlets for their campaigns based on their brand context, budget, and marketing goals.
+
+Key Guidelines:
+- Always be helpful, professional, and concise
+- Focus on recommending specific packages that match their needs
+- Consider their brand context, budget, timeline, and marketing goals
+- Provide clear reasoning for each recommendation
+- Ask clarifying questions when needed
+- Keep responses focused on media buying and PR recommendations`;
+
     // Build comprehensive system message with package knowledge
-    let systemMessage = `You are Lassie, an expert Chicago media consultant assistant. You help brands discover the perfect combination of Chicago media packages and outlets for their marketing goals.
+    let systemMessage = `${baseInstructions}
+
+AVAILABLE MEDIA PACKAGES:
+You have access to 24 curated media packages ranging from $500 to $100K+:
 
 AVAILABLE MEDIA PACKAGES:
 You have access to 24 curated media packages ranging from $500 to $100K+:

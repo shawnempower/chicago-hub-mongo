@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateBrandContextSummary } from "@/utils/documentUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { PackageRecommendationCard } from "@/components/PackageRecommendationCard";
-import { AdminHandoffButton } from "@/components/AdminHandoffButton";
+
 
 interface Message {
   id: string;
@@ -224,24 +224,12 @@ export function AssistantModal({ isOpen, onClose, onViewPackage }: AssistantModa
             <h2 className="text-xl font-semibold text-primary font-serif">
               Lassie - Your Media Assistant
             </h2>
-            {hasBrandContext && (
-              <div className="flex items-center space-x-1 text-xs bg-accent/10 px-2 py-1 rounded-full">
-                <div className="w-2 h-2 bg-accent rounded-full"></div>
-                <span className="text-accent-foreground">Brand-Aware</span>
-              </div>
-            )}
           </div>
           <div className="flex items-center space-x-2">
             {user && (
-              <>
-                <AdminHandoffButton 
-                  conversationContext={messages.map(m => `${m.type}: ${m.content}`).join('\n')}
-                  triggerKeywords={messages.flatMap(m => m.triggerKeywords || [])}
-                />
-                <Button variant="ghost" size="icon" onClick={clearConversation} title="Clear conversation">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
+              <Button variant="ghost" size="icon" onClick={clearConversation} title="Clear conversation">
+                <Trash2 className="h-4 w-4" />
+              </Button>
             )}
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-5 w-5" />
@@ -255,22 +243,11 @@ export function AssistantModal({ isOpen, onClose, onViewPackage }: AssistantModa
             <div key={message.id}>
               {message.type === 'assistant' && (
                 <div className="flex items-start space-x-3">
-                  <div className="relative">
-                    <div className="w-8 h-8 bg-success rounded-full flex items-center justify-center text-white text-sm font-medium">
-                      L
-                    </div>
-                    {message.hasBrandContext && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full border border-background"></div>
-                    )}
+                  <div className="w-8 h-8 bg-success rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    L
                   </div>
                   <div className="bg-muted rounded-lg p-4 max-w-[80%]">
                     <p className="text-muted-foreground">{message.content}</p>
-                    {message.hasBrandContext && (
-                      <div className="mt-2 text-xs text-accent-foreground/70 flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-accent rounded-full"></div>
-                        <span>Personalized based on your brand profile</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
