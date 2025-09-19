@@ -28,8 +28,8 @@ export function useAssistantConversation() {
     id: '1',
     type: 'assistant',
     content: hasBrandContext 
-      ? "Hi! I'm Lassie, your brand-aware Chicago media assistant. I can see you've set up your brand profile, so I'm ready to provide personalized recommendations that align with your specific goals and brand voice. What would you like to explore today?"
-      : "Hi! I'm Lassie, your Chicago media assistant. I help brands discover the perfect combination of Chicago media outlets for their goals. For personalized recommendations, consider completing your brand profile in the dashboard. What brings you to Chicago media today?",
+      ? "Hi! I'm Lassie, your Chicago media assistant. I see your brand profile is set up. What would you like to explore?"
+      : "Hi! I'm Lassie, your Chicago media assistant. I help brands discover Chicago media outlets. Complete your brand profile for personalized recommendations. What brings you here?",
     timestamp: new Date(),
     hasBrandContext: hasBrandContext
   });
