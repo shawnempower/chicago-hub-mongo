@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateBrandContextSummary } from "@/utils/documentUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { PackageRecommendationCard } from "@/components/PackageRecommendationCard";
+import { MultipleChoiceButtons } from "@/components/MultipleChoiceButtons";
 
 
 interface Message {
@@ -45,6 +46,7 @@ export function AssistantModal({ isOpen, onClose, onViewPackage }: AssistantModa
   const { messages, addMessage, clearConversation, loading, brandContext, hasBrandContext, getConversationHistory } = useAssistantConversation();
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [showOtherInput, setShowOtherInput] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -209,6 +211,33 @@ export function AssistantModal({ isOpen, onClose, onViewPackage }: AssistantModa
     await addMessage(assistantResponse);
   };
 
+  const handleMultipleChoiceSelect = async (option: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to chat with the assistant",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: option,
+      timestamp: new Date()
+    };
+
+    await addMessage(userMessage);
+    
+    const assistantResponse = await getAssistantResponse(option);
+    await addMessage(assistantResponse);
+    setShowOtherInput(false);
+  };
+
+  const handleOtherOptionSelect = () => {
+    setShowOtherInput(true);
+  };
   if (!isOpen) return null;
 
   return (
@@ -248,6 +277,11 @@ export function AssistantModal({ isOpen, onClose, onViewPackage }: AssistantModa
                   </div>
                   <div className="bg-muted rounded-lg p-4 max-w-[80%]">
                     <p className="text-muted-foreground">{message.content}</p>
+                    <MultipleChoiceButtons
+                      content={message.content}
+                      onOptionSelect={handleMultipleChoiceSelect}
+                      onOtherSelect={handleOtherOptionSelect}
+                    />
                   </div>
                 </div>
               )}
@@ -372,20 +406,59 @@ export function AssistantModal({ isOpen, onClose, onViewPackage }: AssistantModa
           </div>
         )}
 
-        {/* Input */}
+        {/* Input or Other Response */}
         <div className="border-t border-border p-6">
-          <div className="flex space-x-3">
-            <Input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Type your message..."
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              className="flex-1"
-            />
-            <Button onClick={handleSendMessage} disabled={!inputValue.trim()}>
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
+          {showOtherInput ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Please type your response:</p>
+              <div className="flex space-x-3">
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Type your custom response..."
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSendMessage();
+                      setShowOtherInput(false);
+                    }
+                  }}
+                  className="flex-1"
+                  autoFocus
+                />
+                <Button 
+                  onClick={() => {
+                    handleSendMessage();
+                    setShowOtherInput(false);
+                  }} 
+                  disabled={!inputValue.trim()}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowOtherInput(false);
+                    setInputValue("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex space-x-3">
+              <Input
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Type your message..."
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                className="flex-1"
+              />
+              <Button onClick={handleSendMessage} disabled={!inputValue.trim()}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
