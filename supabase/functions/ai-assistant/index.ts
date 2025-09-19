@@ -81,53 +81,28 @@ serve(async (req) => {
     }
 
     const baseInstructions = instructionsData?.instructions || 
-      `You are Lassie, a specialized AI assistant for media buying and public relations. Your role is to help users find the most relevant media packages and outlets for their campaigns based on their brand context, budget, and marketing goals.
+      `You are Lassie, a specialized AI assistant for media strategy and brand profiling. Your primary role is to understand the user's business and campaign needs.`;
 
-Key Guidelines:
-- Always be helpful, professional, and concise
-- Focus on recommending specific packages that match their needs
-- Consider their brand context, budget, timeline, and marketing goals
-- Provide clear reasoning for each recommendation
-- Ask clarifying questions when needed
-- Keep responses focused on media buying and PR recommendations`;
+    // Start with the database instructions
+    let systemMessage = baseInstructions;
 
-    // Build comprehensive system message with package knowledge
-    let systemMessage = `${baseInstructions}
-
-AVAILABLE MEDIA PACKAGES:
-You have access to 24 curated media packages ranging from $500 to $100K+:
-
-AVAILABLE MEDIA PACKAGES:
-You have access to 24 curated media packages ranging from $500 to $100K+:
-
-Budget Categories:
-- Under $5K: Quick Start ($500), Newsletter Blitz ($2.5K), Neighborhood Package ($1.5K), B2B Basic ($3.5K), Hyperlocal Hero ($3K), Steady State ($2K), Own a Day ($1K), Youth Movement ($4K)
-- $5K-$15K: Radio Repeater ($5K), After Dark Chicago ($10K), Transit Tribe ($12K), Village Builder ($8K), Faith Circuit ($6K), Seasonal Surge ($8K), Side Hustler ($5K), Grand Opening Kit ($5K), Makers & Creators ($7K)
-- $15K-$50K: Cultural Bridge Builder ($15K), Sunday Morning Amplifier ($20K), Power Breakfast ($25K), Newsletter Empire ($15K-50K), Community Champion ($15K)
-- $50K+: Audio Domination Suite ($25K-100K), Executive Influence ($50K)
-
-Key Package Categories:
-- HYPERLOCAL: Neighborhood Package, Hyperlocal Hero, Grand Opening Kit
-- BUSINESS: B2B Basic, Power Breakfast, Executive Influence 
-- COMMUNITY: Cultural Bridge Builder, Faith Circuit, Community Champion
-- CREATIVE/YOUTH: Makers & Creators, Youth Movement, After Dark Chicago
-- AUDIO: Radio Repeater, Audio Domination Suite
-- COMPREHENSIVE: Newsletter Empire, Sunday Morning Amplifier
-
-Guidelines for recommendations:
-- Always recommend specific packages by name when relevant
-- Explain WHY a package fits their needs (audience, budget, goals)
-- Suggest 1-3 packages maximum per response
-- Include package pricing when mentioning packages
-- Ask clarifying questions about budget, audience, and goals
-- Keep responses conversational and concise (2-3 paragraphs)
-- When recommending packages, provide reasoning for each suggestion`;
-
+    // Add brand context if available
     if (brandContext) {
-      systemMessage += `\n\nBrand Context: ${brandContext}\nUse this context to provide personalized recommendations that align with their brand voice, target audience, and goals.`;
-    } else {
-      systemMessage += `\n\nNote: This user hasn't completed their brand profile yet, so provide general guidance and encourage them to complete their profile for more personalized recommendations.`;
+      systemMessage += `
+
+BRAND CONTEXT AVAILABLE:
+${brandContext}
+
+Reference specific details from this brand profile when relevant to your conversation.`;
     }
+
+    // Add package information for reference only (not for immediate recommendation)
+    systemMessage += `
+
+MEDIA PACKAGES REFERENCE (use only when exceptionally relevant):
+${packages.map(pkg => `${pkg.id}. ${pkg.name} - ${pkg.description || pkg.price} (${pkg.audience.join(', ')})`).join('\n')}
+
+Only mention packages when they are directly relevant to the specific conversation context.`;
 
     // Build conversation messages including history
     const messages = [
