@@ -124,7 +124,27 @@ export async function generateBrandContextSummary(userId: string): Promise<strin
       if (profile.company_size) context += `Company Size: ${profile.company_size}\n`;
       if (profile.company_website) context += `Website: ${profile.company_website}\n`;
       
-      context += "\nMARKETING STRATEGY:\n";
+      // Include website analysis if available
+      if (profile.website_content_summary) {
+        context += "\nWEBSITE ANALYSIS:\n";
+        context += `Brand Summary: ${profile.website_content_summary}\n`;
+        
+        if (profile.website_key_services && profile.website_key_services.length > 0) {
+          context += `Key Services: ${profile.website_key_services.join(', ')}\n`;
+        }
+        
+        if (profile.website_brand_themes && profile.website_brand_themes.length > 0) {
+          context += `Brand Themes: ${profile.website_brand_themes.join(', ')}\n`;
+        }
+        
+        if (profile.website_analysis_date) {
+          const analysisDate = new Date(profile.website_analysis_date);
+          context += `Analysis Date: ${analysisDate.toLocaleDateString()}\n`;
+        }
+        context += "\n";
+      }
+      
+      context += "MARKETING STRATEGY:\n";
       if (profile.target_audience) context += `Target Audience: ${profile.target_audience}\n`;
       if (profile.brand_voice) context += `Brand Voice: ${profile.brand_voice}\n`;
       if (profile.marketing_goals && profile.marketing_goals.length > 0) {

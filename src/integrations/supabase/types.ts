@@ -178,6 +178,10 @@ export type Database = {
           target_audience: string | null
           updated_at: string
           user_id: string
+          website_analysis_date: string | null
+          website_brand_themes: string[] | null
+          website_content_summary: string | null
+          website_key_services: string[] | null
         }
         Insert: {
           brand_voice?: string | null
@@ -196,6 +200,10 @@ export type Database = {
           target_audience?: string | null
           updated_at?: string
           user_id: string
+          website_analysis_date?: string | null
+          website_brand_themes?: string[] | null
+          website_content_summary?: string | null
+          website_key_services?: string[] | null
         }
         Update: {
           brand_voice?: string | null
@@ -214,6 +222,10 @@ export type Database = {
           target_audience?: string | null
           updated_at?: string
           user_id?: string
+          website_analysis_date?: string | null
+          website_brand_themes?: string[] | null
+          website_content_summary?: string | null
+          website_key_services?: string[] | null
         }
         Relationships: []
       }

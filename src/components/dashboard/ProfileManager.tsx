@@ -146,6 +146,11 @@ export function ProfileManager() {
       if (error) throw error;
 
       setProfile({ ...profile, profile_completion_score: completionScore });
+
+      // Trigger website analysis if company_website is provided
+      if (profile.company_website) {
+        triggerWebsiteAnalysis(profile.company_website);
+      }
       
       toast({
         title: "Success",
@@ -160,6 +165,33 @@ export function ProfileManager() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const triggerWebsiteAnalysis = async (websiteUrl: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('website-extractor', {
+        body: { 
+          websiteUrl: websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`,
+          userId: user?.id 
+        },
+      });
+
+      if (error) {
+        console.error('Website analysis error:', error);
+        return;
+      }
+
+      if (data?.success) {
+        toast({
+          title: "Website analyzed",
+          description: "Your brand context has been enhanced with website insights.",
+        });
+        // Reload profile to show updated website analysis
+        loadProfile();
+      }
+    } catch (error) {
+      console.error('Error analyzing website:', error);
     }
   };
 
