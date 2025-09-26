@@ -86,7 +86,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in website-extractor:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'Internal server error',
+      error: (error as Error)?.message || 'Internal server error',
       success: false,
     }), {
       status: 500,

@@ -100,7 +100,7 @@ Reference specific details from this brand profile when relevant to your convers
     systemMessage += `
 
 MEDIA PACKAGES REFERENCE (use only when exceptionally relevant):
-${packages.map(pkg => `${pkg.id}. ${pkg.name} - ${pkg.description || pkg.price} (${pkg.audience.join(', ')})`).join('\n')}
+${packages.map((pkg: any) => `${pkg.id}. ${pkg.name} - ${pkg.price || pkg.price_range} (${(pkg.audience || []).join(', ')})`).join('\n')}
 
 Only mention packages when they are directly relevant to the specific conversation context.`;
 
@@ -163,7 +163,7 @@ Only mention packages when they are directly relevant to the specific conversati
   } catch (error) {
     console.error('Error in ai-assistant function:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'An unexpected error occurred' 
+      error: (error as Error)?.message || 'An unexpected error occurred' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

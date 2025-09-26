@@ -1,102 +1,72 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, Edit, Plus } from 'lucide-react';
+import { DatabasePackage } from '@/hooks/usePackages';
 
-interface AdPackage {
-  id: string;
+// Interface for the form data
+interface PackageFormData {
+  id?: string;
+  legacy_id?: number;
   name: string;
-  description?: string;
-  price_range?: string;
-  duration?: string;
-  reach_estimate?: string;
-  format?: string;
-  features: any; // Can be string[] or JSON
-  media_outlet_id?: string;
-  media_outlets?: {
-    name: string;
-  };
+  tagline: string;
+  description: string;
+  price: string;
+  price_range: string;
+  audience: string[];
+  channels: string[];
+  complexity: string;
+  outlets: string[];
+  features: string[];
 }
 
-interface MediaOutlet {
-  id: string;
-  name: string;
-}
-
-export const PackageManagement = () => {
-  const [packages, setPackages] = useState<AdPackage[]>([]);
-  const [outlets, setOutlets] = useState<MediaOutlet[]>([]);
+const PackageManagement = () => {
+  const [packages, setPackages] = useState<DatabasePackage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingPackage, setEditingPackage] = useState<AdPackage | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const { toast } = useToast();
-
-  const [formData, setFormData] = useState({
+  const [editingPackage, setEditingPackage] = useState<DatabasePackage | null>(null);
+  const [formData, setFormData] = useState<PackageFormData>({
     name: '',
+    tagline: '',
     description: '',
-    price_range: '',
-    duration: '',
-    reach_estimate: '',
-    format: '',
-    features: '',
-    media_outlet_id: '',
+    price: '',
+    price_range: 'mid-range',
+    audience: [],
+    channels: [],
+    complexity: 'turnkey',
+    outlets: [],
+    features: [],
   });
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchPackages();
-    fetchOutlets();
   }, []);
 
   const fetchPackages = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('ad_packages')
-        .select(`
-          *,
-          media_outlets (
-            name
-          )
-        `)
-        .order('name');
-
+        .select('*')
+        .order('legacy_id');
+      
       if (error) throw error;
-      
-      // Ensure features is always an array
-      const processedPackages = (data || []).map(pkg => ({
-        ...pkg,
-        features: Array.isArray(pkg.features) ? pkg.features : []
-      }));
-      
-      setPackages(processedPackages);
+      setPackages(data || []);
     } catch (error) {
       console.error('Error fetching packages:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch ad packages",
+        description: "Failed to fetch packages",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchOutlets = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('media_outlets')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setOutlets(data || []);
-    } catch (error) {
-      console.error('Error fetching outlets:', error);
     }
   };
 
@@ -105,26 +75,44 @@ export const PackageManagement = () => {
     
     try {
       const packageData = {
-        ...formData,
-        features: formData.features.split(',').map(f => f.trim()).filter(f => f),
-        media_outlet_id: formData.media_outlet_id || null,
+        name: formData.name,
+        tagline: formData.tagline,
+        description: formData.description,
+        price: formData.price,
+        price_range: formData.price_range,
+        audience: formData.audience,
+        channels: formData.channels,
+        complexity: formData.complexity,
+        outlets: formData.outlets,
+        features: formData.features,
+        is_active: true
       };
 
       if (editingPackage) {
+        // Update existing package
         const { error } = await supabase
           .from('ad_packages')
           .update(packageData)
           .eq('id', editingPackage.id);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Package updated successfully" });
+
+        toast({
+          title: "Success",
+          description: "Package updated successfully",
+        });
       } else {
+        // Create new package
         const { error } = await supabase
           .from('ad_packages')
-          .insert(packageData);
+          .insert([packageData]);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Package created successfully" });
+
+        toast({
+          title: "Success",
+          description: "Package created successfully",
+        });
       }
 
       resetForm();
@@ -139,17 +127,21 @@ export const PackageManagement = () => {
     }
   };
 
-  const handleEdit = (pkg: AdPackage) => {
+  const handleEdit = (pkg: DatabasePackage) => {
     setEditingPackage(pkg);
     setFormData({
+      id: pkg.id,
+      legacy_id: pkg.legacy_id || undefined,
       name: pkg.name,
+      tagline: pkg.tagline || '',
       description: pkg.description || '',
-      price_range: pkg.price_range || '',
-      duration: pkg.duration || '',
-      reach_estimate: pkg.reach_estimate || '',
-      format: pkg.format || '',
-      features: pkg.features.join(', '),
-      media_outlet_id: pkg.media_outlet_id || '',
+      price: pkg.price || '',
+      price_range: pkg.price_range || 'mid-range',
+      audience: pkg.audience || [],
+      channels: pkg.channels || [],
+      complexity: pkg.complexity || 'turnkey',
+      outlets: pkg.outlets || [],
+      features: Array.isArray(pkg.features) ? pkg.features : []
     });
     setShowForm(true);
   };
@@ -165,7 +157,10 @@ export const PackageManagement = () => {
 
       if (error) throw error;
       
-      toast({ title: "Success", description: "Package deleted successfully" });
+      toast({
+        title: "Success",
+        description: "Package deleted successfully",
+      });
       fetchPackages();
     } catch (error) {
       console.error('Error deleting package:', error);
@@ -180,13 +175,15 @@ export const PackageManagement = () => {
   const resetForm = () => {
     setFormData({
       name: '',
+      tagline: '',
       description: '',
-      price_range: '',
-      duration: '',
-      reach_estimate: '',
-      format: '',
-      features: '',
-      media_outlet_id: '',
+      price: '',
+      price_range: 'mid-range',
+      audience: [],
+      channels: [],
+      complexity: 'turnkey',
+      outlets: [],
+      features: [],
     });
     setEditingPackage(null);
     setShowForm(false);
@@ -212,83 +209,91 @@ export const PackageManagement = () => {
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>{editingPackage ? 'Edit' : 'Add'} Ad Package</CardTitle>
+            <CardTitle>{editingPackage ? 'Edit' : 'Add'} Package</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium">Name *</label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Media Outlet</label>
-                  <Select value={formData.media_outlet_id} onValueChange={(value) => setFormData({ ...formData, media_outlet_id: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select outlet (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No specific outlet</SelectItem>
-                      {outlets.map((outlet) => (
-                        <SelectItem key={outlet.id} value={outlet.id}>
-                          {outlet.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Price Range</label>
-                  <Input
-                    value={formData.price_range}
-                    onChange={(e) => setFormData({ ...formData, price_range: e.target.value })}
-                    placeholder="e.g. $500-$1,000"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Duration</label>
-                  <Input
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                    placeholder="e.g. 30 days"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Reach Estimate</label>
-                  <Input
-                    value={formData.reach_estimate}
-                    onChange={(e) => setFormData({ ...formData, reach_estimate: e.target.value })}
-                    placeholder="e.g. 10,000+ listeners"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Format</label>
-                  <Input
-                    value={formData.format}
-                    onChange={(e) => setFormData({ ...formData, format: e.target.value })}
-                    placeholder="e.g. Radio ad, Display ad"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Description</label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Features (comma-separated)</label>
-                <Textarea
-                  value={formData.features}
-                  onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-                  placeholder="Prime time slots, Professional production, Analytics reporting"
-                />
-              </div>
+            <Input
+              placeholder="Package name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+
+            <Input
+              placeholder="Tagline"
+              value={formData.tagline}
+              onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
+            />
+            
+            <Textarea
+              placeholder="Package description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+            />
+
+            <Input
+              placeholder="Price (e.g., $2,500)"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            />
+
+            <select
+              className="w-full p-2 border rounded"
+              value={formData.price_range}
+              onChange={(e) => setFormData({ ...formData, price_range: e.target.value })}
+            >
+              <option value="budget">Budget</option>
+              <option value="mid-range">Mid-range</option>
+              <option value="premium">Premium</option>
+            </select>
+
+            <select
+              className="w-full p-2 border rounded"
+              value={formData.complexity}
+              onChange={(e) => setFormData({ ...formData, complexity: e.target.value })}
+            >
+              <option value="turnkey">Turnkey</option>
+              <option value="custom">Custom</option>
+            </select>
+
+            <Input
+              placeholder="Audience (comma-separated)"
+              value={formData.audience.join(', ')}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                audience: e.target.value.split(',').map(f => f.trim()).filter(f => f)
+              })}
+            />
+
+            <Input
+              placeholder="Channels (comma-separated)"
+              value={formData.channels.join(', ')}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                channels: e.target.value.split(',').map(f => f.trim()).filter(f => f)
+              })}
+            />
+
+            <Input
+              placeholder="Outlets (comma-separated)"
+              value={formData.outlets.join(', ')}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                outlets: e.target.value.split(',').map(f => f.trim()).filter(f => f)
+              })}
+            />
+
+            <Input
+              placeholder="Features (comma-separated)"
+              value={formData.features.join(', ')}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                features: e.target.value.split(',').map(f => f.trim()).filter(f => f)
+              })}
+            />
+
               <div className="flex gap-2">
                 <Button type="submit">
                   {editingPackage ? 'Update' : 'Create'} Package
@@ -302,47 +307,106 @@ export const PackageManagement = () => {
         </Card>
       )}
 
-      <div className="grid gap-4">
+      <div className="space-y-4">
         {packages.map((pkg) => (
           <Card key={pkg.id}>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{pkg.name}</CardTitle>
-                  <CardDescription>
-                    {pkg.media_outlets?.name && `${pkg.media_outlets.name} • `}
-                    {pkg.price_range} • {pkg.duration}
-                  </CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => handleEdit(pkg)}>
-                    <Edit className="w-4 h-4" />
+              <CardTitle className="flex justify-between items-center">
+                <span>{pkg.name}</span>
+                <div className="space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEdit(pkg)}
+                  >
+                    <Edit className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleDelete(pkg.id)}>
-                    <Trash2 className="w-4 h-4" />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDelete(pkg.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              </div>
+              </CardTitle>
             </CardHeader>
-            {(pkg.description || pkg.features.length > 0) && (
-              <CardContent>
-                {pkg.description && (
-                  <p className="text-sm text-muted-foreground mb-2">{pkg.description}</p>
+            <CardContent>
+              {pkg.tagline && (
+                <p className="text-sm text-muted-foreground mb-2">{pkg.tagline}</p>
+              )}
+              <p className="text-gray-600 mb-2">{pkg.description}</p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {pkg.price && (
+                  <Badge variant="secondary">
+                    Price: {pkg.price}
+                  </Badge>
                 )}
-                {pkg.features.length > 0 && (
+                <Badge variant="secondary">
+                  Range: {pkg.price_range}
+                </Badge>
+                <Badge variant="secondary">
+                  Complexity: {pkg.complexity}
+                </Badge>
+              </div>
+              
+              {pkg.audience && pkg.audience.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium mb-1">Audience:</p>
                   <div className="flex flex-wrap gap-1">
-                    {pkg.features.map((feature, index) => (
-                      <span key={index} className="text-xs bg-secondary px-2 py-1 rounded">
-                        {feature}
-                      </span>
+                    {pkg.audience.map((item, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {item}
+                      </Badge>
                     ))}
                   </div>
-                )}
-              </CardContent>
-            )}
+                </div>
+              )}
+
+              {pkg.channels && pkg.channels.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium mb-1">Channels:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {pkg.channels.map((item, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {item}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {pkg.outlets && pkg.outlets.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium mb-1">Outlets:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {pkg.outlets.map((item, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {item}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {pkg.features && Array.isArray(pkg.features) && pkg.features.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium mb-1">Features:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {pkg.features.map((feature, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {feature}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
           </Card>
         ))}
       </div>
     </div>
   );
 };
+
+export { PackageManagement };
