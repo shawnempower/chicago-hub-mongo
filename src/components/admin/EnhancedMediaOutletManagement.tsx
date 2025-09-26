@@ -86,6 +86,23 @@ export const EnhancedMediaOutletManagement = () => {
     competitive_advantages: '',
     business_model: '',
     ownership_type: '',
+    demographics: {
+      gender: { male: '', female: '' },
+      income: { high_income: '' },
+      education: { graduate_degree: '' },
+      device: { mobile: '' }
+    },
+    social_media: {
+      facebook: '',
+      twitter: '',
+      instagram: '',
+      linkedin: '',
+      total_followers: ''
+    },
+    editorial_focus: [] as string[],
+    awards: [] as { type: string; recipient: string; year?: string }[],
+    key_personnel: [] as { name: string; role: string }[],
+    technical_specs: {}
   });
 
   useEffect(() => {
@@ -169,6 +186,26 @@ export const EnhancedMediaOutletManagement = () => {
       competitive_advantages: outlet.competitive_advantages || '',
       business_model: outlet.business_model || '',
       ownership_type: outlet.ownership_type || '',
+      demographics: {
+        gender: { 
+          male: outlet.demographics?.gender?.male?.toString() || '', 
+          female: outlet.demographics?.gender?.female?.toString() || '' 
+        },
+        income: { high_income: outlet.demographics?.income?.high_income?.toString() || '' },
+        education: { graduate_degree: outlet.demographics?.education?.graduate_degree?.toString() || '' },
+        device: { mobile: outlet.demographics?.device?.mobile?.toString() || '' }
+      },
+      social_media: {
+        facebook: outlet.social_media?.facebook?.toString() || '',
+        twitter: outlet.social_media?.twitter?.toString() || '',
+        instagram: outlet.social_media?.instagram?.toString() || '',
+        linkedin: outlet.social_media?.linkedin?.toString() || '',
+        total_followers: outlet.social_media?.total_followers?.toString() || ''
+      },
+      editorial_focus: Array.isArray(outlet.editorial_focus) ? outlet.editorial_focus : [],
+      awards: Array.isArray(outlet.awards) ? outlet.awards : [],
+      key_personnel: Array.isArray(outlet.key_personnel) ? outlet.key_personnel : [],
+      technical_specs: outlet.technical_specs || {}
     });
     setShowForm(true);
   };
@@ -196,6 +233,23 @@ export const EnhancedMediaOutletManagement = () => {
       competitive_advantages: '',
       business_model: '',
       ownership_type: '',
+      demographics: {
+        gender: { male: '', female: '' },
+        income: { high_income: '' },
+        education: { graduate_degree: '' },
+        device: { mobile: '' }
+      },
+      social_media: {
+        facebook: '',
+        twitter: '',
+        instagram: '',
+        linkedin: '',
+        total_followers: ''
+      },
+      editorial_focus: [],
+      awards: [],
+      key_personnel: [],
+      technical_specs: {}
     });
     setShowForm(true);
   };
@@ -230,6 +284,36 @@ export const EnhancedMediaOutletManagement = () => {
         competitive_advantages: formData.competitive_advantages.trim() || null,
         business_model: formData.business_model.trim() || null,
         ownership_type: formData.ownership_type.trim() || null,
+        demographics: {
+          gender: {
+            male: formData.demographics.gender.male ? parseFloat(formData.demographics.gender.male) : null,
+            female: formData.demographics.gender.female ? parseFloat(formData.demographics.gender.female) : null
+          },
+          income: {
+            high_income: formData.demographics.income.high_income ? parseFloat(formData.demographics.income.high_income) : null
+          },
+          education: {
+            graduate_degree: formData.demographics.education.graduate_degree ? parseFloat(formData.demographics.education.graduate_degree) : null
+          },
+          device: {
+            mobile: formData.demographics.device.mobile ? parseFloat(formData.demographics.device.mobile) : null
+          }
+        },
+        social_media: {
+          facebook: formData.social_media.facebook ? parseInt(formData.social_media.facebook) : null,
+          twitter: formData.social_media.twitter ? parseInt(formData.social_media.twitter) : null,
+          instagram: formData.social_media.instagram ? parseInt(formData.social_media.instagram) : null,
+          linkedin: formData.social_media.linkedin ? parseInt(formData.social_media.linkedin) : null,
+          total_followers: formData.social_media.total_followers ? parseInt(formData.social_media.total_followers) : null
+        },
+        editorial_focus: formData.editorial_focus.length > 0 ? formData.editorial_focus : null,
+        awards: formData.awards.filter(a => a.type.trim() && a.recipient.trim()).length > 0 
+          ? formData.awards.filter(a => a.type.trim() && a.recipient.trim()) 
+          : null,
+        key_personnel: formData.key_personnel.filter(p => p.name.trim() && p.role.trim()).length > 0 
+          ? formData.key_personnel.filter(p => p.name.trim() && p.role.trim()) 
+          : null,
+        technical_specs: formData.technical_specs,
         is_active: true,
       };
 
@@ -464,10 +548,20 @@ export const EnhancedMediaOutletManagement = () => {
               <TabsContent value="audience" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Audience Metrics
-                    </CardTitle>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        Audience Metrics
+                      </CardTitle>
+                      <Button 
+                        onClick={() => handleEditOutlet(selectedOutlet)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Audience
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -544,10 +638,20 @@ export const EnhancedMediaOutletManagement = () => {
               <TabsContent value="editorial" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Edit className="h-5 w-5" />
-                      Editorial Information
-                    </CardTitle>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="flex items-center gap-2">
+                        <Edit className="h-5 w-5" />
+                        Editorial Information
+                      </CardTitle>
+                      <Button 
+                        onClick={() => handleEditOutlet(selectedOutlet)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Editorial
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {selectedOutlet.editorial_focus && selectedOutlet.editorial_focus.length > 0 && (
@@ -944,6 +1048,313 @@ export const EnhancedMediaOutletManagement = () => {
                   onChange={(e) => handleInputChange('secondary_markets', e.target.value)}
                   placeholder="Milwaukee, WI, Detroit, MI (comma-separated)"
                 />
+              </div>
+            </div>
+
+            {/* Demographics */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Demographics</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="gender_male">Male Audience (%)</Label>
+                  <Input
+                    id="gender_male"
+                    type="number"
+                    value={formData.demographics.gender.male}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      demographics: {
+                        ...prev.demographics,
+                        gender: { ...prev.demographics.gender, male: e.target.value }
+                      }
+                    }))}
+                    placeholder="50"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="gender_female">Female Audience (%)</Label>
+                  <Input
+                    id="gender_female"
+                    type="number"
+                    value={formData.demographics.gender.female}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      demographics: {
+                        ...prev.demographics,
+                        gender: { ...prev.demographics.gender, female: e.target.value }
+                      }
+                    }))}
+                    placeholder="50"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="high_income">High Income Audience (%)</Label>
+                  <Input
+                    id="high_income"
+                    type="number"
+                    value={formData.demographics.income.high_income}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      demographics: {
+                        ...prev.demographics,
+                        income: { high_income: e.target.value }
+                      }
+                    }))}
+                    placeholder="30"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="graduate_degree">Graduate Degree (%)</Label>
+                  <Input
+                    id="graduate_degree"
+                    type="number"
+                    value={formData.demographics.education.graduate_degree}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      demographics: {
+                        ...prev.demographics,
+                        education: { graduate_degree: e.target.value }
+                      }
+                    }))}
+                    placeholder="25"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="mobile_users">Mobile Users (%)</Label>
+                  <Input
+                    id="mobile_users"
+                    type="number"
+                    value={formData.demographics.device.mobile}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      demographics: {
+                        ...prev.demographics,
+                        device: { mobile: e.target.value }
+                      }
+                    }))}
+                    placeholder="75"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Social Media */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Social Media</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="facebook">Facebook Followers</Label>
+                  <Input
+                    id="facebook"
+                    type="number"
+                    value={formData.social_media.facebook}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      social_media: { ...prev.social_media, facebook: e.target.value }
+                    }))}
+                    placeholder="5000"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="twitter">Twitter Followers</Label>
+                  <Input
+                    id="twitter"
+                    type="number"
+                    value={formData.social_media.twitter}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      social_media: { ...prev.social_media, twitter: e.target.value }
+                    }))}
+                    placeholder="3000"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="instagram">Instagram Followers</Label>
+                  <Input
+                    id="instagram"
+                    type="number"
+                    value={formData.social_media.instagram}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      social_media: { ...prev.social_media, instagram: e.target.value }
+                    }))}
+                    placeholder="8000"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="linkedin">LinkedIn Followers</Label>
+                  <Input
+                    id="linkedin"
+                    type="number"
+                    value={formData.social_media.linkedin}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      social_media: { ...prev.social_media, linkedin: e.target.value }
+                    }))}
+                    placeholder="2000"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="total_followers">Total Social Followers</Label>
+                  <Input
+                    id="total_followers"
+                    type="number"
+                    value={formData.social_media.total_followers}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      social_media: { ...prev.social_media, total_followers: e.target.value }
+                    }))}
+                    placeholder="18000"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Editorial Focus */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Editorial Focus</h3>
+              <div>
+                <Label>Focus Areas</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.editorial_focus.map((focus, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {focus}
+                      <X 
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          editorial_focus: prev.editorial_focus.filter((_, i) => i !== index)
+                        }))}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    placeholder="Add focus area (e.g., Technology, Health)"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        const value = e.currentTarget.value.trim();
+                        if (value && !formData.editorial_focus.includes(value)) {
+                          setFormData(prev => ({
+                            ...prev,
+                            editorial_focus: [...prev.editorial_focus, value]
+                          }));
+                          e.currentTarget.value = '';
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Awards & Key Personnel */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Awards</h3>
+                <div className="space-y-2">
+                  {formData.awards.map((award, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        placeholder="Award type"
+                        value={award.type}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          awards: prev.awards.map((a, i) => 
+                            i === index ? { ...a, type: e.target.value } : a
+                          )
+                        }))}
+                      />
+                      <Input
+                        placeholder="Recipient"
+                        value={award.recipient}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          awards: prev.awards.map((a, i) => 
+                            i === index ? { ...a, recipient: e.target.value } : a
+                          )
+                        }))}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          awards: prev.awards.filter((_, i) => i !== index)
+                        }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      awards: [...prev.awards, { type: '', recipient: '' }]
+                    }))}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Award
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Key Personnel</h3>
+                <div className="space-y-2">
+                  {formData.key_personnel.map((person, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        placeholder="Name"
+                        value={person.name}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          key_personnel: prev.key_personnel.map((p, i) => 
+                            i === index ? { ...p, name: e.target.value } : p
+                          )
+                        }))}
+                      />
+                      <Input
+                        placeholder="Role"
+                        value={person.role}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          key_personnel: prev.key_personnel.map((p, i) => 
+                            i === index ? { ...p, role: e.target.value } : p
+                          )
+                        }))}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          key_personnel: prev.key_personnel.filter((_, i) => i !== index)
+                        }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      key_personnel: [...prev.key_personnel, { name: '', role: '' }]
+                    }))}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Person
+                  </Button>
+                </div>
               </div>
             </div>
 
