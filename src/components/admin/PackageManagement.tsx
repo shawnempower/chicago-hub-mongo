@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, Plus } from 'lucide-react';
+import { Trash2, Edit, Plus, Archive, RotateCcw } from 'lucide-react';
 import { DatabasePackage } from '@/hooks/usePackages';
+import { SafeDeleteDialog } from './SafeDeleteDialog';
 
 // Interface for the form data
 interface PackageFormData {
@@ -27,9 +28,13 @@ interface PackageFormData {
 
 const PackageManagement = () => {
   const [packages, setPackages] = useState<DatabasePackage[]>([]);
+  const [deletedPackages, setDeletedPackages] = useState<DatabasePackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [editingPackage, setEditingPackage] = useState<DatabasePackage | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [packageToDelete, setPackageToDelete] = useState<DatabasePackage | null>(null);
   const [formData, setFormData] = useState<PackageFormData>({
     name: '',
     tagline: '',
@@ -51,13 +56,27 @@ const PackageManagement = () => {
   const fetchPackages = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Fetch active packages
+      const { data: activeData, error: activeError } = await supabase
         .from('ad_packages')
         .select('*')
+        .is('deleted_at', null)
         .order('legacy_id');
       
-      if (error) throw error;
-      setPackages(data || []);
+      if (activeError) throw activeError;
+      setPackages(activeData || []);
+
+      // Fetch deleted packages
+      const { data: deletedData, error: deletedError } = await supabase
+        .from('ad_packages')
+        .select('*')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+
+      if (deletedError) throw deletedError;
+      setDeletedPackages(deletedData || []);
+      
     } catch (error) {
       console.error('Error fetching packages:', error);
       toast({
@@ -146,27 +165,33 @@ const PackageManagement = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (packageId: string) => {
-    if (!confirm('Are you sure you want to delete this package?')) return;
+  const handleDeleteClick = (pkg: DatabasePackage) => {
+    setPackageToDelete(pkg);
+    setDeleteDialogOpen(true);
+  };
 
+  const handleRestore = async (id: string, name: string) => {
     try {
-      const { error } = await supabase
-        .from('ad_packages')
-        .delete()
-        .eq('id', packageId);
+      const { data, error } = await supabase
+        .rpc('restore_package', { package_uuid: id });
 
       if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Package deleted successfully",
-      });
-      fetchPackages();
+
+      const result = data as any;
+      if (result.success) {
+        toast({
+          title: "Package Restored",
+          description: `"${name}" has been restored successfully.`,
+        });
+        fetchPackages();
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
-      console.error('Error deleting package:', error);
+      console.error('Error restoring package:', error);
       toast({
         title: "Error",
-        description: "Failed to delete package",
+        description: "Failed to restore package. Please try again.",
         variant: "destructive",
       });
     }
@@ -200,10 +225,19 @@ const PackageManagement = () => {
           <h2 className="text-2xl font-bold">Ad Packages</h2>
           <p className="text-muted-foreground">Manage advertising packages and offerings</p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Package
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant={showDeleted ? "default" : "outline"}
+            onClick={() => setShowDeleted(!showDeleted)}
+          >
+            <Archive className="w-4 h-4 mr-2" />
+            {showDeleted ? "Show Active" : "Show Archived"} ({showDeleted ? packages.length : deletedPackages.length})
+          </Button>
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Package
+          </Button>
+        </div>
       </div>
 
       {showForm && (
@@ -308,26 +342,39 @@ const PackageManagement = () => {
       )}
 
       <div className="space-y-4">
-        {packages.map((pkg) => (
+        {(showDeleted ? deletedPackages : packages).map((pkg) => (
           <Card key={pkg.id}>
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 <span>{pkg.name}</span>
                 <div className="space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(pkg)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(pkg.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {showDeleted ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleRestore(pkg.id, pkg.name)}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1" />
+                      Restore
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(pkg)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteClick(pkg)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardTitle>
             </CardHeader>
@@ -405,6 +452,17 @@ const PackageManagement = () => {
           </Card>
         ))}
       </div>
+
+      <SafeDeleteDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setPackageToDelete(null);
+        }}
+        onSuccess={fetchPackages}
+        packageId={packageToDelete?.id || ''}
+        packageName={packageToDelete?.name || ''}
+      />
     </div>
   );
 };

@@ -32,6 +32,7 @@ export const usePackages = () => {
         .from('ad_packages')
         .select('*')
         .eq('is_active', true)
+        .is('deleted_at', null)
         .order('legacy_id');
 
       if (error) throw error;

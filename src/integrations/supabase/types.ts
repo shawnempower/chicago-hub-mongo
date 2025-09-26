@@ -20,6 +20,7 @@ export type Database = {
           channels: string[] | null
           complexity: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           duration: string | null
           features: Json | null
@@ -41,6 +42,7 @@ export type Database = {
           channels?: string[] | null
           complexity?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           duration?: string | null
           features?: Json | null
@@ -62,6 +64,7 @@ export type Database = {
           channels?: string[] | null
           complexity?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           duration?: string | null
           features?: Json | null
@@ -494,6 +497,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_package_usage_stats: {
+        Args: { package_legacy_id: number }
+        Returns: {
+          saved_count: number
+          users_with_saves: string[]
+        }[]
+      }
+      restore_package: {
+        Args: { package_uuid: string }
+        Returns: Json
+      }
+      safe_delete_package: {
+        Args: {
+          cascade_saves?: boolean
+          force_delete?: boolean
+          package_uuid: string
+        }
+        Returns: Json
+      }
       sanitize_input: {
         Args: { input_text: string }
         Returns: string
