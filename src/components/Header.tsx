@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { User, ChevronDown } from "lucide-react";
 
@@ -11,6 +12,7 @@ interface HeaderProps {
 export function Header({ onAssistantClick }: HeaderProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdminAuth();
   
   const firstName = user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'User';
   
@@ -56,6 +58,18 @@ export function Header({ onAssistantClick }: HeaderProps) {
             >
               Ad Packages
             </Link>
+            {isAdmin && (
+              <Link 
+                to="/admin" 
+                className={`transition-colors ${
+                  location.pathname === '/admin' 
+                    ? 'text-primary font-medium' 
+                    : 'text-muted-foreground hover:text-primary'
+                }`}
+              >
+                Admin
+              </Link>
+            )}
           </nav>
         </div>
         
@@ -91,6 +105,11 @@ export function Header({ onAssistantClick }: HeaderProps) {
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard?tab=saved">Saved Items</Link>
                 </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin">Admin Dashboard</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={signOut} className="text-destructive">
                   Sign Out
                 </DropdownMenuItem>

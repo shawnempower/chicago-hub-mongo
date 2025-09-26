@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_packages: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration: string | null
+          features: Json | null
+          format: string | null
+          id: string
+          is_active: boolean | null
+          legacy_id: number | null
+          media_outlet_id: string | null
+          name: string
+          price_range: string | null
+          reach_estimate: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          features?: Json | null
+          format?: string | null
+          id?: string
+          is_active?: boolean | null
+          legacy_id?: number | null
+          media_outlet_id?: string | null
+          name: string
+          price_range?: string | null
+          reach_estimate?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          features?: Json | null
+          format?: string | null
+          id?: string
+          is_active?: boolean | null
+          legacy_id?: number | null
+          media_outlet_id?: string | null
+          name?: string
+          price_range?: string | null
+          reach_estimate?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_packages_media_outlet_id_fkey"
+            columns: ["media_outlet_id"]
+            isOneToOne: false
+            referencedRelation: "media_outlets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assistant_conversations: {
         Row: {
           conversation_thread_id: string | null
@@ -160,6 +216,123 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_inquiries: {
+        Row: {
+          assigned_to: string | null
+          budget_range: string | null
+          business_name: string
+          contact_email: string
+          contact_name: string
+          contact_phone: string | null
+          conversation_context: Json | null
+          created_at: string
+          follow_up_date: string | null
+          id: string
+          interested_outlets: string[] | null
+          interested_packages: number[] | null
+          marketing_goals: string[] | null
+          notes: string | null
+          status: string | null
+          timeline: string | null
+          updated_at: string
+          user_id: string | null
+          website_url: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          budget_range?: string | null
+          business_name: string
+          contact_email: string
+          contact_name: string
+          contact_phone?: string | null
+          conversation_context?: Json | null
+          created_at?: string
+          follow_up_date?: string | null
+          id?: string
+          interested_outlets?: string[] | null
+          interested_packages?: number[] | null
+          marketing_goals?: string[] | null
+          notes?: string | null
+          status?: string | null
+          timeline?: string | null
+          updated_at?: string
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          budget_range?: string | null
+          business_name?: string
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string | null
+          conversation_context?: Json | null
+          created_at?: string
+          follow_up_date?: string | null
+          id?: string
+          interested_outlets?: string[] | null
+          interested_packages?: number[] | null
+          marketing_goals?: string[] | null
+          notes?: string | null
+          status?: string | null
+          timeline?: string | null
+          updated_at?: string
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      media_outlets: {
+        Row: {
+          audience_size: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          coverage_area: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          social_media: Json | null
+          tagline: string | null
+          type: string
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          audience_size?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          coverage_area?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          social_media?: Json | null
+          tagline?: string | null
+          type: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          audience_size?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          coverage_area?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          social_media?: Json | null
+          tagline?: string | null
+          type?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           brand_voice: string | null
@@ -170,6 +343,7 @@ export type Database = {
           first_name: string | null
           id: string
           industry: string | null
+          is_admin: boolean | null
           last_name: string | null
           marketing_goals: string[] | null
           phone: string | null
@@ -192,6 +366,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           industry?: string | null
+          is_admin?: boolean | null
           last_name?: string | null
           marketing_goals?: string[] | null
           phone?: string | null
@@ -214,6 +389,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           industry?: string | null
+          is_admin?: boolean | null
           last_name?: string | null
           marketing_goals?: string[] | null
           phone?: string | null
