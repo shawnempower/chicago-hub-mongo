@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LeadManagement } from './LeadManagement';
-import { MediaOutletManagement } from './MediaOutletManagement';
 import { PackageManagement } from './PackageManagement';
 import { AssistantManagement } from './AssistantManagement';
 import { MediaImportInterface } from './MediaImportInterface';
@@ -20,13 +19,12 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="outlets">Outlets</TabsTrigger>
           <TabsTrigger value="packages">Packages</TabsTrigger>
           <TabsTrigger value="import">Import</TabsTrigger>
-          <TabsTrigger value="enhanced-outlets">Enhanced Outlets</TabsTrigger>
           <TabsTrigger value="assistant">Assistant</TabsTrigger>
         </TabsList>
 
@@ -144,7 +142,7 @@ export const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="outlets">
-          <MediaOutletManagement />
+          <EnhancedMediaOutletManagement />
         </TabsContent>
 
         <TabsContent value="packages">
@@ -152,11 +150,7 @@ export const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="import">
-          <MediaImportInterface onImportSuccess={() => setActiveTab('enhanced-outlets')} />
-        </TabsContent>
-
-        <TabsContent value="enhanced-outlets">
-          <EnhancedMediaOutletManagement />
+          <MediaImportInterface onImportSuccess={() => setActiveTab('outlets')} />
         </TabsContent>
 
         <TabsContent value="assistant">

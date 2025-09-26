@@ -62,6 +62,17 @@ export const EnhancedMediaOutletManagement = () => {
   const [selectedOutlet, setSelectedOutlet] = useState<MediaOutlet | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showForm, setShowForm] = useState(false);
+  const [editingOutlet, setEditingOutlet] = useState<MediaOutlet | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    type: '',
+    tagline: '',
+    description: '',
+    website_url: '',
+    contact_email: '',
+    contact_phone: '',
+  });
 
   useEffect(() => {
     fetchOutlets();

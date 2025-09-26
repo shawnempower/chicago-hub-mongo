@@ -451,7 +451,7 @@ export const MediaImportInterface = ({ onImportSuccess }: MediaImportInterfacePr
                     className="p-0 h-auto ml-2"
                     onClick={onImportSuccess}
                   >
-                    View in Enhanced Outlets →
+                    View in Outlets →
                   </Button>
                 )}
               </AlertDescription>
