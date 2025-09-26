@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart } from "lucide-react";
-import { Package, audienceTypes, channelTypes, priceRanges, complexityTypes } from "@/data/packages";
+import { Package } from "@/types/package";
+import { audienceTypes, channelTypes, priceRanges, complexityTypes } from "@/data/packages";
 import { cn } from "@/lib/utils";
 
 interface PackageCardProps {

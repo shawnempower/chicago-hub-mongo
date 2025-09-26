@@ -11,7 +11,9 @@ import { ActiveFilters } from "@/components/ActiveFilters";
 import { PackageModal } from "@/components/PackageModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { packages, Package } from "@/data/packages";
+import { Package, convertDatabasePackage } from "@/types/package";
+import { usePackages } from "@/hooks/usePackages";
+import { audienceTypes, channelTypes, priceRanges, complexityTypes } from "@/data/packages";
 import { Grid, List, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSavedPackages } from "@/hooks/useSavedPackages";
@@ -23,6 +25,8 @@ const Packages = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [highlightedPackageId, setHighlightedPackageId] = useState<number | null>(null);
   
+  const { packages: dbPackages, loading } = usePackages();
+  const packages = dbPackages.map(convertDatabasePackage);
   const { savedPackages, toggleSavePackage, isSaved } = useSavedPackages();
 
   // Handle highlighting from AI recommendations
@@ -163,9 +167,9 @@ const Packages = () => {
           <div className="container mx-auto px-6">
             {/* Results Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-              <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
                 <h2 className="text-xl font-semibold text-foreground">
-                  Showing {filteredPackages.length} packages
+                  {loading ? "Loading packages..." : `Showing ${filteredPackages.length} packages`}
                 </h2>
                 {savedPackages.length > 0 && (
                   <Badge variant="outline" className="text-accent">
@@ -207,32 +211,50 @@ const Packages = () => {
             </div>
 
             {/* Package Grid */}
-            <div className={cn(
-              "grid gap-6",
-              viewMode === "grid" 
-                ? "md:grid-cols-2 lg:grid-cols-3" 
-                : "grid-cols-1 max-w-4xl mx-auto"
-            )}>
-              {filteredPackages.map(pkg => (
-                <div
-                  key={pkg.id}
-                  id={`package-${pkg.id}`}
-                  className={cn(
-                    "transition-all duration-300",
-                    highlightedPackageId === pkg.id && "ring-2 ring-accent shadow-lg"
-                  )}
-                >
-                  <PackageCard
-                    packageData={pkg}
-                    onSave={handleSavePackage}
-                    isSaved={isSaved(pkg.id)}
-                    onDetails={setSelectedPackage}
-                  />
-                </div>
-              ))}
-            </div>
+            {loading ? (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="outlet-card animate-pulse">
+                    <div className="p-6">
+                      <div className="h-6 bg-muted rounded mb-2"></div>
+                      <div className="h-4 bg-muted rounded mb-4"></div>
+                      <div className="h-16 bg-muted rounded mb-4"></div>
+                      <div className="flex gap-2 mb-4">
+                        <div className="h-6 w-16 bg-muted rounded"></div>
+                        <div className="h-6 w-16 bg-muted rounded"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={cn(
+                "grid gap-6",
+                viewMode === "grid" 
+                  ? "md:grid-cols-2 lg:grid-cols-3" 
+                  : "grid-cols-1 max-w-4xl mx-auto"
+              )}>
+                {filteredPackages.map(pkg => (
+                  <div
+                    key={pkg.id}
+                    id={`package-${pkg.id}`}
+                    className={cn(
+                      "transition-all duration-300",
+                      highlightedPackageId === pkg.id && "ring-2 ring-accent shadow-lg"
+                    )}
+                  >
+                    <PackageCard
+                      packageData={pkg}
+                      onSave={handleSavePackage}
+                      isSaved={isSaved(pkg.id)}
+                      onDetails={setSelectedPackage}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {filteredPackages.length === 0 && (
+            {!loading && filteredPackages.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">No packages match your current filters.</p>
                 <Button variant="outline" onClick={clearAllFilters}>

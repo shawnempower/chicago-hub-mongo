@@ -2,7 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Share2 } from "lucide-react";
-import { Package, audienceTypes, channelTypes, complexityTypes } from "@/data/packages";
+import { Package } from "@/types/package";
+import { audienceTypes, channelTypes, complexityTypes } from "@/data/packages";
 import { cn } from "@/lib/utils";
 
 interface PackageModalProps {

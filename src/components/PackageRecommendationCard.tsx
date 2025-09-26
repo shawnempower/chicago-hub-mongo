@@ -1,4 +1,4 @@
-import { Package } from "@/data/packages";
+import { Package } from "@/types/package";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, ExternalLink } from "lucide-react";
