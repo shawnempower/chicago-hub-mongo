@@ -53,7 +53,11 @@ interface ParsedInventoryData {
   description?: string;
 }
 
-export const MediaImportInterface = () => {
+interface MediaImportInterfaceProps {
+  onImportSuccess?: () => void;
+}
+
+export const MediaImportInterface = ({ onImportSuccess }: MediaImportInterfaceProps) => {
   const [profileMarkdown, setProfileMarkdown] = useState('');
   const [inventoryMarkdown, setInventoryMarkdown] = useState('');
   const [parsedData, setParsedData] = useState<{
@@ -353,6 +357,13 @@ export const MediaImportInterface = () => {
       setSuccess(true);
       toast.success('Media outlet imported successfully!');
       
+      // Call success callback to navigate to Enhanced Outlets tab
+      if (onImportSuccess) {
+        setTimeout(() => {
+          onImportSuccess();
+        }, 1000); // Small delay to show success message
+      }
+      
       // Reset form
       setProfileMarkdown('');
       setInventoryMarkdown('');
@@ -432,7 +443,18 @@ export const MediaImportInterface = () => {
           {success && (
             <Alert>
               <CheckCircle className="h-4 w-4" />
-              <AlertDescription>Media outlet imported successfully!</AlertDescription>
+              <AlertDescription>
+                Media outlet imported successfully! 
+                {onImportSuccess && (
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto ml-2"
+                    onClick={onImportSuccess}
+                  >
+                    View in Enhanced Outlets →
+                  </Button>
+                )}
+              </AlertDescription>
             </Alert>
           )}
 

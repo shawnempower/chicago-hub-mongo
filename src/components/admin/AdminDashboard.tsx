@@ -20,12 +20,13 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="outlets">Outlets</TabsTrigger>
           <TabsTrigger value="packages">Packages</TabsTrigger>
           <TabsTrigger value="import">Import</TabsTrigger>
+          <TabsTrigger value="enhanced-outlets">Enhanced Outlets</TabsTrigger>
           <TabsTrigger value="assistant">Assistant</TabsTrigger>
         </TabsList>
 
@@ -151,10 +152,11 @@ export const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="import">
-          <div className="space-y-6">
-            <MediaImportInterface />
-            <EnhancedMediaOutletManagement />
-          </div>
+          <MediaImportInterface onImportSuccess={() => setActiveTab('enhanced-outlets')} />
+        </TabsContent>
+
+        <TabsContent value="enhanced-outlets">
+          <EnhancedMediaOutletManagement />
         </TabsContent>
 
         <TabsContent value="assistant">

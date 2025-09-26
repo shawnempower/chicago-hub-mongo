@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Trash2, Edit, Plus, Eye, Users, TrendingUp, Award, Building } from 'lucide-react';
+import { Trash2, Edit, Plus, Eye, Users, TrendingUp, Award, Building, RefreshCw } from 'lucide-react';
 
 interface MediaOutlet {
   id: string;
@@ -143,6 +143,17 @@ export const EnhancedMediaOutletManagement = () => {
           <h2 className="text-2xl font-bold">Enhanced Media Outlet Management</h2>
           <p className="text-muted-foreground">Comprehensive outlet profiles and advertising inventory</p>
         </div>
+        <Button 
+          onClick={() => {
+            fetchOutlets();
+            fetchInventory();
+          }}
+          variant="outline"
+          disabled={loading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh Data
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
