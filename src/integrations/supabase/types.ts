@@ -16,6 +16,9 @@ export type Database = {
     Tables: {
       ad_packages: {
         Row: {
+          audience: string[] | null
+          channels: string[] | null
+          complexity: string | null
           created_at: string
           description: string | null
           duration: string | null
@@ -26,11 +29,17 @@ export type Database = {
           legacy_id: number | null
           media_outlet_id: string | null
           name: string
+          outlets: string[] | null
+          price: string | null
           price_range: string | null
           reach_estimate: string | null
+          tagline: string | null
           updated_at: string
         }
         Insert: {
+          audience?: string[] | null
+          channels?: string[] | null
+          complexity?: string | null
           created_at?: string
           description?: string | null
           duration?: string | null
@@ -41,11 +50,17 @@ export type Database = {
           legacy_id?: number | null
           media_outlet_id?: string | null
           name: string
+          outlets?: string[] | null
+          price?: string | null
           price_range?: string | null
           reach_estimate?: string | null
+          tagline?: string | null
           updated_at?: string
         }
         Update: {
+          audience?: string[] | null
+          channels?: string[] | null
+          complexity?: string | null
           created_at?: string
           description?: string | null
           duration?: string | null
@@ -56,8 +71,11 @@ export type Database = {
           legacy_id?: number | null
           media_outlet_id?: string | null
           name?: string
+          outlets?: string[] | null
+          price?: string | null
           price_range?: string | null
           reach_estimate?: string | null
+          tagline?: string | null
           updated_at?: string
         }
         Relationships: [
