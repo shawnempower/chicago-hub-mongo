@@ -91,6 +91,77 @@ export type Database = {
           },
         ]
       }
+      advertising_inventory: {
+        Row: {
+          availability_schedule: string | null
+          cancellation_policy: string | null
+          created_at: string
+          description: string | null
+          file_requirements: Json | null
+          id: string
+          is_active: boolean | null
+          lead_time: string | null
+          max_commitment: string | null
+          media_outlet_id: string
+          min_commitment: string | null
+          package_name: string
+          package_type: string
+          performance_metrics: Json | null
+          placement_options: Json | null
+          pricing_tiers: Json | null
+          technical_requirements: Json | null
+          updated_at: string
+        }
+        Insert: {
+          availability_schedule?: string | null
+          cancellation_policy?: string | null
+          created_at?: string
+          description?: string | null
+          file_requirements?: Json | null
+          id?: string
+          is_active?: boolean | null
+          lead_time?: string | null
+          max_commitment?: string | null
+          media_outlet_id: string
+          min_commitment?: string | null
+          package_name: string
+          package_type: string
+          performance_metrics?: Json | null
+          placement_options?: Json | null
+          pricing_tiers?: Json | null
+          technical_requirements?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          availability_schedule?: string | null
+          cancellation_policy?: string | null
+          created_at?: string
+          description?: string | null
+          file_requirements?: Json | null
+          id?: string
+          is_active?: boolean | null
+          lead_time?: string | null
+          max_commitment?: string | null
+          media_outlet_id?: string
+          min_commitment?: string | null
+          package_name?: string
+          package_type?: string
+          performance_metrics?: Json | null
+          placement_options?: Json | null
+          pricing_tiers?: Json | null
+          technical_requirements?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertising_inventory_media_outlet_id_fkey"
+            columns: ["media_outlet_id"]
+            isOneToOne: false
+            referencedRelation: "media_outlets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assistant_conversations: {
         Row: {
           conversation_thread_id: string | null
@@ -306,48 +377,96 @@ export type Database = {
       media_outlets: {
         Row: {
           audience_size: string | null
+          awards: Json | null
+          business_model: string | null
+          competitive_advantages: string | null
           contact_email: string | null
           contact_phone: string | null
           coverage_area: string | null
           created_at: string
+          demographics: Json | null
           description: string | null
+          editorial_focus: Json | null
+          email_subscribers: number | null
+          founding_year: number | null
           id: string
           is_active: boolean | null
+          key_personnel: Json | null
+          monthly_visitors: number | null
           name: string
+          open_rate: number | null
+          ownership_type: string | null
+          primary_market: string | null
+          publication_frequency: string | null
+          secondary_markets: Json | null
           social_media: Json | null
+          staff_count: number | null
           tagline: string | null
+          technical_specs: Json | null
           type: string
           updated_at: string
           website_url: string | null
         }
         Insert: {
           audience_size?: string | null
+          awards?: Json | null
+          business_model?: string | null
+          competitive_advantages?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           coverage_area?: string | null
           created_at?: string
+          demographics?: Json | null
           description?: string | null
+          editorial_focus?: Json | null
+          email_subscribers?: number | null
+          founding_year?: number | null
           id?: string
           is_active?: boolean | null
+          key_personnel?: Json | null
+          monthly_visitors?: number | null
           name: string
+          open_rate?: number | null
+          ownership_type?: string | null
+          primary_market?: string | null
+          publication_frequency?: string | null
+          secondary_markets?: Json | null
           social_media?: Json | null
+          staff_count?: number | null
           tagline?: string | null
+          technical_specs?: Json | null
           type: string
           updated_at?: string
           website_url?: string | null
         }
         Update: {
           audience_size?: string | null
+          awards?: Json | null
+          business_model?: string | null
+          competitive_advantages?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           coverage_area?: string | null
           created_at?: string
+          demographics?: Json | null
           description?: string | null
+          editorial_focus?: Json | null
+          email_subscribers?: number | null
+          founding_year?: number | null
           id?: string
           is_active?: boolean | null
+          key_personnel?: Json | null
+          monthly_visitors?: number | null
           name?: string
+          open_rate?: number | null
+          ownership_type?: string | null
+          primary_market?: string | null
+          publication_frequency?: string | null
+          secondary_markets?: Json | null
           social_media?: Json | null
+          staff_count?: number | null
           tagline?: string | null
+          technical_specs?: Json | null
           type?: string
           updated_at?: string
           website_url?: string | null

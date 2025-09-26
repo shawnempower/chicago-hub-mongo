@@ -5,6 +5,8 @@ import { LeadManagement } from './LeadManagement';
 import { MediaOutletManagement } from './MediaOutletManagement';
 import { PackageManagement } from './PackageManagement';
 import { AssistantManagement } from './AssistantManagement';
+import { MediaImportInterface } from './MediaImportInterface';
+import { EnhancedMediaOutletManagement } from './EnhancedMediaOutletManagement';
 import { Users, Package, Radio, Bot } from 'lucide-react';
 
 export const AdminDashboard = () => {
@@ -18,11 +20,12 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="outlets">Outlets</TabsTrigger>
           <TabsTrigger value="packages">Packages</TabsTrigger>
+          <TabsTrigger value="import">Import</TabsTrigger>
           <TabsTrigger value="assistant">Assistant</TabsTrigger>
         </TabsList>
 
@@ -145,6 +148,13 @@ export const AdminDashboard = () => {
 
         <TabsContent value="packages">
           <PackageManagement />
+        </TabsContent>
+
+        <TabsContent value="import">
+          <div className="space-y-6">
+            <MediaImportInterface />
+            <EnhancedMediaOutletManagement />
+          </div>
         </TabsContent>
 
         <TabsContent value="assistant">
