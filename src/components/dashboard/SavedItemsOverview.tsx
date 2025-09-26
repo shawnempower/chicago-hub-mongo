@@ -1,20 +1,37 @@
 import { useSavedPackages } from "@/hooks/useSavedPackages";
 import { useSavedOutlets } from "@/hooks/useSavedOutlets";
+import { usePackages } from "@/hooks/usePackages";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Package, Building2, ExternalLink, Heart, MessageCircle } from "lucide-react";
-import { packages } from "@/data/packages";
 import { mediaPartners } from "@/data/mediaPartners";
 import { EmptyStates } from "@/components/EmptyStates";
+import { convertDatabasePackage } from "@/types/package";
 
 export function SavedItemsOverview() {
   const { savedPackages, toggleSavePackage } = useSavedPackages();
   const { savedOutlets, toggleSaveOutlet } = useSavedOutlets();
+  const { packages: dbPackages, loading: packagesLoading } = usePackages();
 
-  const savedPackagesList = packages.filter(pkg => savedPackages.includes(pkg.id));
+  // Convert database packages to frontend format and filter by saved IDs
+  const savedPackagesList = dbPackages
+    .filter(dbPkg => dbPkg.legacy_id && savedPackages.includes(dbPkg.legacy_id))
+    .map(convertDatabasePackage);
+  
   const savedOutletsList = mediaPartners.filter(partner => savedOutlets.has(partner.id.toString()));
+
+  if (packagesLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="section-title mb-2">Saved Items</h2>
+          <p className="body-large">Loading your saved items...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (savedPackagesList.length === 0 && savedOutletsList.length === 0) {
     return (
