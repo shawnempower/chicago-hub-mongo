@@ -7,9 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Trash2, Edit, Plus, Eye, Users, TrendingUp, Award, Building, RefreshCw } from 'lucide-react';
+import { Trash2, Edit, Plus, Eye, Users, TrendingUp, Award, Building, RefreshCw, Save, X } from 'lucide-react';
 
 interface MediaOutlet {
   id: string;
@@ -72,6 +73,19 @@ export const EnhancedMediaOutletManagement = () => {
     website_url: '',
     contact_email: '',
     contact_phone: '',
+    coverage_area: '',
+    audience_size: '',
+    founding_year: '',
+    publication_frequency: '',
+    staff_count: '',
+    monthly_visitors: '',
+    email_subscribers: '',
+    open_rate: '',
+    primary_market: '',
+    secondary_markets: '',
+    competitive_advantages: '',
+    business_model: '',
+    ownership_type: '',
   });
 
   useEffect(() => {
@@ -124,9 +138,133 @@ export const EnhancedMediaOutletManagement = () => {
       if (error) throw error;
       toast.success('Media outlet deleted successfully');
       fetchOutlets();
+      if (selectedOutlet?.id === id) {
+        setSelectedOutlet(null);
+      }
     } catch (error: any) {
       toast.error('Error deleting outlet: ' + error.message);
     }
+  };
+
+  const handleEditOutlet = (outlet: MediaOutlet) => {
+    setEditingOutlet(outlet);
+    setFormData({
+      name: outlet.name || '',
+      type: outlet.type || '',
+      tagline: outlet.tagline || '',
+      description: outlet.description || '',
+      website_url: outlet.website_url || '',
+      contact_email: outlet.contact_email || '',
+      contact_phone: outlet.contact_phone || '',
+      coverage_area: outlet.coverage_area || '',
+      audience_size: outlet.audience_size || '',
+      founding_year: outlet.founding_year?.toString() || '',
+      publication_frequency: outlet.publication_frequency || '',
+      staff_count: outlet.staff_count?.toString() || '',
+      monthly_visitors: outlet.monthly_visitors?.toString() || '',
+      email_subscribers: outlet.email_subscribers?.toString() || '',
+      open_rate: outlet.open_rate?.toString() || '',
+      primary_market: outlet.primary_market || '',
+      secondary_markets: Array.isArray(outlet.secondary_markets) ? outlet.secondary_markets.join(', ') : '',
+      competitive_advantages: outlet.competitive_advantages || '',
+      business_model: outlet.business_model || '',
+      ownership_type: outlet.ownership_type || '',
+    });
+    setShowForm(true);
+  };
+
+  const handleCreateOutlet = () => {
+    setEditingOutlet(null);
+    setFormData({
+      name: '',
+      type: '',
+      tagline: '',
+      description: '',
+      website_url: '',
+      contact_email: '',
+      contact_phone: '',
+      coverage_area: '',
+      audience_size: '',
+      founding_year: '',
+      publication_frequency: '',
+      staff_count: '',
+      monthly_visitors: '',
+      email_subscribers: '',
+      open_rate: '',
+      primary_market: '',
+      secondary_markets: '',
+      competitive_advantages: '',
+      business_model: '',
+      ownership_type: '',
+    });
+    setShowForm(true);
+  };
+
+  const handleSaveOutlet = async () => {
+    if (!formData.name.trim() || !formData.type.trim()) {
+      toast.error('Name and type are required');
+      return;
+    }
+
+    try {
+      const outletData = {
+        name: formData.name.trim(),
+        type: formData.type.trim(),
+        tagline: formData.tagline.trim() || null,
+        description: formData.description.trim() || null,
+        website_url: formData.website_url.trim() || null,
+        contact_email: formData.contact_email.trim() || null,
+        contact_phone: formData.contact_phone.trim() || null,
+        coverage_area: formData.coverage_area.trim() || null,
+        audience_size: formData.audience_size.trim() || null,
+        founding_year: formData.founding_year ? parseInt(formData.founding_year) : null,
+        publication_frequency: formData.publication_frequency.trim() || null,
+        staff_count: formData.staff_count ? parseInt(formData.staff_count) : null,
+        monthly_visitors: formData.monthly_visitors ? parseInt(formData.monthly_visitors) : null,
+        email_subscribers: formData.email_subscribers ? parseInt(formData.email_subscribers) : null,
+        open_rate: formData.open_rate ? parseFloat(formData.open_rate) : null,
+        primary_market: formData.primary_market.trim() || null,
+        secondary_markets: formData.secondary_markets.trim() 
+          ? formData.secondary_markets.split(',').map(s => s.trim()).filter(s => s)
+          : null,
+        competitive_advantages: formData.competitive_advantages.trim() || null,
+        business_model: formData.business_model.trim() || null,
+        ownership_type: formData.ownership_type.trim() || null,
+        is_active: true,
+      };
+
+      if (editingOutlet) {
+        const { error } = await supabase
+          .from('media_outlets')
+          .update(outletData)
+          .eq('id', editingOutlet.id);
+
+        if (error) throw error;
+        toast.success('Media outlet updated successfully');
+        
+        // Update selected outlet if it's the one being edited
+        if (selectedOutlet?.id === editingOutlet.id) {
+          setSelectedOutlet({ ...editingOutlet, ...outletData });
+        }
+      } else {
+        const { error } = await supabase
+          .from('media_outlets')
+          .insert([outletData]);
+
+        if (error) throw error;
+        toast.success('Media outlet created successfully');
+      }
+
+      setShowForm(false);
+      setEditingOutlet(null);
+      fetchOutlets();
+    } catch (error: any) {
+      toast.error('Error saving outlet: ' + error.message);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const getOutletInventory = (outletId: string) => {
@@ -151,20 +289,26 @@ export const EnhancedMediaOutletManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Enhanced Media Outlet Management</h2>
+          <h2 className="text-2xl font-bold">Media Outlets Management</h2>
           <p className="text-muted-foreground">Comprehensive outlet profiles and advertising inventory</p>
         </div>
-        <Button 
-          onClick={() => {
-            fetchOutlets();
-            fetchInventory();
-          }}
-          variant="outline"
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Data
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleCreateOutlet} variant="default">
+            <Plus className="h-4 w-4 mr-2" />
+            Add New Outlet
+          </Button>
+          <Button 
+            onClick={() => {
+              fetchOutlets();
+              fetchInventory();
+            }}
+            variant="outline"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -231,11 +375,23 @@ export const EnhancedMediaOutletManagement = () => {
               <TabsContent value="overview" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building className="h-5 w-5" />
-                      {selectedOutlet.name}
-                    </CardTitle>
-                    <CardDescription>{selectedOutlet.tagline}</CardDescription>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Building className="h-5 w-5" />
+                          {selectedOutlet.name}
+                        </CardTitle>
+                        <CardDescription>{selectedOutlet.tagline}</CardDescription>
+                      </div>
+                      <Button 
+                        onClick={() => handleEditOutlet(selectedOutlet)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Outlet
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -545,6 +701,280 @@ export const EnhancedMediaOutletManagement = () => {
           )}
         </div>
       </div>
+
+      {/* Edit/Create Modal */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingOutlet ? 'Edit Media Outlet' : 'Create New Media Outlet'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingOutlet 
+                ? 'Update the media outlet information below.'
+                : 'Enter the details for the new media outlet.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Basic Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="Media outlet name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="type">Type *</Label>
+                  <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select outlet type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Newspaper">Newspaper</SelectItem>
+                      <SelectItem value="Magazine">Magazine</SelectItem>
+                      <SelectItem value="Newsletter">Newsletter</SelectItem>
+                      <SelectItem value="Blog">Blog</SelectItem>
+                      <SelectItem value="Podcast">Podcast</SelectItem>
+                      <SelectItem value="Radio">Radio</SelectItem>
+                      <SelectItem value="TV">TV</SelectItem>
+                      <SelectItem value="Digital">Digital</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="tagline">Tagline</Label>
+                  <Input
+                    id="tagline"
+                    value={formData.tagline}
+                    onChange={(e) => handleInputChange('tagline', e.target.value)}
+                    placeholder="Brief tagline or slogan"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="website_url">Website URL</Label>
+                  <Input
+                    id="website_url"
+                    value={formData.website_url}
+                    onChange={(e) => handleInputChange('website_url', e.target.value)}
+                    placeholder="https://example.com"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Detailed description of the media outlet"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Contact Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="contact_email">Contact Email</Label>
+                  <Input
+                    id="contact_email"
+                    type="email"
+                    value={formData.contact_email}
+                    onChange={(e) => handleInputChange('contact_email', e.target.value)}
+                    placeholder="contact@example.com"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="contact_phone">Contact Phone</Label>
+                  <Input
+                    id="contact_phone"
+                    value={formData.contact_phone}
+                    onChange={(e) => handleInputChange('contact_phone', e.target.value)}
+                    placeholder="+1 (555) 123-4567"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Organization Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Organization Details</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="founding_year">Founding Year</Label>
+                  <Input
+                    id="founding_year"
+                    type="number"
+                    value={formData.founding_year}
+                    onChange={(e) => handleInputChange('founding_year', e.target.value)}
+                    placeholder="2020"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="staff_count">Staff Count</Label>
+                  <Input
+                    id="staff_count"
+                    type="number"
+                    value={formData.staff_count}
+                    onChange={(e) => handleInputChange('staff_count', e.target.value)}
+                    placeholder="10"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="ownership_type">Ownership Type</Label>
+                  <Select value={formData.ownership_type} onValueChange={(value) => handleInputChange('ownership_type', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select ownership" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Independent">Independent</SelectItem>
+                      <SelectItem value="Corporate">Corporate</SelectItem>
+                      <SelectItem value="Non-profit">Non-profit</SelectItem>
+                      <SelectItem value="Government">Government</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="publication_frequency">Publication Frequency</Label>
+                  <Select value={formData.publication_frequency} onValueChange={(value) => handleInputChange('publication_frequency', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Daily">Daily</SelectItem>
+                      <SelectItem value="Weekly">Weekly</SelectItem>
+                      <SelectItem value="Bi-weekly">Bi-weekly</SelectItem>
+                      <SelectItem value="Monthly">Monthly</SelectItem>
+                      <SelectItem value="Quarterly">Quarterly</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="business_model">Business Model</Label>
+                  <Input
+                    id="business_model"
+                    value={formData.business_model}
+                    onChange={(e) => handleInputChange('business_model', e.target.value)}
+                    placeholder="Subscription, advertising, etc."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Audience & Metrics */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Audience & Metrics</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="monthly_visitors">Monthly Visitors</Label>
+                  <Input
+                    id="monthly_visitors"
+                    type="number"
+                    value={formData.monthly_visitors}
+                    onChange={(e) => handleInputChange('monthly_visitors', e.target.value)}
+                    placeholder="50000"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email_subscribers">Email Subscribers</Label>
+                  <Input
+                    id="email_subscribers"
+                    type="number"
+                    value={formData.email_subscribers}
+                    onChange={(e) => handleInputChange('email_subscribers', e.target.value)}
+                    placeholder="10000"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="open_rate">Email Open Rate (%)</Label>
+                  <Input
+                    id="open_rate"
+                    type="number"
+                    step="0.1"
+                    value={formData.open_rate}
+                    onChange={(e) => handleInputChange('open_rate', e.target.value)}
+                    placeholder="25.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="audience_size">Audience Size</Label>
+                  <Input
+                    id="audience_size"
+                    value={formData.audience_size}
+                    onChange={(e) => handleInputChange('audience_size', e.target.value)}
+                    placeholder="Medium, Large, etc."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="coverage_area">Coverage Area</Label>
+                  <Input
+                    id="coverage_area"
+                    value={formData.coverage_area}
+                    onChange={(e) => handleInputChange('coverage_area', e.target.value)}
+                    placeholder="Local, Regional, National"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="primary_market">Primary Market</Label>
+                  <Input
+                    id="primary_market"
+                    value={formData.primary_market}
+                    onChange={(e) => handleInputChange('primary_market', e.target.value)}
+                    placeholder="Chicago, IL"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="secondary_markets">Secondary Markets</Label>
+                <Input
+                  id="secondary_markets"
+                  value={formData.secondary_markets}
+                  onChange={(e) => handleInputChange('secondary_markets', e.target.value)}
+                  placeholder="Milwaukee, WI, Detroit, MI (comma-separated)"
+                />
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Additional Information</h3>
+              <div>
+                <Label htmlFor="competitive_advantages">Competitive Advantages</Label>
+                <Textarea
+                  id="competitive_advantages"
+                  value={formData.competitive_advantages}
+                  onChange={(e) => handleInputChange('competitive_advantages', e.target.value)}
+                  placeholder="What sets this outlet apart from competitors?"
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => setShowForm(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button onClick={handleSaveOutlet}>
+              <Save className="h-4 w-4 mr-2" />
+              {editingOutlet ? 'Update Outlet' : 'Create Outlet'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
