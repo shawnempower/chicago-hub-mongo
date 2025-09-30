@@ -1,13 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/chicago-hero.jpg";
-import { mediaOutlets } from "@/data/mediaOutlets";
+import { usePublicationsAsMediaEntities } from "@/hooks/usePublications";
 interface HeroSectionProps {
   onAssistantClick: () => void;
 }
 export function HeroSection({
   onAssistantClick
 }: HeroSectionProps) {
+  const { mediaEntities, loading } = usePublicationsAsMediaEntities();
   return <section className="relative overflow-hidden bg-gradient-to-br from-background via-brand-cream to-brand-light-gray">
       <div className="container mx-auto px-6 py-16 lg:py-24">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -41,17 +42,17 @@ export function HeroSection({
             {/* Floating Media Outlet Cards */}
             <div className="absolute inset-0 z-20 p-6 flex flex-col justify-end">
               <div className="grid grid-cols-2 gap-3 opacity-90">
-                {mediaOutlets.slice(0, 4).map((outlet, index) => <div key={outlet.id} className="bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg transform transition-all duration-300 hover:scale-105" style={{
+                {!loading && mediaEntities.slice(0, 4).map((partner, index) => <div key={partner.id} className="bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg transform transition-all duration-300 hover:scale-105" style={{
                 animationDelay: `${index * 0.2}s`,
                 animation: 'fade-in 0.6s ease-out forwards'
               }}>
                     <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                      {outlet.type}
+                      {partner.category}
                     </p>
                     <h3 className="font-semibold text-sm text-primary font-serif">
-                      {outlet.name}
+                      {partner.name}
                     </h3>
-                    <p className="text-xs text-accent italic">"{outlet.tagline}"</p>
+                    <p className="text-xs text-accent italic">"{partner.brief}"</p>
                   </div>)}
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/CustomAuthContext";
+import { profilesApi } from "@/api/profiles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,21 +13,9 @@ import { User, Building2, Mail, Phone, Globe, Target, Palette, TrendingUp } from
 import { DocumentManager } from "./DocumentManager";
 import { calculateDocumentCompletionScore } from "@/utils/documentUtils";
 
-interface Profile {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  company_name: string | null;
-  role: string | null;
-  phone: string | null;
-  company_website: string | null;
-  industry: string | null;
-  company_size: string | null;
-  marketing_goals: string[] | null;
-  target_audience: string | null;
-  brand_voice: string | null;
-  profile_completion_score: number | null;
-}
+import type { UserProfile } from "@/types/common";
+
+type Profile = UserProfile;
 
 const INDUSTRY_OPTIONS = [
   "Technology", "Healthcare", "Finance", "Education", "Retail", "Manufacturing",
@@ -60,28 +48,16 @@ export function ProfileManager() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const apiProfile = await profilesApi.getProfile();
 
-      if (error) throw error;
-
-      setProfile(data || {
-        id: '',
-        first_name: user.user_metadata?.first_name || '',
-        last_name: user.user_metadata?.last_name || '',
-        company_name: user.user_metadata?.company_name || '',
-        role: null,
-        phone: null,
-        company_website: null,
-        industry: null,
-        company_size: null,
-        marketing_goals: null,
-        target_audience: null,
-        brand_voice: null,
-        profile_completion_score: 0
+      setProfile(apiProfile || {
+        userId: user.id,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        companyName: user.companyName || '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        profileCompletionScore: 0
       });
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -97,13 +73,13 @@ export function ProfileManager() {
 
   const calculateCompletionScore = async (profile: Profile): Promise<number> => {
     const fields = [
-      profile.first_name, profile.last_name, profile.company_name, 
-      profile.role, profile.phone, profile.company_website, 
-      profile.industry, profile.company_size, profile.target_audience, 
-      profile.brand_voice
+      profile.firstName, profile.lastName, profile.companyName, 
+      profile.role, profile.phone, profile.companyWebsite, 
+      profile.industry, profile.companySizes, profile.targetAudience, 
+      profile.brandVoice
     ];
-    const marketingGoalsScore = profile.marketing_goals && profile.marketing_goals.length > 0 ? 1 : 0;
-    const filledFields = fields.filter(field => field && field.trim() !== '').length + marketingGoalsScore;
+    const marketingGoalsScore = profile.marketingGoals && profile.marketingGoals.length > 0 ? 1 : 0;
+    const filledFields = fields.filter(field => field && field.toString().trim() !== '').length + marketingGoalsScore;
     const profileScore = Math.round((filledFields / (fields.length + 1)) * 80); // Profile contributes 80%
     
     const documentScore = await calculateDocumentCompletionScore(user?.id || ""); // Documents contribute 20%
@@ -115,7 +91,7 @@ export function ProfileManager() {
     if (!profile || !user?.id) return;
     
     const newScore = await calculateCompletionScore(profile);
-    setProfile(prev => prev ? { ...prev, profile_completion_score: newScore } : null);
+    setProfile(prev => prev ? { ...prev, profileCompletionScore: newScore } : null);
   };
 
   const saveProfile = async () => {
@@ -125,31 +101,28 @@ export function ProfileManager() {
     try {
       const completionScore = await calculateCompletionScore(profile);
       
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          company_name: profile.company_name,
-          role: profile.role,
-          phone: profile.phone,
-          company_website: profile.company_website,
-          industry: profile.industry,
-          company_size: profile.company_size,
-          marketing_goals: profile.marketing_goals,
-          target_audience: profile.target_audience,
-          brand_voice: profile.brand_voice,
-          profile_completion_score: completionScore
-        });
+      const updatedProfile = await profilesApi.updateProfile({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        companyName: profile.companyName,
+        role: profile.role,
+        phone: profile.phone,
+        companyWebsite: profile.companyWebsite,
+        industry: profile.industry,
+        companySizes: profile.companySizes as any,
+        marketingGoals: profile.marketingGoals,
+        targetAudience: profile.targetAudience,
+        brandVoice: profile.brandVoice,
+        profileCompletionScore: completionScore
+      });
 
-      if (error) throw error;
+      if (updatedProfile) {
+        setProfile(updatedProfile);
+      }
 
-      setProfile({ ...profile, profile_completion_score: completionScore });
-
-      // Trigger website analysis if company_website is provided
-      if (profile.company_website) {
-        triggerWebsiteAnalysis(profile.company_website);
+      // Trigger website analysis if companyWebsite is provided
+      if (profile.companyWebsite) {
+        triggerWebsiteAnalysis(profile.companyWebsite);
       }
       
       toast({
@@ -170,26 +143,8 @@ export function ProfileManager() {
 
   const triggerWebsiteAnalysis = async (websiteUrl: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('website-extractor', {
-        body: { 
-          websiteUrl: websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`,
-          userId: user?.id 
-        },
-      });
-
-      if (error) {
-        console.error('Website analysis error:', error);
-        return;
-      }
-
-      if (data?.success) {
-        toast({
-          title: "Website analyzed",
-          description: "Your brand context has been enhanced with website insights.",
-        });
-        // Reload profile to show updated website analysis
-        loadProfile();
-      }
+      // TODO: Implement website analysis with MongoDB or remove this feature
+      console.log('Website analysis not implemented for MongoDB backend:', websiteUrl);
     } catch (error) {
       console.error('Error analyzing website:', error);
     }
@@ -202,11 +157,11 @@ export function ProfileManager() {
 
   const toggleMarketingGoal = (goal: string) => {
     if (!profile) return;
-    const currentGoals = profile.marketing_goals || [];
+    const currentGoals = profile.marketingGoals || [];
     const newGoals = currentGoals.includes(goal)
       ? currentGoals.filter(g => g !== goal)
       : [...currentGoals, goal];
-    updateProfile('marketing_goals', newGoals);
+    updateProfile('marketingGoals', newGoals);
   };
 
   if (loading) {
@@ -217,7 +172,7 @@ export function ProfileManager() {
     );
   }
 
-  const completionScore = profile?.profile_completion_score || 0;
+  const completionScore = profile?.profileCompletionScore || 0;
 
   return (
     <div className="space-y-6">
@@ -248,8 +203,8 @@ export function ProfileManager() {
                 <Label htmlFor="firstName">First Name</Label>
                 <Input
                   id="firstName"
-                  value={profile?.first_name || ''}
-                  onChange={(e) => updateProfile('first_name', e.target.value)}
+                  value={profile?.firstName || ''}
+                  onChange={(e) => updateProfile('firstName', e.target.value)}
                   placeholder="Enter first name"
                 />
               </div>
@@ -257,8 +212,8 @@ export function ProfileManager() {
                 <Label htmlFor="lastName">Last Name</Label>
                 <Input
                   id="lastName"
-                  value={profile?.last_name || ''}
-                  onChange={(e) => updateProfile('last_name', e.target.value)}
+                  value={profile?.lastName || ''}
+                  onChange={(e) => updateProfile('lastName', e.target.value)}
                   placeholder="Enter last name"
                 />
               </div>
@@ -300,8 +255,8 @@ export function ProfileManager() {
               <Label htmlFor="companyName">Company Name</Label>
               <Input
                 id="companyName"
-                value={profile?.company_name || ''}
-                onChange={(e) => updateProfile('company_name', e.target.value)}
+                value={profile?.companyName || ''}
+                onChange={(e) => updateProfile('companyName', e.target.value)}
                 placeholder="Enter company name"
               />
             </div>
@@ -322,8 +277,8 @@ export function ProfileManager() {
                 <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="companyWebsite"
-                  value={profile?.company_website || ''}
-                  onChange={(e) => updateProfile('company_website', e.target.value)}
+                  value={profile?.companyWebsite || ''}
+                  onChange={(e) => updateProfile('companyWebsite', e.target.value)}
                   placeholder="https://yourcompany.com"
                   className="pl-10"
                 />
@@ -350,8 +305,8 @@ export function ProfileManager() {
               <div>
                 <Label htmlFor="companySize">Company Size</Label>
                 <Select 
-                  value={profile?.company_size || ''} 
-                  onValueChange={(value) => updateProfile('company_size', value)}
+                  value={profile?.companySizes || ''} 
+                  onValueChange={(value) => updateProfile('companySizes', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select size" />
@@ -383,7 +338,7 @@ export function ProfileManager() {
                 {MARKETING_GOALS_OPTIONS.map((goal) => (
                   <Button
                     key={goal}
-                    variant={profile?.marketing_goals?.includes(goal) ? "default" : "outline"}
+                    variant={profile?.marketingGoals?.includes(goal) ? "default" : "outline"}
                     size="sm"
                     onClick={() => toggleMarketingGoal(goal)}
                     className="justify-start text-left h-auto p-3"
@@ -410,8 +365,8 @@ export function ProfileManager() {
               <Label htmlFor="targetAudience">Target Audience</Label>
               <Textarea
                 id="targetAudience"
-                value={profile?.target_audience || ''}
-                onChange={(e) => updateProfile('target_audience', e.target.value)}
+                value={profile?.targetAudience || ''}
+                onChange={(e) => updateProfile('targetAudience', e.target.value)}
                 placeholder="Describe your ideal customers, demographics, interests..."
                 rows={3}
               />
@@ -421,8 +376,8 @@ export function ProfileManager() {
               <Label htmlFor="brandVoice">Brand Voice & Personality</Label>
               <Textarea
                 id="brandVoice"
-                value={profile?.brand_voice || ''}
-                onChange={(e) => updateProfile('brand_voice', e.target.value)}
+                value={profile?.brandVoice || ''}
+                onChange={(e) => updateProfile('brandVoice', e.target.value)}
                 placeholder="Describe your brand's tone, personality, values, and communication style..."
                 rows={3}
               />

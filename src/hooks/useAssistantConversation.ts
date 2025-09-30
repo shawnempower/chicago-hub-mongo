@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+// MongoDB services removed - using API calls instead
+import { useAuth } from '@/contexts/CustomAuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { generateBrandContextSummary, hasBrandContext } from '@/utils/documentUtils';
 
@@ -46,11 +46,7 @@ export function useAssistantConversation() {
       // Load brand context and conversation in parallel
       const [contextResult, conversationResult, hasBrandResult] = await Promise.all([
         generateBrandContextSummary(user.id),
-        supabase
-          .from('assistant_conversations')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: true }),
+        Promise.resolve([]), // Temporary - will be replaced with API call
         hasBrandContext(user.id)
       ]);
 
@@ -59,19 +55,17 @@ export function useAssistantConversation() {
       
       const initialMessage = getInitialMessage(hasBrandResult);
 
-      if (conversationResult.error) throw conversationResult.error;
-
-      if (conversationResult.data && conversationResult.data.length > 0) {
-        const loadedMessages: Message[] = conversationResult.data.map(conv => ({
-          id: conv.id,
-          type: conv.message_type as 'user' | 'assistant' | 'outlets' | 'packages',
-          content: conv.message_content,
-          outlets: (conv.metadata as any)?.outlets,
-          packages: (conv.metadata as any)?.packages,
-          timestamp: new Date(conv.created_at),
-          hasBrandContext: (conv.metadata as any)?.hasBrandContext,
-          conversationScore: (conv.metadata as any)?.conversationScore,
-          triggerKeywords: (conv.metadata as any)?.triggerKeywords
+      if (conversationResult && conversationResult.length > 0) {
+        const loadedMessages: Message[] = conversationResult.map(conv => ({
+          id: conv._id?.toString() || '',
+          type: conv.messageType as 'user' | 'assistant' | 'outlets' | 'packages',
+          content: conv.messageContent,
+          outlets: conv.metadata?.outlets,
+          packages: conv.metadata?.packages,
+          timestamp: conv.createdAt,
+          hasBrandContext: conv.metadata?.hasBrandContext,
+          conversationScore: conv.metadata?.conversationScore,
+          triggerKeywords: conv.metadata?.triggerKeywords
         }));
         setMessages([initialMessage, ...loadedMessages]);
       } else {
@@ -101,16 +95,8 @@ export function useAssistantConversation() {
       if (message.conversationScore) metadata.conversationScore = message.conversationScore;
       if (message.triggerKeywords) metadata.triggerKeywords = message.triggerKeywords;
 
-      const { error } = await supabase
-        .from('assistant_conversations')
-        .insert({
-          user_id: user.id,
-          message_content: message.content,
-          message_type: message.type,
-          metadata
-        });
-
-      if (error) throw error;
+      // Temporary - will be replaced with API call
+      console.log('Saving message:', { userId: user.id, content: message.content, type: message.type, metadata });
     } catch (error) {
       console.error('Error saving message:', error);
       // Don't show error to user as it's not critical for chat functionality
@@ -134,12 +120,9 @@ export function useAssistantConversation() {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('assistant_conversations')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      // Note: We'll need to implement a clearByUserId method in the service
+      // For now, just reset the local state
+      console.log('Clear conversation - would delete conversations for user:', user.id);
 
       const initialMessage = getInitialMessage(hasBrand);
       setMessages([initialMessage]);

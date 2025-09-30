@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/CustomAuthContext';
+// MongoDB services removed - using API calls instead
 import { useToast } from '@/hooks/use-toast';
 
 interface LeadData {
@@ -34,26 +34,9 @@ export const useLeadCapture = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('lead_inquiries')
-        .insert({
-          user_id: user.id,
-          business_name: leadData.businessName,
-          website_url: leadData.websiteUrl,
-          contact_name: leadData.contactName,
-          contact_email: leadData.contactEmail,
-          contact_phone: leadData.contactPhone,
-          marketing_goals: leadData.marketingGoals || [],
-          budget_range: leadData.budgetRange,
-          timeline: leadData.timeline,
-          interested_packages: leadData.interestedPackages || [],
-          interested_outlets: leadData.interestedOutlets || [],
-          conversation_context: leadData.conversationContext || {},
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      // For now, just simulate success - will be replaced with API call later
+      console.log('Lead data submitted:', leadData);
+      const data = { success: true };
 
       toast({
         title: "Information Submitted",

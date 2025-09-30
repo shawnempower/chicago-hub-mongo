@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/CustomAuthContext";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { User, ChevronDown } from "lucide-react";
@@ -14,7 +14,7 @@ export function Header({ onAssistantClick }: HeaderProps) {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminAuth();
   
-  const firstName = user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'User';
+  const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
   
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-border">

@@ -8,7 +8,7 @@ import { ProfileManager } from "@/components/dashboard/ProfileManager";
 import { SavedItemsOverview } from "@/components/dashboard/SavedItemsOverview";
 import { ConversationHistory } from "@/components/dashboard/ConversationHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/CustomAuthContext";
 import { Navigate, useSearchParams } from "react-router-dom";
 
 export default function Dashboard() {

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Share2 } from "lucide-react";
 import { Package } from "@/types/package";
-import { audienceTypes, channelTypes, complexityTypes } from "@/data/packages";
+import { audienceTypes, channelTypes, complexityTypes } from "@/constants/packageFilters";
 import { cn } from "@/lib/utils";
 
 interface PackageModalProps {

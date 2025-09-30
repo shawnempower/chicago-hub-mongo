@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/CustomAuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,14 +12,14 @@ import { Progress } from "@/components/ui/progress";
 
 interface BrandDocument {
   id: string;
-  document_name: string;
+  name: string;
   description: string | null;
-  document_type: string;
-  file_url: string | null;
-  external_url: string | null;
-  mime_type: string | null;
-  file_size: number | null;
-  created_at: string;
+  type: string;
+  url: string | null;
+  externalUrl: string | null;
+  mimeType: string | null;
+  size: number | null;
+  createdAt: string;
 }
 
 const DOCUMENT_TYPES = [
@@ -56,14 +55,24 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
 
   const loadDocuments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('brand_documents')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('No authentication token');
+      }
 
-      if (error) throw error;
-      setDocuments(data || []);
+      const response = await fetch('http://localhost:3001/api/files/documents', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
+      }
+
+      const data = await response.json();
+      setDocuments(data.documents || []);
     } catch (error) {
       console.error('Error loading documents:', error);
       toast({
@@ -95,21 +104,34 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
     }
   };
 
-  const uploadFile = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
+  const uploadFileToServer = async (file: File, documentName: string, documentType: string, description?: string): Promise<any> => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      throw new Error('No authentication token');
+    }
 
-    const { error: uploadError } = await supabase.storage
-      .from('brand-documents')
-      .upload(fileName, file);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentName', documentName);
+    formData.append('documentType', documentType);
+    if (description) {
+      formData.append('description', description);
+    }
 
-    if (uploadError) throw uploadError;
+    const response = await fetch('http://localhost:3001/api/files/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
 
-    const { data: urlData } = supabase.storage
-      .from('brand-documents')
-      .getPublicUrl(fileName);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Upload failed');
+    }
 
-    return urlData.publicUrl;
+    return response.json();
   };
 
   const saveDocument = async () => {
@@ -131,25 +153,36 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
       let fileSize = null;
 
       if (selectedFile) {
-        fileUrl = await uploadFile(selectedFile);
-        mimeType = selectedFile.type;
-        fileSize = selectedFile.size;
-      }
+        // Upload file via our API
+        setUploadProgress(50);
+        const result = await uploadFileToServer(selectedFile, documentName, documentType, description);
+        setUploadProgress(90);
+      } else if (externalUrl) {
+        // Save external URL document via API
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          throw new Error('No authentication token');
+        }
 
-      const { error } = await supabase
-        .from('brand_documents')
-        .insert({
-          user_id: user?.id,
-          document_name: documentName,
-          description: description || null,
-          document_type: documentType,
-          file_url: fileUrl,
-          external_url: externalUrl || null,
-          mime_type: mimeType,
-          file_size: fileSize,
+        const response = await fetch('http://localhost:3001/api/documents/external', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            documentName,
+            documentType,
+            description: description || null,
+            externalUrl,
+          }),
         });
 
-      if (error) throw error;
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to save external document');
+        }
+      }
 
       toast({
         title: "Success",
@@ -182,23 +215,23 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
 
   const deleteDocument = async (documentId: string, fileUrl: string | null) => {
     try {
-      // Delete from storage if it's a uploaded file
-      if (fileUrl && fileUrl.includes('brand-documents')) {
-        const fileName = fileUrl.split('/').pop();
-        if (fileName) {
-          await supabase.storage
-            .from('brand-documents')
-            .remove([fileName]);
-        }
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('No authentication token');
       }
 
-      // Delete from database
-      const { error } = await supabase
-        .from('brand_documents')
-        .delete()
-        .eq('id', documentId);
+      const response = await fetch(`http://localhost:3001/api/files/documents/${documentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Delete failed');
+      }
 
       toast({
         title: "Success",
@@ -207,11 +240,11 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
 
       await loadDocuments();
       onDocumentChange?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting document:', error);
       toast({
         title: "Error",
-        description: "Failed to delete document",
+        description: error.message || "Failed to delete document",
         variant: "destructive",
       });
     }
@@ -369,24 +402,24 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
-                      <span className="font-medium">{doc.document_name}</span>
+                      <span className="font-medium">{doc.name}</span>
                       <span className="text-xs px-2 py-1 bg-muted rounded">
-                        {doc.document_type}
+                        {doc.type}
                       </span>
                     </div>
                     {doc.description && (
                       <p className="text-sm text-muted-foreground mt-1">{doc.description}</p>
                     )}
                     <div className="text-xs text-muted-foreground mt-1">
-                      {doc.file_size && formatFileSize(doc.file_size)} • {new Date(doc.created_at).toLocaleDateString()}
+                      {doc.size && formatFileSize(doc.size)} • {new Date(doc.createdAt).toLocaleDateString()}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {(doc.file_url || doc.external_url) && (
+                    {(doc.url || doc.externalUrl) && (
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => window.open(doc.file_url || doc.external_url!, '_blank')}
+                        onClick={() => window.open(doc.url || doc.externalUrl!, '_blank')}
                       >
                         <ExternalLink className="h-3 w-3" />
                       </Button>
@@ -394,7 +427,7 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => deleteDocument(doc.id, doc.file_url)}
+                      onClick={() => deleteDocument(doc.id, doc.url)}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>

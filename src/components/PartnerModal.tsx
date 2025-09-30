@@ -2,10 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink, X } from "lucide-react";
-import { MediaPartner } from "@/data/mediaPartners";
-
 interface PartnerModalProps {
-  partner: MediaPartner | null;
+  partner: any | null;
   isOpen: boolean;
   onClose: () => void;
 }

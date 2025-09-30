@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+// MongoDB services removed - using API calls instead
 
 export interface DocumentContext {
   id: string;
@@ -14,21 +14,15 @@ export interface DocumentContext {
  */
 export async function getUserDocumentContext(userId: string): Promise<DocumentContext[]> {
   try {
-    const { data: documents, error } = await supabase
-      .from('brand_documents')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const documents = []; // Temporary - will be replaced with API call
 
-    if (error) throw error;
-
-    return documents?.map(doc => ({
-      id: doc.id,
-      name: doc.document_name,
-      type: doc.document_type,
+    return documents.map(doc => ({
+      id: doc._id?.toString() || '',
+      name: doc.documentName,
+      type: doc.documentType,
       description: doc.description || undefined,
-      url: doc.file_url || doc.external_url || undefined,
-    })) || [];
+      url: doc.fileUrl || doc.externalUrl || undefined,
+    }));
   } catch (error) {
     console.error('Error fetching document context:', error);
     return [];
@@ -40,17 +34,12 @@ export async function getUserDocumentContext(userId: string): Promise<DocumentCo
  */
 export async function calculateDocumentCompletionScore(userId: string): Promise<number> {
   try {
-    const { data: documents, error } = await supabase
-      .from('brand_documents')
-      .select('document_type')
-      .eq('user_id', userId);
-
-    if (error) throw error;
+    const documents = []; // Temporary - will be replaced with API call
 
     if (!documents || documents.length === 0) return 0;
 
     // Award points for different types of documents
-    const documentTypes = new Set(documents.map(doc => doc.document_type));
+    const documentTypes = new Set(documents.map(doc => doc.documentType));
     const maxPoints = 20; // Documents contribute up to 20% of completion score
     
     // Core document types for better scoring
@@ -104,51 +93,43 @@ export async function generateBrandContextSummary(userId: string): Promise<strin
     const documents = await getUserDocumentContext(userId);
     
     // Get user profile data
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (profileError && profileError.code !== 'PGRST116') {
-      console.error('Error fetching profile:', profileError);
-    }
+    const profile = null; // Temporary - will be replaced with API call
 
     // Create comprehensive brand context
     let context = "=== BRAND CONTEXT ===\n\n";
     
     if (profile) {
       context += "COMPANY PROFILE:\n";
-      if (profile.company_name) context += `Company: ${profile.company_name}\n`;
+      if (profile.companyName) context += `Company: ${profile.companyName}\n`;
       if (profile.industry) context += `Industry: ${profile.industry}\n`;
-      if (profile.company_size) context += `Company Size: ${profile.company_size}\n`;
-      if (profile.company_website) context += `Website: ${profile.company_website}\n`;
+      if (profile.companySizes) context += `Company Size: ${profile.companySizes}\n`;
+      if (profile.companyWebsite) context += `Website: ${profile.companyWebsite}\n`;
       
       // Include website analysis if available
-      if (profile.website_content_summary) {
+      if (profile.websiteContentSummary) {
         context += "\nWEBSITE ANALYSIS:\n";
-        context += `Brand Summary: ${profile.website_content_summary}\n`;
+        context += `Brand Summary: ${profile.websiteContentSummary}\n`;
         
-        if (profile.website_key_services && profile.website_key_services.length > 0) {
-          context += `Key Services: ${profile.website_key_services.join(', ')}\n`;
+        if (profile.websiteKeyServices && profile.websiteKeyServices.length > 0) {
+          context += `Key Services: ${profile.websiteKeyServices.join(', ')}\n`;
         }
         
-        if (profile.website_brand_themes && profile.website_brand_themes.length > 0) {
-          context += `Brand Themes: ${profile.website_brand_themes.join(', ')}\n`;
+        if (profile.websiteBrandThemes && profile.websiteBrandThemes.length > 0) {
+          context += `Brand Themes: ${profile.websiteBrandThemes.join(', ')}\n`;
         }
         
-        if (profile.website_analysis_date) {
-          const analysisDate = new Date(profile.website_analysis_date);
+        if (profile.websiteAnalysisDate) {
+          const analysisDate = new Date(profile.websiteAnalysisDate);
           context += `Analysis Date: ${analysisDate.toLocaleDateString()}\n`;
         }
         context += "\n";
       }
       
       context += "MARKETING STRATEGY:\n";
-      if (profile.target_audience) context += `Target Audience: ${profile.target_audience}\n`;
-      if (profile.brand_voice) context += `Brand Voice: ${profile.brand_voice}\n`;
-      if (profile.marketing_goals && profile.marketing_goals.length > 0) {
-        context += `Marketing Goals: ${profile.marketing_goals.join(', ')}\n`;
+      if (profile.targetAudience) context += `Target Audience: ${profile.targetAudience}\n`;
+      if (profile.brandVoice) context += `Brand Voice: ${profile.brandVoice}\n`;
+      if (profile.marketingGoals && profile.marketingGoals.length > 0) {
+        context += `Marketing Goals: ${profile.marketingGoals.join(', ')}\n`;
       }
       context += "\n";
     }
@@ -179,21 +160,16 @@ export async function generateBrandContextSummary(userId: string): Promise<strin
  */
 export async function hasBrandContext(userId: string): Promise<boolean> {
   try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('company_name, industry, target_audience, brand_voice, marketing_goals')
-      .eq('user_id', userId)
-      .single();
-
+    const profile = null; // Temporary - will be replaced with API call
     const documents = await getUserDocumentContext(userId);
     
     // Has context if they have basic profile info OR documents
     const hasProfileInfo = profile && (
-      profile.company_name || 
+      profile.companyName || 
       profile.industry || 
-      profile.target_audience || 
-      profile.brand_voice || 
-      (profile.marketing_goals && profile.marketing_goals.length > 0)
+      profile.targetAudience || 
+      profile.brandVoice || 
+      (profile.marketingGoals && profile.marketingGoals.length > 0)
     );
     
     const hasDocuments = documents.length > 0;

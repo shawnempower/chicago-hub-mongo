@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { mediaOutlets } from "@/data/mediaOutlets";
+import { usePublicationsAsMediaEntities } from "@/hooks/usePublications";
 import communitiesImage from "@/assets/chicago-communities.jpg";
 import { Link } from "react-router-dom";
 interface MediaPartnersSectionProps {
@@ -29,6 +29,7 @@ const collections = [{
 export function MediaPartnersSection({
   onAssistantClick
 }: MediaPartnersSectionProps) {
+  const { mediaEntities, loading } = usePublicationsAsMediaEntities();
   return (
     <section id="media-partners" className="py-16 lg:py-24 bg-background">
       <div className="container mx-auto px-6">
@@ -78,21 +79,26 @@ export function MediaPartnersSection({
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mediaOutlets.slice(0, 6).map(outlet => <div key={outlet.id} className="outlet-card group">
-                <div className="relative h-48 overflow-hidden rounded-t-xl">
-                  <img src={outlet.image} alt={outlet.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            {!loading && mediaEntities.slice(0, 6).map(entity => <div key={entity.id} className="outlet-card group">
+                <div className="relative h-48 overflow-hidden rounded-t-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
+                  <div 
+                    className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl"
+                    style={{ backgroundColor: entity.logoColor }}
+                  >
+                    {entity.logo}
+                  </div>
                 </div>
                 
                 <div className="p-6">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-2">
-                    {outlet.type}
+                    {entity.category}
                   </p>
                   <h3 className="text-xl font-semibold text-primary font-serif mb-2">
-                    {outlet.name}
+                    {entity.name}
                   </h3>
-                  <p className="text-accent italic mb-4">"{outlet.tagline}"</p>
+                  <p className="text-accent italic mb-4">"{entity.brief}"</p>
                   <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
-                    {outlet.description}
+                    {entity.description.substring(0, 120)}...
                   </p>
                   <div className="flex space-x-3">
                     <Button variant="outline" size="sm" className="flex-1">

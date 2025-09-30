@@ -9,16 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { mediaPartners, categories, MediaPartner } from "@/data/mediaPartners";
+import { usePublicationsAsMediaEntities, usePublicationCategories } from "@/hooks/usePublications";
 
 export default function Partners() {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
-  const [selectedPartner, setSelectedPartner] = useState<MediaPartner | null>(null);
+  const [selectedPartner, setSelectedPartner] = useState<any | null>(null);
   const [activeCategory, setActiveCategory] = useState("all");
 
-  const filteredPartners = activeCategory === "all" 
-    ? mediaPartners 
-    : mediaPartners.filter(partner => partner.categoryTag === activeCategory);
+  const { mediaEntities, loading: partnersLoading, error: partnersError } = usePublicationsAsMediaEntities({
+    category: activeCategory === "all" ? undefined : activeCategory
+  });
+  const { categories, loading: categoriesLoading, error: categoriesError } = usePublicationCategories();
+
+  const filteredPartners = mediaEntities;
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,32 +43,63 @@ export default function Partners() {
         {/* Filter Bar */}
         <section className="bg-white border-b border-border py-6">
           <div className="container mx-auto px-6">
-            <div className="flex flex-wrap gap-3 justify-center">
-              {categories.map((category) => (
-                <Button
-                  key={category.id}
-                  variant={activeCategory === category.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveCategory(category.id)}
-                  className="rounded-full"
-                >
-                  {category.name}
-                  {category.id !== "all" && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {mediaPartners.filter(p => p.categoryTag === category.id).length}
-                    </Badge>
-                  )}
-                </Button>
-              ))}
-            </div>
+            {categoriesLoading ? (
+              <div className="flex justify-center">
+                <div className="text-muted-foreground">Loading categories...</div>
+              </div>
+            ) : categoriesError ? (
+              <div className="flex justify-center">
+                <div className="text-destructive">Error loading categories</div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3 justify-center">
+                {categories.map((category) => (
+                  <Button
+                    key={category.id}
+                    variant={activeCategory === category.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveCategory(category.id)}
+                    className="rounded-full"
+                  >
+                    {category.name}
+                    {category.count && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {category.count}
+                      </Badge>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
         {/* Partners Grid */}
         <section className="py-16 bg-gradient-to-b from-white to-brand-cream/30">
           <div className="container mx-auto px-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPartners.map((partner) => (
+            {partnersLoading ? (
+              <div className="flex justify-center items-center py-16">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading media partners...</p>
+                </div>
+              </div>
+            ) : partnersError ? (
+              <div className="flex justify-center items-center py-16">
+                <div className="text-center">
+                  <p className="text-destructive mb-2">Error loading media partners</p>
+                  <p className="text-muted-foreground text-sm">{partnersError}</p>
+                </div>
+              </div>
+            ) : filteredPartners.length === 0 ? (
+              <div className="flex justify-center items-center py-16">
+                <div className="text-center">
+                  <p className="text-muted-foreground">No media partners found for the selected category.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredPartners.map((partner) => (
                 <Card key={partner.id} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2">
                   <CardHeader className="space-y-4">
                     <div className="flex items-center gap-4">
@@ -121,8 +155,9 @@ export default function Partners() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

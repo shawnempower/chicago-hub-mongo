@@ -57,6 +57,11 @@ interface AdvertisingInventory {
   is_active: boolean;
 }
 
+/**
+ * @deprecated This component is deprecated in favor of UnifiedMediaManagement.
+ * Use the "Unified Media" tab in the admin dashboard instead.
+ * This component will be removed in a future version.
+ */
 export const EnhancedMediaOutletManagement = () => {
   const [outlets, setOutlets] = useState<MediaOutlet[]>([]);
   const [inventory, setInventory] = useState<AdvertisingInventory[]>([]);

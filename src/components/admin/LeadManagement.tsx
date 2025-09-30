@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { leadsApi, type Lead } from '@/api/leads';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
-interface Lead {
+interface DisplayLead {
   id: string;
   business_name: string;
   website_url?: string;
@@ -24,9 +24,9 @@ interface Lead {
 }
 
 export const LeadManagement = () => {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<DisplayLead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedLead, setSelectedLead] = useState<DisplayLead | null>(null);
   const [notes, setNotes] = useState('');
   const { toast } = useToast();
 
@@ -36,13 +36,22 @@ export const LeadManagement = () => {
 
   const fetchLeads = async () => {
     try {
-      const { data, error } = await supabase
-        .from('lead_inquiries')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setLeads(data || []);
+      const response = await leadsApi.getAll();
+      const leads = response.leads.map(lead => ({
+        id: lead._id?.toString() || '',
+        business_name: lead.businessName,
+        website_url: lead.websiteUrl || undefined,
+        contact_name: lead.contactName,
+        contact_email: lead.contactEmail,
+        contact_phone: lead.contactPhone || undefined,
+        marketing_goals: lead.marketingGoals || undefined,
+        budget_range: lead.budgetRange || undefined,
+        timeline: lead.timeline || undefined,
+        status: lead.status || 'new',
+        notes: lead.notes || undefined,
+        created_at: lead.createdAt,
+      }));
+      setLeads(leads);
     } catch (error) {
       console.error('Error fetching leads:', error);
       toast({
@@ -57,12 +66,7 @@ export const LeadManagement = () => {
 
   const updateLeadStatus = async (leadId: string, status: string) => {
     try {
-      const { error } = await supabase
-        .from('lead_inquiries')
-        .update({ status })
-        .eq('id', leadId);
-
-      if (error) throw error;
+      await leadsApi.update(leadId, { status: status as any });
 
       setLeads(leads.map(lead => 
         lead.id === leadId ? { ...lead, status } : lead
@@ -84,12 +88,7 @@ export const LeadManagement = () => {
 
   const updateLeadNotes = async (leadId: string) => {
     try {
-      const { error } = await supabase
-        .from('lead_inquiries')
-        .update({ notes })
-        .eq('id', leadId);
-
-      if (error) throw error;
+      await leadsApi.update(leadId, { notes });
 
       setLeads(leads.map(lead => 
         lead.id === leadId ? { ...lead, notes } : lead

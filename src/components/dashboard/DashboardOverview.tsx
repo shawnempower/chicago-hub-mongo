@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/CustomAuthContext";
 import { useSavedPackages } from "@/hooks/useSavedPackages";
 import { useSavedOutlets } from "@/hooks/useSavedOutlets";
 import { useAssistantConversation } from "@/hooks/useAssistantConversation";
@@ -10,7 +10,7 @@ import { Package, Building2, MessageCircle, TrendingUp, Sparkles } from "lucide-
 import { WelcomeModal } from "@/components/WelcomeModal";
 
 import { EmptyStates } from "@/components/EmptyStates";
-import { supabase } from "@/integrations/supabase/client";
+// MongoDB services removed - using API calls instead
 
 export function DashboardOverview() {
   const { user } = useAuth();
@@ -74,7 +74,7 @@ export function DashboardOverview() {
     }
   ];
 
-  const firstName = user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'there';
+  const firstName = user?.firstName || user?.email?.split('@')[0] || 'there';
 
   return (
     <>

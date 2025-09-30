@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/CustomAuthContext';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Spinner } from '@/components/ui/spinner';
 

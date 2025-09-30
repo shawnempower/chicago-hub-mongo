@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Package, convertDatabasePackage } from "@/types/package";
 import { usePackages } from "@/hooks/usePackages";
-import { audienceTypes, channelTypes, priceRanges, complexityTypes } from "@/data/packages";
+import { audienceTypes, channelTypes, priceRanges, complexityTypes } from "@/constants/packageFilters";
 import { Grid, List, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSavedPackages } from "@/hooks/useSavedPackages";

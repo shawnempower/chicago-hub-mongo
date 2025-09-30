@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AdPackage } from '@/types/common';
 
 export interface DatabasePackage {
   id: string;
@@ -20,6 +20,27 @@ export interface DatabasePackage {
   updated_at: string;
 }
 
+// Convert MongoDB AdPackage to frontend DatabasePackage format
+const convertAdPackage = (adPackage: AdPackage): DatabasePackage => ({
+  id: adPackage._id?.toString() || '',
+  legacy_id: adPackage.legacyId || null,
+  name: adPackage.name,
+  tagline: adPackage.tagline || null,
+  description: adPackage.description || null,
+  price: adPackage.price || null,
+  price_range: adPackage.priceRange || null,
+  audience: adPackage.audience || null,
+  channels: adPackage.channels || null,
+  complexity: adPackage.complexity || null,
+  outlets: adPackage.outlets || null,
+  features: adPackage.features || null,
+  is_active: adPackage.isActive || null,
+  created_at: adPackage.createdAt || new Date().toISOString(),
+  updated_at: adPackage.updatedAt || new Date().toISOString(),
+});
+
+// No fallback data - all data must come from MongoDB
+
 export const usePackages = () => {
   const [packages, setPackages] = useState<DatabasePackage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,20 +49,27 @@ export const usePackages = () => {
   const fetchPackages = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('ad_packages')
-        .select('*')
-        .eq('is_active', true)
-        .is('deleted_at', null)
-        .order('legacy_id');
-
-      if (error) throw error;
-      setPackages(data || []);
+      
+      // Fetch from MongoDB API
+      const response = await fetch('/api/packages');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch packages from API');
+      }
+      
+      const data = await response.json();
+      const convertedPackages = data.packages.map(convertAdPackage);
+      setPackages(convertedPackages);
+      
     } catch (error) {
-      console.error('Error fetching packages:', error);
+      console.error('Error fetching packages from API:', error);
+      
+      // No fallback - show error and empty state
+      setPackages([]);
+      
       toast({
         title: "Error",
-        description: "Failed to load packages. Please try again.",
+        description: "Failed to load packages. Please check your connection and try again.",
         variant: "destructive",
       });
     } finally {

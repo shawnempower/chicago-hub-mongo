@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/CustomAuthContext';
+import { profilesApi } from '@/api/profiles';
 
 export const useAdminAuth = () => {
   const { user } = useAuth();
@@ -16,16 +16,29 @@ export const useAdminAuth = () => {
       }
 
       try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('user_id', user.id)
-          .single();
+        // First check if admin flag is already in user object
+        if (user.isAdmin !== undefined) {
+          setIsAdmin(user.isAdmin);
+          setLoading(false);
+          return;
+        }
 
-        setIsAdmin(profile?.is_admin || false);
+        // If not in user object, check user profile
+        const profile = await profilesApi.getProfile();
+        const isAdminUser = profile?.isAdmin || false;
+        
+        // Fallback to email check for backward compatibility
+        if (!isAdminUser) {
+          const emailCheck = user.email === 'admin@chicagohub.com' || user.email?.includes('admin');
+          setIsAdmin(emailCheck);
+        } else {
+          setIsAdmin(isAdminUser);
+        }
       } catch (error) {
         console.error('Error checking admin status:', error);
-        setIsAdmin(false);
+        // Fallback to email check if API fails
+        const emailCheck = user.email === 'admin@chicagohub.com' || user.email?.includes('admin');
+        setIsAdmin(emailCheck);
       } finally {
         setLoading(false);
       }

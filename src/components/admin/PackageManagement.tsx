@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { packagesApi } from '@/api/packages';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,25 +57,48 @@ const PackageManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch active packages
-      const { data: activeData, error: activeError } = await supabase
-        .from('ad_packages')
-        .select('*')
-        .is('deleted_at', null)
-        .order('legacy_id');
+      // Fetch all packages
+      const response = await packagesApi.getAll(false);
+      const allPackages = response.packages;
       
-      if (activeError) throw activeError;
-      setPackages(activeData || []);
+      // Separate active and deleted packages
+      const activeData = allPackages.filter(pkg => !pkg.deletedAt).map(pkg => ({
+        id: pkg._id?.toString() || '',
+        legacy_id: pkg.legacyId || null,
+        name: pkg.name,
+        tagline: pkg.tagline || '',
+        description: pkg.description || '',
+        price: pkg.price || '',
+        price_range: pkg.priceRange || '',
+        audience: pkg.audience || [],
+        channels: pkg.channels || [],
+        complexity: pkg.complexity || '',
+        outlets: pkg.outlets || [],
+        features: Array.isArray(pkg.features) ? pkg.features : Object.values(pkg.features || {}),
+        is_active: pkg.isActive || false,
+        created_at: pkg.createdAt,
+        updated_at: pkg.updatedAt
+      }));
+      setPackages(activeData);
 
-      // Fetch deleted packages
-      const { data: deletedData, error: deletedError } = await supabase
-        .from('ad_packages')
-        .select('*')
-        .not('deleted_at', 'is', null)
-        .order('deleted_at', { ascending: false });
-
-      if (deletedError) throw deletedError;
-      setDeletedPackages(deletedData || []);
+      const deletedData = allPackages.filter(pkg => pkg.deletedAt).map(pkg => ({
+        id: pkg._id?.toString() || '',
+        legacy_id: pkg.legacyId || null,
+        name: pkg.name,
+        tagline: pkg.tagline || '',
+        description: pkg.description || '',
+        price: pkg.price || '',
+        price_range: pkg.priceRange || '',
+        audience: pkg.audience || [],
+        channels: pkg.channels || [],
+        complexity: pkg.complexity || '',
+        outlets: pkg.outlets || [],
+        features: Array.isArray(pkg.features) ? pkg.features : Object.values(pkg.features || {}),
+        is_active: pkg.isActive || false,
+        created_at: pkg.createdAt,
+        updated_at: pkg.updatedAt
+      }));
+      setDeletedPackages(deletedData);
       
     } catch (error) {
       console.error('Error fetching packages:', error);
@@ -98,23 +121,18 @@ const PackageManagement = () => {
         tagline: formData.tagline,
         description: formData.description,
         price: formData.price,
-        price_range: formData.price_range,
+        priceRange: formData.price_range,
         audience: formData.audience,
         channels: formData.channels,
         complexity: formData.complexity,
         outlets: formData.outlets,
         features: formData.features,
-        is_active: true
+        isActive: true
       };
 
       if (editingPackage) {
         // Update existing package
-        const { error } = await supabase
-          .from('ad_packages')
-          .update(packageData)
-          .eq('id', editingPackage.id);
-
-        if (error) throw error;
+        await packagesApi.update(editingPackage.id, packageData);
 
         toast({
           title: "Success",
@@ -122,11 +140,7 @@ const PackageManagement = () => {
         });
       } else {
         // Create new package
-        const { error } = await supabase
-          .from('ad_packages')
-          .insert([packageData]);
-
-        if (error) throw error;
+        await packagesApi.create(packageData);
 
         toast({
           title: "Success",
@@ -172,21 +186,16 @@ const PackageManagement = () => {
 
   const handleRestore = async (id: string, name: string) => {
     try {
-      const { data, error } = await supabase
-        .rpc('restore_package', { package_uuid: id });
+      // Remove the deletedAt timestamp to restore the package
+      await packagesApi.update(id, { 
+        isActive: true 
+      });
 
-      if (error) throw error;
-
-      const result = data as any;
-      if (result.success) {
-        toast({
-          title: "Package Restored",
-          description: `"${name}" has been restored successfully.`,
-        });
-        fetchPackages();
-      } else {
-        throw new Error(result.error);
-      }
+      toast({
+        title: "Package Restored",
+        description: `"${name}" has been restored successfully.`,
+      });
+      fetchPackages();
     } catch (error) {
       console.error('Error restoring package:', error);
       toast({

@@ -1,0 +1,740 @@
+import { ObjectId } from 'mongodb';
+
+// ===== USER AUTHENTICATION SCHEMA =====
+export interface User {
+  _id?: string | ObjectId;
+  email: string;
+  passwordHash: string;
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
+  isEmailVerified: boolean;
+  emailVerificationToken?: string;
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
+  lastLoginAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UserSession {
+  _id?: string | ObjectId;
+  userId: string;
+  token: string;
+  refreshToken?: string;
+  expiresAt: Date;
+  createdAt: Date;
+  userAgent?: string;
+  ipAddress?: string;
+}
+
+// ===== AD PACKAGES SCHEMA =====
+export interface AdPackage {
+  _id?: string | ObjectId;
+  legacyId?: number;
+  name: string;
+  tagline?: string;
+  description?: string;
+  price?: string;
+  priceRange?: string;
+  audience?: string[];
+  channels?: string[];
+  complexity?: string;
+  outlets?: string[];
+  features?: Record<string, any>;
+  format?: string;
+  duration?: string;
+  reachEstimate?: string;
+  mediaOutletId?: string;
+  isActive?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt?: Date;
+}
+
+// ===== ADVERTISING INVENTORY SCHEMA =====
+export interface AdvertisingInventory {
+  _id?: string | ObjectId;
+  mediaOutletId: string;
+  packageName: string;
+  packageType: string;
+  description?: string;
+  pricingTiers?: {
+    tier: string;
+    price: number;
+    impressions?: number;
+    duration?: string;
+  }[];
+  placementOptions?: {
+    location: string;
+    size: string;
+    format: string;
+  }[];
+  performanceMetrics?: {
+    averageCTR?: number;
+    averageImpressions?: number;
+    averageReach?: number;
+  };
+  technicalRequirements?: {
+    fileFormats: string[];
+    maxFileSize: string;
+    dimensions: string[];
+  };
+  fileRequirements?: Record<string, any>;
+  leadTime?: string;
+  minCommitment?: string;
+  maxCommitment?: string;
+  availabilitySchedule?: string;
+  cancellationPolicy?: string;
+  isActive?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ===== LEAD INQUIRIES SCHEMA =====
+export interface LeadInquiry {
+  _id?: string | ObjectId;
+  userId?: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  businessName: string;
+  websiteUrl?: string;
+  budgetRange?: string;
+  timeline?: string;
+  marketingGoals?: string[];
+  interestedOutlets?: string[];
+  interestedPackages?: number[];
+  conversationContext?: Record<string, any>;
+  status?: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'closed_won' | 'closed_lost';
+  assignedTo?: string;
+  followUpDate?: Date;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ===== USER PROFILES SCHEMA =====
+export interface UserProfile {
+  _id?: string | ObjectId;
+  userId: string; // Auth user ID
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  companyName?: string;
+  companyWebsite?: string;
+  companySizes?: 'startup' | 'small' | 'medium' | 'large' | 'enterprise';
+  industry?: string;
+  role?: string;
+  targetAudience?: string;
+  marketingGoals?: string[];
+  brandVoice?: string;
+  isAdmin?: boolean;
+  profileCompletionScore?: number;
+  websiteAnalysisDate?: Date;
+  websiteContentSummary?: string;
+  websiteKeyServices?: string[];
+  websiteBrandThemes?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ===== CONVERSATION THREADS SCHEMA =====
+export interface ConversationThread {
+  _id?: string | ObjectId;
+  userId: string;
+  title: string;
+  description?: string;
+  category?: 'general' | 'media_planning' | 'package_inquiry' | 'support';
+  messageCount?: number;
+  isArchived?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ===== ASSISTANT CONVERSATIONS SCHEMA =====
+export interface AssistantConversation {
+  _id?: string | ObjectId;
+  userId: string;
+  conversationThreadId?: string;
+  messageType: 'user' | 'assistant' | 'system';
+  messageContent: string;
+  metadata?: {
+    packageRecommendations?: string[];
+    outletSuggestions?: string[];
+    searchQuery?: string;
+    userIntent?: string;
+    confidence?: number;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ===== BRAND DOCUMENTS SCHEMA =====
+export interface BrandDocument {
+  _id?: string | ObjectId;
+  userId: string;
+  documentName: string;
+  documentType: 'logo' | 'brand_guide' | 'media_kit' | 'presentation' | 'other';
+  description?: string;
+  fileUrl?: string;
+  externalUrl?: string;
+  s3Key?: string;
+  mimeType?: string;
+  fileSize?: number;
+  originalFileName?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ===== SAVED OUTLETS SCHEMA =====
+export interface SavedOutlet {
+  _id?: string | ObjectId;
+  userId: string;
+  outletId: string; // Reference to publication
+  savedAt: Date;
+}
+
+// ===== SAVED PACKAGES SCHEMA =====
+export interface SavedPackage {
+  _id?: string | ObjectId;
+  userId: string;
+  packageId: number;
+  savedAt: Date;
+}
+
+// ===== USER INTERACTIONS SCHEMA =====
+export interface UserInteraction {
+  _id?: string | ObjectId;
+  userId: string;
+  interactionType: 'page_view' | 'package_view' | 'outlet_view' | 'search' | 'filter' | 'download' | 'inquiry';
+  metadata?: {
+    pageUrl?: string;
+    packageId?: string;
+    outletId?: string;
+    searchQuery?: string;
+    filterApplied?: Record<string, any>;
+    downloadType?: string;
+    inquiryType?: string;
+  };
+  createdAt: Date;
+}
+
+// ===== ASSISTANT INSTRUCTIONS SCHEMA =====
+export interface AssistantInstruction {
+  _id?: string | ObjectId;
+  version: string;
+  instructions: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ===== ANALYTICS SCHEMA =====
+export interface AnalyticsEvent {
+  _id?: string | ObjectId;
+  userId?: string;
+  sessionId: string;
+  eventType: string;
+  eventData: Record<string, any>;
+  userAgent?: string;
+  ipAddress?: string;
+  timestamp: Date;
+}
+
+// ===== UNIVERSAL PUBLISHER PROFILE SCHEMA =====
+// Comprehensive publication/media entity schema
+export interface Publication {
+  _id?: string | ObjectId;
+  publicationId: number; // Unique internal publication identifier
+  
+  basicInfo: {
+    publicationName: string;
+    websiteUrl?: string;
+    founded?: string | number;
+    publicationType?: 'daily' | 'weekly' | 'monthly' | 'bi-weekly' | 'quarterly' | 'other';
+    contentType?: 'news' | 'lifestyle' | 'business' | 'entertainment' | 'sports' | 'alternative' | 'mixed';
+    headquarters?: string;
+    geographicCoverage?: 'local' | 'regional' | 'state' | 'national' | 'international';
+    primaryServiceArea?: string;
+    secondaryMarkets?: string[];
+    numberOfPublications?: number;
+  };
+  
+  contactInfo?: {
+    mainPhone?: string;
+    businessHours?: string;
+    salesContact?: {
+      name?: string;
+      title?: string;
+      email?: string;
+      phone?: string;
+      preferredContact?: 'email' | 'phone' | 'text' | 'linkedin';
+    };
+    editorialContact?: {
+      name?: string;
+      title?: string;
+      email?: string;
+      phone?: string;
+    };
+    generalManager?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+    };
+    advertisingDirector?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+    };
+  };
+  
+  socialMediaProfiles?: Array<{
+    platform: 'facebook' | 'instagram' | 'twitter' | 'linkedin' | 'youtube' | 'tiktok' | 'pinterest' | 'snapchat' | 'threads' | 'other';
+    handle: string;
+    url?: string;
+    verified?: boolean;
+    metrics?: {
+      followers?: number;
+      following?: number;
+      posts?: number;
+      engagementRate?: number;
+      averageReach?: number;
+      averageImpressions?: number;
+    };
+    lastUpdated?: string;
+  }>;
+  
+  distributionChannels?: {
+    website?: {
+      url?: string;
+      cmsplatform?: string;
+      metrics?: {
+        monthlyVisitors?: number;
+        monthlyPageViews?: number;
+        averageSessionDuration?: number;
+        pagesPerSession?: number;
+        bounceRate?: number;
+        mobilePercentage?: number;
+      };
+      advertisingOpportunities?: Array<{
+        name?: string;
+        adFormat?: '300x250 banner' | '728x90 banner' | '320x50 banner' | '300x600 banner' | '970x250 banner' | 'takeover ad' | 'native' | 'video' | 'sponsored content' | 'custom';
+        location?: string;
+        pricing?: {
+          cpm?: number;
+          flatRate?: number;
+          pricingModel?: 'cpm' | 'flat' | 'cpc' | 'cpa' | 'contact';
+          minimumCommitment?: string;
+        };
+        specifications?: {
+          size?: string;
+          format?: string;
+          fileSize?: string;
+          resolution?: string;
+          animationAllowed?: boolean;
+          thirdPartyTags?: boolean;
+        };
+        monthlyImpressions?: number;
+        available?: boolean;
+      }>;
+    };
+    
+    newsletters?: Array<{
+      name?: string;
+      subject?: string;
+      frequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'irregular';
+      sendDay?: string;
+      sendTime?: string;
+      subscribers?: number;
+      openRate?: number;
+      clickThroughRate?: number;
+      listGrowthRate?: number;
+      advertisingOpportunities?: Array<{
+        name?: string;
+        position?: 'header' | 'footer' | 'inline' | 'dedicated';
+        dimensions?: string;
+        pricing?: {
+          perSend?: number;
+          monthly?: number;
+        };
+      }>;
+    }>;
+    
+    print?: {
+      frequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly';
+      circulation?: number;
+      paidCirculation?: number;
+      freeCirculation?: number;
+      distributionArea?: string;
+      distributionPoints?: string[];
+      printSchedule?: string;
+      advertisingOpportunities?: Array<{
+        name?: string;
+        adFormat?: 'full page' | 'half page' | 'quarter page' | 'eighth page' | 'business card' | 'classified' | 'insert';
+        dimensions?: string;
+        color?: 'color' | 'black and white' | 'both';
+        location?: string;
+        pricing?: {
+          oneTime?: number;
+          fourTimes?: number;
+          twelveTimes?: number;
+          openRate?: number;
+        };
+        specifications?: {
+          format?: string;
+          resolution?: string;
+          bleed?: boolean;
+        };
+      }>;
+    };
+    
+    events?: Array<{
+      name?: string;
+      type?: string;
+      frequency?: string;
+      averageAttendance?: number;
+      targetAudience?: string;
+      location?: string;
+      advertisingOpportunities?: Array<{
+        level?: 'title' | 'presenting' | 'supporting' | 'vendor' | 'booth';
+        benefits?: string[];
+        pricing?: number;
+      }>;
+    }>;
+  };
+  
+  audienceDemographics?: {
+    totalAudience?: number;
+    ageGroups?: {
+      '18-24'?: number;
+      '25-34'?: number;
+      '35-44'?: number;
+      '45-54'?: number;
+      '55-64'?: number;
+      '65+'?: number;
+    };
+    gender?: {
+      male?: number;
+      female?: number;
+      other?: number;
+    };
+    householdIncome?: {
+      under35k?: number;
+      '35k-50k'?: number;
+      '50k-75k'?: number;
+      '75k-100k'?: number;
+      '100k-150k'?: number;
+      over150k?: number;
+    };
+    education?: {
+      highSchool?: number;
+      someCollege?: number;
+      bachelors?: number;
+      graduate?: number;
+    };
+    location?: string;
+    interests?: string[];
+    targetMarkets?: string[];
+  };
+  
+  editorialInfo?: {
+    contentFocus?: string[];
+    contentPillars?: string[];
+    specialSections?: string[];
+    signatureFeatures?: string[];
+    editorialTeam?: {
+      editorInChief?: string;
+      managingEditor?: string;
+      keyWriters?: string[];
+      contributingWriters?: string[];
+    };
+  };
+  
+  businessInfo?: {
+    ownershipType?: 'independent' | 'chain' | 'nonprofit' | 'public' | 'private' | 'family-owned';
+    parentCompany?: string;
+    yearsInOperation?: number;
+    numberOfEmployees?: number;
+    averageMonthlyRevenue?: number;
+    revenueBreakdown?: {
+      digital?: number;
+      print?: number;
+      events?: number;
+      other?: number;
+    };
+    topAdvertiserCategories?: string[];
+    clientRetentionRate?: number;
+  };
+  
+  crossChannelPackages?: Array<{
+    name?: string;
+    packageName?: string;
+    includedChannels?: Array<'website' | 'print' | 'newsletter' | 'social' | 'events' | 'email'>;
+    pricing?: string;
+    details?: string;
+    duration?: string;
+    savings?: number;
+  }>;
+  
+  technicalCapabilities?: {
+    cmsplatform?: string;
+    emailServiceProvider?: string;
+    adServer?: string;
+    analyticsTools?: string[];
+    crmSystem?: string;
+    paymentProcessing?: Array<'credit cards' | 'ach' | 'check' | 'paypal' | 'stripe' | 'square'>;
+  };
+  
+  competitiveInfo?: {
+    uniqueValueProposition?: string;
+    keyDifferentiators?: string[];
+    competitiveAdvantages?: string[];
+    marketShare?: number;
+    mainCompetitors?: string[];
+  };
+  
+  awards?: Array<{
+    award?: string;
+    organization?: string;
+    year?: number;
+    category?: string;
+  }>;
+  
+  bookingPolicies?: {
+    minimumLeadTime?: string;
+    cancellationPolicy?: string;
+    materialDeadline?: string;
+    paymentTerms?: string;
+    agencyDiscount?: number;
+    creditCardsAccepted?: boolean;
+  };
+  
+  metadata?: {
+    extractedFrom?: Array<'website' | 'web_search' | 'manual_entry' | 'api' | 'media_kit' | 'sales_contact'>;
+    confidence?: number;
+    lastAnalyzed?: Date;
+    lastUpdated?: Date;
+    createdAt?: Date;
+    mediaKitDate?: Date;
+    nextReviewDate?: Date;
+    dataCompleteness?: number;
+    verificationStatus?: 'verified' | 'needs_verification' | 'outdated' | 'incomplete';
+  };
+  
+  internalNotes?: {
+    operationalNotes?: string;
+    salesApproach?: string;
+    knownChallenges?: string[];
+    growthOpportunities?: string[];
+    preferredContactTime?: string;
+    responseTime?: string;
+    decisionMakers?: string[];
+  };
+}
+
+export interface PublicationInsert extends Omit<Publication, '_id'> {}
+export interface PublicationUpdate extends Partial<PublicationInsert> {
+  'metadata.lastUpdated': Date;
+}
+
+// Legacy MediaEntity interface for backward compatibility
+export interface MediaEntity {
+  _id?: string | ObjectId;
+  legacyId?: number;
+  name: string;
+  type: string;
+  tagline?: string;
+  description: string;
+  website?: string;
+  category: string;
+  categoryTag: string;
+  logo: string;
+  logoColor: string;
+  brief: string;
+  reach: string;
+  audience: string;
+  strengths: string[];
+  advertising: string[];
+  contactInfo?: {
+    email?: string;
+    phone?: string;
+    salesContact?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+    };
+  };
+  businessInfo?: {
+    foundingYear?: number;
+    staffCount?: number;
+    ownershipType?: string;
+    businessModel?: string;
+    competitiveAdvantages?: string;
+    primaryMarket?: string;
+    coverageArea?: string;
+    publicationFrequency?: string;
+  };
+  audienceMetrics?: {
+    monthlyVisitors?: number;
+    emailSubscribers?: number;
+    openRate?: number;
+    audienceSize?: string;
+    demographics?: {
+      gender?: { male?: number; female?: number };
+      income?: { highIncome?: number };
+      education?: { graduateDegree?: number };
+      device?: { mobile?: number };
+    };
+  };
+  socialMedia?: {
+    facebook?: string;
+    twitter?: string;
+    instagram?: string;
+    linkedin?: string;
+    totalFollowers?: number;
+  };
+  editorialInfo?: {
+    editorialFocus?: string[];
+    awards?: any[];
+    keyPersonnel?: any[];
+  };
+  technicalSpecs?: {
+    adSpecs?: any;
+    fileRequirements?: any;
+    technicalRequirements?: any;
+  };
+  isActive: boolean;
+  sortOrder?: number;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt?: Date;
+}
+
+export interface MediaEntityInsert extends Omit<MediaEntity, '_id' | 'createdAt' | 'updatedAt'> {}
+export interface MediaEntityUpdate extends Partial<MediaEntityInsert> {
+  updatedAt: Date;
+}
+
+// Collection Names
+export const COLLECTIONS = {
+  USERS: 'users',
+  USER_SESSIONS: 'user_sessions',
+  PUBLICATIONS: 'publications',
+  AD_PACKAGES: 'ad_packages',
+  ADVERTISING_INVENTORY: 'advertising_inventory',
+  LEAD_INQUIRIES: 'lead_inquiries',
+  USER_PROFILES: 'user_profiles',
+  CONVERSATION_THREADS: 'conversation_threads',
+  ASSISTANT_CONVERSATIONS: 'assistant_conversations',
+  BRAND_DOCUMENTS: 'brand_documents',
+  SAVED_OUTLETS: 'saved_outlets',
+  SAVED_PACKAGES: 'saved_packages',
+  USER_INTERACTIONS: 'user_interactions',
+  ASSISTANT_INSTRUCTIONS: 'assistant_instructions',
+  ANALYTICS_EVENTS: 'analytics_events',
+  MEDIA_ENTITIES: 'media_entities', // Unified media collection
+} as const;
+
+// MongoDB Indexes Configuration
+export const INDEXES = {
+  users: [
+    { email: 1 }, // unique
+    { emailVerificationToken: 1 },
+    { passwordResetToken: 1 },
+    { createdAt: -1 }
+  ],
+  user_sessions: [
+    { userId: 1 },
+    { token: 1 }, // unique
+    { expiresAt: 1 },
+    { createdAt: -1 }
+  ],
+  publications: [
+    { publicationId: 1 }, // unique
+    { 'basicInfo.geographicCoverage': 1, 'basicInfo.primaryServiceArea': 1 },
+    { 'basicInfo.publicationType': 1, 'basicInfo.contentType': 1 },
+    { 'distributionChannels.website.metrics.monthlyVisitors': -1 },
+    { 'distributionChannels.print.circulation': -1 },
+    { 'metadata.lastUpdated': -1 },
+    { 'metadata.verificationStatus': 1 }
+  ],
+  ad_packages: [
+    { legacyId: 1 },
+    { mediaOutletId: 1 },
+    { isActive: 1 },
+    { createdAt: -1 }
+  ],
+  lead_inquiries: [
+    { userId: 1 },
+    { status: 1 },
+    { createdAt: -1 },
+    { assignedTo: 1 },
+    { followUpDate: 1 }
+  ],
+  user_profiles: [
+    { userId: 1 }, // unique
+    { companyName: 1 },
+    { industry: 1 },
+    { isAdmin: 1 }
+  ],
+  conversation_threads: [
+    { userId: 1 },
+    { createdAt: -1 },
+    { isArchived: 1 }
+  ],
+  assistant_conversations: [
+    { userId: 1 },
+    { conversationThreadId: 1 },
+    { createdAt: -1 }
+  ],
+  brand_documents: [
+    { userId: 1 },
+    { documentType: 1 },
+    { createdAt: -1 }
+  ],
+  saved_outlets: [
+    { userId: 1, outletId: 1 }, // compound unique
+    { savedAt: -1 }
+  ],
+  saved_packages: [
+    { userId: 1, packageId: 1 }, // compound unique
+    { savedAt: -1 }
+  ],
+  user_interactions: [
+    { userId: 1 },
+    { interactionType: 1 },
+    { createdAt: -1 }
+  ],
+  assistant_instructions: [
+    { version: 1 },
+    { isActive: 1 },
+    { createdAt: -1 }
+  ],
+  analytics_events: [
+    { userId: 1 },
+    { sessionId: 1 },
+    { eventType: 1 },
+    { timestamp: -1 }
+  ],
+  media_entities: [
+    { legacyId: 1 },
+    { categoryTag: 1 },
+    { type: 1 },
+    { category: 1 },
+    { isActive: 1 },
+    { sortOrder: 1 },
+    { name: 1 },
+    { 'businessInfo.primaryMarket': 1 },
+    { 'audienceMetrics.monthlyVisitors': -1 },
+    { createdAt: -1 }
+  ],
+  media_partners: [
+    { legacyId: 1 },
+    { categoryTag: 1 },
+    { isActive: 1 },
+    { sortOrder: 1 },
+    { name: 1 },
+    { createdAt: -1 }
+  ]
+};

@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LeadManagement } from './LeadManagement';
 import { PackageManagement } from './PackageManagement';
 import { AssistantManagement } from './AssistantManagement';
 import { MediaImportInterface } from './MediaImportInterface';
-import { EnhancedMediaOutletManagement } from './EnhancedMediaOutletManagement';
-import { Users, Package, Radio, Bot } from 'lucide-react';
+import { UserManagement } from './UserManagement';
+import { EnhancedPublicationsManagement } from './EnhancedPublicationsManagement';
+import { PublicationsImport } from './PublicationsImport';
+import { PublicationInventoryManager } from './PublicationInventoryManager';
+import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target } from 'lucide-react';
 
 export const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -19,10 +22,12 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
-          <TabsTrigger value="outlets">Outlets</TabsTrigger>
+          <TabsTrigger value="publications">Publications</TabsTrigger>
+          <TabsTrigger value="inventory">Ad Inventory</TabsTrigger>
           <TabsTrigger value="packages">Packages</TabsTrigger>
           <TabsTrigger value="import">Import</TabsTrigger>
           <TabsTrigger value="assistant">Assistant</TabsTrigger>
@@ -42,22 +47,22 @@ export const AdminDashboard = () => {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Outlets</CardTitle>
-                <Radio className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Publications</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">48</div>
-                <p className="text-xs text-muted-foreground">+3 new this week</p>
+                <div className="text-2xl font-bold">35</div>
+                <p className="text-xs text-muted-foreground">Universal profiles</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ad Packages</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Ad Inventory</CardTitle>
+                <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">124</div>
-                <p className="text-xs text-muted-foreground">Across all outlets</p>
+                <div className="text-2xl font-bold">247</div>
+                <p className="text-xs text-muted-foreground">Opportunities available</p>
               </CardContent>
             </Card>
             <Card>
@@ -112,11 +117,25 @@ export const AdminDashboard = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 <button 
-                  onClick={() => setActiveTab('outlets')}
+                  onClick={() => setActiveTab('publications')}
                   className="w-full text-left p-3 rounded-lg hover:bg-accent transition-colors"
                 >
-                  <div className="font-medium">Add New Outlet</div>
-                  <div className="text-sm text-muted-foreground">Create a new media outlet</div>
+                  <div className="font-medium">Manage Publications</div>
+                  <div className="text-sm text-muted-foreground">Add, edit, and manage your publications database</div>
+                </button>
+                <button 
+                  onClick={() => setActiveTab('inventory')}
+                  className="w-full text-left p-3 rounded-lg hover:bg-accent transition-colors"
+                >
+                  <div className="font-medium">Advertising Inventory</div>
+                  <div className="text-sm text-muted-foreground">Manage website, newsletter, print, and event advertising opportunities</div>
+                </button>
+                <button 
+                  onClick={() => setActiveTab('import')}
+                  className="w-full text-left p-3 rounded-lg hover:bg-accent transition-colors"
+                >
+                  <div className="font-medium">Import Publications</div>
+                  <div className="text-sm text-muted-foreground">Import publication data from JSON with preview</div>
                 </button>
                 <button 
                   onClick={() => setActiveTab('packages')}
@@ -137,12 +156,20 @@ export const AdminDashboard = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="users">
+          <UserManagement />
+        </TabsContent>
+
         <TabsContent value="leads">
           <LeadManagement />
         </TabsContent>
 
-        <TabsContent value="outlets">
-          <EnhancedMediaOutletManagement />
+        <TabsContent value="publications">
+          <EnhancedPublicationsManagement />
+        </TabsContent>
+
+        <TabsContent value="inventory">
+          <PublicationInventoryManager />
         </TabsContent>
 
         <TabsContent value="packages">
@@ -150,7 +177,7 @@ export const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="import">
-          <MediaImportInterface onImportSuccess={() => setActiveTab('outlets')} />
+          <PublicationsImport />
         </TabsContent>
 
         <TabsContent value="assistant">

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Package, Building2, ExternalLink, Heart, MessageCircle } from "lucide-react";
-import { mediaPartners } from "@/data/mediaPartners";
+import { usePublicationsAsMediaEntities } from "@/hooks/usePublications";
 import { EmptyStates } from "@/components/EmptyStates";
 import { convertDatabasePackage } from "@/types/package";
 
@@ -14,15 +14,16 @@ export function SavedItemsOverview() {
   const { savedPackages, toggleSavePackage } = useSavedPackages();
   const { savedOutlets, toggleSaveOutlet } = useSavedOutlets();
   const { packages: dbPackages, loading: packagesLoading } = usePackages();
+  const { mediaEntities, loading: entitiesLoading } = usePublicationsAsMediaEntities();
 
   // Convert database packages to frontend format and filter by saved IDs
   const savedPackagesList = dbPackages
     .filter(dbPkg => dbPkg.legacy_id && savedPackages.includes(dbPkg.legacy_id))
     .map(convertDatabasePackage);
   
-  const savedOutletsList = mediaPartners.filter(partner => savedOutlets.has(partner.id.toString()));
+  const savedOutletsList = mediaEntities.filter(entity => savedOutlets.has(entity.id.toString()));
 
-  if (packagesLoading) {
+  if (packagesLoading || entitiesLoading) {
     return (
       <div className="space-y-6">
         <div>

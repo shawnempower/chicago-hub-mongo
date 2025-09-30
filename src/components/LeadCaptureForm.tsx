@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLeadCapture } from '@/hooks/useLeadCapture';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/CustomAuthContext';
 
 interface LeadCaptureFormProps {
   onSuccess?: () => void;
@@ -27,7 +27,7 @@ export const LeadCaptureForm = ({
   const [formData, setFormData] = useState({
     businessName: '',
     websiteUrl: '',
-    contactName: user?.user_metadata?.first_name || '',
+    contactName: user?.firstName || '',
     contactEmail: user?.email || '',
     contactPhone: '',
     marketingGoals: [] as string[],

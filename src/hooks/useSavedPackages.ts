@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/CustomAuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 export function useSavedPackages() {
@@ -22,14 +21,9 @@ export function useSavedPackages() {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
-        .from('saved_packages')
-        .select('package_id')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      
-      const packageIds = data?.map(item => item.package_id) || [];
+      // For now, use localStorage as a temporary solution
+      const saved = localStorage.getItem(`saved_packages_${user.id}`);
+      const packageIds = saved ? JSON.parse(saved) : [];
       setSavedPackages(packageIds);
     } catch (error) {
       console.error('Error loading saved packages:', error);
@@ -49,38 +43,27 @@ export function useSavedPackages() {
     const isSaved = savedPackages.includes(packageId);
 
     try {
+      let newSavedPackages;
       if (isSaved) {
         // Remove from saved packages
-        const { error } = await supabase
-          .from('saved_packages')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('package_id', packageId);
-
-        if (error) throw error;
-        
-        setSavedPackages(prev => prev.filter(id => id !== packageId));
+        newSavedPackages = savedPackages.filter(id => id !== packageId);
+        setSavedPackages(newSavedPackages);
         toast({
           title: "Package removed",
           description: "Package has been removed from your saved list.",
         });
       } else {
         // Add to saved packages
-        const { error } = await supabase
-          .from('saved_packages')
-          .insert({
-            user_id: user.id,
-            package_id: packageId
-          });
-
-        if (error) throw error;
-        
-        setSavedPackages(prev => [...prev, packageId]);
+        newSavedPackages = [...savedPackages, packageId];
+        setSavedPackages(newSavedPackages);
         toast({
           title: "Package saved",
           description: "Package has been added to your saved list.",
         });
       }
+      
+      // Save to localStorage
+      localStorage.setItem(`saved_packages_${user.id}`, JSON.stringify(newSavedPackages));
     } catch (error: any) {
       console.error('Error toggling saved package:', error);
       toast({

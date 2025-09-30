@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+// MongoDB services removed - using API calls instead
+import { useAuth } from '@/contexts/CustomAuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 export function useSavedOutlets() {
@@ -17,15 +17,10 @@ export function useSavedOutlets() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('saved_outlets')
-        .select('outlet_id')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      const outletIds = new Set(data?.map(item => item.outlet_id) || []);
-      setSavedOutlets(outletIds);
+      // For now, use localStorage as a temporary solution
+      const saved = localStorage.getItem(`saved_outlets_${user.id}`);
+      const outletIds = saved ? JSON.parse(saved) : [];
+      setSavedOutlets(new Set(outletIds));
     } catch (error) {
       console.error('Error loading saved outlets:', error);
       toast({
@@ -55,19 +50,13 @@ export function useSavedOutlets() {
     const isCurrentlySaved = savedOutlets.has(outletId);
 
     try {
+      let newOutlets;
       if (isCurrentlySaved) {
         // Remove from saved outlets
-        const { error } = await supabase
-          .from('saved_outlets')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('outlet_id', outletId);
-
-        if (error) throw error;
-
         setSavedOutlets(prev => {
           const newSet = new Set(prev);
           newSet.delete(outletId);
+          newOutlets = Array.from(newSet);
           return newSet;
         });
 
@@ -77,22 +66,20 @@ export function useSavedOutlets() {
         });
       } else {
         // Add to saved outlets
-        const { error } = await supabase
-          .from('saved_outlets')
-          .insert({
-            user_id: user.id,
-            outlet_id: outletId
-          });
-
-        if (error) throw error;
-
-        setSavedOutlets(prev => new Set(prev).add(outletId));
+        setSavedOutlets(prev => {
+          const newSet = new Set(prev).add(outletId);
+          newOutlets = Array.from(newSet);
+          return newSet;
+        });
 
         toast({
           title: "Outlet Saved",
           description: "Outlet added to your saved list"
         });
       }
+      
+      // Save to localStorage
+      localStorage.setItem(`saved_outlets_${user.id}`, JSON.stringify(newOutlets));
     } catch (error) {
       console.error('Error toggling save outlet:', error);
       toast({
