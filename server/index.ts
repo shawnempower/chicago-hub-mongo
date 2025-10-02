@@ -11,7 +11,7 @@ import { authService } from '../src/integrations/mongodb/authService';
 import { connectToDatabase } from '../src/integrations/mongodb/client';
 import { emailService } from './emailService';
 import { s3Service } from './s3Service';
-import { brandDocumentsService, adPackagesService, userProfilesService, leadInquiriesService, publicationsService } from '../src/integrations/mongodb/allServices';
+import { brandDocumentsService, adPackagesService, userProfilesService, leadInquiriesService, publicationsService, publicationFilesService, assistantInstructionsService } from '../src/integrations/mongodb/allServices';
 import multer from 'multer';
 
 const app = express();
@@ -35,22 +35,45 @@ const upload = multer({
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
+      // Documents
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'text/csv',
+      'text/markdown',
+      'text/x-markdown',
+      'application/json',
+      // Images
       'image/jpeg',
       'image/jpg',
       'image/png',
       'image/svg+xml',
-      'application/vnd.ms-powerpoint',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'text/plain' // Allow .txt files for testing
+      'image/gif',
+      'image/webp',
+      // Archives
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/gzip',
+      // Video
+      'video/mp4',
+      'video/mpeg',
+      'video/quicktime',
+      // Audio
+      'audio/mpeg',
+      'audio/wav',
+      'audio/mp4'
     ];
     
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('File type not supported'), false);
+      const supportedExts = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'csv', 'md', 'json', 'jpg', 'jpeg', 'png', 'svg', 'gif', 'webp', 'zip', 'gz', 'mp4', 'mpeg', 'mov', 'mp3', 'wav'];
+      cb(new Error(`File type "${file.mimetype}" not supported. Supported formats: ${supportedExts.join(', ')}`) as any, false);
     }
   }
 });
@@ -398,7 +421,7 @@ app.post('/api/publications/import', authenticateToken, async (req: any, res) =>
 
     // Enhanced import logic to match UI expectations
     console.log('🚀 Using enhanced import logic for', publications.length, 'publications');
-    const results = [];
+    const results: any[] = [];
     
     for (const pub of publications) {
       if (!pub.publicationId || !pub.basicInfo?.publicationName) {
@@ -474,7 +497,7 @@ app.post('/api/publications/import-preview', authenticateToken, async (req: any,
     }
 
     // Generate preview results
-    const results = [];
+    const results: any[] = [];
     for (const pub of publications) {
       if (!pub.publicationId || !pub.basicInfo?.publicationName) {
         continue;
@@ -511,6 +534,270 @@ app.post('/api/publications/import-preview', authenticateToken, async (req: any,
   } catch (error) {
     console.error('Error generating import preview:', error);
     res.status(500).json({ error: 'Failed to generate import preview' });
+  }
+});
+
+// ===== PUBLICATION FILES ROUTES =====
+
+// Get all files for a publication
+app.get('/api/publications/:publicationId/files', authenticateToken, async (req: any, res) => {
+  try {
+    const { publicationId } = req.params;
+    
+    // Verify publication exists
+    const publication = await publicationsService.getById(publicationId);
+    if (!publication) {
+      return res.status(404).json({ error: 'Publication not found' });
+    }
+
+    // Use the publication's _id to find files
+    const files = await publicationFilesService.getByPublicationId(publication._id!.toString());
+    res.json(files);
+  } catch (error) {
+    console.error('Error fetching publication files:', error);
+    res.status(500).json({ error: 'Failed to fetch publication files' });
+  }
+});
+
+// Get a specific file
+app.get('/api/publications/:publicationId/files/:fileId', authenticateToken, async (req: any, res) => {
+  try {
+    const { publicationId, fileId } = req.params;
+    
+    // Verify publication exists and get its _id
+    const publication = await publicationsService.getById(publicationId);
+    if (!publication) {
+      return res.status(404).json({ error: 'Publication not found' });
+    }
+    
+    const file = await publicationFilesService.getById(fileId);
+    if (!file || file.publicationId !== publication._id!.toString()) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    res.json(file);
+  } catch (error) {
+    console.error('Error fetching publication file:', error);
+    res.status(500).json({ error: 'Failed to fetch publication file' });
+  }
+});
+
+// Upload a new file
+app.post('/api/publications/:publicationId/files', authenticateToken, upload.single('file'), async (req: any, res) => {
+  try {
+    const { publicationId } = req.params;
+    const { fileType, description, tags, isPublic } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    if (!fileType) {
+      return res.status(400).json({ error: 'File type is required' });
+    }
+
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // Verify publication exists
+    const publication = await publicationsService.getById(publicationId);
+    if (!publication) {
+      return res.status(404).json({ error: 'Publication not found' });
+    }
+
+    // Upload file to S3
+    const s3ServiceInstance = s3Service();
+    if (!s3ServiceInstance) {
+      return res.status(500).json({ error: 'File storage service not available' });
+    }
+
+    const uploadResult = await s3ServiceInstance.uploadFile({
+      userId: req.user.id,
+      folder: 'uploads',
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      buffer: req.file.buffer,
+      isPublic: isPublic === 'true'
+    });
+
+    if (!uploadResult.success) {
+      return res.status(500).json({ error: uploadResult.error || 'Failed to upload file' });
+    }
+
+    // Create file record
+    const fileData = {
+      publicationId: publication._id!.toString(), // Use MongoDB _id
+      fileName: req.file.originalname,
+      originalFileName: req.file.originalname,
+      fileType,
+      description: description || undefined,
+      s3Key: uploadResult.key!,
+      s3Bucket: process.env.AWS_S3_BUCKET || '',
+      fileUrl: uploadResult.url,
+      mimeType: req.file.mimetype,
+      fileSize: req.file.size,
+      uploadedBy: req.user.id,
+      tags: tags ? JSON.parse(tags) : undefined,
+      isPublic: isPublic === 'true'
+    };
+
+    const createdFile = await publicationFilesService.create(fileData);
+    res.status(201).json(createdFile);
+  } catch (error) {
+    console.error('Error uploading publication file:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
+// Update file metadata
+app.put('/api/publications/:publicationId/files/:fileId', authenticateToken, async (req: any, res) => {
+  try {
+    const { publicationId, fileId } = req.params;
+    const { fileName, description, tags, isPublic } = req.body;
+
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // Verify publication exists and get its _id
+    const publication = await publicationsService.getById(publicationId);
+    if (!publication) {
+      return res.status(404).json({ error: 'Publication not found' });
+    }
+
+    // Verify file exists and belongs to publication
+    const existingFile = await publicationFilesService.getById(fileId);
+    if (!existingFile || existingFile.publicationId !== publication._id!.toString()) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    const updates: any = {};
+    if (fileName !== undefined) updates.fileName = fileName;
+    if (description !== undefined) updates.description = description;
+    if (tags !== undefined) updates.tags = tags;
+    if (isPublic !== undefined) updates.isPublic = isPublic;
+
+    const updatedFile = await publicationFilesService.update(fileId, updates);
+    if (!updatedFile) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    res.json(updatedFile);
+  } catch (error) {
+    console.error('Error updating publication file:', error);
+    res.status(500).json({ error: 'Failed to update file' });
+  }
+});
+
+// Delete a file
+app.delete('/api/publications/:publicationId/files/:fileId', authenticateToken, async (req: any, res) => {
+  try {
+    const { publicationId, fileId } = req.params;
+
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // Verify publication exists and get its _id
+    const publication = await publicationsService.getById(publicationId);
+    if (!publication) {
+      return res.status(404).json({ error: 'Publication not found' });
+    }
+
+    // Verify file exists and belongs to publication
+    const existingFile = await publicationFilesService.getById(fileId);
+    if (!existingFile || existingFile.publicationId !== publication._id!.toString()) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Delete from S3
+    const s3ServiceInstance = s3Service();
+    if (s3ServiceInstance && existingFile.s3Key) {
+      await s3ServiceInstance.deleteFile(existingFile.s3Key);
+    }
+
+    // Soft delete from database
+    const deleted = await publicationFilesService.delete(fileId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting publication file:', error);
+    res.status(500).json({ error: 'Failed to delete file' });
+  }
+});
+
+// Get download URL for a file
+app.get('/api/publications/:publicationId/files/:fileId/download', authenticateToken, async (req: any, res) => {
+  try {
+    const { publicationId, fileId } = req.params;
+
+    // Verify publication exists and get its _id
+    const publication = await publicationsService.getById(publicationId);
+    if (!publication) {
+      return res.status(404).json({ error: 'Publication not found' });
+    }
+
+    const file = await publicationFilesService.getById(fileId);
+    if (!file || file.publicationId !== publication._id!.toString()) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Increment download count
+    await publicationFilesService.incrementDownloadCount(fileId);
+
+    // Generate signed URL for private files
+    const s3ServiceInstance = s3Service();
+    if (!file.isPublic && s3ServiceInstance) {
+      const downloadUrl = await s3ServiceInstance.getSignedUrl(file.s3Key, 3600); // 1 hour
+      return res.json({ downloadUrl });
+    }
+
+    // Return public URL for public files
+    res.json({ downloadUrl: file.fileUrl });
+  } catch (error) {
+    console.error('Error getting download URL:', error);
+    res.status(500).json({ error: 'Failed to get download URL' });
+  }
+});
+
+// Search files across all publications (admin only)
+app.get('/api/publications/files/search', authenticateToken, async (req: any, res) => {
+  try {
+    const { q, fileType, publicationId, tags, isPublic } = req.query;
+
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const filters: any = {};
+    if (fileType) filters.fileType = fileType;
+    if (publicationId) filters.publicationId = publicationId;
+    if (tags) {
+      try {
+        filters.tags = JSON.parse(tags as string);
+      } catch {
+        filters.tags = [tags];
+      }
+    }
+    if (isPublic !== undefined) filters.isPublic = isPublic === 'true';
+
+    const files = await publicationFilesService.search(q as string || '', filters);
+    res.json(files);
+  } catch (error) {
+    console.error('Error searching publication files:', error);
+    res.status(500).json({ error: 'Failed to search files' });
   }
 });
 
@@ -582,12 +869,7 @@ app.delete('/api/admin/packages/:id', authenticateToken, async (req: any, res) =
     const { id } = req.params;
     const { permanent } = req.query;
     
-    let success;
-    if (permanent === 'true') {
-      success = await adPackagesService.hardDelete(id);
-    } else {
-      success = await adPackagesService.softDelete(id);
-    }
+    const success = await adPackagesService.softDelete(id);
     
     if (!success) {
       return res.status(404).json({ error: 'Package not found' });
@@ -823,6 +1105,236 @@ app.put('/api/admin/users/:userId/admin', authenticateToken, async (req: any, re
   }
 });
 
+// Admin dashboard statistics endpoint
+app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    // Get counts from various services
+    const [leads, publications, packages, publicationFiles] = await Promise.all([
+      leadInquiriesService.getAll(),
+      publicationsService.getAll(),
+      adPackagesService.getAll(),
+      publicationFilesService.search('', {}) // Get all files with empty search query
+    ]);
+
+    // Calculate detailed marketplace aggregates
+    let adInventoryCount = 0;
+    const inventoryByType = {
+      website: 0,
+      newsletter: 0,
+      print: 0,
+      events: 0,
+      social: 0,
+      crossChannel: 0
+    };
+    
+    const publicationsByType = {
+      daily: 0,
+      weekly: 0,
+      monthly: 0,
+      other: 0
+    };
+    
+    const geographicCoverage = {
+      local: 0,
+      regional: 0,
+      state: 0,
+      national: 0,
+      international: 0
+    };
+    
+    const contentTypes = {
+      news: 0,
+      lifestyle: 0,
+      business: 0,
+      entertainment: 0,
+      sports: 0,
+      alternative: 0,
+      mixed: 0
+    };
+    
+    const audienceMetrics = {
+      totalWebsiteVisitors: 0,
+      totalNewsletterSubscribers: 0,
+      totalSocialFollowers: 0,
+      totalEngagementRates: 0,
+      engagementRateCount: 0
+    };
+    
+    const pricingData = {
+      websiteAdPrices: [] as number[],
+      newsletterAdPrices: [] as number[],
+      printAdPrices: [] as number[],
+      totalValue: 0
+    };
+
+    for (const pub of publications) {
+      // Count and categorize inventory by type
+      if (pub.distributionChannels?.website?.advertisingOpportunities) {
+        const websiteAds = pub.distributionChannels.website.advertisingOpportunities.length;
+        inventoryByType.website += websiteAds;
+        adInventoryCount += websiteAds;
+        
+        // Collect website pricing data
+        pub.distributionChannels.website.advertisingOpportunities.forEach(ad => {
+          const price = ad.pricing?.flatRate || ad.pricing?.cpm;
+          if (price) {
+            pricingData.websiteAdPrices.push(price);
+            pricingData.totalValue += price;
+          }
+        });
+      }
+      
+      if (pub.distributionChannels?.newsletters) {
+        for (const newsletter of pub.distributionChannels.newsletters) {
+          if (newsletter.advertisingOpportunities) {
+            const newsletterAds = newsletter.advertisingOpportunities.length;
+            inventoryByType.newsletter += newsletterAds;
+            adInventoryCount += newsletterAds;
+            
+            // Collect newsletter pricing data
+            newsletter.advertisingOpportunities.forEach(ad => {
+              const price = ad.pricing?.perSend || ad.pricing?.monthly;
+              if (price) {
+                pricingData.newsletterAdPrices.push(price);
+                pricingData.totalValue += price;
+              }
+            });
+          }
+          
+          // Aggregate newsletter subscribers
+          if (newsletter.subscribers) {
+            audienceMetrics.totalNewsletterSubscribers += newsletter.subscribers;
+          }
+        }
+      }
+      
+      if (pub.distributionChannels?.print?.advertisingOpportunities) {
+        const printAds = pub.distributionChannels.print.advertisingOpportunities.length;
+        inventoryByType.print += printAds;
+        adInventoryCount += printAds;
+        
+        // Collect print pricing data
+        pub.distributionChannels.print.advertisingOpportunities.forEach(ad => {
+          const price = ad.pricing?.oneTime || ad.pricing?.fourTimes || ad.pricing?.twelveTimes;
+          if (price) {
+            pricingData.printAdPrices.push(price);
+            pricingData.totalValue += price;
+          }
+        });
+      }
+      
+      if (pub.distributionChannels?.events) {
+        for (const event of pub.distributionChannels.events) {
+          if (event.advertisingOpportunities) {
+            const eventAds = event.advertisingOpportunities.length;
+            inventoryByType.events += eventAds;
+            adInventoryCount += eventAds;
+          }
+        }
+      }
+      
+      if (pub.crossChannelPackages) {
+        const packages = pub.crossChannelPackages.length;
+        inventoryByType.crossChannel += packages;
+        adInventoryCount += packages;
+      }
+      
+      // Social media count
+      if (pub.socialMediaProfiles) {
+        inventoryByType.social += pub.socialMediaProfiles.length;
+        
+        // Aggregate social followers and engagement
+        pub.socialMediaProfiles.forEach(profile => {
+          if (profile.metrics?.followers) {
+            audienceMetrics.totalSocialFollowers += profile.metrics.followers;
+          }
+          if (profile.metrics?.engagementRate) {
+            audienceMetrics.totalEngagementRates += profile.metrics.engagementRate;
+            audienceMetrics.engagementRateCount++;
+          }
+        });
+      }
+      
+      // Aggregate website visitors
+      if (pub.distributionChannels?.website?.metrics?.monthlyVisitors) {
+        audienceMetrics.totalWebsiteVisitors += pub.distributionChannels.website.metrics.monthlyVisitors;
+      }
+      
+      // Categorize publications by type
+      const pubType = pub.basicInfo.publicationType || 'other';
+      if (pubType in publicationsByType) {
+        publicationsByType[pubType as keyof typeof publicationsByType]++;
+      } else {
+        publicationsByType.other++;
+      }
+      
+      // Categorize by geographic coverage
+      const geoCoverage = pub.basicInfo.geographicCoverage || 'local';
+      if (geoCoverage in geographicCoverage) {
+        geographicCoverage[geoCoverage as keyof typeof geographicCoverage]++;
+      }
+      
+      // Categorize by content type
+      const contentType = pub.basicInfo.contentType || 'mixed';
+      if (contentType in contentTypes) {
+        contentTypes[contentType as keyof typeof contentTypes]++;
+      } else {
+        contentTypes.mixed++;
+      }
+    }
+
+    // For conversations, we'll need to implement conversation tracking
+    // For now, use a placeholder that indicates real data would come from conversation service
+    const conversationCount = 0; // TODO: Implement conversation tracking service
+
+    // Calculate average pricing
+    const calculateAverage = (prices: number[]) => 
+      prices.length > 0 ? Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length) : 0;
+
+    const stats = {
+      leads: leads.length,
+      publications: publications.length,
+      adInventory: adInventoryCount,
+      conversations: conversationCount,
+      packages: packages.length,
+      publicationFiles: publicationFiles.length,
+      
+      // Marketplace-focused aggregates
+      inventoryByType,
+      publicationsByType,
+      geographicCoverage,
+      contentTypes,
+      
+      audienceMetrics: {
+        totalWebsiteVisitors: audienceMetrics.totalWebsiteVisitors,
+        totalNewsletterSubscribers: audienceMetrics.totalNewsletterSubscribers,
+        totalSocialFollowers: audienceMetrics.totalSocialFollowers,
+        averageEngagementRate: audienceMetrics.engagementRateCount > 0 
+          ? Math.round((audienceMetrics.totalEngagementRates / audienceMetrics.engagementRateCount) * 100) / 100
+          : 0
+      },
+      
+      pricingInsights: {
+        averageWebsiteAdPrice: calculateAverage(pricingData.websiteAdPrices),
+        averageNewsletterAdPrice: calculateAverage(pricingData.newsletterAdPrices),
+        averagePrintAdPrice: calculateAverage(pricingData.printAdPrices),
+        totalInventoryValue: Math.round(pricingData.totalValue)
+      }
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
+  }
+});
+
 // Lead Inquiry endpoints
 // Get all leads (admin only)
 app.get('/api/admin/leads', authenticateToken, async (req: any, res) => {
@@ -879,13 +1391,13 @@ app.post('/api/documents/external', authenticateToken, async (req: any, res: any
       userId: req.user.id,
       documentName,
       documentType,
-      description: description || null,
+      description: description || undefined,
       externalUrl,
-      fileUrl: null,
-      s3Key: null,
-      fileSize: null,
-      mimeType: null,
-      originalFileName: null,
+      fileUrl: undefined,
+      s3Key: undefined,
+      fileSize: undefined,
+      mimeType: undefined,
+      originalFileName: undefined,
     });
 
     res.json({
@@ -900,6 +1412,100 @@ app.post('/api/documents/external', authenticateToken, async (req: any, res: any
   } catch (error) {
     console.error('External document save error:', error);
     res.status(500).json({ error: 'Failed to save external document' });
+  }
+});
+
+// ===== ASSISTANT INSTRUCTIONS API =====
+// Get active instructions for an assistant type
+app.get('/api/assistant-instructions/:assistantType', async (req, res) => {
+  try {
+    const { assistantType } = req.params;
+    
+    if (!['campaign', 'package'].includes(assistantType)) {
+      return res.status(400).json({ error: 'Invalid assistant type' });
+    }
+    
+    const instruction = await assistantInstructionsService.getActive(assistantType as 'campaign' | 'package');
+    
+    if (!instruction) {
+      // Return default instructions if none found
+      const defaultInstructions = {
+        campaign: "You are Lassie, a specialized AI assistant for media strategy and brand profiling. Your primary role is to understand the user's business and campaign needs, help them discover Chicago media outlets, and recommend appropriate advertising packages.",
+        package: "You are Scout, a specialized AI assistant for package building and publication network analysis. Your primary role is to help analyze publication data, identify optimal package combinations, and create packages that make sense for the publication network. You focus on inventory management, audience analysis, and strategic package development."
+      };
+      
+      return res.json({ 
+        instructions: defaultInstructions[assistantType as keyof typeof defaultInstructions] 
+      });
+    }
+    
+    res.json({ instructions: instruction.instructions });
+  } catch (error) {
+    console.error('Error fetching assistant instructions:', error);
+    res.status(500).json({ error: 'Failed to fetch assistant instructions' });
+  }
+});
+
+// Get all assistant instructions (admin only)
+app.get('/api/admin/assistant-instructions', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const instructions = await assistantInstructionsService.getAll();
+    res.json(instructions);
+  } catch (error) {
+    console.error('Error fetching all assistant instructions:', error);
+    res.status(500).json({ error: 'Failed to fetch assistant instructions' });
+  }
+});
+
+// Update assistant instructions (admin only)
+app.post('/api/admin/assistant-instructions/:assistantType', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { assistantType } = req.params;
+    const { instructions } = req.body;
+
+    if (!['campaign', 'package'].includes(assistantType)) {
+      return res.status(400).json({ error: 'Invalid assistant type' });
+    }
+
+    if (!instructions || typeof instructions !== 'string') {
+      return res.status(400).json({ error: 'Instructions are required' });
+    }
+
+    const result = await assistantInstructionsService.upsert(assistantType as 'campaign' | 'package', instructions);
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating assistant instructions:', error);
+    res.status(500).json({ error: 'Failed to update assistant instructions' });
+  }
+});
+
+// Activate specific assistant instruction (admin only)
+app.post('/api/admin/assistant-instructions/:id/activate', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    await assistantInstructionsService.activate(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error activating assistant instruction:', error);
+    res.status(500).json({ error: 'Failed to activate assistant instruction' });
   }
 });
 

@@ -32,6 +32,3 @@ port = 54326
 [edge_runtime]
 enabled = true
 port = 54327
-
-[functions.ai-assistant]
-verify_jwt = false

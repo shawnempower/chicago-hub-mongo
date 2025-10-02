@@ -9,10 +9,14 @@ import { UserManagement } from './UserManagement';
 import { EnhancedPublicationsManagement } from './EnhancedPublicationsManagement';
 import { PublicationsImport } from './PublicationsImport';
 import { PublicationInventoryManager } from './PublicationInventoryManager';
-import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target } from 'lucide-react';
+import PublicationFilesSearch from './PublicationFilesSearch';
+import { ErrorBoundary } from '../ErrorBoundary';
+import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, Globe, Mail, Printer, Calendar, DollarSign, TrendingUp, MapPin, Eye } from 'lucide-react';
 
 export const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const { stats, loading, error } = useDashboardStats();
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -22,11 +26,12 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="publications">Publications</TabsTrigger>
+          <TabsTrigger value="files">Knowledge Base</TabsTrigger>
           <TabsTrigger value="inventory">Ad Inventory</TabsTrigger>
           <TabsTrigger value="packages">Packages</TabsTrigger>
           <TabsTrigger value="import">Import</TabsTrigger>
@@ -34,6 +39,16 @@ export const AdminDashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {error && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="pt-6">
+                <div className="text-red-600 text-sm">
+                  Error loading dashboard statistics: {error}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -41,8 +56,14 @@ export const AdminDashboard = () => {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">12</div>
-                <p className="text-xs text-muted-foreground">+2 from yesterday</p>
+                <div className="text-2xl font-bold">
+                  {loading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    stats?.leads ?? 0
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Total inquiries</p>
               </CardContent>
             </Card>
             <Card>
@@ -51,7 +72,13 @@ export const AdminDashboard = () => {
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">35</div>
+                <div className="text-2xl font-bold">
+                  {loading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    stats?.publications ?? 0
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">Universal profiles</p>
               </CardContent>
             </Card>
@@ -61,7 +88,13 @@ export const AdminDashboard = () => {
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">247</div>
+                <div className="text-2xl font-bold">
+                  {loading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    stats?.adInventory ?? 0
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">Opportunities available</p>
               </CardContent>
             </Card>
@@ -71,8 +104,239 @@ export const AdminDashboard = () => {
                 <Bot className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">89</div>
-                <p className="text-xs text-muted-foreground">This week</p>
+                <div className="text-2xl font-bold">
+                  {loading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    stats?.conversations ?? 0
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.conversations === 0 ? 'Tracking not implemented' : 'This week'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Marketplace Insights Section */}
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Inventory Breakdown */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Inventory Breakdown
+                </CardTitle>
+                <CardDescription>Ad opportunities by channel</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm">Website</span>
+                    </div>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.inventoryByType?.website ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-green-500" />
+                      <span className="text-sm">Newsletter</span>
+                    </div>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.inventoryByType?.newsletter ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Printer className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm">Print</span>
+                    </div>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.inventoryByType?.print ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-orange-500" />
+                      <span className="text-sm">Events</span>
+                    </div>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.inventoryByType?.events ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-red-500" />
+                      <span className="text-sm">Cross-Channel</span>
+                    </div>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.inventoryByType?.crossChannel ?? 0)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Audience Metrics */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5" />
+                  Audience Reach
+                </CardTitle>
+                <CardDescription>Total audience across all channels</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 
+                        (stats?.audienceMetrics?.totalWebsiteVisitors ?? 0).toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Monthly Website Visitors</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 
+                        (stats?.audienceMetrics?.totalNewsletterSubscribers ?? 0).toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Newsletter Subscribers</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 
+                        (stats?.audienceMetrics?.totalSocialFollowers ?? 0).toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Social Media Followers</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pricing Insights */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Pricing Insights
+                </CardTitle>
+                <CardDescription>Average ad pricing by channel</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Website Ads</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                        `$${(stats?.pricingInsights?.averageWebsiteAdPrice ?? 0).toLocaleString()}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Newsletter Ads</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                        `$${(stats?.pricingInsights?.averageNewsletterAdPrice ?? 0).toLocaleString()}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Print Ads</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                        `$${(stats?.pricingInsights?.averagePrintAdPrice ?? 0).toLocaleString()}`}
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Total Value</span>
+                      <span className="font-bold text-green-600">
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                          `$${(stats?.pricingInsights?.totalInventoryValue ?? 0).toLocaleString()}`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Geographic & Content Distribution */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Geographic Coverage
+                </CardTitle>
+                <CardDescription>Publications by geographic reach</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Local</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.local ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Regional</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.regional ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">State</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.state ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">National</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.national ?? 0)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Content Types
+                </CardTitle>
+                <CardDescription>Publications by content focus</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">News</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.news ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Business</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.business ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Lifestyle</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.lifestyle ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Mixed</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.mixed ?? 0)}
+                    </span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -166,6 +430,12 @@ export const AdminDashboard = () => {
 
         <TabsContent value="publications">
           <EnhancedPublicationsManagement />
+        </TabsContent>
+
+        <TabsContent value="files">
+          <ErrorBoundary>
+            <PublicationFilesSearch />
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="inventory">

@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { 
-  Plus, Edit, Trash2, Eye, DollarSign, Target, BarChart3, 
+  Plus, Edit, Trash2, DollarSign, Target, BarChart3, 
   Globe, Mail, Printer, Calendar, Package, Search,
   RefreshCw, Save, X, TrendingUp, Users
 } from 'lucide-react';
@@ -283,6 +283,38 @@ export const PublicationInventoryManager = () => {
     });
   };
 
+  const addEvent = async () => {
+    if (!currentPublication) return;
+    
+    const newEvent = {
+      name: 'New Event',
+      type: 'Community Event',
+      frequency: 'monthly',
+      averageAttendance: null,
+      targetAudience: 'General audience',
+      location: 'TBD',
+      advertisingOpportunities: []
+    };
+
+    const updatedEvents = [
+      ...(currentPublication.distributionChannels?.events || []),
+      newEvent
+    ];
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          events: updatedEvents
+        }
+      });
+      toast.success('Event added successfully');
+    } catch (error) {
+      console.error('Error adding event:', error);
+      toast.error('Failed to add event');
+    }
+  };
+
   const addEventOpportunity = async (eventIndex: number) => {
     if (!currentPublication?.distributionChannels?.events?.[eventIndex]) return;
     
@@ -342,6 +374,52 @@ export const PublicationInventoryManager = () => {
         }
       }
     });
+  };
+
+  const removePrintOpportunity = (index: number) => {
+    if (!currentPublication?.distributionChannels?.print?.advertisingOpportunities) return;
+
+    const updatedOpportunities = currentPublication.distributionChannels.print.advertisingOpportunities.filter((_, i) => i !== index);
+
+    handleUpdatePublication({
+      distributionChannels: {
+        ...currentPublication.distributionChannels,
+        print: {
+          ...currentPublication.distributionChannels.print,
+          advertisingOpportunities: updatedOpportunities
+        }
+      }
+    });
+  };
+
+  const addNewsletter = async () => {
+    if (!currentPublication) return;
+    
+    const newNewsletter = {
+      name: 'New Newsletter',
+      subscribers: 0,
+      frequency: 'weekly',
+      openRate: 0,
+      advertisingOpportunities: []
+    };
+
+    const updatedNewsletters = [
+      ...(currentPublication.distributionChannels?.newsletters || []),
+      newNewsletter
+    ];
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          newsletters: updatedNewsletters
+        }
+      });
+      toast.success('Newsletter added successfully');
+    } catch (error) {
+      console.error('Error adding newsletter:', error);
+      toast.error('Failed to add newsletter');
+    }
   };
 
   const addCrossChannelPackage = async () => {
@@ -574,9 +652,6 @@ export const PublicationInventoryManager = () => {
                     </div>
                     
                     <div className="flex gap-2 ml-4">
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-3 h-3" />
-                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -618,6 +693,10 @@ export const PublicationInventoryManager = () => {
         <TabsContent value="newsletter" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Newsletter Advertising</h3>
+            <Button onClick={addNewsletter}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Newsletter
+            </Button>
           </div>
           
           <div className="grid gap-4">
@@ -695,6 +774,10 @@ export const PublicationInventoryManager = () => {
                     <Mail className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Newsletters</h3>
                     <p className="text-gray-600 mb-4">Configure newsletters first to add advertising opportunities.</p>
+                    <Button onClick={addNewsletter}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Newsletter
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -755,9 +838,6 @@ export const PublicationInventoryManager = () => {
                     </div>
                     
                     <div className="flex gap-2 ml-4">
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-3 h-3" />
-                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -862,9 +942,6 @@ export const PublicationInventoryManager = () => {
                     </div>
                     
                     <div className="flex gap-2 ml-4">
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-3 h-3" />
-                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -872,7 +949,12 @@ export const PublicationInventoryManager = () => {
                       >
                         <Edit className="w-3 h-3" />
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => removePrintOpportunity(index)}
+                        className="text-red-600 hover:text-red-700"
+                      >
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
@@ -901,6 +983,10 @@ export const PublicationInventoryManager = () => {
         <TabsContent value="events" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Event Sponsorships</h3>
+            <Button onClick={addEvent}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Event
+            </Button>
           </div>
           
           <div className="grid gap-4">
@@ -980,7 +1066,7 @@ export const PublicationInventoryManager = () => {
                     <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Events</h3>
                     <p className="text-gray-600 mb-4">Create your first event sponsorship opportunity.</p>
-                    <Button>
+                    <Button onClick={addEvent}>
                       <Plus className="w-4 h-4 mr-2" />
                       Add Event
                     </Button>
@@ -1041,9 +1127,6 @@ export const PublicationInventoryManager = () => {
                     </div>
                     
                     <div className="flex gap-2 ml-4">
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-3 h-3" />
-                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -1856,19 +1939,49 @@ export const PublicationInventoryManager = () => {
                 </div>
               )}
 
-              {/* Event Benefits */}
+              {/* Event Advertising Opportunity Fields */}
               {editingType === 'event' && (
-                <div>
-                  <Label htmlFor="benefits">Benefits (comma-separated)</Label>
-                  <Textarea
-                    id="benefits"
-                    value={editingItem.benefits?.join(', ') || ''}
-                    onChange={(e) => setEditingItem({ 
-                      ...editingItem, 
-                      benefits: e.target.value.split(',').map(b => b.trim()).filter(b => b) 
-                    })}
-                  />
-                </div>
+                <>
+                  <div>
+                    <Label htmlFor="level">Sponsorship Level</Label>
+                    <Input
+                      id="level"
+                      value={editingItem.level || ''}
+                      onChange={(e) => setEditingItem({ 
+                        ...editingItem, 
+                        level: e.target.value 
+                      })}
+                      placeholder="e.g., sponsor, premium, platinum"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="benefits">Benefits (comma-separated)</Label>
+                    <Textarea
+                      id="benefits"
+                      value={editingItem.benefits?.join(', ') || ''}
+                      onChange={(e) => setEditingItem({ 
+                        ...editingItem, 
+                        benefits: e.target.value.split(',').map(b => b.trim()).filter(b => b) 
+                      })}
+                      placeholder="Logo placement, Event listing, Social media mention"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="pricing">Pricing ($)</Label>
+                    <Input
+                      id="pricing"
+                      type="number"
+                      value={editingItem.pricing || ''}
+                      onChange={(e) => setEditingItem({ 
+                        ...editingItem, 
+                        pricing: parseFloat(e.target.value) || 0 
+                      })}
+                      placeholder="250"
+                    />
+                  </div>
+                </>
               )}
 
               {/* Available Toggle */}
