@@ -9,7 +9,6 @@ import { useSavedOutlets } from "@/hooks/useSavedOutlets";
 import { useAssistantConversation } from "@/hooks/useAssistantConversation";
 import { useToast } from "@/hooks/use-toast";
 import { generateBrandContextSummary } from "@/utils/documentUtils";
-import { supabase } from "@/integrations/supabase/client";
 import { PackageRecommendationCard } from "@/components/PackageRecommendationCard";
 import { MultipleChoiceButtons } from "@/components/MultipleChoiceButtons";
 

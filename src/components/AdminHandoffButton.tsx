@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { UserCheck, Send } from "lucide-react";
 import { useAuth } from "@/contexts/CustomAuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 interface AdminHandoffButtonProps {
   conversationContext?: string;

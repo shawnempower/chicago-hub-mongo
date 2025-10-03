@@ -31,13 +31,7 @@ OPENAI_API_KEY=your-openai-api-key-here
 
 Set these in **Amplify Console** → **App Settings** → **Environment Variables**:
 
-| Variable Name | Value | Notes |
-|---------------|-------|-------|
-| `VITE_SUPABASE_PROJECT_ID` | `vnvbzjcsgyctmbvftlii` | Frontend only |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` | Frontend only |
-| `VITE_SUPABASE_URL` | `https://vnvbzjcsgyctmbvftlii.supabase.co` | Frontend only |
-
-**Note**: Amplify frontend only needs `VITE_*` variables since the backend runs on ECS.
+**Note**: Amplify frontend doesn't need environment variables since it uses API redirects to the ECS backend.
 
 ## 🚀 Setup Steps
 
@@ -133,9 +127,7 @@ git commit -m "Remove .env from tracking"
 ## 📋 Environment Variables Checklist
 
 ### Frontend (Amplify Console):
-- [ ] `VITE_SUPABASE_PROJECT_ID`
-- [ ] `VITE_SUPABASE_PUBLISHABLE_KEY` 
-- [ ] `VITE_SUPABASE_URL`
+- [x] No environment variables needed - uses API redirects
 
 ### Backend (ECS - already configured):
 - [x] `MONGODB_URI`
