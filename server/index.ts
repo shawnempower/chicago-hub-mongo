@@ -11,7 +11,9 @@ import { authService } from '../src/integrations/mongodb/authService';
 import { connectToDatabase } from '../src/integrations/mongodb/client';
 import { emailService } from './emailService';
 import { s3Service } from './s3Service';
-import { brandDocumentsService, adPackagesService, userProfilesService, leadInquiriesService, publicationsService, publicationFilesService, assistantInstructionsService } from '../src/integrations/mongodb/allServices';
+import { brandDocumentsService, adPackagesService, userProfilesService, leadInquiriesService, publicationsService, publicationFilesService, assistantInstructionsService, surveySubmissionsService } from '../src/integrations/mongodb/allServices';
+import { getDatabase } from '../src/integrations/mongodb/client';
+import { ObjectId } from 'mongodb';
 import multer from 'multer';
 
 const app = express();
@@ -801,6 +803,195 @@ app.get('/api/publications/files/search', authenticateToken, async (req: any, re
   }
 });
 
+// ===== SURVEY SUBMISSION ROUTES =====
+
+    // Submit a new survey (public endpoint)
+    app.post('/api/survey', async (req, res) => {
+      try {
+        const submissionData = req.body;
+
+        // Generate metadata from request
+        const metadata = {
+          respondentId: Date.now().toString(),
+          collectorId: '1',
+          startDate: new Date(),
+          endDate: new Date(),
+          source: 'web_form',
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          referrer: req.get('Referer')
+        };
+
+        // Ensure required fields exist
+        if (!submissionData.contactInformation || !submissionData.contactInformation.mediaOutletNames) {
+          return res.status(400).json({ error: 'Media outlet name is required' });
+        }
+
+        const submission = await surveySubmissionsService.create({
+          ...submissionData,
+          metadata,
+          application: {
+            status: 'new'
+          }
+        });
+
+        res.status(201).json({
+          success: true,
+          submissionId: submission._id,
+          message: 'Survey submitted successfully'
+        });
+      } catch (error) {
+        console.error('Error submitting survey:', error);
+        res.status(500).json({ error: 'Failed to submit survey' });
+      }
+    });
+
+// Get survey submissions (admin only)
+app.get('/api/admin/surveys', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const user = await authService.getUserById(req.user.id);
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    const { status, dateFrom, dateTo, companyName } = req.query;
+    const filters: any = {};
+    
+    if (status) filters.status = status;
+    if (dateFrom) filters.dateFrom = new Date(dateFrom as string);
+    if (dateTo) filters.dateTo = new Date(dateTo as string);
+    if (companyName) filters.companyName = companyName;
+    
+    const submissions = await surveySubmissionsService.getAll(filters);
+    res.json({ submissions });
+  } catch (error) {
+    console.error('Error fetching survey submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch survey submissions' });
+  }
+});
+
+// Get survey statistics (admin only) - MUST come before /:id route
+app.get('/api/admin/surveys/stats', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const user = await authService.getUserById(req.user.id);
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    const stats = await surveySubmissionsService.getStats();
+    res.json({ stats });
+  } catch (error) {
+    console.error('Error fetching survey stats:', error);
+    res.status(500).json({ error: 'Failed to fetch survey stats' });
+  }
+});
+
+// Get single survey submission (admin only)
+app.get('/api/admin/surveys/:id', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const user = await authService.getUserById(req.user.id);
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    const { id } = req.params;
+    const submission = await surveySubmissionsService.getById(id);
+    
+    if (!submission) {
+      return res.status(404).json({ error: 'Survey submission not found' });
+    }
+    
+    res.json({ submission });
+  } catch (error) {
+    console.error('Error fetching survey submission:', error);
+    res.status(500).json({ error: 'Failed to fetch survey submission' });
+  }
+});
+
+// Update survey submission status (admin only)
+app.put('/api/admin/surveys/:id/status', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const user = await authService.getUserById(req.user.id);
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    const { id } = req.params;
+    const { status, reviewNotes } = req.body;
+    
+    const submission = await surveySubmissionsService.updateStatus(
+      id, 
+      status, 
+      reviewNotes, 
+      user.email
+    );
+    
+    if (!submission) {
+      return res.status(404).json({ error: 'Survey submission not found' });
+    }
+    
+    res.json({ submission });
+  } catch (error) {
+    console.error('Error updating survey status:', error);
+    res.status(500).json({ error: 'Failed to update survey status' });
+  }
+});
+
+// Update full survey submission (admin only)
+app.put('/api/admin/surveys/:id', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const user = await authService.getUserById(req.user.id);
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    const updateData = req.body || {};
+
+    // Avoid updating immutable fields
+    delete updateData._id;
+    delete updateData.createdAt;
+
+    const updated = await surveySubmissionsService.update(id, updateData);
+    if (!updated) {
+      return res.status(404).json({ error: 'Survey submission not found' });
+    }
+
+    res.json({ submission: updated });
+  } catch (error) {
+    console.error('Error updating survey submission:', error);
+    res.status(500).json({ error: 'Failed to update survey submission' });
+  }
+});
+
+// Delete survey submission (admin only)
+app.delete('/api/admin/surveys/:id', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const user = await authService.getUserById(req.user.id);
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    const { id } = req.params;
+    const success = await surveySubmissionsService.delete(id);
+    
+    if (!success) {
+      return res.status(404).json({ error: 'Survey submission not found' });
+    }
+    
+    res.json({ success: true, message: 'Survey submission deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting survey submission:', error);
+    res.status(500).json({ error: 'Failed to delete survey submission' });
+  }
+});
+
 
 // Ad Packages routes
 app.get('/api/packages', async (req, res) => {
@@ -1054,6 +1245,73 @@ app.get('/api/admin/check', authenticateToken, async (req: any, res) => {
   } catch (error) {
     console.error('Error checking admin status:', error);
     res.status(500).json({ error: 'Failed to check admin status' });
+  }
+});
+
+// TEMPORARY: Debug and make current user admin (remove this in production)
+app.post('/api/admin/make-me-admin', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    console.log('🔍 Looking for user with ID:', userId, 'Type:', typeof userId);
+    
+    const db = getDatabase();
+    
+    // Try multiple ways to find the user
+    let directUser = null;
+    
+    // Try as ObjectId
+    try {
+      directUser = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+      console.log('🔍 ObjectId lookup result:', directUser ? `${directUser.email}` : 'null');
+    } catch (e) {
+      console.log('🔍 ObjectId lookup failed:', e.message);
+    }
+    
+    // Try as string
+    if (!directUser) {
+      directUser = await db.collection('users').findOne({ _id: userId });
+      console.log('🔍 String lookup result:', directUser ? `${directUser.email}` : 'null');
+    }
+    
+    // List all users to see what's in the database
+    const allUsers = await db.collection('users').find({}).limit(5).toArray();
+    console.log('🔍 Sample users in DB:', allUsers.map(u => ({ id: u._id, email: u.email })));
+    
+    if (!directUser) {
+      return res.status(404).json({ 
+        error: 'User not found in database',
+        debug: {
+          searchedId: userId,
+          searchedType: typeof userId,
+          sampleUsers: allUsers.map(u => ({ id: u._id?.toString(), email: u.email }))
+        }
+      });
+    }
+    
+    // Create profile directly
+    const profileResult = await db.collection('user_profiles').updateOne(
+      { userId: directUser._id.toString() },
+      { 
+        $set: { 
+          isAdmin: true,
+          updatedAt: new Date()
+        } 
+      },
+      { upsert: true }
+    );
+    
+    console.log(`✅ Made user ${directUser.email} an admin via direct DB!`, profileResult);
+    
+    return res.json({ 
+      success: true, 
+      message: `User ${directUser.email} is now an admin`,
+      method: 'direct_db',
+      profileResult
+    });
+    
+  } catch (error) {
+    console.error('Error making user admin:', error);
+    res.status(500).json({ error: 'Failed to make user admin', details: error.message });
   }
 });
 

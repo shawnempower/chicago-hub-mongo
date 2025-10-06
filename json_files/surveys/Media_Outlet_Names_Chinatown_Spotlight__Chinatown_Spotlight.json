@@ -1,0 +1,61 @@
+{
+  "metadata": {
+    "respondentId": "118953877820.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-15T20:28:09Z"
+    },
+    "endDate": {
+      "$date": "2025-09-15T20:44:02Z"
+    },
+    "ipAddress": "98.206.146.106"
+  },
+  "contactInformation": {
+    "title": "Senior Civic Engagement Manager",
+    "email": "yonggangxiao@cbcacchicago.org",
+    "companyName": "Coalition for a Better Chinese American Community",
+    "mediaOutletNames": "Chinatown Spotlight"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": false
+  },
+  "printAdvertising": {
+    "hasPrintProduct": true,
+    "mainPrintProductName": "Chinatown Spotlight",
+    "printFrequency": "monthly",
+    "averagePrintRun": "500",
+    "distributionOutlets": "24",
+    "fullPageAdSize": "10 * 15.5",
+    "halfPageAdSize": "10 * 7.75"
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": false
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": false
+  },
+  "socialMedia": {
+    "facebookFollowers": "1400",
+    "instagramFollowers": "4335",
+    "linkedinFollowers": "419",
+    "otherSocialFollowers": "WeChat official account: 1,519",
+    "socialMediaAdvertisingOptions": "We don't have a price rate yet."
+  },
+  "eventMarketing": {
+    "hostsEvents": false
+  },
+  "brandedContent": {
+    "offersBrandedContent": false
+  },
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:59:06.095464Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:59:06.095524Z"
+  }
+}

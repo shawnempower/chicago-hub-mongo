@@ -1,0 +1,69 @@
+{
+  "metadata": {
+    "respondentId": "118957079253.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-19T12:22:10Z"
+    },
+    "endDate": {
+      "$date": "2025-09-19T14:15:46Z"
+    },
+    "ipAddress": "107.215.177.85"
+  },
+  "contactInformation": {
+    "title": "Publisher",
+    "email": "ads@nadignewspapers.com",
+    "companyName": "Nadig Newspapers",
+    "mediaOutletNames": "Chicago\u2019s NW Side Press, Reporter"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "720 by 1000",
+    "secondLargestDigitalAdSize": "720 by 300",
+    "largestAdWeeklyRate": "199",
+    "largestAdMonthlyRate": "425",
+    "secondLargestAdWeeklyRate": "299"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": true,
+    "mainPrintProductName": "Chicago\u2019s NW Side Press",
+    "printFrequency": "weekly",
+    "averagePrintRun": "5000",
+    "distributionOutlets": "40",
+    "fullPageAdSize": "10 by 15.5",
+    "halfPageAdSize": "6.75 by 11.5",
+    "fullPageRate1x": "999",
+    "fullPageRate6x": "750",
+    "fullPageRate12x": "750",
+    "halfPageRate1x": "599",
+    "halfPageRate6x": "450",
+    "halfPageRate12x": "450"
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": true,
+    "newsletterFrequency": "monthly",
+    "newsletterTakeoverCost": "499"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": false
+  },
+  "socialMedia": {},
+  "eventMarketing": {
+    "hostsEvents": false
+  },
+  "brandedContent": {
+    "offersBrandedContent": false
+  },
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:59:06.104236Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:59:06.104285Z"
+  }
+}

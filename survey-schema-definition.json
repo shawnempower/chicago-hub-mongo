@@ -1,0 +1,663 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Chicago Media Network Survey Submission",
+  "description": "Schema for advertising inventory survey submissions from Chicago-area media outlets",
+  "type": "object",
+  "required": ["metadata", "contactInformation", "createdAt", "updatedAt"],
+  "properties": {
+    "_id": {
+      "type": "string",
+      "description": "MongoDB ObjectId as string"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Automatically generated metadata about the survey submission",
+      "required": ["source"],
+      "properties": {
+        "respondentId": {
+          "type": "string",
+          "description": "Unique identifier for the respondent, typically timestamp-based"
+        },
+        "collectorId": {
+          "type": "string",
+          "description": "Identifier for the form/collector version"
+        },
+        "startDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user started filling out the survey"
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user completed the survey"
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "IP address of the submitter"
+        },
+        "userAgent": {
+          "type": "string",
+          "description": "Browser user agent string"
+        },
+        "referrer": {
+          "type": "string",
+          "description": "URL that referred the user to the survey"
+        },
+        "source": {
+          "type": "string",
+          "enum": ["web_form"],
+          "description": "Source of the submission"
+        },
+        "utmSource": {
+          "type": "string",
+          "description": "UTM source parameter for tracking"
+        },
+        "utmMedium": {
+          "type": "string",
+          "description": "UTM medium parameter for tracking"
+        },
+        "utmCampaign": {
+          "type": "string",
+          "description": "UTM campaign parameter for tracking"
+        }
+      }
+    },
+    "contactInformation": {
+      "type": "object",
+      "description": "Contact details for the media outlet representative",
+      "required": ["mediaOutletNames"],
+      "anyOf": [
+        { "required": ["email"] },
+        { "required": ["emailAddress"] }
+      ],
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "First name of the contact person"
+        },
+        "lastName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Last name of the contact person"
+        },
+        "fullName": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Full name (alternative to firstName/lastName)"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Job title or position"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 255,
+          "description": "Primary email address"
+        },
+        "emailAddress": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 255,
+          "description": "Alternative email field"
+        },
+        "companyName": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Company or organization name"
+        },
+        "mediaOutletNames": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Names of media outlets (comma-separated if multiple)"
+        }
+      }
+    },
+    "websiteAdvertising": {
+      "type": "object",
+      "description": "Website and digital advertising information",
+      "properties": {
+        "monthlyUniqueVisitors": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Monthly unique website visitors"
+        },
+        "hasWebsiteAdvertising": {
+          "type": "boolean",
+          "description": "Whether the outlet offers website advertising"
+        },
+        "largestDigitalAdSize": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Dimensions/description of largest digital ad size"
+        },
+        "secondLargestDigitalAdSize": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Dimensions/description of second largest digital ad size"
+        },
+        "largestAdWeeklyRate": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Weekly rate for largest digital ad"
+        },
+        "largestAdMonthlyRate": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Monthly rate for largest digital ad"
+        },
+        "secondLargestAdWeeklyRate": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Weekly rate for second largest digital ad"
+        },
+        "secondLargestAdMonthlyRate": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Monthly rate for second largest digital ad"
+        },
+        "websiteTakeoverCost": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" },
+            { "type": "null" }
+          ],
+          "description": "Cost for website takeover advertising (null if N/A)"
+        },
+        "mediaKitLink": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 500,
+          "description": "URL to media kit or rate card"
+        }
+      }
+    },
+    "printAdvertising": {
+      "type": "object",
+      "description": "Print publication advertising information",
+      "properties": {
+        "hasPrintProduct": {
+          "type": "boolean",
+          "description": "Whether the outlet has a print publication"
+        },
+        "mainPrintProductName": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Name of the main print publication"
+        },
+        "printFrequency": {
+          "type": "string",
+          "enum": ["daily", "weekly", "bi-weekly", "monthly", "quarterly", "other"],
+          "description": "How often the print publication is released"
+        },
+        "averagePrintRun": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Average number of copies printed"
+        },
+        "distributionOutlets": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Number of distribution points/outlets"
+        },
+        "fullPageAdSize": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Dimensions of full page advertisement"
+        },
+        "halfPageAdSize": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Dimensions of half page advertisement"
+        },
+        "fullPageRate1x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Full page ad rate for 1 insertion"
+        },
+        "fullPageRate6x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Full page ad rate for 6 insertions"
+        },
+        "fullPageRate12x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Full page ad rate for 12 insertions"
+        },
+        "halfPageRate1x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Half page ad rate for 1 insertion"
+        },
+        "halfPageRate6x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Half page ad rate for 6 insertions"
+        },
+        "halfPageRate12x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Half page ad rate for 12 insertions"
+        },
+        "printRatesComparable": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Comparison of print rates with other publications"
+        }
+      }
+    },
+    "newsletterAdvertising": {
+      "type": "object",
+      "description": "Newsletter advertising information",
+      "properties": {
+        "hasNewsletter": {
+          "type": "boolean",
+          "description": "Whether the outlet publishes a newsletter"
+        },
+        "newsletterSubscribers": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Number of newsletter subscribers"
+        },
+        "newsletterFrequency": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "How often the newsletter is sent"
+        },
+        "newsletterAdSizeLargest": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Dimensions/description of largest newsletter ad"
+        },
+        "newsletterAdSizeSecond": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Dimensions/description of second newsletter ad size"
+        },
+        "newsletterLargestAdRate1x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "One-time rate for largest newsletter ad"
+        },
+        "newsletterLargestAdRateMonthly": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Monthly rate for largest newsletter ad"
+        },
+        "newsletterSecondAdRate1x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "One-time rate for second newsletter ad"
+        },
+        "newsletterSecondAdRateMonthly": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Monthly rate for second newsletter ad"
+        },
+        "newsletterTakeoverCost": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" },
+            { "type": "null" }
+          ],
+          "description": "Cost for newsletter takeover (null if N/A)"
+        },
+        "newsletterRatesComparable": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Comparison of newsletter rates with others"
+        }
+      }
+    },
+    "radioPodcastAdvertising": {
+      "type": "object",
+      "description": "Radio, podcast, and video advertising information",
+      "properties": {
+        "hasRadioStation": {
+          "type": "boolean",
+          "description": "Whether the outlet operates a radio station"
+        },
+        "hasPodcast": {
+          "type": "boolean",
+          "description": "Whether the outlet produces podcasts"
+        },
+        "radio30SecondAdsCost10x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Cost for 10x 30-second radio advertisements"
+        },
+        "radio60SecondAdsCost10x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Cost for 10x 60-second radio advertisements"
+        },
+        "podcast30SecondAdsCost10x": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Cost for 10x 30-second podcast advertisements"
+        },
+        "podcastListenersPerShow": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Average number of listeners per podcast episode"
+        },
+        "podcastSpecialTakeoversCost": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Cost for special podcast takeovers"
+        },
+        "video30SecondAdCost": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Cost for 30-second video advertisement"
+        },
+        "video60SecondAdCost": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Cost for 60-second video advertisement"
+        },
+        "videoAverageViews": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Average views per video"
+        }
+      }
+    },
+    "socialMedia": {
+      "type": "object",
+      "description": "Social media presence and advertising options",
+      "properties": {
+        "facebookFollowers": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Number of Facebook followers"
+        },
+        "instagramFollowers": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Number of Instagram followers"
+        },
+        "twitterFollowers": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Number of Twitter/X followers"
+        },
+        "tiktokFollowers": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Number of TikTok followers"
+        },
+        "linkedinFollowers": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Number of LinkedIn followers"
+        },
+        "otherSocialFollowers": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Other social media platforms and follower counts"
+        },
+        "socialMediaAdvertisingOptions": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Description of social media advertising services offered"
+        }
+      }
+    },
+    "eventMarketing": {
+      "type": "object",
+      "description": "Event hosting and marketing information",
+      "properties": {
+        "hostsEvents": {
+          "type": "boolean",
+          "description": "Whether the outlet hosts events"
+        },
+        "annualEventCount": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Number of events hosted per year"
+        },
+        "eventAttendanceRange": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Typical range of event attendance"
+        },
+        "largestSponsorshipLevel": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Cost of highest sponsorship tier"
+        },
+        "smallestSponsorshipLevel": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Cost of lowest sponsorship tier"
+        },
+        "eventSponsorshipDetails": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Details about event sponsorship opportunities"
+        }
+      }
+    },
+    "brandedContent": {
+      "type": "object",
+      "description": "Branded content and sponsored content services",
+      "properties": {
+        "offersBrandedContent": {
+          "type": "boolean",
+          "description": "Whether the outlet offers branded content services"
+        },
+        "printBrandedContentCost": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" },
+            { "type": "null" }
+          ],
+          "description": "Cost for print branded content (null if N/A)"
+        },
+        "websiteBrandedContentCost3Month": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Cost for 3-month website branded content campaign"
+        },
+        "shortFormContentCost": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "pattern": "^[0-9]+$" }
+          ],
+          "description": "Cost for short-form content or interviews"
+        },
+        "brandedContentAdditionalInfo": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Additional information about branded content services"
+        }
+      }
+    },
+    "additionalServices": {
+      "type": "object",
+      "description": "Additional marketing and production services",
+      "properties": {
+        "offersOttMarketing": {
+          "type": "boolean",
+          "description": "Whether the outlet offers OTT (Over-the-Top) marketing"
+        },
+        "offersVirtualWebinars": {
+          "type": "boolean",
+          "description": "Whether the outlet offers virtual webinar services"
+        },
+        "producesOtherVideos": {
+          "type": "boolean",
+          "description": "Whether the outlet produces other types of videos"
+        },
+        "videoProductionDetails": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Details about video production capabilities"
+        },
+        "customData": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Any additional services or information"
+        }
+      }
+    },
+    "surveyResponses": {
+      "type": "object",
+      "description": "Legacy survey response data for migration purposes",
+      "properties": {
+        "responseIndicators": {
+          "type": "object",
+          "description": "Boolean and string response indicators",
+          "properties": {
+            "response1": { "oneOf": [{ "type": "boolean" }, { "type": "string" }] },
+            "response2": { "oneOf": [{ "type": "boolean" }, { "type": "string" }] },
+            "response3": { "oneOf": [{ "type": "boolean" }, { "type": "string" }] },
+            "response4": { "oneOf": [{ "type": "boolean" }, { "type": "string" }] },
+            "response5": { "oneOf": [{ "type": "boolean" }, { "type": "string" }] },
+            "response6": { "oneOf": [{ "type": "boolean" }, { "type": "string" }] },
+            "response7": { "oneOf": [{ "type": "boolean" }, { "type": "string" }] },
+            "response10": { "oneOf": [{ "type": "boolean" }, { "type": "string" }] },
+            "response13": { "oneOf": [{ "type": "boolean" }, { "type": "string" }] }
+          }
+        },
+        "openEndedResponses": {
+          "type": "object",
+          "description": "Open-ended text responses",
+          "properties": {
+            "openEndedResponse1": { "type": "string", "maxLength": 2000 },
+            "openEndedResponse2": { "type": "string", "maxLength": 2000 },
+            "generalResponse": { "type": "string", "maxLength": 2000 }
+          }
+        },
+        "conditionalResponses": {
+          "type": "object",
+          "description": "Conditional follow-up responses",
+          "properties": {
+            "ifYes1Explanation": { "type": "string", "maxLength": 1000 },
+            "ifYes2Explanation": { "type": "string", "maxLength": 1000 }
+          }
+        },
+        "parsedExtra": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Additional parsed data or context"
+        }
+      }
+    },
+    "application": {
+      "type": "object",
+      "description": "Admin application status and review information",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["new", "reviewing", "approved", "rejected", "follow_up_needed"],
+          "default": "new",
+          "description": "Current status of the application"
+        },
+        "reviewNotes": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Admin notes about the review"
+        },
+        "reviewedBy": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of the admin who reviewed the submission"
+        },
+        "reviewedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the review was completed"
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the survey was submitted"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the survey was last updated"
+    }
+  },
+  "additionalProperties": false
+}
+

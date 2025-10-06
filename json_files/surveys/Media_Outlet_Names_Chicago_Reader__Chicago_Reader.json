@@ -1,0 +1,86 @@
+{
+  "metadata": {
+    "respondentId": "118953464231.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-15T10:37:30Z"
+    },
+    "endDate": {
+      "$date": "2025-09-15T11:57:26Z"
+    },
+    "ipAddress": "73.176.237.211"
+  },
+  "contactInformation": {
+    "title": "Director of Advertising and Revenue Products",
+    "email": "anettles@chicagoreader.com",
+    "companyName": "Reader Institute for Community Journalism",
+    "mediaOutletNames": "Chicago Reader"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "600x150",
+    "secondLargestDigitalAdSize": "600x150",
+    "largestAdWeeklyRate": "20",
+    "largestAdMonthlyRate": "100",
+    "secondLargestAdWeeklyRate": "The digital ads are typically all three sizes we prefer not to do one size...",
+    "secondLargestAdMonthlyRate": "100",
+    "websiteTakeoverCost": "3000"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": true,
+    "mainPrintProductName": "Chicago Reader",
+    "printFrequency": "weekly",
+    "averagePrintRun": "63000",
+    "distributionOutlets": "800",
+    "fullPageAdSize": "9.75x9.875",
+    "halfPageAdSize": "4.7917x9.875",
+    "fullPageRate1x": "1950",
+    "fullPageRate6x": "1615",
+    "fullPageRate12x": "1638",
+    "halfPageRate1x": "975",
+    "halfPageRate6x": "897",
+    "halfPageRate12x": "819"
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": true,
+    "newsletterFrequency": "daily Mon-Fri",
+    "newsletterTakeoverCost": "950"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": true
+  },
+  "socialMedia": {
+    "facebookFollowers": "96345",
+    "instagramFollowers": "89542",
+    "twitterFollowers": "273943",
+    "tiktokFollowers": "0",
+    "linkedinFollowers": "0",
+    "youtubeFollowers": "0",
+    "otherSocialFollowers": "0",
+    "socialMediaAdvertisingOptions": "Priced per organic post (Insta and FB), + boost  Bundle FB + Twitter  We do no sell onto Bluesky, Linkedin, YouTube or TikTok"
+  },
+  "eventMarketing": {
+    "hostsEvents": true,
+    "annualEventCount": "2",
+    "eventAttendanceRange": "30-3000",
+    "largestSponsorshipLevel": "25000",
+    "smallestSponsorshipLevel": "500"
+  },
+  "brandedContent": {
+    "offersBrandedContent": false,
+    "printBrandedContentCost": "1500",
+    "websiteBrandedContentCost3Month": "1"
+  },
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:59:06.132014Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:59:06.132082Z"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "respondentId": "118954226297.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-16T08:02:38Z"
+    },
+    "endDate": {
+      "$date": "2025-09-16T08:04:46Z"
+    },
+    "ipAddress": "71.57.9.6"
+  },
+  "contactInformation": {
+    "title": "Executive Director",
+    "email": "aurora@freespiritmedia.org",
+    "companyName": "Free Spirit Media",
+    "mediaOutletNames": "Free Spirit Media"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": false
+  },
+  "printAdvertising": {},
+  "newsletterAdvertising": {},
+  "radioPodcastAdvertising": {},
+  "socialMedia": {},
+  "eventMarketing": {},
+  "brandedContent": {},
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:59:06.081474Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:59:06.081519Z"
+  }
+}

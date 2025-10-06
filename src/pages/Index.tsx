@@ -5,6 +5,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { HowItWorksSection } from "@/components/HowItWorksSection";
 import { MediaPartnersSection } from "@/components/MediaPartnersSection";
 import { AssistantModal } from "@/components/AssistantModal";
+import SurveyForm from "@/components/SurveyForm";
 
 import { CTASection } from "@/components/CTASection";
 import { Footer } from "@/components/Footer";
@@ -12,6 +13,7 @@ import { Footer } from "@/components/Footer";
 const Index = () => {
   const navigate = useNavigate();
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isSurveyOpen, setIsSurveyOpen] = useState(false);
 
   const handleAssistantClick = () => {
     setIsAssistantOpen(true);
@@ -21,6 +23,14 @@ const Index = () => {
     setIsAssistantOpen(false);
   };
 
+  const handleSurveyClick = () => {
+    setIsSurveyOpen(true);
+  };
+
+  const handleSurveyClose = () => {
+    setIsSurveyOpen(false);
+  };
+
   const handleViewPackage = (packageId: number) => {
     setIsAssistantOpen(false);
     navigate(`/packages?highlight=${packageId}`);
@@ -28,7 +38,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onAssistantClick={handleAssistantClick} />
+          <Header onAssistantClick={handleAssistantClick} onSurveyClick={handleSurveyClick} />
       
       <main>
         <HeroSection onAssistantClick={handleAssistantClick} />
@@ -36,15 +46,19 @@ const Index = () => {
         <MediaPartnersSection onAssistantClick={handleAssistantClick} />
       </main>
 
-      <CTASection onAssistantClick={handleAssistantClick} />
+      <CTASection onAssistantClick={handleAssistantClick} onSurveyClick={handleSurveyClick} />
       
       <Footer />
-
 
       <AssistantModal 
         isOpen={isAssistantOpen}
         onClose={handleAssistantClose}
         onViewPackage={handleViewPackage}
+      />
+
+      <SurveyForm 
+        open={isSurveyOpen}
+        onOpenChange={setIsSurveyOpen}
       />
     </div>
   );

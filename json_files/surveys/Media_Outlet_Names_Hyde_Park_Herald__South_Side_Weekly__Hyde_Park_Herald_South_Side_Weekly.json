@@ -1,0 +1,63 @@
+{
+  "metadata": {
+    "respondentId": "118957235842.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-19T16:28:48Z"
+    },
+    "endDate": {
+      "$date": "2025-09-19T16:54:43Z"
+    },
+    "ipAddress": "38.140.5.43"
+  },
+  "contactInformation": {
+    "title": "Publisher",
+    "email": "malik.jackson@southsideweekly.com",
+    "companyName": "South Side Weekly NFP",
+    "mediaOutletNames": "Hyde Park Herald, South Side Weekly"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "300x600",
+    "secondLargestDigitalAdSize": "300x250",
+    "largestAdWeeklyRate": "200",
+    "secondLargestAdWeeklyRate": "225"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": true,
+    "mainPrintProductName": "South Side Weekly",
+    "printFrequency": "Biweekly",
+    "averagePrintRun": "8200",
+    "distributionOutlets": "150",
+    "fullPageAdSize": "9.65x10",
+    "halfPageAdSize": "4.825x10",
+    "fullPageRate1x": "1000",
+    "halfPageRate1x": "560"
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": true,
+    "newsletterFrequency": "Weekly"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": true
+  },
+  "socialMedia": {},
+  "eventMarketing": {
+    "hostsEvents": false
+  },
+  "brandedContent": {
+    "offersBrandedContent": false
+  },
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:59:06.074923Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:59:06.075000Z"
+  }
+}

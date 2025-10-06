@@ -19,6 +19,12 @@ import {
   Publication,
   PublicationInsert,
   PublicationUpdate,
+  PublicationFile,
+  PublicationFileInsert,
+  PublicationFileUpdate,
+  SurveySubmission,
+  SurveySubmissionInsert,
+  SurveySubmissionUpdate,
   COLLECTIONS
 } from './schemas';
 
@@ -1166,6 +1172,297 @@ export class PublicationsService {
   }
 }
 
+// ===== PUBLICATION FILES SERVICE =====
+export class PublicationFilesService {
+  private get collection() {
+    return getDatabase().collection<PublicationFile>(COLLECTIONS.PUBLICATION_FILES);
+  }
+
+  async getByPublicationId(publicationId: string): Promise<PublicationFile[]> {
+    try {
+      return await this.collection
+        .find({ publicationId })
+        .sort({ createdAt: -1 })
+        .toArray();
+    } catch (error) {
+      console.error('Error fetching publication files:', error);
+      throw error;
+    }
+  }
+
+  async getById(fileId: string): Promise<PublicationFile | null> {
+    try {
+      return await this.collection.findOne({ _id: new ObjectId(fileId) });
+    } catch (error) {
+      console.error('Error fetching publication file by ID:', error);
+      throw error;
+    }
+  }
+
+  async create(fileData: PublicationFileInsert): Promise<PublicationFile> {
+    try {
+      const now = new Date();
+      const newFile: PublicationFile = {
+        ...fileData,
+        downloadCount: 0,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      const result = await this.collection.insertOne(newFile);
+      return { ...newFile, _id: result.insertedId };
+    } catch (error) {
+      console.error('Error creating publication file:', error);
+      throw error;
+    }
+  }
+
+  async update(fileId: string, updates: Partial<PublicationFileUpdate>): Promise<PublicationFile | null> {
+    try {
+      const updateData = {
+        ...updates,
+        updatedAt: new Date()
+      };
+
+      await this.collection.updateOne(
+        { _id: new ObjectId(fileId) },
+        { $set: updateData }
+      );
+
+      return await this.getById(fileId);
+    } catch (error) {
+      console.error('Error updating publication file:', error);
+      throw error;
+    }
+  }
+
+  async delete(fileId: string): Promise<boolean> {
+    try {
+      const result = await this.collection.deleteOne({ _id: new ObjectId(fileId) });
+      return result.deletedCount > 0;
+    } catch (error) {
+      console.error('Error deleting publication file:', error);
+      throw error;
+    }
+  }
+
+  async incrementDownloadCount(fileId: string): Promise<void> {
+    try {
+      await this.collection.updateOne(
+        { _id: new ObjectId(fileId) },
+        { 
+          $inc: { downloadCount: 1 },
+          $set: { lastAccessedAt: new Date(), updatedAt: new Date() }
+        }
+      );
+    } catch (error) {
+      console.error('Error incrementing download count:', error);
+      throw error;
+    }
+  }
+
+  async search(query: string, filters?: {
+    fileType?: string;
+    publicationId?: string;
+    tags?: string[];
+    isPublic?: boolean;
+  }): Promise<PublicationFile[]> {
+    try {
+      const searchQuery: any = {};
+
+      // Text search
+      if (query) {
+        searchQuery.$or = [
+          { fileName: { $regex: query, $options: 'i' } },
+          { originalFileName: { $regex: query, $options: 'i' } },
+          { description: { $regex: query, $options: 'i' } },
+          { tags: { $in: [new RegExp(query, 'i')] } }
+        ];
+      }
+
+      // Apply filters
+      if (filters?.fileType) {
+        searchQuery.fileType = filters.fileType;
+      }
+      if (filters?.publicationId) {
+        searchQuery.publicationId = filters.publicationId;
+      }
+      if (filters?.tags && filters.tags.length > 0) {
+        searchQuery.tags = { $in: filters.tags };
+      }
+      if (filters?.isPublic !== undefined) {
+        searchQuery.isPublic = filters.isPublic;
+      }
+
+      return await this.collection
+        .find(searchQuery)
+        .sort({ createdAt: -1 })
+        .toArray();
+    } catch (error) {
+      console.error('Error searching publication files:', error);
+      throw error;
+    }
+  }
+}
+
+// ===== SURVEY SUBMISSIONS SERVICE =====
+export class SurveySubmissionsService {
+  private get collection() {
+    return getDatabase().collection<SurveySubmission>(COLLECTIONS.SURVEY_SUBMISSIONS);
+  }
+
+  async getAll(filters?: {
+    status?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    companyName?: string;
+  }): Promise<SurveySubmission[]> {
+    try {
+      const query: any = {};
+      
+      if (filters?.status) {
+        query['application.status'] = filters.status;
+      }
+      
+      if (filters?.dateFrom || filters?.dateTo) {
+        query.createdAt = {};
+        if (filters.dateFrom) query.createdAt.$gte = filters.dateFrom;
+        if (filters.dateTo) query.createdAt.$lte = filters.dateTo;
+      }
+      
+      if (filters?.companyName) {
+        query['contactInformation.companyName'] = { $regex: filters.companyName, $options: 'i' };
+      }
+
+      return await this.collection
+        .find(query)
+        .sort({ createdAt: -1 })
+        .toArray();
+    } catch (error) {
+      console.error('Error fetching survey submissions:', error);
+      throw error;
+    }
+  }
+
+  async getById(id: string): Promise<SurveySubmission | null> {
+    try {
+      return await this.collection.findOne({ _id: new ObjectId(id) });
+    } catch (error) {
+      console.error('Error fetching survey submission by ID:', error);
+      throw error;
+    }
+  }
+
+  async create(submissionData: SurveySubmissionInsert): Promise<SurveySubmission> {
+    try {
+      const now = new Date();
+      const newSubmission: SurveySubmission = {
+        ...submissionData,
+        application: {
+          ...submissionData.application,
+          status: submissionData.application?.status || 'new'
+        },
+        createdAt: now,
+        updatedAt: now
+      };
+
+      const result = await this.collection.insertOne(newSubmission);
+      return { ...newSubmission, _id: result.insertedId };
+    } catch (error) {
+      console.error('Error creating survey submission:', error);
+      throw error;
+    }
+  }
+
+  async update(id: string, updates: Partial<SurveySubmissionUpdate>): Promise<SurveySubmission | null> {
+    try {
+      const updateData = {
+        ...updates,
+        updatedAt: new Date()
+      };
+
+      await this.collection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updateData }
+      );
+
+      return await this.getById(id);
+    } catch (error) {
+      console.error('Error updating survey submission:', error);
+      throw error;
+    }
+  }
+
+  async updateStatus(id: string, status: string, reviewNotes?: string, reviewedBy?: string): Promise<SurveySubmission | null> {
+    try {
+      const updateData: any = {
+        'application.status': status,
+        'application.reviewedAt': new Date(),
+        updatedAt: new Date()
+      };
+
+      if (reviewNotes) updateData['application.reviewNotes'] = reviewNotes;
+      if (reviewedBy) updateData['application.reviewedBy'] = reviewedBy;
+
+      await this.collection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updateData }
+      );
+
+      return await this.getById(id);
+    } catch (error) {
+      console.error('Error updating survey submission status:', error);
+      throw error;
+    }
+  }
+
+  async getStats(): Promise<{
+    total: number;
+    byStatus: Record<string, number>;
+    recentCount: number;
+  }> {
+    try {
+      const total = await this.collection.countDocuments();
+      
+      const statusPipeline = [
+        {
+          $group: {
+            _id: '$application.status',
+            count: { $sum: 1 }
+          }
+        }
+      ];
+      
+      const statusResults = await this.collection.aggregate(statusPipeline).toArray();
+      const byStatus = statusResults.reduce((acc, item) => {
+        acc[item._id || 'new'] = item.count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const recentCount = await this.collection.countDocuments({
+        createdAt: { $gte: sevenDaysAgo }
+      });
+
+      return { total, byStatus, recentCount };
+    } catch (error) {
+      console.error('Error fetching survey stats:', error);
+      throw error;
+    }
+  }
+
+  async delete(id: string): Promise<boolean> {
+    try {
+      const result = await this.collection.deleteOne({ _id: new ObjectId(id) });
+      return result.deletedCount > 0;
+    } catch (error) {
+      console.error('Error deleting survey submission:', error);
+      throw error;
+    }
+  }
+}
+
 
 // Export service instances
 export const adPackagesService = new AdPackagesService();
@@ -1180,3 +1477,5 @@ export const brandDocumentsService = new BrandDocumentsService();
 export const assistantInstructionsService = new AssistantInstructionsService();
 export const mediaEntitiesService = new MediaEntitiesService();
 export const publicationsService = new PublicationsService();
+export const publicationFilesService = new PublicationFilesService();
+export const surveySubmissionsService = new SurveySubmissionsService();

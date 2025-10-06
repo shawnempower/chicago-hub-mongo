@@ -1,0 +1,71 @@
+{
+  "metadata": {
+    "respondentId": "118946764224.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-05T01:34:06Z"
+    },
+    "endDate": {
+      "$date": "2025-09-05T16:14:42Z"
+    },
+    "ipAddress": "142.44.117.71"
+  },
+  "contactInformation": {
+    "title": "CEO",
+    "email": "anna.deshawn@e3radio.fm",
+    "companyName": "E3 Radio",
+    "mediaOutletNames": "E3 Radio"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true
+  },
+  "printAdvertising": {
+    "hasPrintProduct": false
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": "nan",
+    "newsletterFrequency": "6 a month"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": true,
+    "podcastListenersPerShow": "m k",
+    "video30SecondAdCost": "In rate card",
+    "video60SecondAdCost": "In rate card"
+  },
+  "socialMedia": {
+    "facebookFollowers": "7500",
+    "instagramFollowers": "5000",
+    "twitterFollowers": "0",
+    "tiktokFollowers": "57000",
+    "linkedinFollowers": "3000",
+    "youtubeFollowers": "1080",
+    "socialMediaAdvertisingOptions": "Depends on post type. In rate card."
+  },
+  "eventMarketing": {
+    "hostsEvents": true,
+    "annualEventCount": "10",
+    "eventAttendanceRange": "150",
+    "largestSponsorshipLevel": "20000",
+    "smallestSponsorshipLevel": "1000"
+  },
+  "brandedContent": {
+    "offersBrandedContent": true,
+    "brandedContentAdditionalInfo": "We host and moderate events"
+  },
+  "additionalServices": {
+    "offersOttMarketing": false,
+    "offersVirtualWebinars": false,
+    "producesOtherVideos": "Shorts / Reels"
+  },
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:43:19.994445Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:43:19.994521Z"
+  }
+}

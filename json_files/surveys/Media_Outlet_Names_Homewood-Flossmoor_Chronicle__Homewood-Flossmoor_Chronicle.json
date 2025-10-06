@@ -1,0 +1,75 @@
+{
+  "metadata": {
+    "respondentId": "118949173185.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-09T11:44:56Z"
+    },
+    "endDate": {
+      "$date": "2025-09-09T12:25:22Z"
+    },
+    "ipAddress": "71.228.35.172"
+  },
+  "contactInformation": {
+    "title": "Owner/editor",
+    "email": "ewcrump@hfchronicle.com",
+    "companyName": "Homewood-Flossmoor Chronicle LLC",
+    "mediaOutletNames": "Homewood-Flossmoor Chronicle"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "75,000 (300 x 250)",
+    "secondLargestDigitalAdSize": "62,520 (728 x 90)",
+    "largestAdWeeklyRate": "62.50",
+    "largestAdMonthlyRate": "250",
+    "secondLargestAdWeeklyRate": "75",
+    "secondLargestAdMonthlyRate": "300"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": true,
+    "mainPrintProductName": "Homewood-Flossmoor Chronicle",
+    "printFrequency": "Monthly",
+    "averagePrintRun": "13000",
+    "distributionOutlets": "25",
+    "fullPageAdSize": "9 x 9.75",
+    "halfPageAdSize": "4.44 x 9.75",
+    "fullPageRate1x": "1200",
+    "fullPageRate6x": "1020",
+    "fullPageRate12x": "900",
+    "halfPageRate1x": "600",
+    "halfPageRate6x": "510",
+    "halfPageRate12x": "450"
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": false,
+    "newsletterFrequency": "Weekly"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": true,
+    "video30SecondAdCost": "300",
+    "video60SecondAdCost": "450"
+  },
+  "socialMedia": {},
+  "eventMarketing": {
+    "hostsEvents": false
+  },
+  "brandedContent": {
+    "offersBrandedContent": false
+  },
+  "additionalServices": {
+    "offersOttMarketing": false,
+    "offersVirtualWebinars": false,
+    "producesOtherVideos": "No"
+  },
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:53:56.384109Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:53:56.384190Z"
+  }
+}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AssistantModal } from "@/components/AssistantModal";
+import SurveyForm from "@/components/SurveyForm";
 
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { ProfileManager } from "@/components/dashboard/ProfileManager";
@@ -13,6 +14,7 @@ import { Navigate, useSearchParams } from "react-router-dom";
 
 export default function Dashboard() {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isSurveyOpen, setIsSurveyOpen] = useState(false);
   const { user, loading } = useAuth();
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'overview';
@@ -49,7 +51,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onAssistantClick={handleAssistantClick} />
+      <Header onAssistantClick={handleAssistantClick} onSurveyClick={() => setIsSurveyOpen(true)} />
       
       <main className="container mx-auto px-6 py-8">
         <Tabs defaultValue={defaultTab} className="space-y-6">
@@ -85,6 +87,8 @@ export default function Dashboard() {
         isOpen={isAssistantOpen}
         onClose={handleAssistantClose}
       />
+      
+      <SurveyForm open={isSurveyOpen} onOpenChange={setIsSurveyOpen} />
     </div>
   );
 }

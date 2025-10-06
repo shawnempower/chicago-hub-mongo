@@ -10,6 +10,7 @@ import { EnhancedPublicationsManagement } from './EnhancedPublicationsManagement
 import { PublicationsImport } from './PublicationsImport';
 import { PublicationInventoryManager } from './PublicationInventoryManager';
 import PublicationFilesSearch from './PublicationFilesSearch';
+import SurveyManagement from './SurveyManagement';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, Globe, Mail, Printer, Calendar, DollarSign, TrendingUp, MapPin, Eye } from 'lucide-react';
@@ -26,10 +27,11 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
+          <TabsTrigger value="surveys">Surveys</TabsTrigger>
           <TabsTrigger value="publications">Publications</TabsTrigger>
           <TabsTrigger value="files">Knowledge Base</TabsTrigger>
           <TabsTrigger value="inventory">Ad Inventory</TabsTrigger>
@@ -426,6 +428,12 @@ export const AdminDashboard = () => {
 
         <TabsContent value="leads">
           <LeadManagement />
+        </TabsContent>
+
+        <TabsContent value="surveys">
+          <ErrorBoundary>
+            <SurveyManagement />
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="publications">

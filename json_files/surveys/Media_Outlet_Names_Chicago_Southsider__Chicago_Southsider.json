@@ -1,0 +1,58 @@
+{
+  "metadata": {
+    "respondentId": "118946470790.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-05T09:40:49Z"
+    },
+    "endDate": {
+      "$date": "2025-09-06T06:43:41Z"
+    },
+    "ipAddress": "142.147.59.29"
+  },
+  "contactInformation": {
+    "title": "Publisher",
+    "email": "hello@chicagosouthsider.com",
+    "companyName": "Rhinehart Media Group",
+    "mediaOutletNames": "Chicago Southsider"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "600 X 200",
+    "secondLargestDigitalAdSize": "300 X 300",
+    "largestAdWeeklyRate": "500",
+    "largestAdMonthlyRate": "3000",
+    "secondLargestAdWeeklyRate": "250",
+    "secondLargestAdMonthlyRate": "1500"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": false
+  },
+  "newsletterAdvertising": {
+    "newsletterFrequency": "once weekly, twice if we have advertising clients",
+    "newsletterTakeoverCost": "1000"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": false
+  },
+  "socialMedia": {},
+  "eventMarketing": {
+    "hostsEvents": false
+  },
+  "brandedContent": {
+    "offersBrandedContent": false,
+    "websiteBrandedContentCost3Month": "2500"
+  },
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:53:56.343668Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:53:56.343715Z"
+  }
+}

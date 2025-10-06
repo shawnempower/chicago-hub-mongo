@@ -1,0 +1,74 @@
+{
+  "metadata": {
+    "respondentId": "118944338621.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-02T19:43:56Z"
+    },
+    "endDate": {
+      "$date": "2025-09-03T17:57:16Z"
+    },
+    "ipAddress": "73.45.76.29"
+  },
+  "contactInformation": {
+    "title": "Co-Founder/Editor-in-Chief",
+    "email": "terrence@thebigs.us",
+    "companyName": "The Bigs",
+    "mediaOutletNames": "The Bigs"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "Large Rectangle: 336x280",
+    "secondLargestDigitalAdSize": "Medium Rectangle: 300x250",
+    "largestAdWeeklyRate": "525",
+    "largestAdMonthlyRate": "2100",
+    "secondLargestAdWeeklyRate": "350",
+    "secondLargestAdMonthlyRate": "1400",
+    "websiteTakeoverCost": "2500"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": false
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": "nan",
+    "newsletterFrequency": "2x per week (at least)",
+    "newsletterTakeoverCost": "2750"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": false,
+    "video30SecondAdCost": "750",
+    "video60SecondAdCost": "1500"
+  },
+  "socialMedia": {
+    "instagramFollowers": "3685",
+    "twitterFollowers": "4034",
+    "youtubeFollowers": "3743",
+    "socialMediaAdvertisingOptions": "We price on a per post basis."
+  },
+  "eventMarketing": {
+    "hostsEvents": true,
+    "annualEventCount": "1",
+    "eventAttendanceRange": "50-75",
+    "largestSponsorshipLevel": "2000",
+    "smallestSponsorshipLevel": "500"
+  },
+  "brandedContent": {
+    "offersBrandedContent": true,
+    "brandedContentAdditionalInfo": "We also offer naming sponsorship rights to our production studio on the South Side of Chicago."
+  },
+  "additionalServices": {
+    "offersOttMarketing": false,
+    "offersVirtualWebinars": false
+  },
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:43:20.085925Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:43:20.085990Z"
+  }
+}

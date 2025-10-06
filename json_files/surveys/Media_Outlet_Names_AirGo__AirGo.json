@@ -1,0 +1,50 @@
+{
+  "metadata": {
+    "respondentId": "118938555249.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-08-25T11:13:32Z"
+    },
+    "endDate": {
+      "$date": "2025-08-25T11:15:43Z"
+    },
+    "ipAddress": "73.110.148.154"
+  },
+  "contactInformation": {
+    "title": "Co-Founder",
+    "email": "contact@respairmedia.com",
+    "companyName": "Respair Production & Media",
+    "mediaOutletNames": "AirGo"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true
+  },
+  "printAdvertising": {
+    "hasPrintProduct": "nan"
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": "nan"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": "nan",
+    "hasPodcast": "nan"
+  },
+  "socialMedia": {},
+  "eventMarketing": {
+    "hostsEvents": "nan"
+  },
+  "brandedContent": {
+    "offersBrandedContent": "nan"
+  },
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:43:19.943750Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:43:19.943900Z"
+  }
+}

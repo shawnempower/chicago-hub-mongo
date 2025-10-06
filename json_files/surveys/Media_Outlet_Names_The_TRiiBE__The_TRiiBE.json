@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "respondentId": "118956209777.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-18T11:01:05Z"
+    },
+    "endDate": {
+      "$date": "2025-09-18T15:57:03Z"
+    },
+    "ipAddress": "67.176.130.195"
+  },
+  "contactInformation": {
+    "title": "Publisher",
+    "email": "morgan@thetriibe.com",
+    "companyName": "The Triibe, Inc.",
+    "mediaOutletNames": "The TRiiBE"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "1200 x 675px",
+    "secondLargestDigitalAdSize": "720 x 90px",
+    "largestAdWeeklyRate": "850",
+    "largestAdMonthlyRate": "2975",
+    "secondLargestAdWeeklyRate": "1250",
+    "secondLargestAdMonthlyRate": "4375",
+    "websiteTakeoverCost": "5000"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": false
+  },
+  "newsletterAdvertising": {
+    "newsletterFrequency": "1 per week",
+    "newsletterTakeoverCost": "1250"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": true
+  },
+  "socialMedia": {
+    "facebookFollowers": "11k",
+    "instagramFollowers": "51k",
+    "twitterFollowers": "0",
+    "tiktokFollowers": "5.3k",
+    "linkedinFollowers": "0",
+    "youtubeFollowers": "1200",
+    "otherSocialFollowers": "BlueSky 29.7k, Threads 9.6k",
+    "socialMediaAdvertisingOptions": "We do social media bundles where people can choose the platform that they would like to be posted. We then set a goal for number of views/impressions with the client and we post the assets repeatedly until that views/impressions goal is met.     Our rate is $100 per 1,000 views and we have a minimum spend of $500."
+  },
+  "eventMarketing": {
+    "hostsEvents": true,
+    "annualEventCount": "4",
+    "eventAttendanceRange": "50 - 500",
+    "largestSponsorshipLevel": "10000",
+    "smallestSponsorshipLevel": "1000"
+  },
+  "brandedContent": {
+    "offersBrandedContent": false,
+    "printBrandedContentCost": "1500",
+    "websiteBrandedContentCost3Month": "4500"
+  },
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:59:06.057674Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:59:06.057772Z"
+  }
+}

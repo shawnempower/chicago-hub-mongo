@@ -1,0 +1,92 @@
+{
+  "metadata": {
+    "respondentId": "118946844936.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-05T18:20:17Z"
+    },
+    "endDate": {
+      "$date": "2025-09-05T22:48:20Z"
+    },
+    "ipAddress": "76.157.134.31"
+  },
+  "contactInformation": {
+    "title": "Executive Director",
+    "email": "michael.workman1@gmail.com",
+    "companyName": "Bridge Art NFP",
+    "mediaOutletNames": "Bridge Chicago, Bridge Magazine"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "432w x 216h (dedicated blast)",
+    "secondLargestDigitalAdSize": "432w x 216h (top + downscroll placement)",
+    "largestAdWeeklyRate": "75",
+    "largestAdMonthlyRate": "300",
+    "secondLargestAdWeeklyRate": "112.5",
+    "secondLargestAdMonthlyRate": "450"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": true,
+    "mainPrintProductName": "Bridge Magazine",
+    "printFrequency": "Twice annually; roughly Dec/Jun",
+    "averagePrintRun": "1500",
+    "distributionOutlets": "75",
+    "fullPageAdSize": "10.5 x 13.5 (trim)",
+    "halfPageAdSize": "4.99 x 13.25",
+    "fullPageRate1x": "650",
+    "fullPageRate6x": "3500",
+    "fullPageRate12x": "7000",
+    "halfPageRate1x": "350",
+    "halfPageRate6x": "1750",
+    "halfPageRate12x": "3500"
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": true,
+    "newsletterFrequency": "seasonally",
+    "newsletterTakeoverCost": "450"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": false,
+    "video30SecondAdCost": "300",
+    "video60SecondAdCost": "300",
+    "videoAverageViews": "350"
+  },
+  "socialMedia": {
+    "facebookFollowers": "614",
+    "instagramFollowers": "2834",
+    "twitterFollowers": "0",
+    "tiktokFollowers": "0",
+    "linkedinFollowers": "0",
+    "youtubeFollowers": "34",
+    "otherSocialFollowers": "0",
+    "socialMediaAdvertisingOptions": "Placements are available in our Bridge Instagram magazine. Our Instagram magazine publishes 5-days a week Mon-Fri (in the active periods of Aug-Dec and Feb-June each year), and have daily themes as follows:     -Monday posts are for new Bridge Magazine online features    -Tue posts vary featured content with each new season     -Wed posts showcase work from the Bridge Journal, either past or teasing new releases    -Thu posts feature work previously published in any of our magazine formats, and teasers from the Readings Archive    -Fri posts are for new Bridge Video features, and may include highlights from our Movement Matters dance and performance art showcase series.    Please note that video may only be scheduled in advance as stories on Instagram, and not as posts. Instagram stories scheduled in advance may not include tags or links.     Posts and stories containing video that are not scheduled in advance may include tags or links will incur an additional 25% manual posting charge.     ALL placements in social media will be marked with a \u201csponsored\u201d notice. All posts may also be shred as sponsored stories, for an additional 10% fee (billed separately).     Dedicated sponsored posts to the Bridge Instagram channel  Bridge Instagram Magazine Sponsored Posts (Per Post)    Bridge Instagram Magazine Sponsored Stories (Per Story)"
+  },
+  "eventMarketing": {
+    "hostsEvents": true,
+    "annualEventCount": "Approximately 10\u201312 public programs annually, including the Festival of Holes, exhibitions, seasonal streaming launches, and literary / poetry readings or Movement Matters dance and performance symposia panels or similar programs.",
+    "eventAttendanceRange": "m   k  4060        200300    /           12000- .",
+    "largestSponsorshipLevel": "10000",
+    "smallestSponsorshipLevel": "250",
+    "eventSponsorshipDetails": "As we expand the Festival of Holes and our annual slate of other programs, we are seeking multi-channel sponsorships that combine live events, streaming exposure, and print/digital visibility. This ensures that sponsor support resonates across our ecosystem: in-person audiences, online subscribers, and readership communities. We are especially interested in building collaborative partnerships that help sustain underrepresented film, literature, and performance practices while offering sponsors unique access to experimental and innovative creative communities."
+  },
+  "brandedContent": {
+    "offersBrandedContent": true,
+    "brandedContentAdditionalInfo": "Yes. Bridge monetizes work through our Bridge Video micro-streaming service (subscription-based, $25/6 months), which offers sponsors visibility across curated artist content, \u201cFilm Friday\u201d premieres, and featured partner programming (including collaborations with Indiana University and WTTW\u2019s Image Union archive). Print and digital platforms can be bundled with event sponsorships for larger cross-media campaigns across the Bridge Journal, Bridge print and online magazines."
+  },
+  "additionalServices": {
+    "offersOttMarketing": "N0",
+    "offersVirtualWebinars": false,
+    "producesOtherVideos": "No"
+  },
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:53:56.359455Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:53:56.359492Z"
+  }
+}

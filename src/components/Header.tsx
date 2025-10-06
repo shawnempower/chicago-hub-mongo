@@ -7,9 +7,10 @@ import { User, ChevronDown } from "lucide-react";
 
 interface HeaderProps {
   onAssistantClick: () => void;
+  onSurveyClick: () => void;
 }
 
-export function Header({ onAssistantClick }: HeaderProps) {
+export function Header({ onAssistantClick, onSurveyClick }: HeaderProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminAuth();
@@ -74,6 +75,13 @@ export function Header({ onAssistantClick }: HeaderProps) {
         </div>
         
         <div className="flex items-center space-x-4">
+          <Button 
+            variant="outline" 
+            onClick={onSurveyClick}
+            className="hidden sm:inline-flex"
+          >
+            Apply to Network
+          </Button>
           <Button 
             variant="assistant" 
             onClick={onAssistantClick}

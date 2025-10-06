@@ -616,11 +616,198 @@ export interface MediaEntityUpdate extends Partial<MediaEntityInsert> {
   updatedAt: Date;
 }
 
+// ===== PUBLICATION FILES SCHEMA =====
+export interface PublicationFile {
+  _id?: string | ObjectId;
+  publicationId: string;
+  fileName: string;
+  originalFileName: string;
+  fileType: string;
+  description?: string;
+  s3Key: string;
+  s3Bucket: string;
+  fileUrl?: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedBy?: string;
+  tags?: string[];
+  isPublic?: boolean;
+  downloadCount?: number;
+  lastAccessedAt?: Date;
+  metadata?: {
+    width?: number;
+    height?: number;
+    duration?: number;
+    pageCount?: number;
+    extractedText?: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PublicationFileInsert extends Omit<PublicationFile, '_id' | 'createdAt' | 'updatedAt'> {}
+
+export interface PublicationFileUpdate extends Partial<Omit<PublicationFile, '_id' | 'publicationId' | 's3Key' | 's3Bucket' | 'createdAt'>> {
+  updatedAt: Date;
+}
+
+// ===== SURVEY SUBMISSIONS SCHEMA =====
+export interface SurveySubmission {
+  _id?: string | ObjectId;
+  metadata: {
+    respondentId?: string;
+    collectorId?: string;
+    startDate?: Date;
+    endDate?: Date;
+    ipAddress?: string;
+    userAgent?: string;
+    referrer?: string;
+    source?: string;
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+  };
+  contactInformation: {
+    firstName?: string;
+    lastName?: string;
+    fullName?: string;
+    title?: string;
+    email?: string;
+    emailAddress?: string;
+    companyName?: string;
+    mediaOutletNames: string;
+  };
+  websiteAdvertising?: {
+    monthlyUniqueVisitors?: number | string;
+    hasWebsiteAdvertising?: boolean;
+    largestDigitalAdSize?: string;
+    secondLargestDigitalAdSize?: string;
+    largestAdWeeklyRate?: number | string;
+    largestAdMonthlyRate?: number | string;
+    secondLargestAdWeeklyRate?: number | string;
+    secondLargestAdMonthlyRate?: number | string;
+    websiteTakeoverCost?: number | string | null;
+    mediaKitLink?: string;
+  };
+  printAdvertising?: {
+    hasPrintProduct?: boolean;
+    mainPrintProductName?: string;
+    printFrequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'other';
+    averagePrintRun?: number | string;
+    distributionOutlets?: number | string;
+    fullPageAdSize?: string;
+    halfPageAdSize?: string;
+    fullPageRate1x?: number | string;
+    fullPageRate6x?: number | string;
+    fullPageRate12x?: number | string;
+    halfPageRate1x?: number | string;
+    halfPageRate6x?: number | string;
+    halfPageRate12x?: number | string;
+    printRatesComparable?: string;
+  };
+  newsletterAdvertising?: {
+    hasNewsletter?: boolean;
+    newsletterSubscribers?: number | string;
+    newsletterFrequency?: string;
+    newsletterAdSizeLargest?: string;
+    newsletterAdSizeSecond?: string;
+    newsletterLargestAdRate1x?: number | string;
+    newsletterLargestAdRateMonthly?: number | string;
+    newsletterSecondAdRate1x?: number | string;
+    newsletterSecondAdRateMonthly?: number | string;
+    newsletterTakeoverCost?: number | string | null;
+    newsletterRatesComparable?: string;
+  };
+  radioPodcastAdvertising?: {
+    hasRadioStation?: boolean;
+    hasPodcast?: boolean;
+    radio30SecondAdsCost10x?: number | string;
+    radio60SecondAdsCost10x?: number | string;
+    podcast30SecondAdsCost10x?: number | string;
+    podcastListenersPerShow?: number | string;
+    podcastSpecialTakeoversCost?: number | string;
+    video30SecondAdCost?: number | string;
+    video60SecondAdCost?: number | string;
+    videoAverageViews?: number | string;
+  };
+  socialMedia?: {
+    facebookFollowers?: number | string;
+    instagramFollowers?: number | string;
+    twitterFollowers?: number | string;
+    tiktokFollowers?: number | string;
+    linkedinFollowers?: number | string;
+    otherSocialFollowers?: string;
+    socialMediaAdvertisingOptions?: string;
+  };
+  eventMarketing?: {
+    hostsEvents?: boolean;
+    annualEventCount?: number | string;
+    eventAttendanceRange?: string;
+    largestSponsorshipLevel?: number | string;
+    smallestSponsorshipLevel?: number | string;
+    eventSponsorshipDetails?: string;
+  };
+  brandedContent?: {
+    offersBrandedContent?: boolean;
+    printBrandedContentCost?: number | string | null;
+    websiteBrandedContentCost3Month?: number | string;
+    shortFormContentCost?: number | string;
+    brandedContentAdditionalInfo?: string;
+  };
+  additionalServices?: {
+    offersOttMarketing?: boolean;
+    offersVirtualWebinars?: boolean;
+    producesOtherVideos?: boolean;
+    videoProductionDetails?: string;
+    customData?: string;
+  };
+  surveyResponses?: {
+    responseIndicators?: {
+      response1?: boolean | string;
+      response2?: boolean | string;
+      response3?: boolean | string;
+      response4?: boolean | string;
+      response5?: boolean | string;
+      response6?: boolean | string;
+      response7?: boolean | string;
+      response10?: boolean | string;
+      response13?: boolean | string;
+    };
+    openEndedResponses?: {
+      openEndedResponse1?: string;
+      openEndedResponse2?: string;
+      generalResponse?: string;
+    };
+    conditionalResponses?: {
+      ifYes1Explanation?: string;
+      ifYes2Explanation?: string;
+    };
+    parsedExtra?: string;
+  };
+  // Admin fields
+  application?: {
+    status?: 'new' | 'reviewing' | 'approved' | 'rejected' | 'follow_up_needed';
+    reviewNotes?: string;
+    reviewedBy?: string;
+    reviewedAt?: Date;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SurveySubmissionInsert extends Omit<SurveySubmission, '_id' | 'createdAt' | 'updatedAt'> {}
+
+export interface SurveySubmissionUpdate extends Partial<Omit<SurveySubmission, '_id' | 'createdAt'>> {
+  updatedAt: Date;
+}
+
 // Collection Names
 export const COLLECTIONS = {
   USERS: 'users',
   USER_SESSIONS: 'user_sessions',
   PUBLICATIONS: 'publications',
+  PUBLICATION_FILES: 'publication_files',
+  SURVEY_SUBMISSIONS: 'survey_submissions',
   AD_PACKAGES: 'ad_packages',
   ADVERTISING_INVENTORY: 'advertising_inventory',
   LEAD_INQUIRIES: 'lead_inquiries',

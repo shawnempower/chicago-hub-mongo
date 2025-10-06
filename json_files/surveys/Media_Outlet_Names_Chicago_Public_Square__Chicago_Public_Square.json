@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "respondentId": "118938597153.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-08-25T11:50:21Z"
+    },
+    "endDate": {
+      "$date": "2025-08-25T12:52:24Z"
+    },
+    "ipAddress": "73.51.241.97"
+  },
+  "contactInformation": {
+    "title": "Publisher",
+    "email": "Meyerson@gmail.com",
+    "companyName": "Chicago Public Square",
+    "mediaOutletNames": "Chicago Public Square"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "Template shrinks it to 600 px on the web or whatever a phone screen\u2019s width will accomodate.",
+    "secondLargestDigitalAdSize": "Template shrinks it to 600 px or whatever a phone screen\u2019s width will accomodate.",
+    "largestAdWeeklyRate": "480",
+    "largestAdMonthlyRate": "1900",
+    "secondLargestAdWeeklyRate": "480",
+    "secondLargestAdMonthlyRate": "1900"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": false
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": "nan",
+    "newsletterFrequency": "Daily, weekdays",
+    "newsletterTakeoverCost": "200"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": false,
+    "podcastListenersPerShow": "240 -m"
+  },
+  "socialMedia": {
+    "facebookFollowers": "2.1K",
+    "instagramFollowers": "126",
+    "twitterFollowers": "523",
+    "tiktokFollowers": "0",
+    "linkedinFollowers": "290",
+    "youtubeFollowers": "51",
+    "socialMediaAdvertisingOptions": "Same as daily newsletter ads (see above)"
+  },
+  "eventMarketing": {
+    "hostsEvents": false,
+    "eventSponsorshipDetails": "You should welcome other single-proprietor email newsletter producers, too. For better or worse, it\u2019s the future."
+  },
+  "brandedContent": {
+    "offersBrandedContent": false
+  },
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:43:19.981688Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:43:19.981749Z"
+  }
+}

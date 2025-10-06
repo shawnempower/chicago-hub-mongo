@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AssistantModal } from "@/components/AssistantModal";
+import SurveyForm from "@/components/SurveyForm";
 
 import { CTASection } from "@/components/CTASection";
 import { PackageCard } from "@/components/PackageCard";
@@ -21,6 +22,7 @@ import { useSavedPackages } from "@/hooks/useSavedPackages";
 const Packages = () => {
   const [searchParams] = useSearchParams();
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isSurveyOpen, setIsSurveyOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [highlightedPackageId, setHighlightedPackageId] = useState<number | null>(null);
@@ -135,7 +137,7 @@ const Packages = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onAssistantClick={handleAssistantClick} />
+      <Header onAssistantClick={handleAssistantClick} onSurveyClick={() => setIsSurveyOpen(true)} />
       
       <main>
         {/* Hero Section */}
@@ -266,7 +268,7 @@ const Packages = () => {
         </section>
       </main>
 
-      <CTASection onAssistantClick={handleAssistantClick} />
+      <CTASection onAssistantClick={handleAssistantClick} onSurveyClick={() => setIsSurveyOpen(true)} />
 
       <Footer />
 
@@ -276,6 +278,8 @@ const Packages = () => {
         onClose={handleAssistantClose}
         onViewPackage={handleViewPackage}
       />
+
+      <SurveyForm open={isSurveyOpen} onOpenChange={setIsSurveyOpen} />
 
       <PackageModal
         packageData={selectedPackage}

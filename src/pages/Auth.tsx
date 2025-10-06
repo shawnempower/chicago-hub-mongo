@@ -7,11 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useConfetti } from '@/hooks/useConfetti';
 
 export default function Auth() {
   const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { triggerLoginConfetti, triggerSuccessConfetti } = useConfetti();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,6 +45,10 @@ export default function Auth() {
         title: "Welcome back!",
         description: "You have been signed in successfully.",
       });
+      // Trigger confetti after successful login
+      setTimeout(() => {
+        triggerLoginConfetti();
+      }, 100);
     }
     
     setLoading(false);
@@ -69,6 +75,10 @@ export default function Auth() {
         title: "Account created!",
         description: "Please check your email to verify your account.",
       });
+      // Trigger confetti after successful signup
+      setTimeout(() => {
+        triggerSuccessConfetti();
+      }, 100);
     }
     
     setLoading(false);

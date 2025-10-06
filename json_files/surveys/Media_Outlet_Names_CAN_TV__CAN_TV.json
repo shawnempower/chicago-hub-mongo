@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "respondentId": "118947725597.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-09-07T16:32:41Z"
+    },
+    "endDate": {
+      "$date": "2025-09-07T16:55:17Z"
+    },
+    "ipAddress": "162.255.57.169"
+  },
+  "contactInformation": {
+    "email": "dhilmon@cantv.org",
+    "companyName": "Chicago Access Network (CAN TV)",
+    "mediaOutletNames": "CAN TV"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "600 \u00d7 100 px",
+    "secondLargestDigitalAdSize": "300 \u00d7 250 px",
+    "largestAdWeeklyRate": "250",
+    "largestAdMonthlyRate": "750",
+    "secondLargestAdWeeklyRate": "150",
+    "secondLargestAdMonthlyRate": "500"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": false
+  },
+  "newsletterAdvertising": {
+    "newsletterFrequency": "Weekly"
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": true,
+    "hasPodcast": false
+  },
+  "socialMedia": {},
+  "eventMarketing": {
+    "hostsEvents": true,
+    "annualEventCount": "Four",
+    "eventAttendanceRange": "100-1K",
+    "largestSponsorshipLevel": "50000",
+    "smallestSponsorshipLevel": "2500"
+  },
+  "brandedContent": {
+    "offersBrandedContent": true,
+    "printBrandedContentCost": "5",
+    "websiteBrandedContentCost3Month": "25",
+    "brandedContentAdditionalInfo": "Program underwriting and/or sponsor branded segments within existing programs (e.g. Old National Bank is both the underwriter of the CAN TV Original Program 'In the Money' and has a branded segment called 'Money Matters' within the show"
+  },
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:53:56.376215Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:53:56.376256Z"
+  }
+}

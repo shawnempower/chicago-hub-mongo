@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AssistantModal } from "@/components/AssistantModal";
+import SurveyForm from "@/components/SurveyForm";
 
 import { CTASection } from "@/components/CTASection";
 import { PartnerModal } from "@/components/PartnerModal";
@@ -13,6 +14,7 @@ import { usePublicationsAsMediaEntities, usePublicationCategories } from "@/hook
 
 export default function Partners() {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isSurveyOpen, setIsSurveyOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<any | null>(null);
   const [activeCategory, setActiveCategory] = useState("all");
 
@@ -25,7 +27,7 @@ export default function Partners() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onAssistantClick={() => setIsAssistantOpen(true)} />
+      <Header onAssistantClick={() => setIsAssistantOpen(true)} onSurveyClick={() => setIsSurveyOpen(true)} />
       
       <main>
         {/* Hero Section */}
@@ -161,12 +163,13 @@ export default function Partners() {
           </div>
         </section>
 
-        <CTASection onAssistantClick={() => setIsAssistantOpen(true)} />
+        <CTASection onAssistantClick={() => setIsAssistantOpen(true)} onSurveyClick={() => setIsSurveyOpen(true)} />
       </main>
 
       <Footer />
       
       <AssistantModal isOpen={isAssistantOpen} onClose={() => setIsAssistantOpen(false)} />
+      <SurveyForm open={isSurveyOpen} onOpenChange={setIsSurveyOpen} />
       <PartnerModal 
         partner={selectedPartner} 
         isOpen={!!selectedPartner} 

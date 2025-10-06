@@ -1,0 +1,71 @@
+{
+  "metadata": {
+    "respondentId": "118938557633.0",
+    "collectorId": "461878958.0",
+    "startDate": {
+      "$date": "2025-08-25T11:12:22Z"
+    },
+    "endDate": {
+      "$date": "2025-08-25T11:29:21Z"
+    },
+    "ipAddress": "108.204.107.41"
+  },
+  "contactInformation": {
+    "email": "inside1958@gmail.com",
+    "companyName": "Inside Publications",
+    "mediaOutletNames": "Skyline, Inside Booster, and News Star newspapers"
+  },
+  "websiteAdvertising": {
+    "hasWebsiteAdvertising": true,
+    "largestDigitalAdSize": "If you buy an ad in print, it runs for free on our website / full page",
+    "secondLargestDigitalAdSize": "3/4 page",
+    "largestAdWeeklyRate": "1650",
+    "largestAdMonthlyRate": "1485",
+    "secondLargestAdWeeklyRate": "1300",
+    "secondLargestAdMonthlyRate": "1170"
+  },
+  "printAdvertising": {
+    "hasPrintProduct": true,
+    "mainPrintProductName": "Skyline, Inside Booster, and News Star newspapers",
+    "printFrequency": "weekly",
+    "averagePrintRun": "16400",
+    "distributionOutlets": "459",
+    "fullPageAdSize": "10\" x 15.75\"",
+    "halfPageAdSize": "10\" x 8\"",
+    "fullPageRate1x": "1000",
+    "fullPageRate6x": "850",
+    "fullPageRate12x": "750",
+    "halfPageRate1x": "600",
+    "halfPageRate6x": "500",
+    "halfPageRate12x": "450"
+  },
+  "newsletterAdvertising": {
+    "hasNewsletter": true
+  },
+  "radioPodcastAdvertising": {
+    "hasRadioStation": false,
+    "hasPodcast": "nan"
+  },
+  "socialMedia": {},
+  "eventMarketing": {
+    "hostsEvents": false,
+    "eventSponsorshipDetails": "We love our advertisers"
+  },
+  "brandedContent": {
+    "offersBrandedContent": false,
+    "printBrandedContentCost": "see rate card",
+    "websiteBrandedContentCost3Month": "It is based on the same space charges see rate card.",
+    "brandedContentAdditionalInfo": "Distribution of pre-printed, brochure, fliers, coupons and circulars."
+  },
+  "additionalServices": {},
+  "surveyResponses": {},
+  "application": {
+    "status": "new"
+  },
+  "createdAt": {
+    "$date": "2025-10-06T18:43:20.061580Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-06T18:43:20.061639Z"
+  }
+}
