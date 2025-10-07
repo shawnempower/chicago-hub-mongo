@@ -8,7 +8,7 @@ frontend:
       commands:
         - npm run build
       environmentVariables:
-        VITE_API_BASE_URL: 'http://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com'
+        VITE_API_BASE_URL: 'https://hubapi.empowerlocal.co'
   artifacts:
     baseDirectory: dist
     files:
