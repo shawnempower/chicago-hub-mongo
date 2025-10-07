@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { AdPackage } from '@/types/common';
+import { API_BASE_URL } from '@/config/api';
 
 export interface DatabasePackage {
   id: string;
@@ -51,7 +52,7 @@ export const usePackages = () => {
       setLoading(true);
       
       // Fetch from MongoDB API
-      const response = await fetch('/api/packages');
+      const response = await fetch(`${API_BASE_URL}/packages`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch packages from API');

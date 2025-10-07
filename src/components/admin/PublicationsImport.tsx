@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/config/api';
 import { 
   Upload, FileJson, Eye, Play, AlertCircle, CheckCircle, 
   XCircle, RefreshCw, Download, FileText, Zap
@@ -176,7 +177,7 @@ export const PublicationsImport = () => {
 
     setIsImporting(true);
     try {
-      const response = await fetch('/api/publications/import-preview', {
+      const response = await fetch(`${API_BASE_URL}/publications/import-preview`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -219,7 +220,7 @@ export const PublicationsImport = () => {
 
     setIsImporting(true);
     try {
-      const response = await fetch('/api/publications/import', {
+      const response = await fetch(`${API_BASE_URL}/publications/import`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({

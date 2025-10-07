@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, CheckCircle, Globe, Printer, Mail, Radio, Users, Calendar, FileText, Settings } from 'lucide-react';
 import { useConfetti } from '@/hooks/useConfetti';
+import { API_BASE_URL } from '@/config/api';
 
 interface SurveyFormProps {
   open: boolean;
@@ -253,7 +254,7 @@ const SurveyForm: React.FC<SurveyFormProps> = ({ open, onOpenChange }) => {
         });
       });
 
-      const response = await fetch('/api/survey', {
+      const response = await fetch(`${API_BASE_URL}/survey`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

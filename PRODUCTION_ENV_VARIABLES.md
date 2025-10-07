@@ -4,7 +4,7 @@
 # ===== APPLICATION SETTINGS =====
 NODE_ENV=production
 PORT=3001
-FRONTEND_URL=https://your-domain.com
+FRONTEND_URL=https://main.dbn59dj42j2z3.amplifyapp.com
 
 # ===== SECURITY =====
 JWT_SECRET=your-super-secure-jwt-secret-minimum-32-characters-long

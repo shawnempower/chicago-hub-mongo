@@ -5,7 +5,7 @@ This guide explains how to deploy the Chicago Hub frontend to AWS Amplify with t
 
 ## Prerequisites
 - ✅ API is deployed and working on ECS
-- ✅ Clean ALB endpoint is available: `https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com`
+- ✅ Custom domain is configured: `https://hubapi.empowerlocal.co`
 - ✅ Frontend code is updated to use environment-based API configuration
 
 ## Configuration Changes Made
@@ -26,7 +26,7 @@ This guide explains how to deploy the Chicago Hub frontend to AWS Amplify with t
 
 ### 3. Amplify Configuration (`amplify.yml`)
 - Added environment variable: `VITE_API_BASE_URL`
-- Points to production ALB endpoint
+- Points to custom domain: `https://hubapi.empowerlocal.co`
 
 ## Deployment Steps
 
@@ -36,7 +36,7 @@ This guide explains how to deploy the Chicago Hub frontend to AWS Amplify with t
 3. Go to "Environment variables" in the left sidebar
 4. Add the following environment variable:
    - **Key**: `VITE_API_BASE_URL`
-   - **Value**: `https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com`
+   - **Value**: `https://hubapi.empowerlocal.co`
 5. Save and trigger a new deployment
 
 ### Option 2: Deploy via Git Push
@@ -55,7 +55,7 @@ After deployment, verify the following:
 ### 2. Test API Calls
 - Open browser dev tools → Network tab
 - Navigate through the app
-- Verify API calls go to: `https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com/api/*`
+- Verify API calls go to: `https://hubapi.empowerlocal.co/api/*`
 
 ### 3. Test Key Features
 - User authentication (signup/login)
@@ -77,16 +77,16 @@ After deployment, verify the following:
 - Verify ALB is accessible from the frontend domain
 
 ### 404 Errors on API Calls
-- Verify the ALB endpoint is correct
+- Verify the custom domain is correct
 - Check that the API routes are working directly
-- Test with: `curl https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com/health`
+- Test with: `curl https://hubapi.empowerlocal.co/health`
 
 ## Environment Variables Reference
 
 | Variable | Development | Production |
 |----------|-------------|------------|
-| `VITE_API_BASE_URL` | Not set (uses relative URLs) | `https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com` |
-| `API_BASE_URL` | `/api` | `https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com/api` |
+| `VITE_API_BASE_URL` | Not set (uses relative URLs) | `https://hubapi.empowerlocal.co` |
+| `API_BASE_URL` | `/api` | `https://hubapi.empowerlocal.co/api` |
 
 ## API Endpoints
 

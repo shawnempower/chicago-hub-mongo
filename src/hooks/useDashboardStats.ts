@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/config/api';
 
 export interface DashboardStats {
   leads: number;
@@ -73,7 +74,7 @@ export const useDashboardStats = () => {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('/api/admin/dashboard-stats', {
+      const response = await fetch(`${API_BASE_URL}/admin/dashboard-stats`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

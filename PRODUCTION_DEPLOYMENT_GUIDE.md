@@ -65,7 +65,9 @@ aws ecs create-service \
 
 1. **Target Group**: Create target group for port 3001
 2. **Health Check**: Configure health check for `/health` endpoint
-3. **Listener**: Add listener rule for your API routes (e.g., `/api/*`)
+3. **Listener**: Configure HTTPS listener on port 443 with SSL certificate
+4. **Custom Domain**: Set up custom domain (e.g., `hubapi.empowerlocal.co`) with Route 53 CNAME record
+5. **CORS**: Ensure ALB forwards requests directly to ECS tasks without path rewriting
 
 ## Step 6: Security Considerations
 
@@ -93,7 +95,7 @@ aws ecs create-service \
 ### Production Environment Variables:
 - `NODE_ENV=production`
 - `PORT=3001`
-- `FRONTEND_URL=https://your-production-domain.com`
+- `FRONTEND_URL=https://main.dbn59dj42j2z3.amplifyapp.com` (Amplify frontend domain)
 
 ### Required AWS Services:
 - **ECS Fargate**: For container orchestration

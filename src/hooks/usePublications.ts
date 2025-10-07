@@ -5,6 +5,7 @@ import {
   PublicationCategory, 
   PublicationType 
 } from '@/types/publication';
+import { API_BASE_URL } from '@/config/api';
 import { 
   getPublications, 
   getPublicationById, 
@@ -357,7 +358,7 @@ export const usePublicationCategories = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('/api/publications/categories');
+        const response = await fetch(`${API_BASE_URL}/publications/categories`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch categories');
@@ -401,7 +402,7 @@ export const usePublicationTypes = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('/api/publications/types');
+        const response = await fetch(`${API_BASE_URL}/publications/types`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch types');

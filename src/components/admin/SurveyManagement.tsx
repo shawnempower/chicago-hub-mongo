@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { API_BASE_URL } from '@/config/api';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { RefreshCw, Eye, Trash2, CheckCircle, XCircle, Loader2, Users, TrendingUp, CalendarDays, Building2, Globe, Printer, Mail, Radio, FileText, Settings } from 'lucide-react';
@@ -216,7 +217,7 @@ const SurveyManagement: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/admin/surveys/stats', {
+      const response = await fetch(`${API_BASE_URL}/admin/surveys/stats`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
