@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/config/api';
 import { 
   Trash2, Edit, Plus, Eye, Users, TrendingUp, Award, Building, 
   RefreshCw, Save, X, ExternalLink, Globe, Mail, Phone, Search,
@@ -468,7 +469,7 @@ export const EnhancedPublicationsManagement = () => {
     
     try {
       // Fetch full publication data for editing
-      const response = await fetch(`/api/publications/${publication.id}`);
+      const response = await fetch(`${API_BASE_URL}/publications/${publication.id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch publication details');
       }

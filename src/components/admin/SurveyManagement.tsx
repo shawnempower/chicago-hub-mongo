@@ -197,7 +197,7 @@ const SurveyManagement: React.FC = () => {
       const params = new URLSearchParams();
       if (filterStatus !== 'all') params.append('status', filterStatus);
 
-      const response = await fetch(`/api/admin/surveys?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/surveys?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
@@ -269,7 +269,7 @@ const SurveyManagement: React.FC = () => {
   const handleUpdateStatus = async () => {
     if (!selectedSubmission) return;
     try {
-      const response = await fetch(`/api/admin/surveys/${selectedSubmission._id}/status`, {
+      const response = await fetch(`${API_BASE_URL}/admin/surveys/${selectedSubmission._id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -294,7 +294,7 @@ const SurveyManagement: React.FC = () => {
       return;
     }
     try {
-      const response = await fetch(`/api/admin/surveys/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/surveys/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
@@ -980,7 +980,7 @@ const SurveyManagement: React.FC = () => {
               if (!formData?.contactInformation?.mediaOutletNames) { toast.error('Media outlet name is required'); return; }
               setFormSaving(true);
               try {
-                const res = await fetch(`/api/admin/surveys/${selectedSubmission._id}`, {
+                const res = await fetch(`${API_BASE_URL}/admin/surveys/${selectedSubmission._id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
                   body: JSON.stringify(formData)
@@ -1078,7 +1078,7 @@ const SurveyManagement: React.FC = () => {
                   setSaving(false);
                   return;
                 }
-                const res = await fetch(`/api/admin/surveys/${selectedSubmission._id}`, {
+                const res = await fetch(`${API_BASE_URL}/admin/surveys/${selectedSubmission._id}`, {
                   method: 'PUT',
                   headers: {
                     'Content-Type': 'application/json',

@@ -1,5 +1,6 @@
 // API functions for publication file management
 import { PublicationFile, PublicationFileInsert } from '@/integrations/mongodb/schemas';
+import { API_BASE_URL } from '@/config/api';
 
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {
@@ -54,7 +55,7 @@ export interface PublicationFileResponse {
 // Get all files for a publication
 export const getPublicationFiles = async (publicationId: string): Promise<PublicationFileResponse[]> => {
   try {
-    const response = await fetch(`/api/publications/${publicationId}/files`, {
+    const response = await fetch(`${API_BASE_URL}/publications/${publicationId}/files`, {
       headers: getAuthHeaders(),
     });
 
@@ -75,7 +76,7 @@ export const getPublicationFiles = async (publicationId: string): Promise<Public
 // Get a single file by ID
 export const getPublicationFile = async (publicationId: string, fileId: string): Promise<PublicationFileResponse | null> => {
   try {
-    const response = await fetch(`/api/publications/${publicationId}/files/${fileId}`, {
+    const response = await fetch(`${API_BASE_URL}/publications/${publicationId}/files/${fileId}`, {
       headers: getAuthHeaders(),
     });
 
@@ -118,7 +119,7 @@ export const uploadPublicationFile = async (
     if (tags && tags.length > 0) formData.append('tags', JSON.stringify(tags));
     formData.append('isPublic', isPublic.toString());
 
-    const response = await fetch(`/api/publications/${publicationId}/files`, {
+    const response = await fetch(`${API_BASE_URL}/publications/${publicationId}/files`, {
       method: 'POST',
       headers: getMultipartAuthHeaders(),
       body: formData,
@@ -155,7 +156,7 @@ export const updatePublicationFile = async (
   }
 ): Promise<PublicationFileResponse | null> => {
   try {
-    const response = await fetch(`/api/publications/${publicationId}/files/${fileId}`, {
+    const response = await fetch(`${API_BASE_URL}/publications/${publicationId}/files/${fileId}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(updates),
@@ -186,7 +187,7 @@ export const updatePublicationFile = async (
 // Delete a file
 export const deletePublicationFile = async (publicationId: string, fileId: string): Promise<boolean> => {
   try {
-    const response = await fetch(`/api/publications/${publicationId}/files/${fileId}`, {
+    const response = await fetch(`${API_BASE_URL}/publications/${publicationId}/files/${fileId}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
@@ -257,7 +258,7 @@ export const searchPublicationFiles = async (
     if (filters?.tags && filters.tags.length > 0) params.append('tags', JSON.stringify(filters.tags));
     if (filters?.isPublic !== undefined) params.append('isPublic', filters.isPublic.toString());
 
-    const response = await fetch(`/api/publications/files/search?${params.toString()}`, {
+    const response = await fetch(`${API_BASE_URL}/publications/files/search?${params.toString()}`, {
       headers: getAuthHeaders(),
     });
 
