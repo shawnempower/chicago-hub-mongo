@@ -1,0 +1,52 @@
+# Multi-stage build for production optimization
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Production stage
+FROM node:18-alpine AS production
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S chicago-hub -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files and install production dependencies
+COPY package*.json ./
+RUN npm ci --only=production && npm install tsx && npm cache clean --force
+
+# Copy source code
+COPY --chown=chicago-hub:nodejs . .
+
+# Remove development files (keep tsconfig files for tsx)
+RUN rm -rf src/scripts lambda/ *.md .git* .eslint* .prettier* \
+    vite.config.ts tailwind.config.ts postcss.config.js \
+    components.json
+
+# Switch to non-root user
+USER chicago-hub
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "const http=require('http');const req=http.request({hostname:'localhost',port:3001,path:'/health',method:'GET'},res=>{process.exit(res.statusCode===200?0:1)});req.on('error',()=>process.exit(1));req.end();"
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the server
+CMD ["npm", "run", "server"]

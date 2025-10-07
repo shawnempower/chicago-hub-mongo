@@ -104,6 +104,16 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Health check for load balancer path-based routing
+app.get('/chicago-hub/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString(), service: 'chicago-hub' });
+});
+
+// Test route to verify API is working
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API routes are working!' });
+});
+
 // Auth routes
 app.post('/api/auth/signup', async (req, res) => {
   try {
@@ -1786,6 +1796,8 @@ async function startServer() {
     await connectToDatabase();
     console.log('Connected to MongoDB successfully!');
 
+    // API routes are defined at module load time (no function call needed)
+
     // Check S3 service status
     const s3ServiceInstance = s3Service();
     console.log('S3 Service status:', s3ServiceInstance ? 'AVAILABLE' : 'NOT AVAILABLE');
@@ -1796,7 +1808,7 @@ async function startServer() {
     }
 
     // Start server
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Authentication server running on port ${PORT}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth/*`);

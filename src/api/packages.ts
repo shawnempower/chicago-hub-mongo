@@ -1,7 +1,6 @@
 // Admin API endpoints for package management
 import type { DatabasePackage } from '@/hooks/usePackages';
-
-const API_BASE_URL = '/api';
+import { API_BASE_URL } from '@/config/api';
 
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {

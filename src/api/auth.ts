@@ -1,5 +1,6 @@
 // Authentication API endpoints for frontend
 // This is a client-side API wrapper that will make requests to your backend
+import { API_BASE_URL } from '@/config/api';
 
 export interface AuthResponse {
   user?: {
@@ -26,7 +27,7 @@ export interface SignUpData {
 }
 
 class AuthAPI {
-  private baseUrl = '/api/auth'; // This will be your backend endpoint
+  private baseUrl = `${API_BASE_URL}/auth`; // This will be your backend endpoint
 
   async signUp(data: SignUpData): Promise<AuthResponse> {
     try {

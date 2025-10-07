@@ -1,0 +1,84 @@
+{
+  "family": "chicago-hub-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::947442015939:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::947442015939:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "chicago-hub-api",
+      "image": "947442015939.dkr.ecr.us-east-2.amazonaws.com/chicago-hub-api:latest",
+      "portMappings": [
+        {
+          "containerPort": 3001,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "PORT",
+          "value": "3001"
+        },
+        {
+          "name": "FRONTEND_URL",
+          "value": "https://your-domain.com"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/jwt-secret"
+        },
+        {
+          "name": "MONGODB_URI",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/mongodb-uri"
+        },
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/aws-access-key-id"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/aws-secret-access-key"
+        },
+        {
+          "name": "AWS_S3_BUCKET",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/s3-bucket"
+        },
+        {
+          "name": "MAILGUN_API_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/mailgun-api-key"
+        },
+        {
+          "name": "MAILGUN_DOMAIN",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/mailgun-domain"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/chicago-hub-api",
+          "awslogs-region": "us-east-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "node -e \"const http=require('http');const req=http.request({hostname:'localhost',port:3001,path:'/health',method:'GET'},res=>{process.exit(res.statusCode===200?0:1)});req.on('error',()=>process.exit(1));req.end();\""
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

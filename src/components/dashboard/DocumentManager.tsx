@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/CustomAuthContext";
+import { API_BASE_URL } from "@/config/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +61,7 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
         throw new Error('No authentication token');
       }
 
-      const response = await fetch('http://localhost:3001/api/files/documents', {
+      const response = await fetch(`${API_BASE_URL}/files/documents`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -118,7 +119,7 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
       formData.append('description', description);
     }
 
-    const response = await fetch('http://localhost:3001/api/files/upload', {
+    const response = await fetch(`${API_BASE_URL}/files/upload`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -164,7 +165,7 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
           throw new Error('No authentication token');
         }
 
-        const response = await fetch('http://localhost:3001/api/documents/external', {
+        const response = await fetch(`${API_BASE_URL}/documents/external`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -220,7 +221,7 @@ export function DocumentManager({ onDocumentChange }: DocumentManagerProps) {
         throw new Error('No authentication token');
       }
 
-      const response = await fetch(`http://localhost:3001/api/files/documents/${documentId}`, {
+      const response = await fetch(`${API_BASE_URL}/files/documents/${documentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

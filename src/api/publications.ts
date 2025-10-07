@@ -1,4 +1,5 @@
 import { PublicationFrontend, PublicationInsertFrontend } from '@/types/publication';
+import { API_BASE_URL } from '@/config/api';
 
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {
@@ -28,7 +29,7 @@ export const getPublications = async (filters?: {
     if (filters?.contentType) params.append('contentType', filters.contentType);
     if (filters?.verificationStatus) params.append('verificationStatus', filters.verificationStatus);
 
-    const url = `/api/publications${params.toString() ? '?' + params.toString() : ''}`;
+    const url = `${API_BASE_URL}/publications${params.toString() ? '?' + params.toString() : ''}`;
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -45,7 +46,7 @@ export const getPublications = async (filters?: {
 // Get a single publication by ID
 export const getPublicationById = async (id: string): Promise<PublicationFrontend | null> => {
   try {
-    const response = await fetch(`/api/publications/${id}`);
+    const response = await fetch(`${API_BASE_URL}/publications/${id}`);
     
     if (!response.ok) {
       if (response.status === 404) {
@@ -64,7 +65,7 @@ export const getPublicationById = async (id: string): Promise<PublicationFronten
 // Create a new publication
 export const createPublication = async (publicationData: PublicationInsertFrontend): Promise<PublicationFrontend> => {
   try {
-    const response = await fetch('/api/publications', {
+    const response = await fetch(`${API_BASE_URL}/publications`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(publicationData),
@@ -88,7 +89,7 @@ export const createPublication = async (publicationData: PublicationInsertFronte
 // Update an existing publication
 export const updatePublication = async (id: string, updates: Partial<PublicationInsertFrontend>): Promise<PublicationFrontend | null> => {
   try {
-    const response = await fetch(`/api/publications/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/publications/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(updates),
@@ -108,7 +109,7 @@ export const updatePublication = async (id: string, updates: Partial<Publication
         status: response.status,
         statusText: response.statusText,
         errorData,
-        url: `/api/publications/${id}`,
+        url: `${API_BASE_URL}/publications/${id}`,
         updates
       });
       throw new Error(errorData.error || 'Failed to update publication');
@@ -124,7 +125,7 @@ export const updatePublication = async (id: string, updates: Partial<Publication
 // Delete a publication
 export const deletePublication = async (id: string): Promise<boolean> => {
   try {
-    const response = await fetch(`/api/publications/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/publications/${id}`, {
       method: 'DELETE',
     });
 
@@ -146,7 +147,7 @@ export const deletePublication = async (id: string): Promise<boolean> => {
 // Import multiple publications
 export const importPublications = async (publications: PublicationInsertFrontend[]): Promise<{ inserted: number; errors: any[] }> => {
   try {
-    const response = await fetch('/api/publications/import', {
+    const response = await fetch(`${API_BASE_URL}/publications/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -168,7 +169,7 @@ export const importPublications = async (publications: PublicationInsertFrontend
 // Enhanced import with options
 export const importPublicationsWithOptions = async (publications: PublicationInsertFrontend[], options: any) => {
   try {
-    const response = await fetch('/api/publications/import', {
+    const response = await fetch(`${API_BASE_URL}/publications/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -190,7 +191,7 @@ export const importPublicationsWithOptions = async (publications: PublicationIns
 // Preview import changes
 export const previewPublicationsImport = async (publications: PublicationInsertFrontend[], options: any) => {
   try {
-    const response = await fetch('/api/publications/import-preview', {
+    const response = await fetch(`${API_BASE_URL}/publications/import-preview`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -212,7 +213,7 @@ export const previewPublicationsImport = async (publications: PublicationInsertF
 // Get publication categories for filtering
 export const getPublicationCategories = async (): Promise<Array<{ id: string; name: string; count: number }>> => {
   try {
-    const response = await fetch('/api/publications/categories');
+    const response = await fetch(`${API_BASE_URL}/publications/categories`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch publication categories');
@@ -228,7 +229,7 @@ export const getPublicationCategories = async (): Promise<Array<{ id: string; na
 // Get publication types for filtering
 export const getPublicationTypes = async (): Promise<Array<{ id: string; name: string; count: number }>> => {
   try {
-    const response = await fetch('/api/publications/types');
+    const response = await fetch(`${API_BASE_URL}/publications/types`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch publication types');

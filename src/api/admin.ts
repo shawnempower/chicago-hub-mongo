@@ -1,7 +1,6 @@
 // Admin API endpoints for user management
 import type { UserProfile } from "@/types/common";
-
-const API_BASE_URL = '/api';
+import { API_BASE_URL } from '@/config/api';
 
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {

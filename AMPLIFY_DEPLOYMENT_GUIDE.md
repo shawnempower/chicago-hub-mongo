@@ -1,129 +1,117 @@
-# 🚀 AWS Amplify Deployment Guide for Chicago Hub
+# Amplify Deployment Guide for Chicago Hub
+
+## Overview
+This guide explains how to deploy the Chicago Hub frontend to AWS Amplify with the production API configuration.
 
 ## Prerequisites
-- ✅ Backend deployed to ECS (Chicago Hub service running)
-- ✅ GitHub repository with latest code
-- ✅ AWS account with Amplify access
+- ✅ API is deployed and working on ECS
+- ✅ Clean ALB endpoint is available: `https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com`
+- ✅ Frontend code is updated to use environment-based API configuration
 
-## 🎯 Quick Deployment Steps
+## Configuration Changes Made
 
-### 1. Connect to AWS Amplify Console
+### 1. API Configuration (`src/config/api.ts`)
+- Created centralized API configuration
+- Uses relative URLs in development (Vite proxy)
+- Uses environment variable in production
 
-1. Go to [AWS Amplify Console](https://console.aws.amazon.com/amplify/)
-2. Click **"New app"** → **"Host web app"**
-3. Select **GitHub** as the source
-4. Choose your repository: `chicago-hub-mongo`
-5. Select branch: `main`
+### 2. Updated All API Files
+- `src/api/auth.ts` - Authentication endpoints
+- `src/api/publications.ts` - Publication management
+- `src/api/packages.ts` - Package management
+- `src/api/profiles.ts` - User profiles
+- `src/api/admin.ts` - Admin functions
+- `src/api/leads.ts` - Lead management
+- `src/components/dashboard/DocumentManager.tsx` - Document management
 
-### 2. Configure Build Settings
+### 3. Amplify Configuration (`amplify.yml`)
+- Added environment variable: `VITE_API_BASE_URL`
+- Points to production ALB endpoint
 
-The `amplify.yml` file is already configured in your repository. Amplify will automatically detect it.
+## Deployment Steps
 
-**Build Configuration:**
-```yaml
-version: 1
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - npm ci
-    build:
-      commands:
-        - npm run build
-  artifacts:
-    baseDirectory: dist
-    files:
-      - '**/*'
-```
+### Option 1: Deploy via Amplify Console
+1. Go to AWS Amplify Console
+2. Select your Chicago Hub app
+3. Go to "Environment variables" in the left sidebar
+4. Add the following environment variable:
+   - **Key**: `VITE_API_BASE_URL`
+   - **Value**: `https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com`
+5. Save and trigger a new deployment
 
-### 3. Configure Redirects
+### Option 2: Deploy via Git Push
+1. Commit all changes to your repository
+2. Push to the main branch
+3. Amplify will automatically detect changes and deploy
 
-The `public/_redirects` file is already configured to route API calls to your Chicago Hub backend:
+## Verification
 
-```
-/api/* http://empowerlocal-api-lb-1173133034.us-east-2.elb.amazonaws.com/chicago-hub/api/:splat 200
-/*    /index.html   200
-```
+After deployment, verify the following:
 
-### 4. Deploy!
+### 1. Check Environment Variables
+- Open browser dev tools
+- Check that `import.meta.env.VITE_API_BASE_URL` is set correctly
 
-1. Click **"Save and deploy"**
-2. Wait for the build to complete (usually 3-5 minutes)
-3. Your app will be available at: `https://[random-id].amplifyapp.com`
+### 2. Test API Calls
+- Open browser dev tools → Network tab
+- Navigate through the app
+- Verify API calls go to: `https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com/api/*`
 
-## 🔧 Backend Connection Status
+### 3. Test Key Features
+- User authentication (signup/login)
+- Publication browsing
+- Package management
+- Document uploads
+- Admin functions
 
-### ✅ Current Backend Setup:
-- **ECS Service**: `chicago-hub-service` 
-- **Load Balancer**: `empowerlocal-api-lb-1173133034.us-east-2.elb.amazonaws.com`
-- **API Path**: `/chicago-hub/api/*`
-- **Health Check**: Available at `/chicago-hub/health`
+## Troubleshooting
 
-### 🧪 Test Backend Connection:
+### API Calls Still Going to Localhost
+- Check that environment variable is set in Amplify
+- Verify the build is using the updated code
+- Clear browser cache
 
-```bash
-# Test health endpoint
-curl http://empowerlocal-api-lb-1173133034.us-east-2.elb.amazonaws.com/chicago-hub/health
+### CORS Issues
+- The API is configured to allow all origins
+- Check browser console for CORS errors
+- Verify ALB is accessible from the frontend domain
 
-# Test survey endpoint (should return 405 Method Not Allowed for GET)
-curl http://empowerlocal-api-lb-1173133034.us-east-2.elb.amazonaws.com/chicago-hub/api/survey
-```
+### 404 Errors on API Calls
+- Verify the ALB endpoint is correct
+- Check that the API routes are working directly
+- Test with: `curl https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com/health`
 
-## 📱 Frontend Features Ready:
+## Environment Variables Reference
 
-1. **✅ Survey Form**: "Apply to Network" button with multi-step form
-2. **✅ API Integration**: Survey submissions to MongoDB
-3. **✅ Admin Panel**: Survey management for admins
-4. **✅ Responsive Design**: Mobile-friendly UI
+| Variable | Development | Production |
+|----------|-------------|------------|
+| `VITE_API_BASE_URL` | Not set (uses relative URLs) | `https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com` |
+| `API_BASE_URL` | `/api` | `https://chicago-hub-api-clean-1202657911.us-east-2.elb.amazonaws.com/api` |
 
-## 🎉 Post-Deployment Testing:
+## API Endpoints
 
-Once deployed, test these features:
+The following endpoints are available in production:
 
-1. **Homepage**: Should load with "Apply to Network" button
-2. **Survey Form**: Click button, fill form, submit
-3. **Admin Access**: Login as admin to view submissions
-4. **API Calls**: Check browser network tab for successful API calls
+- `GET /health` - Health check
+- `GET /api/test` - Test endpoint
+- `GET /api/publications` - Get all publications
+- `POST /api/auth/signup` - User registration
+- `POST /api/auth/login` - User login
+- `GET /api/packages` - Get packages
+- `POST /api/files/upload` - File upload
+- And all other API routes as defined in the backend
 
-## 🔗 Important URLs:
+## Security Notes
 
-- **Frontend**: `https://[your-amplify-id].amplifyapp.com`
-- **Backend Health**: `http://empowerlocal-api-lb-1173133034.us-east-2.elb.amazonaws.com/chicago-hub/health`
-- **Survey API**: `http://empowerlocal-api-lb-1173133034.us-east-2.elb.amazonaws.com/chicago-hub/api/survey`
+- All API calls include authentication headers when user is logged in
+- CORS is configured to allow the frontend domain
+- Environment variables are injected at build time (not runtime)
+- API endpoints are protected by authentication middleware
 
-## 🛠 Troubleshooting:
-
-### If API calls fail:
-1. Check browser console for CORS errors
-2. Verify backend service is running in ECS
-3. Test backend health endpoint directly
-
-### If build fails:
-1. Check build logs in Amplify console
-2. Verify all dependencies are in `package.json`
-3. Ensure Node.js version compatibility
-
-### If survey form doesn't work:
-1. Check network tab for failed API calls
-2. Verify MongoDB connection in backend logs
-3. Test survey endpoint directly with curl
-
-## 🎯 Next Steps:
-
-After successful deployment:
-1. **Custom Domain** (optional): Add custom domain in Amplify Console
-2. **Environment Variables**: Add any frontend env vars if needed
-3. **Monitoring**: Set up CloudWatch alerts for backend
-4. **SSL Certificate**: Automatically handled by Amplify
-
----
-
-## 🚨 Need Help?
+## Support
 
 If you encounter issues:
-1. Check AWS Amplify build logs
-2. Verify ECS service is running: `aws ecs describe-services --cluster empowerlocal-api-cluster --services chicago-hub-service`
-3. Test backend health endpoint
-4. Check CloudWatch logs: `/ecs/chicago-hub-task`
-
-**Your Chicago Hub is ready to deploy! 🎉**
+1. Check the Amplify build logs
+2. Verify the API is accessible directly
+3. Check browser console for errors
+4. Ensure all environment variables are set correctly
