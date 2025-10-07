@@ -5,6 +5,7 @@
 export interface UserProfile {
   _id?: string;
   userId: string;
+  email?: string; // Added to show email for users without complete profiles
   firstName?: string;
   lastName?: string;
   phone?: string;

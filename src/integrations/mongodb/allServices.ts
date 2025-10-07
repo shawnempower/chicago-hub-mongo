@@ -251,9 +251,49 @@ export class UserProfilesService {
 
   async getAllUsers(): Promise<UserProfile[]> {
     try {
-      return await this.collection.find({}).sort({ createdAt: -1 }).toArray();
+      const db = getDatabase();
+      const usersCollection = db.collection(COLLECTIONS.USERS);
+      
+      // Get all registered users from the users collection
+      const allUsers = await usersCollection.find({}).sort({ createdAt: -1 }).toArray();
+      
+      // Get all profiles
+      const allProfiles = await this.collection.find({}).toArray();
+      const profilesMap = new Map(allProfiles.map(profile => [profile.userId, profile]));
+      
+      // Merge user data with profile data, creating virtual profiles for users without profiles
+      const mergedUsers: UserProfile[] = allUsers.map(user => {
+        const existingProfile = profilesMap.get(user._id?.toString());
+        
+        if (existingProfile) {
+          // Return existing profile with updated user info
+          return {
+            ...existingProfile,
+            // Ensure we have the latest user info from auth
+            email: user.email, // Always include email from auth
+            firstName: existingProfile.firstName || user.firstName,
+            lastName: existingProfile.lastName || user.lastName,
+            companyName: existingProfile.companyName || user.companyName,
+          };
+        } else {
+          // Create a virtual profile for users without a profile
+          return {
+            userId: user._id?.toString() || '',
+            email: user.email, // Include email for identification
+            firstName: user.firstName,
+            lastName: user.lastName,
+            companyName: user.companyName,
+            isAdmin: false, // Default to false, can be changed by admin
+            profileCompletionScore: 0,
+            createdAt: user.createdAt || new Date(),
+            updatedAt: user.updatedAt || user.createdAt || new Date(),
+          };
+        }
+      });
+      
+      return mergedUsers;
     } catch (error) {
-      console.error('Error fetching all user profiles:', error);
+      console.error('Error fetching all users with profiles:', error);
       throw error;
     }
   }

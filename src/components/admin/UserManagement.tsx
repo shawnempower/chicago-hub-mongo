@@ -92,12 +92,19 @@ export function UserManagement() {
           <Card key={user._id?.toString() || user.userId}>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">
-                  {user.firstName && user.lastName 
-                    ? `${user.firstName} ${user.lastName}`
-                    : user.companyName || 'Unknown User'
-                  }
-                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg">
+                    {user.firstName && user.lastName 
+                      ? `${user.firstName} ${user.lastName}`
+                      : user.companyName || user.email || 'Unknown User'
+                    }
+                  </CardTitle>
+                  {(user.profileCompletionScore || 0) === 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      No Profile
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   {user.isAdmin && (
                     <Badge variant="destructive">Admin</Badge>
@@ -119,6 +126,9 @@ export function UserManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm text-muted-foreground">
+                {user.email && (
+                  <div><strong>Email:</strong> {user.email}</div>
+                )}
                 <div><strong>User ID:</strong> {user.userId}</div>
                 {user.companyName && (
                   <div><strong>Company:</strong> {user.companyName}</div>
@@ -128,6 +138,9 @@ export function UserManagement() {
                 )}
                 {user.role && (
                   <div><strong>Role:</strong> {user.role}</div>
+                )}
+                {user.profileCompletionScore !== undefined && user.profileCompletionScore > 0 && (
+                  <div><strong>Profile Completion:</strong> {user.profileCompletionScore}%</div>
                 )}
                 <div>
                   <strong>Created:</strong> {' '}
