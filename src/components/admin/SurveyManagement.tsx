@@ -721,7 +721,7 @@ const SurveyManagement: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           {formData && (
-            <Tabs defaultValue="contact" className="mt-2">
+            <Tabs defaultValue="contact" className="mt-2 admin-survey-editor">
               <TabsList className="flex flex-wrap gap-2">
                 <TabsTrigger value="contact">Contact</TabsTrigger>
                 <TabsTrigger value="website">Website</TabsTrigger>
@@ -768,15 +768,35 @@ const SurveyManagement: React.FC = () => {
                   </div>
                   <div>
                     <Label>Largest Digital Ad Size</Label>
-                    <Input value={formData?.websiteAdvertising?.largestDigitalAdSize || ''} onChange={(e) => updateForm('websiteAdvertising.largestDigitalAdSize', e.target.value)} />
+                    <Input value={formData?.websiteAdvertising?.largestDigitalAdSize || ''} onChange={(e) => updateForm('websiteAdvertising.largestDigitalAdSize', e.target.value)} placeholder="e.g., 728x90 pixels" />
+                  </div>
+                  <div>
+                    <Label>Second Largest Digital Ad Size</Label>
+                    <Input value={formData?.websiteAdvertising?.secondLargestDigitalAdSize || ''} onChange={(e) => updateForm('websiteAdvertising.secondLargestDigitalAdSize', e.target.value)} placeholder="e.g., 300x250 pixels" />
+                  </div>
+                  <div>
+                    <Label>Weekly Rate (Largest)</Label>
+                    <Input value={formData?.websiteAdvertising?.largestAdWeeklyRate || ''} onChange={(e) => updateForm('websiteAdvertising.largestAdWeeklyRate', e.target.value)} placeholder="e.g., $500" />
                   </div>
                   <div>
                     <Label>Monthly Rate (Largest)</Label>
-                    <Input value={formData?.websiteAdvertising?.largestAdMonthlyRate || ''} onChange={(e) => updateForm('websiteAdvertising.largestAdMonthlyRate', e.target.value)} />
+                    <Input value={formData?.websiteAdvertising?.largestAdMonthlyRate || ''} onChange={(e) => updateForm('websiteAdvertising.largestAdMonthlyRate', e.target.value)} placeholder="e.g., $1800" />
                   </div>
-                  <div className="md:col-span-3">
+                  <div>
+                    <Label>Weekly Rate (Second Largest)</Label>
+                    <Input value={formData?.websiteAdvertising?.secondLargestAdWeeklyRate || ''} onChange={(e) => updateForm('websiteAdvertising.secondLargestAdWeeklyRate', e.target.value)} placeholder="e.g., $300" />
+                  </div>
+                  <div>
+                    <Label>Monthly Rate (Second Largest)</Label>
+                    <Input value={formData?.websiteAdvertising?.secondLargestAdMonthlyRate || ''} onChange={(e) => updateForm('websiteAdvertising.secondLargestAdMonthlyRate', e.target.value)} placeholder="e.g., $1000" />
+                  </div>
+                  <div>
+                    <Label>Website Takeover Cost</Label>
+                    <Input value={formData?.websiteAdvertising?.websiteTakeoverCost || ''} onChange={(e) => updateForm('websiteAdvertising.websiteTakeoverCost', e.target.value)} placeholder="e.g., $5000 or N/A" />
+                  </div>
+                  <div>
                     <Label>Media Kit Link</Label>
-                    <Input value={formData?.websiteAdvertising?.mediaKitLink || ''} onChange={(e) => updateForm('websiteAdvertising.mediaKitLink', e.target.value)} />
+                    <Input value={formData?.websiteAdvertising?.mediaKitLink || ''} onChange={(e) => updateForm('websiteAdvertising.mediaKitLink', e.target.value)} placeholder="https://..." />
                   </div>
                 </div>
               </TabsContent>
@@ -801,6 +821,50 @@ const SurveyManagement: React.FC = () => {
                     <Label>Frequency</Label>
                     <Input value={formData?.printAdvertising?.printFrequency || ''} onChange={(e) => updateForm('printAdvertising.printFrequency', e.target.value)} />
                   </div>
+                  <div>
+                    <Label>Average Print Run</Label>
+                    <Input value={formData?.printAdvertising?.averagePrintRun || ''} onChange={(e) => updateForm('printAdvertising.averagePrintRun', e.target.value)} placeholder="e.g., 15000" />
+                  </div>
+                  <div>
+                    <Label>Distribution Outlets</Label>
+                    <Input value={formData?.printAdvertising?.distributionOutlets || ''} onChange={(e) => updateForm('printAdvertising.distributionOutlets', e.target.value)} placeholder="e.g., 200" />
+                  </div>
+                  <div>
+                    <Label>Full Page Ad Size</Label>
+                    <Input value={formData?.printAdvertising?.fullPageAdSize || ''} onChange={(e) => updateForm('printAdvertising.fullPageAdSize', e.target.value)} placeholder="e.g., 10 x 13 inches" />
+                  </div>
+                  <div>
+                    <Label>Half Page Ad Size</Label>
+                    <Input value={formData?.printAdvertising?.halfPageAdSize || ''} onChange={(e) => updateForm('printAdvertising.halfPageAdSize', e.target.value)} placeholder="e.g., 10 x 6.5 inches" />
+                  </div>
+                  <div>
+                    <Label>Full Page Rate (1x)</Label>
+                    <Input value={formData?.printAdvertising?.fullPageRate1x || ''} onChange={(e) => updateForm('printAdvertising.fullPageRate1x', e.target.value)} placeholder="e.g., $2000" />
+                  </div>
+                  <div>
+                    <Label>Full Page Rate (6x)</Label>
+                    <Input value={formData?.printAdvertising?.fullPageRate6x || ''} onChange={(e) => updateForm('printAdvertising.fullPageRate6x', e.target.value)} placeholder="e.g., $1800" />
+                  </div>
+                  <div>
+                    <Label>Full Page Rate (12x)</Label>
+                    <Input value={formData?.printAdvertising?.fullPageRate12x || ''} onChange={(e) => updateForm('printAdvertising.fullPageRate12x', e.target.value)} placeholder="e.g., $1600" />
+                  </div>
+                  <div>
+                    <Label>Half Page Rate (1x)</Label>
+                    <Input value={formData?.printAdvertising?.halfPageRate1x || ''} onChange={(e) => updateForm('printAdvertising.halfPageRate1x', e.target.value)} placeholder="e.g., $1200" />
+                  </div>
+                  <div>
+                    <Label>Half Page Rate (6x)</Label>
+                    <Input value={formData?.printAdvertising?.halfPageRate6x || ''} onChange={(e) => updateForm('printAdvertising.halfPageRate6x', e.target.value)} placeholder="e.g., $1100" />
+                  </div>
+                  <div>
+                    <Label>Half Page Rate (12x)</Label>
+                    <Input value={formData?.printAdvertising?.halfPageRate12x || ''} onChange={(e) => updateForm('printAdvertising.halfPageRate12x', e.target.value)} placeholder="e.g., $1000" />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label>Print Rates Comparable</Label>
+                    <Textarea rows={2} value={formData?.printAdvertising?.printRatesComparable || ''} onChange={(e) => updateForm('printAdvertising.printRatesComparable', e.target.value)} placeholder="Are rates comparable across print products?" />
+                  </div>
                 </div>
               </TabsContent>
 
@@ -818,11 +882,43 @@ const SurveyManagement: React.FC = () => {
                   </div>
                   <div>
                     <Label>Subscribers</Label>
-                    <Input value={formData?.newsletterAdvertising?.newsletterSubscribers || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterSubscribers', e.target.value)} />
+                    <Input value={formData?.newsletterAdvertising?.newsletterSubscribers || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterSubscribers', e.target.value)} placeholder="e.g., 12000" />
                   </div>
                   <div>
                     <Label>Frequency</Label>
-                    <Input value={formData?.newsletterAdvertising?.newsletterFrequency || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterFrequency', e.target.value)} />
+                    <Input value={formData?.newsletterAdvertising?.newsletterFrequency || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterFrequency', e.target.value)} placeholder="e.g., daily, weekly" />
+                  </div>
+                  <div>
+                    <Label>Largest Ad Size</Label>
+                    <Input value={formData?.newsletterAdvertising?.newsletterAdSizeLargest || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterAdSizeLargest', e.target.value)} placeholder="e.g., 600x200 pixels" />
+                  </div>
+                  <div>
+                    <Label>Second Ad Size</Label>
+                    <Input value={formData?.newsletterAdvertising?.newsletterAdSizeSecond || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterAdSizeSecond', e.target.value)} placeholder="e.g., 300x150 pixels" />
+                  </div>
+                  <div>
+                    <Label>Largest Ad Rate (1x)</Label>
+                    <Input value={formData?.newsletterAdvertising?.newsletterLargestAdRate1x || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterLargestAdRate1x', e.target.value)} placeholder="e.g., $500" />
+                  </div>
+                  <div>
+                    <Label>Largest Ad Rate (Monthly)</Label>
+                    <Input value={formData?.newsletterAdvertising?.newsletterLargestAdRateMonthly || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterLargestAdRateMonthly', e.target.value)} placeholder="e.g., $2000" />
+                  </div>
+                  <div>
+                    <Label>Second Ad Rate (1x)</Label>
+                    <Input value={formData?.newsletterAdvertising?.newsletterSecondAdRate1x || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterSecondAdRate1x', e.target.value)} placeholder="e.g., $300" />
+                  </div>
+                  <div>
+                    <Label>Second Ad Rate (Monthly)</Label>
+                    <Input value={formData?.newsletterAdvertising?.newsletterSecondAdRateMonthly || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterSecondAdRateMonthly', e.target.value)} placeholder="e.g., $1200" />
+                  </div>
+                  <div>
+                    <Label>Takeover Cost</Label>
+                    <Input value={formData?.newsletterAdvertising?.newsletterTakeoverCost || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterTakeoverCost', e.target.value)} placeholder="e.g., $5000 or N/A" />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label>Newsletter Rates Comparable</Label>
+                    <Textarea rows={2} value={formData?.newsletterAdvertising?.newsletterRatesComparable || ''} onChange={(e) => updateForm('newsletterAdvertising.newsletterRatesComparable', e.target.value)} placeholder="Comparison of newsletter rates with others" />
                   </div>
                 </div>
               </TabsContent>
@@ -850,8 +946,36 @@ const SurveyManagement: React.FC = () => {
                     </Select>
                   </div>
                   <div>
+                    <Label>Radio 30s Ads Cost (10x)</Label>
+                    <Input value={formData?.radioPodcastAdvertising?.radio30SecondAdsCost10x || ''} onChange={(e) => updateForm('radioPodcastAdvertising.radio30SecondAdsCost10x', e.target.value)} placeholder="e.g., $1500" />
+                  </div>
+                  <div>
+                    <Label>Radio 60s Ads Cost (10x)</Label>
+                    <Input value={formData?.radioPodcastAdvertising?.radio60SecondAdsCost10x || ''} onChange={(e) => updateForm('radioPodcastAdvertising.radio60SecondAdsCost10x', e.target.value)} placeholder="e.g., $2500" />
+                  </div>
+                  <div>
+                    <Label>Podcast 30s Ads Cost (10x)</Label>
+                    <Input value={formData?.radioPodcastAdvertising?.podcast30SecondAdsCost10x || ''} onChange={(e) => updateForm('radioPodcastAdvertising.podcast30SecondAdsCost10x', e.target.value)} placeholder="e.g., $800" />
+                  </div>
+                  <div>
                     <Label>Podcast Listeners/Show</Label>
-                    <Input value={formData?.radioPodcastAdvertising?.podcastListenersPerShow || ''} onChange={(e) => updateForm('radioPodcastAdvertising.podcastListenersPerShow', e.target.value)} />
+                    <Input value={formData?.radioPodcastAdvertising?.podcastListenersPerShow || ''} onChange={(e) => updateForm('radioPodcastAdvertising.podcastListenersPerShow', e.target.value)} placeholder="e.g., 5000" />
+                  </div>
+                  <div>
+                    <Label>Podcast Takeover Cost</Label>
+                    <Input value={formData?.radioPodcastAdvertising?.podcastSpecialTakeoversCost || ''} onChange={(e) => updateForm('radioPodcastAdvertising.podcastSpecialTakeoversCost', e.target.value)} placeholder="e.g., $3000" />
+                  </div>
+                  <div>
+                    <Label>Video 30s Ad Cost</Label>
+                    <Input value={formData?.radioPodcastAdvertising?.video30SecondAdCost || ''} onChange={(e) => updateForm('radioPodcastAdvertising.video30SecondAdCost', e.target.value)} placeholder="e.g., $500" />
+                  </div>
+                  <div>
+                    <Label>Video 60s Ad Cost</Label>
+                    <Input value={formData?.radioPodcastAdvertising?.video60SecondAdCost || ''} onChange={(e) => updateForm('radioPodcastAdvertising.video60SecondAdCost', e.target.value)} placeholder="e.g., $800" />
+                  </div>
+                  <div>
+                    <Label>Video Average Views</Label>
+                    <Input value={formData?.radioPodcastAdvertising?.videoAverageViews || ''} onChange={(e) => updateForm('radioPodcastAdvertising.videoAverageViews', e.target.value)} placeholder="e.g., 10000" />
                   </div>
                 </div>
               </TabsContent>
@@ -860,19 +984,31 @@ const SurveyManagement: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <Label>Facebook Followers</Label>
-                    <Input value={formData?.socialMedia?.facebookFollowers || ''} onChange={(e) => updateForm('socialMedia.facebookFollowers', e.target.value)} />
+                    <Input value={formData?.socialMedia?.facebookFollowers || ''} onChange={(e) => updateForm('socialMedia.facebookFollowers', e.target.value)} placeholder="e.g., 25000" />
                   </div>
                   <div>
                     <Label>Instagram Followers</Label>
-                    <Input value={formData?.socialMedia?.instagramFollowers || ''} onChange={(e) => updateForm('socialMedia.instagramFollowers', e.target.value)} />
+                    <Input value={formData?.socialMedia?.instagramFollowers || ''} onChange={(e) => updateForm('socialMedia.instagramFollowers', e.target.value)} placeholder="e.g., 15000" />
+                  </div>
+                  <div>
+                    <Label>Twitter/X Followers</Label>
+                    <Input value={formData?.socialMedia?.twitterFollowers || ''} onChange={(e) => updateForm('socialMedia.twitterFollowers', e.target.value)} placeholder="e.g., 8000" />
+                  </div>
+                  <div>
+                    <Label>TikTok Followers</Label>
+                    <Input value={formData?.socialMedia?.tiktokFollowers || ''} onChange={(e) => updateForm('socialMedia.tiktokFollowers', e.target.value)} placeholder="e.g., 12000" />
                   </div>
                   <div>
                     <Label>LinkedIn Followers</Label>
-                    <Input value={formData?.socialMedia?.linkedinFollowers || ''} onChange={(e) => updateForm('socialMedia.linkedinFollowers', e.target.value)} />
+                    <Input value={formData?.socialMedia?.linkedinFollowers || ''} onChange={(e) => updateForm('socialMedia.linkedinFollowers', e.target.value)} placeholder="e.g., 3000" />
+                  </div>
+                  <div>
+                    <Label>Other Social Platforms</Label>
+                    <Textarea rows={2} value={formData?.socialMedia?.otherSocialFollowers || ''} onChange={(e) => updateForm('socialMedia.otherSocialFollowers', e.target.value)} placeholder="List other platforms and follower counts" />
                   </div>
                   <div className="md:col-span-3">
-                    <Label>Advertising Options</Label>
-                    <Textarea rows={3} value={formData?.socialMedia?.socialMediaAdvertisingOptions || ''} onChange={(e) => updateForm('socialMedia.socialMediaAdvertisingOptions', e.target.value)} />
+                    <Label>Social Media Advertising Options</Label>
+                    <Textarea rows={3} value={formData?.socialMedia?.socialMediaAdvertisingOptions || ''} onChange={(e) => updateForm('socialMedia.socialMediaAdvertisingOptions', e.target.value)} placeholder="Describe social media advertising services you offer" />
                   </div>
                 </div>
               </TabsContent>
@@ -891,11 +1027,23 @@ const SurveyManagement: React.FC = () => {
                   </div>
                   <div>
                     <Label>Annual Event Count</Label>
-                    <Input value={formData?.eventMarketing?.annualEventCount || ''} onChange={(e) => updateForm('eventMarketing.annualEventCount', e.target.value)} />
+                    <Input value={formData?.eventMarketing?.annualEventCount || ''} onChange={(e) => updateForm('eventMarketing.annualEventCount', e.target.value)} placeholder="e.g., 12" />
                   </div>
                   <div>
                     <Label>Attendance Range</Label>
-                    <Input value={formData?.eventMarketing?.eventAttendanceRange || ''} onChange={(e) => updateForm('eventMarketing.eventAttendanceRange', e.target.value)} />
+                    <Input value={formData?.eventMarketing?.eventAttendanceRange || ''} onChange={(e) => updateForm('eventMarketing.eventAttendanceRange', e.target.value)} placeholder="e.g., 50-200" />
+                  </div>
+                  <div>
+                    <Label>Largest Sponsorship Level</Label>
+                    <Input value={formData?.eventMarketing?.largestSponsorshipLevel || ''} onChange={(e) => updateForm('eventMarketing.largestSponsorshipLevel', e.target.value)} placeholder="e.g., $5000" />
+                  </div>
+                  <div>
+                    <Label>Smallest Sponsorship Level</Label>
+                    <Input value={formData?.eventMarketing?.smallestSponsorshipLevel || ''} onChange={(e) => updateForm('eventMarketing.smallestSponsorshipLevel', e.target.value)} placeholder="e.g., $500" />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label>Event Sponsorship Details</Label>
+                    <Textarea rows={3} value={formData?.eventMarketing?.eventSponsorshipDetails || ''} onChange={(e) => updateForm('eventMarketing.eventSponsorshipDetails', e.target.value)} placeholder="Describe sponsorship opportunities and benefits" />
                   </div>
                 </div>
               </TabsContent>
@@ -914,11 +1062,19 @@ const SurveyManagement: React.FC = () => {
                   </div>
                   <div>
                     <Label>Print Branded Content Cost</Label>
-                    <Input value={formData?.brandedContent?.printBrandedContentCost || ''} onChange={(e) => updateForm('brandedContent.printBrandedContentCost', e.target.value)} />
+                    <Input value={formData?.brandedContent?.printBrandedContentCost || ''} onChange={(e) => updateForm('brandedContent.printBrandedContentCost', e.target.value)} placeholder="e.g., $2500 or N/A" />
                   </div>
                   <div>
                     <Label>Website Branded Content (3 mo)</Label>
-                    <Input value={formData?.brandedContent?.websiteBrandedContentCost3Month || ''} onChange={(e) => updateForm('brandedContent.websiteBrandedContentCost3Month', e.target.value)} />
+                    <Input value={formData?.brandedContent?.websiteBrandedContentCost3Month || ''} onChange={(e) => updateForm('brandedContent.websiteBrandedContentCost3Month', e.target.value)} placeholder="e.g., $3000" />
+                  </div>
+                  <div>
+                    <Label>Short Form Content Cost</Label>
+                    <Input value={formData?.brandedContent?.shortFormContentCost || ''} onChange={(e) => updateForm('brandedContent.shortFormContentCost', e.target.value)} placeholder="e.g., $1500" />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label>Branded Content Additional Info</Label>
+                    <Textarea rows={3} value={formData?.brandedContent?.brandedContentAdditionalInfo || ''} onChange={(e) => updateForm('brandedContent.brandedContentAdditionalInfo', e.target.value)} placeholder="Additional information about branded content services" />
                   </div>
                 </div>
               </TabsContent>
@@ -945,9 +1101,23 @@ const SurveyManagement: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="md:col-span-2">
+                  <div>
+                    <Label>Produces Other Videos</Label>
+                    <Select value={String(!!formData?.additionalServices?.producesOtherVideos)} onValueChange={(v) => updateForm('additionalServices.producesOtherVideos', v === 'true')}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">Yes</SelectItem>
+                        <SelectItem value="false">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label>Video Production Details</Label>
-                    <Textarea rows={3} value={formData?.additionalServices?.videoProductionDetails || ''} onChange={(e) => updateForm('additionalServices.videoProductionDetails', e.target.value)} />
+                    <Textarea rows={2} value={formData?.additionalServices?.videoProductionDetails || ''} onChange={(e) => updateForm('additionalServices.videoProductionDetails', e.target.value)} placeholder="Describe video production capabilities" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Custom Data / Other Services</Label>
+                    <Textarea rows={3} value={formData?.additionalServices?.customData || ''} onChange={(e) => updateForm('additionalServices.customData', e.target.value)} placeholder="Any other services or information you'd like to share" />
                   </div>
                 </div>
               </TabsContent>

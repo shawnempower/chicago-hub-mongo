@@ -34,6 +34,7 @@
 
     --muted: 0 0% 98%;
     --muted-foreground: 215 16% 47%;
+    --placeholder: 215 16% 70%;
 
     --accent: 24 86% 52%;
     --accent-foreground: 0 0% 100%;
@@ -138,6 +139,12 @@
 
   .typing-dot:nth-child(1) { animation-delay: -0.32s; }
   .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+  /* Admin Survey Editor - Lighter placeholders */
+  .admin-survey-editor input::placeholder,
+  .admin-survey-editor textarea::placeholder {
+    color: hsl(var(--placeholder));
+  }
 }
 
 @keyframes fade-in {
