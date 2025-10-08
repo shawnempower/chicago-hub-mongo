@@ -5,19 +5,26 @@ import { AssistantModal } from "@/components/AssistantModal";
 import SurveyForm from "@/components/SurveyForm";
 
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
-import { ProfileManager } from "@/components/dashboard/ProfileManager";
-import { SavedItemsOverview } from "@/components/dashboard/SavedItemsOverview";
-import { ConversationHistory } from "@/components/dashboard/ConversationHistory";
+import { PublicationProfile } from "@/components/dashboard/PublicationProfile";
+import { PublicationInventory } from "@/components/dashboard/PublicationInventory";
+import { PublicationKnowledgeBase } from "@/components/dashboard/PublicationKnowledgeBase";
+import { PublicationSettings } from "@/components/dashboard/PublicationSettings";
+import { PublicationStorefront } from "@/components/dashboard/PublicationStorefront";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/CustomAuthContext";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams, useNavigate } from "react-router-dom";
+import { PublicationProvider, usePublication } from "@/contexts/PublicationContext";
+import { PublicationSelector } from "@/components/PublicationSelector";
 
-export default function Dashboard() {
+// Internal Dashboard Component (wrapped by PublicationProvider)
+function DashboardContent() {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isSurveyOpen, setIsSurveyOpen] = useState(false);
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { selectedPublication, loading: publicationLoading } = usePublication();
   const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get('tab') || 'overview';
+  const navigate = useNavigate();
+  const currentTab = searchParams.get('tab') || 'dashboard';
 
   useEffect(() => {
     // Listen for custom events to open assistant
@@ -34,7 +41,11 @@ export default function Dashboard() {
     setIsAssistantOpen(false);
   };
 
-  if (loading) {
+  const handleTabChange = (value: string) => {
+    navigate(`/dashboard?tab=${value}`);
+  };
+
+  if (authLoading || publicationLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -54,34 +65,58 @@ export default function Dashboard() {
       <Header onAssistantClick={handleAssistantClick} onSurveyClick={() => setIsSurveyOpen(true)} />
       
       <main className="container mx-auto px-6 py-8">
-        <Tabs defaultValue={defaultTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="saved">Saved Items</TabsTrigger>
-            <TabsTrigger value="conversations">Conversations</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-          </TabsList>
+        {/* Publication Selector */}
+        <div className="mb-8 p-4 bg-card border border-border rounded-lg">
+          <PublicationSelector />
+        </div>
 
-          <TabsContent value="overview" className="space-y-6">
-            <DashboardOverview />
-          </TabsContent>
+        {/* Publication-Specific Dashboard */}
+        {selectedPublication ? (
+          <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="inventory">Inventory</TabsTrigger>
+              <TabsTrigger value="knowledgebase">Knowledgebase</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="storefront">Storefront</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="saved" className="space-y-6">
-            <SavedItemsOverview />
-          </TabsContent>
+            <TabsContent value="dashboard" className="space-y-6">
+              <DashboardOverview />
+            </TabsContent>
 
-          <TabsContent value="conversations" className="space-y-6">
-            <ConversationHistory />
-          </TabsContent>
+            <TabsContent value="profile" className="space-y-6">
+              <PublicationProfile />
+            </TabsContent>
 
-          <TabsContent value="profile" className="space-y-6">
-            <ProfileManager />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="inventory" className="space-y-6">
+              <PublicationInventory />
+            </TabsContent>
+
+            <TabsContent value="knowledgebase" className="space-y-6">
+              <PublicationKnowledgeBase />
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-6">
+              <PublicationSettings />
+            </TabsContent>
+
+            <TabsContent value="storefront" className="space-y-6">
+              <PublicationStorefront />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-semibold mb-4">Select a Publication</h2>
+            <p className="text-muted-foreground">
+              Choose a publication from the dropdown above to view its dashboard and manage its content.
+            </p>
+          </div>
+        )}
       </main>
 
       <Footer />
-
 
       <AssistantModal 
         isOpen={isAssistantOpen}
@@ -90,5 +125,14 @@ export default function Dashboard() {
       
       <SurveyForm open={isSurveyOpen} onOpenChange={setIsSurveyOpen} />
     </div>
+  );
+}
+
+// Main Dashboard Component with PublicationProvider
+export default function Dashboard() {
+  return (
+    <PublicationProvider>
+      <DashboardContent />
+    </PublicationProvider>
   );
 }

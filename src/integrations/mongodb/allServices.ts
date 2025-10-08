@@ -22,6 +22,9 @@ import {
   PublicationFile,
   PublicationFileInsert,
   PublicationFileUpdate,
+  StorefrontConfiguration,
+  StorefrontConfigurationInsert,
+  StorefrontConfigurationUpdate,
   SurveySubmission,
   SurveySubmissionInsert,
   SurveySubmissionUpdate,
@@ -1504,6 +1507,198 @@ export class SurveySubmissionsService {
 }
 
 
+// ===== STOREFRONT CONFIGURATIONS SERVICE =====
+export class StorefrontConfigurationsService {
+  private get collection() {
+    return getDatabase().collection<StorefrontConfiguration>(COLLECTIONS.STOREFRONT_CONFIGURATIONS);
+  }
+
+  async getAll(filters?: {
+    is_draft?: boolean;
+    publisher_id?: string;
+    isActive?: boolean;
+    publicationId?: string;
+  }): Promise<StorefrontConfiguration[]> {
+    try {
+      const query: any = {};
+      
+      if (filters?.is_draft !== undefined) {
+        query['meta.is_draft'] = filters.is_draft;
+      }
+      
+      if (filters?.publisher_id) {
+        query['meta.publisher_id'] = filters.publisher_id;
+      }
+      
+      if (filters?.isActive !== undefined) {
+        query.isActive = filters.isActive;
+      }
+      
+      if (filters?.publicationId) {
+        query.publicationId = filters.publicationId;
+      }
+
+      return await this.collection
+        .find(query)
+        .sort({ updatedAt: -1 })
+        .toArray();
+    } catch (error) {
+      console.error('Error fetching storefront configurations:', error);
+      throw error;
+    }
+  }
+
+  async getByPublicationId(publicationId: string): Promise<StorefrontConfiguration | null> {
+    try {
+      return await this.collection.findOne({ publicationId });
+    } catch (error) {
+      console.error('Error fetching storefront configuration:', error);
+      throw error;
+    }
+  }
+
+  async getById(id: string): Promise<StorefrontConfiguration | null> {
+    try {
+      return await this.collection.findOne({ _id: new ObjectId(id) });
+    } catch (error) {
+      console.error('Error fetching storefront configuration by ID:', error);
+      throw error;
+    }
+  }
+
+  async create(configData: StorefrontConfigurationInsert): Promise<StorefrontConfiguration> {
+    try {
+      // Check if configuration already exists for this publication
+      const existingConfig = await this.collection.findOne({ publicationId: configData.publicationId });
+      if (existingConfig) {
+        throw new Error(`Storefront configuration already exists for publication ${configData.publicationId}`);
+      }
+
+      const now = new Date();
+      const configWithTimestamps: StorefrontConfiguration = {
+        ...configData,
+        isActive: configData.isActive ?? true,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const result = await this.collection.insertOne(configWithTimestamps);
+      
+      if (!result.acknowledged) {
+        throw new Error('Failed to create storefront configuration');
+      }
+
+      const createdConfig = await this.collection.findOne({ _id: result.insertedId });
+      if (!createdConfig) {
+        throw new Error('Failed to retrieve created storefront configuration');
+      }
+
+      return createdConfig;
+    } catch (error) {
+      console.error('Error creating storefront configuration:', error);
+      throw error;
+    }
+  }
+
+  async update(publicationId: string, updates: Partial<StorefrontConfigurationInsert>): Promise<StorefrontConfiguration | null> {
+    try {
+      const updateData: StorefrontConfigurationUpdate = {
+        ...updates,
+        updatedAt: new Date(),
+      };
+
+      // Update meta.lastUpdated if meta is being updated
+      if (updates.meta) {
+        updateData.meta = {
+          ...updates.meta,
+          lastUpdated: new Date().toISOString(),
+        };
+      }
+
+      const result = await this.collection.findOneAndUpdate(
+        { publicationId },
+        { $set: updateData },
+        { returnDocument: 'after' }
+      );
+
+      return result.value;
+    } catch (error) {
+      console.error('Error updating storefront configuration:', error);
+      throw error;
+    }
+  }
+
+  async delete(publicationId: string): Promise<boolean> {
+    try {
+      const result = await this.collection.deleteOne({ publicationId });
+      return result.deletedCount > 0;
+    } catch (error) {
+      console.error('Error deleting storefront configuration:', error);
+      throw error;
+    }
+  }
+
+  async publish(publicationId: string): Promise<StorefrontConfiguration | null> {
+    try {
+      const result = await this.collection.findOneAndUpdate(
+        { publicationId },
+        { 
+          $set: { 
+            'meta.is_draft': false,
+            'meta.lastUpdated': new Date().toISOString(),
+            updatedAt: new Date()
+          } 
+        },
+        { returnDocument: 'after' }
+      );
+
+      return result.value;
+    } catch (error) {
+      console.error('Error publishing storefront configuration:', error);
+      throw error;
+    }
+  }
+
+  async duplicate(sourcePublicationId: string, targetPublicationId: string, targetPublisherId: string): Promise<StorefrontConfiguration> {
+    try {
+      // Get the source configuration
+      const sourceConfig = await this.collection.findOne({ publicationId: sourcePublicationId });
+      if (!sourceConfig) {
+        throw new Error(`Source storefront configuration not found for publication ${sourcePublicationId}`);
+      }
+
+      // Check if target already has a configuration
+      const existingTarget = await this.collection.findOne({ publicationId: targetPublicationId });
+      if (existingTarget) {
+        throw new Error(`Storefront configuration already exists for target publication ${targetPublicationId}`);
+      }
+
+      // Create the duplicate configuration
+      const duplicateConfig: StorefrontConfigurationInsert = {
+        ...sourceConfig,
+        publicationId: targetPublicationId,
+        meta: {
+          ...sourceConfig.meta,
+          publisher_id: targetPublisherId,
+          description: `Duplicated from ${sourceConfig.meta.publisher_id} - ${sourceConfig.meta.description}`,
+          lastUpdated: new Date().toISOString(),
+          is_draft: true, // Always create duplicates as drafts
+        }
+      };
+
+      // Remove MongoDB-specific fields
+      delete (duplicateConfig as any)._id;
+      delete (duplicateConfig as any).createdAt;
+      delete (duplicateConfig as any).updatedAt;
+
+      return await this.create(duplicateConfig);
+    } catch (error) {
+      console.error('Error duplicating storefront configuration:', error);
+      throw error;
+    }
+  }
+}
+
 // Export service instances
 export const adPackagesService = new AdPackagesService();
 export const leadInquiriesService = new LeadInquiriesService();
@@ -1518,4 +1713,5 @@ export const assistantInstructionsService = new AssistantInstructionsService();
 export const mediaEntitiesService = new MediaEntitiesService();
 export const publicationsService = new PublicationsService();
 export const publicationFilesService = new PublicationFilesService();
+export const storefrontConfigurationsService = new StorefrontConfigurationsService();
 export const surveySubmissionsService = new SurveySubmissionsService();

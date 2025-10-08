@@ -17,6 +17,7 @@ export const initializeDatabase = async () => {
           // Check if it's a unique index (for publicationId and compound unique indexes)
           const isUnique = 
             (collectionName === 'publications' && 'publicationId' in indexSpec) ||
+            (collectionName === 'storefront_configurations' && 'publicationId' in indexSpec) ||
             (collectionName === 'user_profiles' && 'userId' in indexSpec) ||
             (collectionName === 'saved_outlets' && 'userId' in indexSpec && 'outletId' in indexSpec) ||
             (collectionName === 'saved_packages' && 'userId' in indexSpec && 'packageId' in indexSpec);

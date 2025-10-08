@@ -116,6 +116,7 @@ export interface Newsletter {
 
 // Print Distribution Channel
 export interface PrintChannel {
+  name?: string;
   frequency?: PrintFrequency;
   circulation?: number;
   paidCirculation?: number;
@@ -162,7 +163,7 @@ export interface Event {
 export interface DistributionChannels {
   website?: WebsiteChannel;
   newsletters?: Newsletter[];
-  print?: PrintChannel;
+  print?: PrintChannel[];
   events?: Event[];
 }
 

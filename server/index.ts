@@ -11,7 +11,7 @@ import { authService } from '../src/integrations/mongodb/authService';
 import { connectToDatabase } from '../src/integrations/mongodb/client';
 import { emailService } from './emailService';
 import { s3Service } from './s3Service';
-import { brandDocumentsService, adPackagesService, userProfilesService, leadInquiriesService, publicationsService, publicationFilesService, assistantInstructionsService, surveySubmissionsService } from '../src/integrations/mongodb/allServices';
+import { brandDocumentsService, adPackagesService, userProfilesService, leadInquiriesService, publicationsService, publicationFilesService, storefrontConfigurationsService, assistantInstructionsService, surveySubmissionsService } from '../src/integrations/mongodb/allServices';
 import { getDatabase } from '../src/integrations/mongodb/client';
 import { ObjectId } from 'mongodb';
 import multer from 'multer';
@@ -810,6 +810,256 @@ app.get('/api/publications/files/search', authenticateToken, async (req: any, re
   } catch (error) {
     console.error('Error searching publication files:', error);
     res.status(500).json({ error: 'Failed to search files' });
+  }
+});
+
+// ===== STOREFRONT CONFIGURATION ROUTES =====
+
+// Get storefront configuration by publication ID
+app.get('/api/storefront/:publicationId', async (req, res) => {
+  try {
+    const { publicationId } = req.params;
+    const config = await storefrontConfigurationsService.getByPublicationId(publicationId);
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Storefront configuration not found' });
+    }
+    
+    res.json(config);
+  } catch (error) {
+    console.error('Error fetching storefront configuration:', error);
+    res.status(500).json({ error: 'Failed to fetch storefront configuration' });
+  }
+});
+
+// Get all storefront configurations with optional filtering (admin only)
+app.get('/api/storefront', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { is_draft, publisher_id, isActive } = req.query;
+    const filters: any = {};
+    
+    if (is_draft !== undefined) filters.is_draft = is_draft === 'true';
+    if (publisher_id) filters.publisher_id = publisher_id;
+    if (isActive !== undefined) filters.isActive = isActive === 'true';
+
+    const configs = await storefrontConfigurationsService.getAll(filters);
+    res.json(configs);
+  } catch (error) {
+    console.error('Error fetching storefront configurations:', error);
+    res.status(500).json({ error: 'Failed to fetch storefront configurations' });
+  }
+});
+
+// Create a new storefront configuration (admin only)
+app.post('/api/storefront', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const config = await storefrontConfigurationsService.create(req.body);
+    res.status(201).json(config);
+  } catch (error) {
+    console.error('Error creating storefront configuration:', error);
+    if (error instanceof Error && error.message.includes('already exists')) {
+      return res.status(409).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to create storefront configuration' });
+  }
+});
+
+// Update storefront configuration (admin only)
+app.put('/api/storefront/:publicationId', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { publicationId } = req.params;
+    const config = await storefrontConfigurationsService.update(publicationId, req.body);
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Storefront configuration not found' });
+    }
+    
+    res.json(config);
+  } catch (error) {
+    console.error('Error updating storefront configuration:', error);
+    res.status(500).json({ error: 'Failed to update storefront configuration' });
+  }
+});
+
+// Delete storefront configuration (admin only)
+app.delete('/api/storefront/:publicationId', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { publicationId } = req.params;
+    const success = await storefrontConfigurationsService.delete(publicationId);
+    
+    if (!success) {
+      return res.status(404).json({ error: 'Storefront configuration not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting storefront configuration:', error);
+    res.status(500).json({ error: 'Failed to delete storefront configuration' });
+  }
+});
+
+// Publish storefront configuration (admin only)
+app.post('/api/storefront/:publicationId/publish', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { publicationId } = req.params;
+    const config = await storefrontConfigurationsService.publish(publicationId);
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Storefront configuration not found' });
+    }
+    
+    res.json(config);
+  } catch (error) {
+    console.error('Error publishing storefront configuration:', error);
+    res.status(500).json({ error: 'Failed to publish storefront configuration' });
+  }
+});
+
+// Duplicate storefront configuration (admin only)
+app.post('/api/storefront/:sourcePublicationId/duplicate', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { sourcePublicationId } = req.params;
+    const { targetPublicationId, targetPublisherId } = req.body;
+
+    if (!targetPublicationId || !targetPublisherId) {
+      return res.status(400).json({ error: 'Target publication ID and publisher ID are required' });
+    }
+
+    const config = await storefrontConfigurationsService.duplicate(
+      sourcePublicationId, 
+      targetPublicationId, 
+      targetPublisherId
+    );
+    
+    res.status(201).json(config);
+  } catch (error) {
+    console.error('Error duplicating storefront configuration:', error);
+    if (error instanceof Error && error.message.includes('already exists')) {
+      return res.status(409).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to duplicate storefront configuration' });
+  }
+});
+
+// Preview storefront configuration (public for now, could be restricted later)
+app.get('/api/storefront/:publicationId/preview', async (req, res) => {
+  try {
+    const { publicationId } = req.params;
+    const config = await storefrontConfigurationsService.getByPublicationId(publicationId);
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Storefront configuration not found' });
+    }
+    
+    // For now, just return the config as JSON
+    // In a real implementation, this might generate HTML or other preview formats
+    res.json({
+      config,
+      html: '<!-- Preview HTML would be generated here -->',
+      previewUrl: `${process.env.FRONTEND_URL || 'http://localhost:8080'}/preview/${publicationId}`
+    });
+  } catch (error) {
+    console.error('Error generating storefront preview:', error);
+    res.status(500).json({ error: 'Failed to generate storefront preview' });
+  }
+});
+
+// Validate storefront configuration
+app.post('/api/storefront/validate', async (req, res) => {
+  try {
+    const config = req.body;
+    const errors: string[] = [];
+    
+    // Basic validation
+    if (!config.meta?.publisher_id) {
+      errors.push('Publisher ID is required');
+    }
+    
+    if (!config.theme?.colors?.lightPrimary) {
+      errors.push('Primary color is required');
+    }
+    
+    if (!config.components?.navbar?.content?.logoUrl) {
+      errors.push('Navbar logo URL is required');
+    }
+    
+    if (!config.components?.hero?.content?.title) {
+      errors.push('Hero title is required');
+    }
+    
+    res.json({
+      isValid: errors.length === 0,
+      errors
+    });
+  } catch (error) {
+    console.error('Error validating storefront configuration:', error);
+    res.status(500).json({ error: 'Failed to validate storefront configuration' });
+  }
+});
+
+// Get storefront templates
+app.get('/api/storefront/templates', async (req, res) => {
+  try {
+    // For now, return a basic template
+    // In a real implementation, these would be stored in the database
+    const templates = [
+      {
+        id: 'default',
+        name: 'Default Template',
+        description: 'A clean, professional template suitable for most publications',
+        config: {
+          meta: {
+            configVersion: "1.0.0",
+            description: "Default storefront template",
+            lastUpdated: new Date().toISOString(),
+            publisher_id: "template_default",
+            is_draft: true
+          },
+          // ... rest of default config would be here
+        }
+      }
+    ];
+    
+    res.json(templates);
+  } catch (error) {
+    console.error('Error fetching storefront templates:', error);
+    res.status(500).json({ error: 'Failed to fetch storefront templates' });
   }
 });
 

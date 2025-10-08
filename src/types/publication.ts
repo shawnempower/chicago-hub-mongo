@@ -118,7 +118,8 @@ export interface PublicationFrontend {
       }>;
     }>;
     
-    print?: {
+    print?: Array<{
+      name?: string;
       frequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly';
       circulation?: number;
       paidCirculation?: number;
@@ -144,7 +145,7 @@ export interface PublicationFrontend {
           bleed?: boolean;
         };
       }>;
-    };
+    }>;
     
     events?: Array<{
       name?: string;

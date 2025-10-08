@@ -361,7 +361,8 @@ export interface Publication {
       }>;
     }>;
     
-    print?: {
+    print?: Array<{
+      name?: string;
       frequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly';
       circulation?: number;
       paidCirculation?: number;
@@ -387,7 +388,7 @@ export interface Publication {
           bleed?: boolean;
         };
       }>;
-    };
+    }>;
     
     events?: Array<{
       name?: string;
@@ -651,6 +652,69 @@ export interface PublicationFileUpdate extends Partial<Omit<PublicationFile, '_i
   updatedAt: Date;
 }
 
+// ===== STOREFRONT CONFIGURATIONS SCHEMA =====
+export interface StorefrontConfiguration {
+  _id?: string | ObjectId;
+  publicationId: string; // Reference to publication
+  meta: {
+    configVersion: string;
+    description: string;
+    lastUpdated: string;
+    publisher_id: string;
+    is_draft: boolean;
+  };
+  theme: {
+    colors: {
+      lightPrimary: string;
+      darkPrimary: string;
+      gradStart: string;
+      gradEnd: string;
+      angle: number;
+      mode: 'light' | 'dark';
+      ctaTextColor: string;
+    };
+    typography: {
+      primaryFont: string;
+      fontWeights: string;
+    };
+    layout: {
+      radius: number;
+      iconWeight: 'light' | 'regular' | 'bold';
+    };
+    sectionSettings: {
+      [key: string]: {
+        mode: 'light' | 'dark';
+        accentOverride: string | null;
+      };
+    };
+  };
+  components: Record<string, {
+    enabled: boolean;
+    order: number;
+    content: Record<string, any>;
+  }>;
+  seoMetadata: {
+    title: string;
+    description: string;
+    keywords: string[];
+    ogImage: string;
+    ogTitle: string;
+    ogDescription: string;
+  };
+  analytics: {
+    googleAnalyticsId: string;
+    facebookPixelId: string;
+  };
+  isActive?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface StorefrontConfigurationInsert extends Omit<StorefrontConfiguration, '_id' | 'createdAt' | 'updatedAt'> {}
+export interface StorefrontConfigurationUpdate extends Partial<StorefrontConfigurationInsert> {
+  updatedAt: Date;
+}
+
 // ===== SURVEY SUBMISSIONS SCHEMA =====
 export interface SurveySubmission {
   _id?: string | ObjectId;
@@ -807,6 +871,7 @@ export const COLLECTIONS = {
   USER_SESSIONS: 'user_sessions',
   PUBLICATIONS: 'publications',
   PUBLICATION_FILES: 'publication_files',
+  STOREFRONT_CONFIGURATIONS: 'storefront_configurations',
   SURVEY_SUBMISSIONS: 'survey_submissions',
   AD_PACKAGES: 'ad_packages',
   ADVERTISING_INVENTORY: 'advertising_inventory',
@@ -845,6 +910,14 @@ export const INDEXES = {
     { 'distributionChannels.print.circulation': -1 },
     { 'metadata.lastUpdated': -1 },
     { 'metadata.verificationStatus': 1 }
+  ],
+  storefront_configurations: [
+    { publicationId: 1 }, // unique per publication
+    { 'meta.publisher_id': 1 },
+    { 'meta.is_draft': 1 },
+    { isActive: 1 },
+    { updatedAt: -1 },
+    { createdAt: -1 }
   ],
   ad_packages: [
     { legacyId: 1 },
