@@ -1,12 +1,12 @@
-# Amplify Deployment Guide for Chicago Hub
+# 🚀 AWS Amplify Deployment Guide - Chicago Hub
+
+## Current Status
+- ✅ **Already Deployed**: https://main.dbn59dj42j2z3.amplifyapp.com
+- ✅ **Auto-Deploy**: Connected to GitHub main branch
+- ✅ **API Integration**: Connected to https://hubapi.empowerlocal.co
 
 ## Overview
-This guide explains how to deploy the Chicago Hub frontend to AWS Amplify with the production API configuration.
-
-## Prerequisites
-- ✅ API is deployed and working on ECS
-- ✅ Custom domain is configured: `https://hubapi.empowerlocal.co`
-- ✅ Frontend code is updated to use environment-based API configuration
+This guide covers the AWS Amplify deployment setup for the Chicago Hub frontend, including automatic GitHub integration and environment configuration.
 
 ## Configuration Changes Made
 
@@ -28,21 +28,21 @@ This guide explains how to deploy the Chicago Hub frontend to AWS Amplify with t
 - Added environment variable: `VITE_API_BASE_URL`
 - Points to custom domain: `https://hubapi.empowerlocal.co`
 
-## Deployment Steps
+## 🔄 Automatic Deployment
 
-### Option 1: Deploy via Amplify Console
-1. Go to AWS Amplify Console
-2. Select your Chicago Hub app
-3. Go to "Environment variables" in the left sidebar
-4. Add the following environment variable:
-   - **Key**: `VITE_API_BASE_URL`
-   - **Value**: `https://hubapi.empowerlocal.co`
-5. Save and trigger a new deployment
+The Chicago Hub is configured for **automatic deployment**:
 
-### Option 2: Deploy via Git Push
-1. Commit all changes to your repository
-2. Push to the main branch
-3. Amplify will automatically detect changes and deploy
+1. **Push to GitHub**: Any commit to the `main` branch triggers a deployment
+2. **Build Process**: Amplify uses the `amplify.yml` configuration
+3. **Environment Variables**: Automatically injected during build
+4. **Deploy Time**: Typically 3-5 minutes
+
+### Manual Deployment (if needed)
+If you need to manually trigger a deployment:
+
+1. Go to [AWS Amplify Console](https://console.aws.amazon.com/amplify/)
+2. Select the Chicago Hub app
+3. Click "Redeploy this version" or trigger new build
 
 ## Verification
 

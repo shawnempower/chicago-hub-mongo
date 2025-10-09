@@ -1,73 +1,155 @@
-# Welcome to your Lovable project
+# Chicago Hub - Media Partnership Platform
 
-## Project info
+A comprehensive platform connecting advertisers with Chicago-area media outlets, featuring publication management, package recommendations, and streamlined partnership workflows.
 
-**URL**: https://lovable.dev/projects/1e8867bc-a125-450a-87dc-7f66bc7cee16
+## 🌟 Features
 
-## How can I edit this code?
+- **Publication Management**: Comprehensive database of Chicago media outlets
+- **Package Recommendations**: AI-powered advertising package suggestions
+- **User Dashboard**: Save publications, manage preferences, track interactions
+- **Admin Interface**: Full CRUD operations for publications and packages
+- **Document Management**: File upload and organization system
+- **Survey Integration**: Lead capture and audience insights
 
-There are several ways of editing your application.
+## 🚀 Live Application
 
-**Use Lovable**
+- **Frontend**: https://main.dbn59dj42j2z3.amplifyapp.com
+- **API**: https://hubapi.empowerlocal.co
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/1e8867bc-a125-450a-87dc-7f66bc7cee16) and start prompting.
+## 🛠 Technology Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for build tooling
+- **Tailwind CSS** for styling
+- **shadcn/ui** for components
+- **React Query** for state management
+- **React Hook Form** for form handling
 
-**Use your preferred IDE**
+### Backend
+- **Node.js** with Express
+- **MongoDB** with Mongoose
+- **JWT** authentication
+- **AWS S3** for file storage
+- **Mailgun** for email services
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Infrastructure
+- **AWS Amplify** for frontend hosting
+- **AWS ECS Fargate** for backend container orchestration
+- **AWS Application Load Balancer** for API routing
+- **MongoDB Atlas** for database hosting
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🏃‍♂️ Quick Start
 
-Follow these steps:
+### Prerequisites
+- Node.js 18+ and npm
+- MongoDB connection string
+- AWS credentials (for file uploads)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Local Development
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```bash
+# Clone the repository
+git clone https://github.com/your-org/chicago-hub.git
+cd chicago-hub
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Set up environment variables
+cp env.template .env
+# Edit .env with your actual values
+
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will be available at `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Backend Setup
 
-**Use GitHub Codespaces**
+```bash
+# Start the backend server
+cd server
+npm install
+npm run dev
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The API will be available at `http://localhost:3001`
 
-## What technologies are used for this project?
+## 📁 Project Structure
 
-This project is built with:
+```
+├── src/
+│   ├── api/           # API service functions
+│   ├── components/    # React components
+│   │   ├── admin/     # Admin interface components
+│   │   ├── dashboard/ # User dashboard components
+│   │   └── ui/        # Reusable UI components
+│   ├── contexts/      # React contexts
+│   ├── hooks/         # Custom React hooks
+│   ├── integrations/  # External service integrations
+│   ├── pages/         # Page components
+│   └── types/         # TypeScript type definitions
+├── server/            # Backend API server
+├── json_files/        # Data files and schemas
+└── docs/             # Documentation
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🔧 Configuration
 
-## How can I deploy this project?
+### Environment Variables
 
-Simply open [Lovable](https://lovable.dev/projects/1e8867bc-a125-450a-87dc-7f66bc7cee16) and click on Share -> Publish.
+See `env.template` for required environment variables:
 
-## Can I connect a custom domain to my Lovable project?
+- `MONGODB_URI` - MongoDB connection string
+- `JWT_SECRET` - JWT signing secret
+- `AWS_*` - AWS credentials for S3
+- `MAILGUN_*` - Email service configuration
 
-Yes, you can!
+### API Configuration
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+The frontend automatically detects the environment:
+- **Development**: Uses `http://localhost:3001/api`
+- **Production**: Uses `https://hubapi.empowerlocal.co/api`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 📚 Documentation
+
+- [Current Production Setup](./CURRENT_PRODUCTION_SETUP.md)
+- [Deployment Guide](./PRODUCTION_DEPLOYMENT_GUIDE.md)
+- [Environment Variables Guide](./ENV_MANAGEMENT_GUIDE.md)
+
+## 🧪 Testing
+
+```bash
+# Run tests
+npm test
+
+# Run with coverage
+npm run test:coverage
+```
+
+## 🚀 Deployment
+
+The application is configured for automatic deployment:
+
+- **Frontend**: Deployed to AWS Amplify on push to `main` branch
+- **Backend**: Deployed to AWS ECS with Docker containers
+
+See deployment guides for detailed instructions.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is proprietary software. All rights reserved.
+
+## 📞 Support
+
+For questions or support, please contact the development team or create an issue in the repository.
