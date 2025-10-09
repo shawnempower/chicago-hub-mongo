@@ -12,7 +12,7 @@ export const config = {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('MONGODB_URI must be set in production');
     }
-    return 'mongodb+srv://shawn:ig8kVxMOy6e98YmP@cluster0.1shq5cl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+    return 'mongodb://localhost:27017/chicago-hub';
   })(),
   
   // Email configuration for future use
