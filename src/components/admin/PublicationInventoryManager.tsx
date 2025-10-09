@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { 
   Plus, Edit, Trash2, DollarSign, Target, BarChart3, 
   Globe, Mail, Printer, Calendar, Package, Search,
-  RefreshCw, Save, X, TrendingUp, Users
+  RefreshCw, Save, X, TrendingUp, Users, Mic, Radio, Video
 } from 'lucide-react';
 
 import { usePublications } from '@/hooks/usePublications';
@@ -29,7 +29,7 @@ export const PublicationInventoryManager = () => {
   
   // Edit dialog states
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [editingType, setEditingType] = useState<'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | null>(null);
+  const [editingType, setEditingType] = useState<'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'podcast' | 'radio' | 'streaming' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'social-media-ad' | 'print-ad' | null>(null);
   const [editingIndex, setEditingIndex] = useState<number>(-1);
   const [editingSubIndex, setEditingSubIndex] = useState<number>(-1); // for newsletter ads within newsletters
 
@@ -82,7 +82,7 @@ export const PublicationInventoryManager = () => {
   };
 
   // Edit dialog handlers
-  const openEditDialog = (item: any, type: 'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container', index: number, subIndex: number = -1) => {
+  const openEditDialog = (item: any, type: 'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast' | 'radio' | 'streaming' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'social-media-ad' | 'print-ad', index: number, subIndex: number = -1) => {
     setEditingItem({ ...item });
     setEditingType(type);
     setEditingIndex(index);
@@ -138,8 +138,26 @@ export const PublicationInventoryManager = () => {
           break;
 
         case 'social-media':
-          if (updatedPublication.socialMediaProfiles) {
-            updatedPublication.socialMediaProfiles[editingIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.socialMedia) {
+            updatedPublication.distributionChannels.socialMedia[editingIndex] = editingItem;
+          }
+          break;
+
+        case 'podcast':
+          if (updatedPublication.distributionChannels?.podcasts) {
+            updatedPublication.distributionChannels.podcasts[editingIndex] = editingItem;
+          }
+          break;
+
+        case 'radio':
+          if (updatedPublication.distributionChannels?.radioStations) {
+            updatedPublication.distributionChannels.radioStations[editingIndex] = editingItem;
+          }
+          break;
+
+        case 'streaming':
+          if (updatedPublication.distributionChannels?.streamingVideo) {
+            updatedPublication.distributionChannels.streamingVideo[editingIndex] = editingItem;
           }
           break;
 
@@ -164,6 +182,54 @@ export const PublicationInventoryManager = () => {
         case 'print-container':
           if (updatedPublication.distributionChannels?.print) {
             updatedPublication.distributionChannels.print = { ...updatedPublication.distributionChannels.print, ...editingItem };
+          }
+          break;
+
+        case 'podcast-container':
+          if (updatedPublication.distributionChannels?.podcasts) {
+            updatedPublication.distributionChannels.podcasts[editingIndex] = editingItem;
+          }
+          break;
+
+        case 'radio-container':
+          if (updatedPublication.distributionChannels?.radioStations) {
+            updatedPublication.distributionChannels.radioStations[editingIndex] = editingItem;
+          }
+          break;
+
+        case 'streaming-container':
+          if (updatedPublication.distributionChannels?.streamingVideo) {
+            updatedPublication.distributionChannels.streamingVideo[editingIndex] = editingItem;
+          }
+          break;
+
+        case 'podcast-ad':
+          if (updatedPublication.distributionChannels?.podcasts && updatedPublication.distributionChannels.podcasts[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities![editingSubIndex] = editingItem;
+          }
+          break;
+
+        case 'radio-ad':
+          if (updatedPublication.distributionChannels?.radioStations && updatedPublication.distributionChannels.radioStations[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.radioStations[editingIndex].advertisingOpportunities![editingSubIndex] = editingItem;
+          }
+          break;
+
+        case 'streaming-ad':
+          if (updatedPublication.distributionChannels?.streamingVideo && updatedPublication.distributionChannels.streamingVideo[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.streamingVideo[editingIndex].advertisingOpportunities![editingSubIndex] = editingItem;
+          }
+          break;
+
+        case 'social-media-ad':
+          if (updatedPublication.distributionChannels?.socialMedia && updatedPublication.distributionChannels.socialMedia[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.socialMedia[editingIndex].advertisingOpportunities![editingSubIndex] = editingItem;
+          }
+          break;
+
+        case 'print-ad':
+          if (updatedPublication.distributionChannels?.print && updatedPublication.distributionChannels.print[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.print[editingIndex].advertisingOpportunities![editingSubIndex] = editingItem;
           }
           break;
       }
@@ -251,7 +317,7 @@ export const PublicationInventoryManager = () => {
     });
   };
 
-  const addPrintOpportunity = async () => {
+  const addPrintOpportunity = async (printIndex: number) => {
     if (!currentPublication) return;
     
     const newOpportunity = {
@@ -267,20 +333,41 @@ export const PublicationInventoryManager = () => {
       }
     };
 
-    const updatedOpportunities = [
-      ...(currentPublication.distributionChannels?.print?.advertisingOpportunities || []),
-      newOpportunity
-    ];
+    // Normalize print data - handle both array and single object cases
+    const currentPrint = currentPublication.distributionChannels?.print;
+    let updatedPrint: any[];
+    
+    if (Array.isArray(currentPrint)) {
+      updatedPrint = [...currentPrint];
+    } else if (currentPrint) {
+      // Convert single object to array
+      updatedPrint = [currentPrint];
+    } else {
+      updatedPrint = [];
+    }
 
-    await handleUpdatePublication({
-      distributionChannels: {
-        ...currentPublication.distributionChannels,
-        print: {
-          ...currentPublication.distributionChannels?.print,
-          advertisingOpportunities: updatedOpportunities
+    if (updatedPrint[printIndex]) {
+      updatedPrint[printIndex] = {
+        ...updatedPrint[printIndex],
+        advertisingOpportunities: [
+          ...(updatedPrint[printIndex].advertisingOpportunities || []),
+          newOpportunity
+        ]
+      };
+    }
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          print: updatedPrint
         }
-      }
-    });
+      });
+      toast.success('Print advertising opportunity added successfully');
+    } catch (error) {
+      console.error('Error adding print opportunity:', error);
+      toast.error('Failed to add print advertising opportunity');
+    }
   };
 
   const addEvent = async () => {
@@ -455,7 +542,7 @@ export const PublicationInventoryManager = () => {
     if (!currentPublication) return;
     
     const newProfile = {
-      platform: 'facebook',
+      platform: 'facebook' as const,
       handle: 'newhandle',
       url: 'https://facebook.com/newhandle',
       verified: false,
@@ -463,17 +550,21 @@ export const PublicationInventoryManager = () => {
         followers: 0,
         engagementRate: 0
       },
-      lastUpdated: new Date().toISOString().split('T')[0]
+      lastUpdated: new Date().toISOString().split('T')[0],
+      advertisingOpportunities: []
     };
 
     const updatedProfiles = [
-      ...(currentPublication.socialMediaProfiles || []),
+      ...(currentPublication.distributionChannels?.socialMedia || []),
       newProfile
     ];
 
     try {
       await handleUpdatePublication({
-        socialMediaProfiles: updatedProfiles
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          socialMedia: updatedProfiles
+        }
       });
       toast.success('Social media profile added successfully');
     } catch (error) {
@@ -482,10 +573,305 @@ export const PublicationInventoryManager = () => {
     }
   };
 
+  const addDistributionChannel = async (channelType: 'podcasts' | 'radio' | 'streaming' | 'print') => {
+    if (!currentPublication) return;
+    
+    let newChannel: any;
+    let channelKey: string;
+    
+    switch (channelType) {
+      case 'podcasts':
+        newChannel = {
+          podcastId: `podcast_${Date.now()}`,
+          name: 'New Podcast',
+          description: 'Podcast description',
+          frequency: 'weekly',
+          averageDownloads: 0,
+          averageListeners: 0,
+          episodeCount: 0,
+          platforms: ['spotify'],
+          advertisingOpportunities: []
+        };
+        channelKey = 'podcasts';
+        break;
+      
+      case 'radio':
+        newChannel = {
+          stationId: `radio_${Date.now()}`,
+          callSign: 'WXYZ',
+          frequency: '101.5 FM',
+          format: 'news_talk',
+          coverageArea: 'Metropolitan Area',
+          listeners: 0,
+          advertisingOpportunities: []
+        };
+        channelKey = 'radioStations';
+        break;
+      
+      case 'streaming':
+        newChannel = {
+          channelId: `stream_${Date.now()}`,
+          name: 'New Channel',
+          platform: 'youtube',
+          subscribers: 0,
+          averageViews: 0,
+          contentType: 'mixed',
+          streamingSchedule: 'Daily',
+          advertisingOpportunities: []
+        };
+        channelKey = 'streamingVideo';
+        break;
+      
+      case 'print':
+        newChannel = {
+          publicationId: `print_${Date.now()}`,
+          name: 'New Print Publication',
+          frequency: 'weekly',
+          circulation: 10000,
+          paidCirculation: 8000,
+          freeCirculation: 2000,
+          distributionArea: 'Local',
+          advertisingOpportunities: []
+        };
+        channelKey = 'print';
+        break;
+    }
+
+    const updatedChannels = [
+      ...(currentPublication.distributionChannels?.[channelKey as keyof typeof currentPublication.distributionChannels] as any[] || []),
+      newChannel
+    ];
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          [channelKey]: updatedChannels
+        }
+      });
+      toast.success(`${channelType} channel added successfully`);
+    } catch (error) {
+      console.error(`Error adding ${channelType} channel:`, error);
+      toast.error(`Failed to add ${channelType} channel`);
+    }
+  };
+
+  const removeDistributionChannel = async (channelType: 'podcasts' | 'radio' | 'streaming' | 'print', index: number) => {
+    if (!currentPublication) return;
+    
+    let channelKey: string;
+    
+    switch (channelType) {
+      case 'podcasts':
+        channelKey = 'podcasts';
+        break;
+      case 'radio':
+        channelKey = 'radioStations';
+        break;
+      case 'streaming':
+        channelKey = 'streamingVideo';
+        break;
+      case 'print':
+        channelKey = 'print';
+        break;
+    }
+
+    const currentChannels = currentPublication.distributionChannels?.[channelKey as keyof typeof currentPublication.distributionChannels] as any[] || [];
+    const updatedChannels = currentChannels.filter((_, i) => i !== index);
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          [channelKey]: updatedChannels
+        }
+      });
+      toast.success(`${channelType} channel removed successfully`);
+    } catch (error) {
+      console.error(`Error removing ${channelType} channel:`, error);
+      toast.error(`Failed to remove ${channelType} channel`);
+    }
+  };
+
+  const addPodcastOpportunity = async (podcastIndex: number) => {
+    if (!currentPublication) return;
+    
+    const newOpportunity = {
+      name: 'New Podcast Ad',
+      adFormat: 'mid-roll' as const,
+      duration: 30,
+      pricing: {
+        cpm: 25,
+        pricingModel: 'cpm' as const
+      },
+      specifications: {
+        format: 'mp3',
+        bitrate: '128kbps'
+      },
+      available: true
+    };
+
+    const updatedPodcasts = [...(currentPublication.distributionChannels?.podcasts || [])];
+    if (updatedPodcasts[podcastIndex]) {
+      updatedPodcasts[podcastIndex] = {
+        ...updatedPodcasts[podcastIndex],
+        advertisingOpportunities: [
+          ...(updatedPodcasts[podcastIndex].advertisingOpportunities || []),
+          newOpportunity
+        ]
+      };
+    }
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          podcasts: updatedPodcasts
+        }
+      });
+      toast.success('Podcast advertising opportunity added successfully');
+    } catch (error) {
+      console.error('Error adding podcast opportunity:', error);
+      toast.error('Failed to add podcast advertising opportunity');
+    }
+  };
+
+  const addRadioOpportunity = async (radioIndex: number) => {
+    if (!currentPublication) return;
+    
+    const newOpportunity = {
+      name: 'New Radio Ad',
+      adFormat: '30_second_spot' as const,
+      timeSlot: 'drive_time_morning' as const,
+      pricing: {
+        perSpot: 150,
+        pricingModel: 'per_spot' as const
+      },
+      specifications: {
+        format: 'mp3',
+        duration: 30,
+        bitrate: '128kbps'
+      },
+      available: true
+    };
+
+    const updatedRadio = [...(currentPublication.distributionChannels?.radioStations || [])];
+    if (updatedRadio[radioIndex]) {
+      updatedRadio[radioIndex] = {
+        ...updatedRadio[radioIndex],
+        advertisingOpportunities: [
+          ...(updatedRadio[radioIndex].advertisingOpportunities || []),
+          newOpportunity
+        ]
+      };
+    }
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          radioStations: updatedRadio
+        }
+      });
+      toast.success('Radio advertising opportunity added successfully');
+    } catch (error) {
+      console.error('Error adding radio opportunity:', error);
+      toast.error('Failed to add radio advertising opportunity');
+    }
+  };
+
+  const addStreamingOpportunity = async (streamingIndex: number) => {
+    if (!currentPublication) return;
+    
+    const newOpportunity = {
+      name: 'New Streaming Ad',
+      adFormat: 'pre-roll' as const,
+      duration: 15,
+      pricing: {
+        cpm: 15,
+        pricingModel: 'cpm' as const
+      },
+      specifications: {
+        format: 'mp4',
+        resolution: '1080p',
+        aspectRatio: '16:9'
+      },
+      available: true
+    };
+
+    const updatedStreaming = [...(currentPublication.distributionChannels?.streamingVideo || [])];
+    if (updatedStreaming[streamingIndex]) {
+      updatedStreaming[streamingIndex] = {
+        ...updatedStreaming[streamingIndex],
+        advertisingOpportunities: [
+          ...(updatedStreaming[streamingIndex].advertisingOpportunities || []),
+          newOpportunity
+        ]
+      };
+    }
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          streamingVideo: updatedStreaming
+        }
+      });
+      toast.success('Streaming advertising opportunity added successfully');
+    } catch (error) {
+      console.error('Error adding streaming opportunity:', error);
+      toast.error('Failed to add streaming advertising opportunity');
+    }
+  };
+
+  const addSocialMediaOpportunity = async (socialIndex: number) => {
+    if (!currentPublication) return;
+    
+    const newOpportunity = {
+      name: 'New Social Media Ad',
+      adFormat: 'sponsored_post' as const,
+      pricing: {
+        perPost: 100,
+        pricingModel: 'per_post' as const
+      },
+      specifications: {
+        format: 'image_video',
+        aspectRatio: '1:1'
+      },
+      available: true
+    };
+
+    const updatedSocialMedia = [...(currentPublication.distributionChannels?.socialMedia || [])];
+    if (updatedSocialMedia[socialIndex]) {
+      updatedSocialMedia[socialIndex] = {
+        ...updatedSocialMedia[socialIndex],
+        advertisingOpportunities: [
+          ...(updatedSocialMedia[socialIndex].advertisingOpportunities || []),
+          newOpportunity
+        ]
+      };
+    }
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          socialMedia: updatedSocialMedia
+        }
+      });
+      toast.success('Social media advertising opportunity added successfully');
+    } catch (error) {
+      console.error('Error adding social media opportunity:', error);
+      toast.error('Failed to add social media advertising opportunity');
+    }
+  };
+
   const formatPrice = (pricing: any) => {
     if (pricing?.flatRate) return `$${pricing.flatRate.toLocaleString()}`;
     if (pricing?.cpm) return `$${pricing.cpm} CPM`;
     if (pricing?.perSend) return `$${pricing.perSend} per send`;
+    if (pricing?.perSpot) return `$${pricing.perSpot} per spot`;
+    if (pricing?.perPost) return `$${pricing.perPost} per post`;
     return 'Contact for pricing';
   };
 
@@ -558,7 +944,7 @@ export const PublicationInventoryManager = () => {
 
       {/* Inventory Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="website" className="flex items-center gap-1 text-sm">
             <Globe className="w-3 h-3" />
             Web ({currentPublication.distributionChannels?.website?.advertisingOpportunities?.length || 0})
@@ -581,7 +967,19 @@ export const PublicationInventoryManager = () => {
           </TabsTrigger>
           <TabsTrigger value="social" className="flex items-center gap-1 text-sm">
             <Users className="w-3 h-3" />
-            Social ({currentPublication.socialMediaProfiles?.length || 0})
+            Social ({currentPublication.distributionChannels?.socialMedia?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="podcasts" className="flex items-center gap-1 text-sm">
+            <Mic className="w-3 h-3" />
+            Podcasts ({currentPublication.distributionChannels?.podcasts?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="radio" className="flex items-center gap-1 text-sm">
+            <Radio className="w-3 h-3" />
+            Radio ({currentPublication.distributionChannels?.radioStations?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="streaming" className="flex items-center gap-1 text-sm">
+            <Video className="w-3 h-3" />
+            Streaming ({currentPublication.distributionChannels?.streamingVideo?.length || 0})
           </TabsTrigger>
         </TabsList>
 
@@ -589,7 +987,7 @@ export const PublicationInventoryManager = () => {
         <TabsContent value="website" className="space-y-4">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-lg font-semibold">Website Advertising Opportunities</h3>
+              <h3 className="text-lg font-semibold">Website Channel</h3>
               {currentPublication.distributionChannels?.website && (
                 <p className="text-sm text-muted-foreground">
                   {currentPublication.distributionChannels.website.url} • {currentPublication.distributionChannels.website.metrics?.monthlyVisitors?.toLocaleString()} monthly visitors
@@ -692,7 +1090,7 @@ export const PublicationInventoryManager = () => {
         {/* Newsletter Advertising */}
         <TabsContent value="newsletter" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Newsletter Advertising</h3>
+            <h3 className="text-lg font-semibold">Newsletters</h3>
             <Button onClick={addNewsletter}>
               <Plus className="w-4 h-4 mr-2" />
               Add Newsletter
@@ -701,67 +1099,123 @@ export const PublicationInventoryManager = () => {
           
           <div className="grid gap-4">
             {currentPublication.distributionChannels?.newsletters?.map((newsletter, newsletterIndex) => (
-              <Card key={newsletterIndex}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Mail className="w-5 h-5" />
-                        {newsletter.name || 'Newsletter'}
-                      </CardTitle>
-                      <CardDescription>
-                        {newsletter.subscribers?.toLocaleString()} subscribers • {newsletter.openRate}% open rate • {newsletter.frequency}
-                      </CardDescription>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => openEditDialog(newsletter, 'newsletter-container', newsletterIndex)}
-                      className="ml-2"
-                    >
-                      <Edit className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-3">
-                    {newsletter.advertisingOpportunities?.map((opp, oppIndex) => (
-                      <div key={oppIndex} className="flex justify-between items-center p-3 border rounded-lg">
+              <Card key={newsletterIndex} className="hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="text-lg font-semibold">{newsletter.name || 'Unnamed Newsletter'}</h4>
+                        <Badge variant="outline" className="text-xs">
+                          {newsletter.frequency || 'Not Set'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                         <div>
-                          <h5 className="font-medium">{opp.name}</h5>
-                          <div className="text-sm text-muted-foreground">
-                            {opp.position} • {opp.dimensions} • ${opp.pricing?.perSend}/send
-                          </div>
+                          <span className="text-muted-foreground">Subscribers:</span>
+                          <span className="ml-2 font-medium">{newsletter.subscribers?.toLocaleString() || 'N/A'}</span>
                         </div>
-                        <div className="flex gap-1">
+                        <div>
+                          <span className="text-muted-foreground">Open Rate:</span>
+                          <span className="ml-2 font-medium">{newsletter.openRate ? `${newsletter.openRate}%` : 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Subject:</span>
+                          <span className="ml-2 font-medium">{newsletter.subject || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Ad Opportunities:</span>
+                          <span className="ml-2 font-medium">{newsletter.advertisingOpportunities?.length || 0}</span>
+                        </div>
+                      </div>
+
+                      {/* Advertising Opportunities */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-medium text-sm">Advertising Opportunities</h5>
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => openEditDialog(opp, 'newsletter', newsletterIndex, oppIndex)}
+                            onClick={() => addNewsletterOpportunity(newsletterIndex)}
                           >
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button variant="outline" size="sm" className="text-red-600">
-                            <Trash2 className="w-3 h-3" />
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Ad
                           </Button>
                         </div>
+                        
+                        {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 ? (
+                          <div className="space-y-2">
+                            {newsletter.advertisingOpportunities.map((ad, adIndex) => (
+                              <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                                <div className="flex-1">
+                                  <span className="font-medium">{ad.name}</span>
+                                  <span className="text-muted-foreground ml-2">
+                                    {ad.position} • {ad.dimensions} • {formatPrice(ad.pricing)}
+                                  </span>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => openEditDialog(ad, 'newsletter', newsletterIndex, adIndex)}
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                    onClick={() => {
+                                      const updatedNewsletters = [...(currentPublication.distributionChannels?.newsletters || [])];
+                                      if (updatedNewsletters[newsletterIndex]?.advertisingOpportunities) {
+                                        updatedNewsletters[newsletterIndex].advertisingOpportunities = 
+                                          updatedNewsletters[newsletterIndex].advertisingOpportunities.filter((_, i) => i !== adIndex);
+                                        handleUpdatePublication({
+                                          distributionChannels: {
+                                            ...currentPublication.distributionChannels,
+                                            newsletters: updatedNewsletters
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                        )}
                       </div>
-                    )) || (
-                      <div className="text-center py-4 text-muted-foreground">
-                        No advertising opportunities configured
-                      </div>
-                    )}
+                    </div>
                     
-                    {/* Add button for this specific newsletter */}
-                    <div className="pt-2 border-t">
+                    <div className="flex gap-2">
                       <Button 
                         variant="outline" 
-                        size="sm" 
-                        onClick={() => addNewsletterOpportunity(newsletterIndex)}
-                        className="w-full"
+                        size="sm"
+                        onClick={() => openEditDialog(newsletter, 'newsletter-container', newsletterIndex)}
                       >
-                        <Plus className="w-3 h-3 mr-2" />
-                        Add Ad to {newsletter.name}
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => {
+                          const updatedNewsletters = currentPublication.distributionChannels?.newsletters?.filter((_, i) => i !== newsletterIndex) || [];
+                          handleUpdatePublication({ 
+                            distributionChannels: {
+                              ...currentPublication.distributionChannels,
+                              newsletters: updatedNewsletters
+                            }
+                          });
+                          toast.success('Newsletter removed successfully');
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
                   </div>
@@ -772,11 +1226,11 @@ export const PublicationInventoryManager = () => {
                 <CardContent className="pt-6">
                   <div className="text-center py-8">
                     <Mail className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Newsletters</h3>
-                    <p className="text-gray-600 mb-4">Configure newsletters first to add advertising opportunities.</p>
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No Newsletters</h3>
+                    <p className="text-gray-500 mb-4">Add newsletters to track email advertising opportunities.</p>
                     <Button onClick={addNewsletter}>
                       <Plus className="w-4 h-4 mr-2" />
-                      Create Newsletter
+                      Add First Newsletter
                     </Button>
                   </div>
                 </CardContent>
@@ -878,82 +1332,140 @@ export const PublicationInventoryManager = () => {
           </div>
         </TabsContent>
 
-        {/* Print Advertising */}
+        {/* Print Publications */}
         <TabsContent value="print" className="space-y-4">
           <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold">Print Advertising</h3>
-              {currentPublication.distributionChannels?.print && (
-                <p className="text-sm text-muted-foreground">
-                  {currentPublication.distributionChannels.print.frequency} • {currentPublication.distributionChannels.print.circulation?.toLocaleString()} circulation • {currentPublication.distributionChannels.print.distributionArea}
-                </p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              {currentPublication.distributionChannels?.print && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => openEditDialog(currentPublication.distributionChannels!.print!, 'print-container', 0)}
-                >
-                  <Edit className="w-3 h-3 mr-2" />
-                  Edit Print Info
-                </Button>
-              )}
-              <Button onClick={addPrintOpportunity}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Print Ad
-              </Button>
-            </div>
+            <h3 className="text-lg font-semibold">Print Publications</h3>
+            <Button onClick={() => addDistributionChannel('print')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Print Publication
+            </Button>
           </div>
           
           <div className="grid gap-4">
-            {currentPublication.distributionChannels?.print?.advertisingOpportunities?.map((opportunity, index) => (
-              <Card key={index}>
+            {(Array.isArray(currentPublication.distributionChannels?.print) 
+              ? currentPublication.distributionChannels.print 
+              : currentPublication.distributionChannels?.print 
+                ? [currentPublication.distributionChannels.print] 
+                : []
+            )?.map((printPub, index) => (
+              <Card key={index} className="hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Printer className="w-5 h-5 text-blue-600" />
-                        <h4 className="text-lg font-semibold">{opportunity.name}</h4>
-                        <Badge variant="outline">{opportunity.color}</Badge>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="text-lg font-semibold">{printPub.name || 'Unnamed Publication'}</h4>
+                        <Badge variant="outline" className="text-xs">
+                          {printPub.frequency || 'Not Set'}
+                        </Badge>
                       </div>
                       
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-muted-foreground mb-3">
+                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                         <div>
-                          <strong>Size:</strong> {opportunity.dimensions}
+                          <span className="text-muted-foreground">Circulation:</span>
+                          <span className="ml-2 font-medium">{printPub.circulation?.toLocaleString() || 'N/A'}</span>
                         </div>
                         <div>
-                          <strong>Format:</strong> {opportunity.adFormat}
+                          <span className="text-muted-foreground">Distribution Area:</span>
+                          <span className="ml-2 font-medium">{printPub.distributionArea || 'N/A'}</span>
                         </div>
                         <div>
-                          <strong>Circulation:</strong> {currentPublication.distributionChannels?.print?.circulation?.toLocaleString() || 'N/A'}
+                          <span className="text-muted-foreground">Paid Circulation:</span>
+                          <span className="ml-2 font-medium">{printPub.paidCirculation?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Ad Opportunities:</span>
+                          <span className="ml-2 font-medium">{printPub.advertisingOpportunities?.length || 0}</span>
                         </div>
                       </div>
-                      
-                      {opportunity.pricing && (
-                        <div className="text-sm text-muted-foreground mb-2">
-                          <strong>Pricing:</strong>
-                          {opportunity.pricing.oneTime && ` One-time: $${opportunity.pricing.oneTime}`}
-                          {opportunity.pricing.fourTimes && ` • 4x: $${opportunity.pricing.fourTimes}`}
-                          {opportunity.pricing.twelveTimes && ` • 12x: $${opportunity.pricing.twelveTimes}`}
+
+                      {/* Advertising Opportunities */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => addPrintOpportunity(index)}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Ad
+                          </Button>
                         </div>
-                      )}
+                        
+                        {printPub.advertisingOpportunities && printPub.advertisingOpportunities.length > 0 ? (
+                          <div className="space-y-2">
+                            {printPub.advertisingOpportunities.map((ad, adIndex) => (
+                              <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                                <div className="flex-1">
+                                  <span className="font-medium">{ad.name}</span>
+                                  <span className="text-muted-foreground ml-2">
+                                    {ad.dimensions} • {ad.adFormat} • {formatPrice(ad.pricing)}
+                                  </span>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => openEditDialog(ad, 'print-ad', adIndex, index)}
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                    onClick={() => {
+                                      // Normalize print data - handle both array and single object cases
+                                      const currentPrint = currentPublication.distributionChannels?.print;
+                                      let updatedPrint: any[];
+                                      
+                                      if (Array.isArray(currentPrint)) {
+                                        updatedPrint = [...currentPrint];
+                                      } else if (currentPrint) {
+                                        updatedPrint = [currentPrint];
+                                      } else {
+                                        updatedPrint = [];
+                                      }
+
+                                      if (updatedPrint[index]?.advertisingOpportunities) {
+                                        updatedPrint[index].advertisingOpportunities = 
+                                          updatedPrint[index].advertisingOpportunities.filter((_, i) => i !== adIndex);
+                                        handleUpdatePublication({
+                                          distributionChannels: {
+                                            ...currentPublication.distributionChannels,
+                                            print: updatedPrint
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                        )}
+                      </div>
                     </div>
                     
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-2">
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => openEditDialog(opportunity, 'print', index)}
+                        onClick={() => openEditDialog(printPub, 'print-container', index)}
                       >
                         <Edit className="w-3 h-3" />
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => removePrintOpportunity(index)}
                         className="text-red-600 hover:text-red-700"
+                        onClick={() => removeDistributionChannel('print', index)}
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
@@ -966,11 +1478,11 @@ export const PublicationInventoryManager = () => {
                 <CardContent className="pt-6">
                   <div className="text-center py-8">
                     <Printer className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Print Advertising</h3>
-                    <p className="text-gray-600 mb-4">Create your first print advertising opportunity.</p>
-                    <Button>
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No Print Publications</h3>
+                    <p className="text-gray-500 mb-4">Add print publications to track print advertising opportunities.</p>
+                    <Button onClick={() => addDistributionChannel('print')}>
                       <Plus className="w-4 h-4 mr-2" />
-                      Add Print Ad
+                      Add First Publication
                     </Button>
                   </div>
                 </CardContent>
@@ -1004,14 +1516,32 @@ export const PublicationInventoryManager = () => {
                         {event.averageAttendance && ` • ${event.averageAttendance.toLocaleString()} attendees`}
                       </CardDescription>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => openEditDialog(event, 'event-container', eventIndex)}
-                      className="ml-2"
-                    >
-                      <Edit className="w-3 h-3" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openEditDialog(event, 'event-container', eventIndex)}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => {
+                          const updatedEvents = currentPublication.distributionChannels?.events?.filter((_, i) => i !== eventIndex) || [];
+                          handleUpdatePublication({ 
+                            distributionChannels: {
+                              ...currentPublication.distributionChannels,
+                              events: updatedEvents
+                            }
+                          });
+                          toast.success('Event removed successfully');
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -1033,7 +1563,25 @@ export const PublicationInventoryManager = () => {
                           >
                             <Edit className="w-3 h-3" />
                           </Button>
-                          <Button variant="outline" size="sm" className="text-red-600">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => {
+                              const updatedEvents = [...(currentPublication.distributionChannels?.events || [])];
+                              if (updatedEvents[eventIndex]?.advertisingOpportunities) {
+                                updatedEvents[eventIndex].advertisingOpportunities = 
+                                  updatedEvents[eventIndex].advertisingOpportunities.filter((_, i) => i !== oppIndex);
+                                handleUpdatePublication({
+                                  distributionChannels: {
+                                    ...currentPublication.distributionChannels,
+                                    events: updatedEvents
+                                  }
+                                });
+                                toast.success('Event advertising opportunity removed successfully');
+                              }
+                            }}
+                          >
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
@@ -1088,7 +1636,7 @@ export const PublicationInventoryManager = () => {
           </div>
           
           <div className="grid gap-4">
-            {currentPublication.socialMediaProfiles?.map((profile, index) => (
+            {currentPublication.distributionChannels?.socialMedia?.map((profile, index) => (
               <Card key={index} className="hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
@@ -1105,24 +1653,85 @@ export const PublicationInventoryManager = () => {
                         </Badge>
                       </div>
                       
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground mb-3">
+                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                         <div>
-                          <strong>Followers:</strong> {profile.metrics?.followers?.toLocaleString() || 'N/A'}
+                          <span className="text-muted-foreground">Followers:</span>
+                          <span className="ml-2 font-medium">{profile.metrics?.followers?.toLocaleString() || 'N/A'}</span>
                         </div>
-                        {profile.metrics?.engagementRate && (
-                          <div>
-                            <strong>Engagement:</strong> {profile.metrics.engagementRate}%
+                        <div>
+                          <span className="text-muted-foreground">Engagement Rate:</span>
+                          <span className="ml-2 font-medium">{profile.metrics?.engagementRate ? `${profile.metrics.engagementRate}%` : 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Verified:</span>
+                          <span className="ml-2 font-medium">{profile.verified ? '✅ Yes' : '❌ No'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Ad Opportunities:</span>
+                          <span className="ml-2 font-medium">{profile.advertisingOpportunities?.length || 0}</span>
+                        </div>
+                      </div>
+
+                      {/* Advertising Opportunities */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => addSocialMediaOpportunity(index)}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Ad
+                          </Button>
+                        </div>
+                        
+                        {profile.advertisingOpportunities && profile.advertisingOpportunities.length > 0 ? (
+                          <div className="space-y-2">
+                            {profile.advertisingOpportunities.map((ad, adIndex) => (
+                              <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                                <div className="flex-1">
+                                  <span className="font-medium">{ad.name}</span>
+                                  <span className="text-muted-foreground ml-2">
+                                    {ad.adFormat} • {formatPrice(ad.pricing)}
+                                  </span>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => openEditDialog(ad, 'social-media-ad', adIndex, index)}
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                    onClick={() => {
+                                      const updatedSocialMedia = [...(currentPublication.distributionChannels?.socialMedia || [])];
+                                      if (updatedSocialMedia[index]?.advertisingOpportunities) {
+                                        updatedSocialMedia[index].advertisingOpportunities = 
+                                          updatedSocialMedia[index].advertisingOpportunities.filter((_, i) => i !== adIndex);
+                                        handleUpdatePublication({
+                                          distributionChannels: {
+                                            ...currentPublication.distributionChannels,
+                                            socialMedia: updatedSocialMedia
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                         )}
-                        <div>
-                          <strong>URL:</strong> 
-                          <a href={profile.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 ml-1">
-                            Link
-                          </a>
-                        </div>
-                        <div>
-                          <strong>Updated:</strong> {profile.lastUpdated ? new Date(profile.lastUpdated).toLocaleDateString() : 'N/A'}
-                        </div>
                       </div>
                     </div>
                     
@@ -1139,8 +1748,13 @@ export const PublicationInventoryManager = () => {
                         size="sm"
                         className="text-red-600 hover:text-red-700"
                         onClick={() => {
-                          const updatedProfiles = currentPublication.socialMediaProfiles?.filter((_, i) => i !== index) || [];
-                          handleUpdatePublication({ socialMediaProfiles: updatedProfiles });
+                          const updatedProfiles = currentPublication.distributionChannels?.socialMedia?.filter((_, i) => i !== index) || [];
+                          handleUpdatePublication({ 
+                            distributionChannels: {
+                              ...currentPublication.distributionChannels,
+                              socialMedia: updatedProfiles
+                            }
+                          });
                         }}
                       >
                         <Trash2 className="w-3 h-3" />
@@ -1166,6 +1780,435 @@ export const PublicationInventoryManager = () => {
             )}
           </div>
         </TabsContent>
+
+        {/* Podcasts Management */}
+        <TabsContent value="podcasts" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Podcast Channels</h3>
+            <Button onClick={() => addDistributionChannel('podcasts')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Podcast
+            </Button>
+          </div>
+          
+          <div className="grid gap-4">
+            {currentPublication.distributionChannels?.podcasts?.map((podcast, index) => (
+              <Card key={index} className="hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="text-lg font-semibold">{podcast.name || 'Unnamed Podcast'}</h4>
+                        <Badge variant="outline" className="text-xs">
+                          {podcast.frequency || 'Not Set'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                        <div>
+                          <span className="text-muted-foreground">Average Downloads:</span>
+                          <span className="ml-2 font-medium">{podcast.averageDownloads?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Episodes:</span>
+                          <span className="ml-2 font-medium">{podcast.episodeCount || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Platforms:</span>
+                          <span className="ml-2 font-medium">{podcast.platforms?.length || 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Ad Opportunities:</span>
+                          <span className="ml-2 font-medium">{podcast.advertisingOpportunities?.length || 0}</span>
+                        </div>
+                      </div>
+
+                      {/* Advertising Opportunities */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => addPodcastOpportunity(index)}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Ad
+                          </Button>
+                        </div>
+                        
+                        {podcast.advertisingOpportunities && podcast.advertisingOpportunities.length > 0 ? (
+                          <div className="space-y-2">
+                            {podcast.advertisingOpportunities.map((ad, adIndex) => (
+                              <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                                <div className="flex-1">
+                                  <span className="font-medium">{ad.name}</span>
+                                  <span className="text-muted-foreground ml-2">
+                                    {ad.adFormat} • {ad.duration}s • {formatPrice(ad.pricing)}
+                                  </span>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => openEditDialog(ad, 'podcast-ad', adIndex, index)}
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                    onClick={() => {
+                                      const updatedPodcasts = [...(currentPublication.distributionChannels?.podcasts || [])];
+                                      if (updatedPodcasts[index]?.advertisingOpportunities) {
+                                        updatedPodcasts[index].advertisingOpportunities = 
+                                          updatedPodcasts[index].advertisingOpportunities.filter((_, i) => i !== adIndex);
+                                        handleUpdatePublication({
+                                          distributionChannels: {
+                                            ...currentPublication.distributionChannels,
+                                            podcasts: updatedPodcasts
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openEditDialog(podcast, 'podcast' as any, index)}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => removeDistributionChannel('podcasts', index)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )) || (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <Mic className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No Podcast Channels</h3>
+                    <p className="text-gray-500 mb-4">Add podcast channels to track audio advertising opportunities.</p>
+                    <Button onClick={() => addDistributionChannel('podcasts')}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add First Podcast
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Radio Management */}
+        <TabsContent value="radio" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Radio Stations</h3>
+            <Button onClick={() => addDistributionChannel('radio')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Radio Station
+            </Button>
+          </div>
+          
+          <div className="grid gap-4">
+            {currentPublication.distributionChannels?.radioStations?.map((station, index) => (
+              <Card key={index} className="hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="text-lg font-semibold">{station.callSign || 'Unnamed Station'}</h4>
+                        <Badge variant="outline" className="text-xs">
+                          {station.frequency || 'Not Set'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                        <div>
+                          <span className="text-muted-foreground">Format:</span>
+                          <span className="ml-2 font-medium">{station.format || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Coverage Area:</span>
+                          <span className="ml-2 font-medium">{station.coverageArea || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Weekly Listeners:</span>
+                          <span className="ml-2 font-medium">{station.listeners?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Ad Opportunities:</span>
+                          <span className="ml-2 font-medium">{station.advertisingOpportunities?.length || 0}</span>
+                        </div>
+                      </div>
+
+                      {/* Advertising Opportunities */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => addRadioOpportunity(index)}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Ad
+                          </Button>
+                        </div>
+                        
+                        {station.advertisingOpportunities && station.advertisingOpportunities.length > 0 ? (
+                          <div className="space-y-2">
+                            {station.advertisingOpportunities.map((ad, adIndex) => (
+                              <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                                <div className="flex-1">
+                                  <span className="font-medium">{ad.name}</span>
+                                  <span className="text-muted-foreground ml-2">
+                                    {ad.adFormat} • {ad.timeSlot} • {formatPrice(ad.pricing)}
+                                  </span>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => openEditDialog(ad, 'radio-ad', adIndex, index)}
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                    onClick={() => {
+                                      const updatedRadio = [...(currentPublication.distributionChannels?.radioStations || [])];
+                                      if (updatedRadio[index]?.advertisingOpportunities) {
+                                        updatedRadio[index].advertisingOpportunities = 
+                                          updatedRadio[index].advertisingOpportunities.filter((_, i) => i !== adIndex);
+                                        handleUpdatePublication({
+                                          distributionChannels: {
+                                            ...currentPublication.distributionChannels,
+                                            radioStations: updatedRadio
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openEditDialog(station, 'radio' as any, index)}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => removeDistributionChannel('radio', index)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )) || (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <Radio className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No Radio Stations</h3>
+                    <p className="text-gray-500 mb-4">Add radio stations to track broadcast advertising opportunities.</p>
+                    <Button onClick={() => addDistributionChannel('radio')}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add First Station
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Streaming Video Management */}
+        <TabsContent value="streaming" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Streaming Video Channels</h3>
+            <Button onClick={() => addDistributionChannel('streaming')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Streaming Channel
+            </Button>
+          </div>
+          
+          <div className="grid gap-4">
+            {currentPublication.distributionChannels?.streamingVideo?.map((channel, index) => (
+              <Card key={index} className="hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="text-lg font-semibold">{channel.name || 'Unnamed Channel'}</h4>
+                        <Badge variant="outline" className="text-xs">
+                          {channel.platform || 'Not Set'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                        <div>
+                          <span className="text-muted-foreground">Subscribers:</span>
+                          <span className="ml-2 font-medium">{channel.subscribers?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Avg Views:</span>
+                          <span className="ml-2 font-medium">{channel.averageViews?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Content Type:</span>
+                          <span className="ml-2 font-medium">{channel.contentType || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Ad Opportunities:</span>
+                          <span className="ml-2 font-medium">{channel.advertisingOpportunities?.length || 0}</span>
+                        </div>
+                      </div>
+
+                      {/* Advertising Opportunities */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => addStreamingOpportunity(index)}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Ad
+                          </Button>
+                        </div>
+                        
+                        {channel.advertisingOpportunities && channel.advertisingOpportunities.length > 0 ? (
+                          <div className="space-y-2">
+                            {channel.advertisingOpportunities.map((ad, adIndex) => (
+                              <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                                <div className="flex-1">
+                                  <span className="font-medium">{ad.name}</span>
+                                  <span className="text-muted-foreground ml-2">
+                                    {ad.adFormat} • {ad.duration}s • {formatPrice(ad.pricing)}
+                                  </span>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => openEditDialog(ad, 'streaming-ad', adIndex, index)}
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                    onClick={() => {
+                                      const updatedStreaming = [...(currentPublication.distributionChannels?.streamingVideo || [])];
+                                      if (updatedStreaming[index]?.advertisingOpportunities) {
+                                        updatedStreaming[index].advertisingOpportunities = 
+                                          updatedStreaming[index].advertisingOpportunities.filter((_, i) => i !== adIndex);
+                                        handleUpdatePublication({
+                                          distributionChannels: {
+                                            ...currentPublication.distributionChannels,
+                                            streamingVideo: updatedStreaming
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openEditDialog(channel, 'streaming' as any, index)}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => removeDistributionChannel('streaming', index)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )) || (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <Video className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No Streaming Channels</h3>
+                    <p className="text-gray-500 mb-4">Add streaming video channels to track video advertising opportunities.</p>
+                    <Button onClick={() => addDistributionChannel('streaming')}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add First Channel
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Edit Dialog */}
@@ -1179,11 +2222,22 @@ export const PublicationInventoryManager = () => {
                    editingType === 'event' ? 'Event' :
                    editingType === 'package' ? 'Package' :
                    editingType === 'social-media' ? 'Social Media Profile' :
+                   editingType === 'podcast' ? 'Podcast Channel' :
+                   editingType === 'radio' ? 'Radio Station' :
+                   editingType === 'streaming' ? 'Streaming Channel' :
                    editingType === 'newsletter-container' ? 'Newsletter Properties' :
                    editingType === 'event-container' ? 'Event Properties' :
                    editingType === 'website-container' ? 'Website Properties' :
                    editingType === 'print-container' ? 'Print Properties' :
-                   'Item'} {editingType?.includes('-container') || editingType === 'package' || editingType === 'social-media' ? '' : 'Advertising Opportunity'}
+                   editingType === 'podcast-container' ? 'Podcast Properties' :
+                   editingType === 'radio-container' ? 'Radio Properties' :
+                   editingType === 'streaming-container' ? 'Streaming Properties' :
+                   editingType === 'podcast-ad' ? 'Podcast' :
+                   editingType === 'radio-ad' ? 'Radio' :
+                   editingType === 'streaming-ad' ? 'Streaming Video' :
+                   editingType === 'social-media-ad' ? 'Social Media' :
+                   editingType === 'print-ad' ? 'Print' :
+                   'Item'} {editingType?.includes('-container') || editingType === 'package' || editingType === 'social-media' || editingType === 'podcast' || editingType === 'radio' || editingType === 'streaming' ? '' : 'Advertising Opportunity'}
             </DialogTitle>
             <DialogDescription>
               {editingType?.includes('-container') 
@@ -1713,8 +2767,711 @@ export const PublicationInventoryManager = () => {
                 </>
               )}
 
+              {/* Podcast Channel Fields */}
+              {editingType === 'podcast' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="podcastName">Podcast Name</Label>
+                      <Input
+                        id="podcastName"
+                        value={editingItem.name || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        placeholder="The Daily Show Podcast"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="frequency">Frequency</Label>
+                      <Select
+                        value={editingItem.frequency || 'weekly'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, frequency: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="irregular">Irregular</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Input
+                      id="description"
+                      value={editingItem.description || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                      placeholder="Brief description of the podcast"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="averageDownloads">Average Downloads</Label>
+                      <Input
+                        id="averageDownloads"
+                        type="number"
+                        value={editingItem.averageDownloads || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, averageDownloads: parseInt(e.target.value) || 0 })}
+                        placeholder="50000"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="episodeCount">Episode Count</Label>
+                      <Input
+                        id="episodeCount"
+                        type="number"
+                        value={editingItem.episodeCount || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, episodeCount: parseInt(e.target.value) || 0 })}
+                        placeholder="100"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Radio Station Fields */}
+              {editingType === 'radio' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="callSign">Call Sign</Label>
+                      <Input
+                        id="callSign"
+                        value={editingItem.callSign || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, callSign: e.target.value })}
+                        placeholder="WXYZ"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="frequency">Frequency</Label>
+                      <Input
+                        id="frequency"
+                        value={editingItem.frequency || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, frequency: e.target.value })}
+                        placeholder="101.5 FM"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="format">Format</Label>
+                      <Select
+                        value={editingItem.format || 'news_talk'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, format: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select format" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="news_talk">News/Talk</SelectItem>
+                          <SelectItem value="classic_rock">Classic Rock</SelectItem>
+                          <SelectItem value="country">Country</SelectItem>
+                          <SelectItem value="pop">Pop</SelectItem>
+                          <SelectItem value="hip_hop">Hip Hop</SelectItem>
+                          <SelectItem value="jazz">Jazz</SelectItem>
+                          <SelectItem value="classical">Classical</SelectItem>
+                          <SelectItem value="alternative">Alternative</SelectItem>
+                          <SelectItem value="sports">Sports</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="coverageArea">Coverage Area</Label>
+                      <Input
+                        id="coverageArea"
+                        value={editingItem.coverageArea || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, coverageArea: e.target.value })}
+                        placeholder="Metropolitan Area"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="listeners">Weekly Listeners</Label>
+                    <Input
+                      id="listeners"
+                      type="number"
+                      value={editingItem.listeners || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, listeners: parseInt(e.target.value) || 0 })}
+                      placeholder="250000"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Streaming Video Channel Fields */}
+              {editingType === 'streaming' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="channelName">Channel Name</Label>
+                      <Input
+                        id="channelName"
+                        value={editingItem.name || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        placeholder="News Channel Live"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="platform">Platform</Label>
+                      <Select
+                        value={editingItem.platform || 'youtube'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, platform: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select platform" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="youtube">YouTube</SelectItem>
+                          <SelectItem value="twitch">Twitch</SelectItem>
+                          <SelectItem value="facebook_live">Facebook Live</SelectItem>
+                          <SelectItem value="instagram_live">Instagram Live</SelectItem>
+                          <SelectItem value="linkedin_live">LinkedIn Live</SelectItem>
+                          <SelectItem value="custom_streaming">Custom Streaming</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="subscribers">Subscribers</Label>
+                      <Input
+                        id="subscribers"
+                        type="number"
+                        value={editingItem.subscribers || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, subscribers: parseInt(e.target.value) || 0 })}
+                        placeholder="10000"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="averageViews">Average Views</Label>
+                      <Input
+                        id="averageViews"
+                        type="number"
+                        value={editingItem.averageViews || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, averageViews: parseInt(e.target.value) || 0 })}
+                        placeholder="5000"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="contentType">Content Type</Label>
+                      <Select
+                        value={editingItem.contentType || 'mixed'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, contentType: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select content type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="live_news">Live News</SelectItem>
+                          <SelectItem value="recorded_shows">Recorded Shows</SelectItem>
+                          <SelectItem value="interviews">Interviews</SelectItem>
+                          <SelectItem value="events">Events</SelectItem>
+                          <SelectItem value="mixed">Mixed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="streamingSchedule">Streaming Schedule</Label>
+                      <Input
+                        id="streamingSchedule"
+                        value={editingItem.streamingSchedule || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, streamingSchedule: e.target.value })}
+                        placeholder="Daily 9-11 AM"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Podcast Ad Fields */}
+              {editingType === 'podcast-ad' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Ad Name</Label>
+                      <Input
+                        id="name"
+                        value={editingItem.name || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        placeholder="Mid-roll Sponsor Spot"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="adFormat">Ad Format</Label>
+                      <Select
+                        value={editingItem.adFormat || 'mid-roll'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select format" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pre-roll">Pre-roll</SelectItem>
+                          <SelectItem value="mid-roll">Mid-roll</SelectItem>
+                          <SelectItem value="post-roll">Post-roll</SelectItem>
+                          <SelectItem value="host-read">Host-read</SelectItem>
+                          <SelectItem value="programmatic">Programmatic</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="duration">Duration (seconds)</Label>
+                      <Input
+                        id="duration"
+                        type="number"
+                        value={editingItem.duration || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || 30 })}
+                        placeholder="30"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cpm">CPM ($)</Label>
+                      <Input
+                        id="cpm"
+                        type="number"
+                        value={editingItem.pricing?.cpm || ''}
+                        onChange={(e) => setEditingItem({ 
+                          ...editingItem, 
+                          pricing: { 
+                            ...editingItem.pricing, 
+                            cpm: parseFloat(e.target.value) || 0,
+                            pricingModel: 'cpm'
+                          } 
+                        })}
+                        placeholder="25"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Radio Ad Fields */}
+              {editingType === 'radio-ad' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Ad Name</Label>
+                      <Input
+                        id="name"
+                        value={editingItem.name || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        placeholder="Drive Time Spot"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="adFormat">Ad Format</Label>
+                      <Select
+                        value={editingItem.adFormat || '30_second_spot'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select format" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15_second_spot">15 Second Spot</SelectItem>
+                          <SelectItem value="30_second_spot">30 Second Spot</SelectItem>
+                          <SelectItem value="60_second_spot">60 Second Spot</SelectItem>
+                          <SelectItem value="live_read">Live Read</SelectItem>
+                          <SelectItem value="sponsorship">Sponsorship</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="timeSlot">Time Slot</Label>
+                      <Select
+                        value={editingItem.timeSlot || 'drive_time_morning'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, timeSlot: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select time slot" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="drive_time_morning">Drive Time Morning</SelectItem>
+                          <SelectItem value="drive_time_evening">Drive Time Evening</SelectItem>
+                          <SelectItem value="midday">Midday</SelectItem>
+                          <SelectItem value="evening">Evening</SelectItem>
+                          <SelectItem value="overnight">Overnight</SelectItem>
+                          <SelectItem value="weekend">Weekend</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="perSpot">Per Spot ($)</Label>
+                      <Input
+                        id="perSpot"
+                        type="number"
+                        value={editingItem.pricing?.perSpot || ''}
+                        onChange={(e) => setEditingItem({ 
+                          ...editingItem, 
+                          pricing: { 
+                            ...editingItem.pricing, 
+                            perSpot: parseFloat(e.target.value) || 0,
+                            pricingModel: 'per_spot'
+                          } 
+                        })}
+                        placeholder="150"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Streaming Ad Fields */}
+              {editingType === 'streaming-ad' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Ad Name</Label>
+                      <Input
+                        id="name"
+                        value={editingItem.name || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        placeholder="Pre-roll Video Ad"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="adFormat">Ad Format</Label>
+                      <Select
+                        value={editingItem.adFormat || 'pre-roll'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select format" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pre-roll">Pre-roll</SelectItem>
+                          <SelectItem value="mid-roll">Mid-roll</SelectItem>
+                          <SelectItem value="post-roll">Post-roll</SelectItem>
+                          <SelectItem value="overlay">Overlay</SelectItem>
+                          <SelectItem value="display_banner">Display Banner</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="duration">Duration (seconds)</Label>
+                      <Input
+                        id="duration"
+                        type="number"
+                        value={editingItem.duration || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || 15 })}
+                        placeholder="15"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cpm">CPM ($)</Label>
+                      <Input
+                        id="cpm"
+                        type="number"
+                        value={editingItem.pricing?.cpm || ''}
+                        onChange={(e) => setEditingItem({ 
+                          ...editingItem, 
+                          pricing: { 
+                            ...editingItem.pricing, 
+                            cpm: parseFloat(e.target.value) || 0,
+                            pricingModel: 'cpm'
+                          } 
+                        })}
+                        placeholder="15"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="resolution">Resolution</Label>
+                      <Select
+                        value={editingItem.specifications?.resolution || '1080p'}
+                        onValueChange={(value) => setEditingItem({ 
+                          ...editingItem, 
+                          specifications: { 
+                            ...editingItem.specifications, 
+                            resolution: value 
+                          } 
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select resolution" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="720p">720p</SelectItem>
+                          <SelectItem value="1080p">1080p</SelectItem>
+                          <SelectItem value="1440p">1440p</SelectItem>
+                          <SelectItem value="4k">4K</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="aspectRatio">Aspect Ratio</Label>
+                      <Select
+                        value={editingItem.specifications?.aspectRatio || '16:9'}
+                        onValueChange={(value) => setEditingItem({ 
+                          ...editingItem, 
+                          specifications: { 
+                            ...editingItem.specifications, 
+                            aspectRatio: value 
+                          } 
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select aspect ratio" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="16:9">16:9</SelectItem>
+                          <SelectItem value="4:3">4:3</SelectItem>
+                          <SelectItem value="1:1">1:1</SelectItem>
+                          <SelectItem value="9:16">9:16</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Social Media Ad Fields */}
+              {editingType === 'social-media-ad' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Ad Name</Label>
+                      <Input
+                        id="name"
+                        value={editingItem.name || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        placeholder="Sponsored Post"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="adFormat">Ad Format</Label>
+                      <Select
+                        value={editingItem.adFormat || 'sponsored_post'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select format" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sponsored_post">Sponsored Post</SelectItem>
+                          <SelectItem value="story_ad">Story Ad</SelectItem>
+                          <SelectItem value="video_ad">Video Ad</SelectItem>
+                          <SelectItem value="carousel_ad">Carousel Ad</SelectItem>
+                          <SelectItem value="collection_ad">Collection Ad</SelectItem>
+                          <SelectItem value="influencer_partnership">Influencer Partnership</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="perPost">Per Post ($)</Label>
+                      <Input
+                        id="perPost"
+                        type="number"
+                        value={editingItem.pricing?.perPost || ''}
+                        onChange={(e) => setEditingItem({ 
+                          ...editingItem, 
+                          pricing: { 
+                            ...editingItem.pricing, 
+                            perPost: parseFloat(e.target.value) || 0,
+                            pricingModel: 'per_post'
+                          } 
+                        })}
+                        placeholder="100"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cpm">CPM ($)</Label>
+                      <Input
+                        id="cpm"
+                        type="number"
+                        value={editingItem.pricing?.cpm || ''}
+                        onChange={(e) => setEditingItem({ 
+                          ...editingItem, 
+                          pricing: { 
+                            ...editingItem.pricing, 
+                            cpm: parseFloat(e.target.value) || 0,
+                            pricingModel: 'cpm'
+                          } 
+                        })}
+                        placeholder="5"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="format">Content Format</Label>
+                      <Select
+                        value={editingItem.specifications?.format || 'image_video'}
+                        onValueChange={(value) => setEditingItem({ 
+                          ...editingItem, 
+                          specifications: { 
+                            ...editingItem.specifications, 
+                            format: value 
+                          } 
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select format" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="image_only">Image Only</SelectItem>
+                          <SelectItem value="video_only">Video Only</SelectItem>
+                          <SelectItem value="image_video">Image & Video</SelectItem>
+                          <SelectItem value="text_only">Text Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="aspectRatio">Aspect Ratio</Label>
+                      <Select
+                        value={editingItem.specifications?.aspectRatio || '1:1'}
+                        onValueChange={(value) => setEditingItem({ 
+                          ...editingItem, 
+                          specifications: { 
+                            ...editingItem.specifications, 
+                            aspectRatio: value 
+                          } 
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select aspect ratio" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1:1">1:1 (Square)</SelectItem>
+                          <SelectItem value="4:5">4:5 (Portrait)</SelectItem>
+                          <SelectItem value="16:9">16:9 (Landscape)</SelectItem>
+                          <SelectItem value="9:16">9:16 (Stories)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Print Ad Fields */}
+              {editingType === 'print-ad' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Ad Name</Label>
+                      <Input
+                        id="name"
+                        value={editingItem.name || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        placeholder="Full Page Ad"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="adFormat">Ad Format</Label>
+                      <Select
+                        value={editingItem.adFormat || 'display_ad'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select format" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="display_ad">Display Ad</SelectItem>
+                          <SelectItem value="classified">Classified</SelectItem>
+                          <SelectItem value="insert">Insert</SelectItem>
+                          <SelectItem value="advertorial">Advertorial</SelectItem>
+                          <SelectItem value="business_card">Business Card</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="dimensions">Dimensions</Label>
+                      <Input
+                        id="dimensions"
+                        value={editingItem.dimensions || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, dimensions: e.target.value })}
+                        placeholder='4" x 6"'
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="color">Color</Label>
+                      <Select
+                        value={editingItem.color || 'color'}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, color: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select color option" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="color">Color</SelectItem>
+                          <SelectItem value="black_white">Black & White</SelectItem>
+                          <SelectItem value="spot_color">Spot Color</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="oneTime">One-time Price ($)</Label>
+                      <Input
+                        id="oneTime"
+                        type="number"
+                        value={editingItem.pricing?.oneTime || ''}
+                        onChange={(e) => setEditingItem({ 
+                          ...editingItem, 
+                          pricing: { 
+                            ...editingItem.pricing, 
+                            oneTime: parseFloat(e.target.value) || 0 
+                          } 
+                        })}
+                        placeholder="500"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="fourTimes">4x Price ($)</Label>
+                      <Input
+                        id="fourTimes"
+                        type="number"
+                        value={editingItem.pricing?.fourTimes || ''}
+                        onChange={(e) => setEditingItem({ 
+                          ...editingItem, 
+                          pricing: { 
+                            ...editingItem.pricing, 
+                            fourTimes: parseFloat(e.target.value) || 0 
+                          } 
+                        })}
+                        placeholder="400"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* Regular advertising opportunity fields (only show for non-container, non-package, and non-social-media types) */}
-              {!editingType?.includes('-container') && editingType !== 'package' && editingType !== 'social-media' && (
+              {!editingType?.includes('-container') && editingType !== 'package' && editingType !== 'social-media' && editingType !== 'podcast' && editingType !== 'radio' && editingType !== 'streaming' && editingType !== 'podcast-ad' && editingType !== 'radio-ad' && editingType !== 'streaming-ad' && editingType !== 'social-media-ad' && editingType !== 'print-ad' && (
                 <>
                   {/* Basic Info */}
                   <div className="grid grid-cols-2 gap-4">

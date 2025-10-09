@@ -78,6 +78,16 @@ interface EnhancedPublicationFormData {
   numberOfEmployees: number;
   topAdvertiserCategories: string;
   
+  // Revenue Breakdown
+  revenueDigital: number;
+  revenuePrint: number;
+  revenueEvents: number;
+  revenuePodcasts: number;
+  revenueRadio: number;
+  revenueStreaming: number;
+  revenueSocial: number;
+  revenueOther: number;
+  
   // Competitive Info
   uniqueValueProposition: string;
   keyDifferentiators: string;
@@ -197,6 +207,16 @@ export const EnhancedPublicationsManagement = () => {
     yearsInOperation: 0,
     numberOfEmployees: 0,
     topAdvertiserCategories: '',
+    
+    // Revenue Breakdown
+    revenueDigital: 0,
+    revenuePrint: 0,
+    revenueEvents: 0,
+    revenuePodcasts: 0,
+    revenueRadio: 0,
+    revenueStreaming: 0,
+    revenueSocial: 0,
+    revenueOther: 0,
     
     // Competitive Info
     uniqueValueProposition: '',
@@ -378,38 +398,28 @@ export const EnhancedPublicationsManagement = () => {
           signatureFeatures: formData.signatureFeatures ? formData.signatureFeatures.split(',').map(s => s.trim()) : []
         },
         businessInfo: {
-          ownershipType: formData.ownershipType,
+          ownershipType: formData.ownershipType as any,
           parentCompany: formData.parentCompany,
           yearsInOperation: formData.yearsInOperation,
           numberOfEmployees: formData.numberOfEmployees,
-          topAdvertiserCategories: formData.topAdvertiserCategories ? formData.topAdvertiserCategories.split(',').map(s => s.trim()) : []
+          topAdvertiserCategories: formData.topAdvertiserCategories ? formData.topAdvertiserCategories.split(',').map(s => s.trim()) : [],
+          revenueBreakdown: {
+            digital: formData.revenueDigital || undefined,
+            print: formData.revenuePrint || undefined,
+            events: formData.revenueEvents || undefined,
+            podcasts: formData.revenuePodcasts || undefined,
+            radio: formData.revenueRadio || undefined,
+            streaming: formData.revenueStreaming || undefined,
+            social: formData.revenueSocial || undefined,
+            other: formData.revenueOther || undefined
+          }
         },
         competitiveInfo: {
           uniqueValueProposition: formData.uniqueValueProposition,
           keyDifferentiators: formData.keyDifferentiators ? formData.keyDifferentiators.split(',').map(s => s.trim()) : [],
           competitiveAdvantages: formData.competitiveAdvantages ? formData.competitiveAdvantages.split(',').map(s => s.trim()) : []
         },
-        socialMediaProfiles: [
-          ...(formData.facebookUrl ? [{
-            platform: 'facebook' as const,
-            url: formData.facebookUrl,
-            metrics: { followers: formData.facebookFollowers }
-          }] : []),
-          ...(formData.instagramUrl ? [{
-            platform: 'instagram' as const,
-            url: formData.instagramUrl,
-            metrics: { followers: formData.instagramFollowers }
-          }] : []),
-          ...(formData.twitterUrl ? [{
-            platform: 'twitter' as const,
-            url: formData.twitterUrl,
-            metrics: { followers: formData.twitterFollowers }
-          }] : []),
-          ...(formData.linkedinUrl ? [{
-            platform: 'linkedin' as const,
-            url: formData.linkedinUrl
-          }] : [])
-        ],
+        // Social media moved to distributionChannels.socialMedia in new schema
         distributionChannels: {
           website: formData.monthlyVisitors ? {
             url: formData.websiteUrl,
@@ -420,20 +430,57 @@ export const EnhancedPublicationsManagement = () => {
               pagesPerSession: formData.pagesPerSession,
               bounceRate: formData.bounceRate,
               mobilePercentage: formData.mobilePercentage
-            }
+            },
+            advertisingOpportunities: []
           } : undefined,
-          print: formData.circulation ? {
-            frequency: formData.printFrequency,
+          socialMedia: [
+            ...(formData.facebookUrl ? [{
+              platform: 'facebook' as const,
+              handle: formData.facebookUrl.replace(/.*\//, '') || 'facebook',
+              url: formData.facebookUrl,
+              metrics: { followers: formData.facebookFollowers },
+              advertisingOpportunities: []
+            }] : []),
+            ...(formData.instagramUrl ? [{
+              platform: 'instagram' as const,
+              handle: formData.instagramUrl.replace(/.*\//, '') || 'instagram',
+              url: formData.instagramUrl,
+              metrics: { followers: formData.instagramFollowers },
+              advertisingOpportunities: []
+            }] : []),
+            ...(formData.twitterUrl ? [{
+              platform: 'twitter' as const,
+              handle: formData.twitterUrl.replace(/.*\//, '') || 'twitter',
+              url: formData.twitterUrl,
+              metrics: { followers: formData.twitterFollowers },
+              advertisingOpportunities: []
+            }] : []),
+            ...(formData.linkedinUrl ? [{
+              platform: 'linkedin' as const,
+              handle: formData.linkedinUrl.replace(/.*\//, '') || 'linkedin',
+              url: formData.linkedinUrl,
+              advertisingOpportunities: []
+            }] : [])
+          ],
+          print: formData.circulation ? [{
+            name: 'Main Publication',
+            frequency: formData.printFrequency as any,
             circulation: formData.circulation,
             paidCirculation: formData.paidCirculation,
             freeCirculation: formData.freeCirculation,
-            distributionArea: formData.distributionArea
-          } : undefined,
+            distributionArea: formData.distributionArea,
+            advertisingOpportunities: []
+          }] : [],
           newsletters: formData.newsletterSubscribers ? [{
             name: 'Main Newsletter',
             subscribers: formData.newsletterSubscribers,
-            openRate: formData.newsletterOpenRate
-          }] : []
+            openRate: formData.newsletterOpenRate,
+            advertisingOpportunities: []
+          }] : [],
+          events: [],
+          podcasts: [],
+          radioStations: [],
+          streamingVideo: []
         },
         metadata: {
           extractedFrom: ['manual_entry'],
@@ -521,16 +568,26 @@ export const EnhancedPublicationsManagement = () => {
         yearsInOperation: fullPublication.businessInfo?.yearsInOperation || 0,
         numberOfEmployees: fullPublication.businessInfo?.numberOfEmployees || 0,
         topAdvertiserCategories: fullPublication.businessInfo?.topAdvertiserCategories?.join(', ') || '',
+        
+        // Revenue Breakdown
+        revenueDigital: fullPublication.businessInfo?.revenueBreakdown?.digital || 0,
+        revenuePrint: fullPublication.businessInfo?.revenueBreakdown?.print || 0,
+        revenueEvents: fullPublication.businessInfo?.revenueBreakdown?.events || 0,
+        revenuePodcasts: fullPublication.businessInfo?.revenueBreakdown?.podcasts || 0,
+        revenueRadio: fullPublication.businessInfo?.revenueBreakdown?.radio || 0,
+        revenueStreaming: fullPublication.businessInfo?.revenueBreakdown?.streaming || 0,
+        revenueSocial: fullPublication.businessInfo?.revenueBreakdown?.social || 0,
+        revenueOther: fullPublication.businessInfo?.revenueBreakdown?.other || 0,
         uniqueValueProposition: fullPublication.competitiveInfo?.uniqueValueProposition || '',
         keyDifferentiators: fullPublication.competitiveInfo?.keyDifferentiators?.join(', ') || '',
         competitiveAdvantages: fullPublication.competitiveInfo?.competitiveAdvantages?.join(', ') || '',
-        facebookUrl: fullPublication.socialMediaProfiles?.find(p => p.platform === 'facebook')?.url || '',
-        facebookFollowers: fullPublication.socialMediaProfiles?.find(p => p.platform === 'facebook')?.metrics?.followers || 0,
-        instagramUrl: fullPublication.socialMediaProfiles?.find(p => p.platform === 'instagram')?.url || '',
-        instagramFollowers: fullPublication.socialMediaProfiles?.find(p => p.platform === 'instagram')?.metrics?.followers || 0,
-        twitterUrl: fullPublication.socialMediaProfiles?.find(p => p.platform === 'twitter')?.url || '',
-        twitterFollowers: fullPublication.socialMediaProfiles?.find(p => p.platform === 'twitter')?.metrics?.followers || 0,
-        linkedinUrl: fullPublication.socialMediaProfiles?.find(p => p.platform === 'linkedin')?.url || '',
+        facebookUrl: fullPublication.distributionChannels?.socialMedia?.find(p => p.platform === 'facebook')?.url || '',
+        facebookFollowers: fullPublication.distributionChannels?.socialMedia?.find(p => p.platform === 'facebook')?.metrics?.followers || 0,
+        instagramUrl: fullPublication.distributionChannels?.socialMedia?.find(p => p.platform === 'instagram')?.url || '',
+        instagramFollowers: fullPublication.distributionChannels?.socialMedia?.find(p => p.platform === 'instagram')?.metrics?.followers || 0,
+        twitterUrl: fullPublication.distributionChannels?.socialMedia?.find(p => p.platform === 'twitter')?.url || '',
+        twitterFollowers: fullPublication.distributionChannels?.socialMedia?.find(p => p.platform === 'twitter')?.metrics?.followers || 0,
+        linkedinUrl: fullPublication.distributionChannels?.socialMedia?.find(p => p.platform === 'linkedin')?.url || '',
         monthlyVisitors: fullPublication.distributionChannels?.website?.metrics?.monthlyVisitors || 0,
         monthlyPageViews: fullPublication.distributionChannels?.website?.metrics?.monthlyPageViews || 0,
         averageSessionDuration: fullPublication.distributionChannels?.website?.metrics?.averageSessionDuration || 0,
@@ -1504,6 +1561,110 @@ export const EnhancedPublicationsManagement = () => {
                     placeholder="Restaurants & Bars, Arts & Entertainment, Retail, Events"
                     rows={3}
                   />
+                </div>
+                
+                <Separator />
+                <h4 className="font-medium">Revenue Breakdown (%)</h4>
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="revenueDigital">Digital</Label>
+                    <Input
+                      id="revenueDigital"
+                      type="number"
+                      value={formData.revenueDigital}
+                      onChange={(e) => setFormData({ ...formData, revenueDigital: parseFloat(e.target.value) || 0 })}
+                      placeholder="45"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="revenuePrint">Print</Label>
+                    <Input
+                      id="revenuePrint"
+                      type="number"
+                      value={formData.revenuePrint}
+                      onChange={(e) => setFormData({ ...formData, revenuePrint: parseFloat(e.target.value) || 0 })}
+                      placeholder="35"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="revenueEvents">Events</Label>
+                    <Input
+                      id="revenueEvents"
+                      type="number"
+                      value={formData.revenueEvents}
+                      onChange={(e) => setFormData({ ...formData, revenueEvents: parseFloat(e.target.value) || 0 })}
+                      placeholder="10"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="revenueSocial">Social</Label>
+                    <Input
+                      id="revenueSocial"
+                      type="number"
+                      value={formData.revenueSocial}
+                      onChange={(e) => setFormData({ ...formData, revenueSocial: parseFloat(e.target.value) || 0 })}
+                      placeholder="5"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="revenuePodcasts">Podcasts</Label>
+                    <Input
+                      id="revenuePodcasts"
+                      type="number"
+                      value={formData.revenuePodcasts}
+                      onChange={(e) => setFormData({ ...formData, revenuePodcasts: parseFloat(e.target.value) || 0 })}
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="revenueRadio">Radio</Label>
+                    <Input
+                      id="revenueRadio"
+                      type="number"
+                      value={formData.revenueRadio}
+                      onChange={(e) => setFormData({ ...formData, revenueRadio: parseFloat(e.target.value) || 0 })}
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="revenueStreaming">Streaming</Label>
+                    <Input
+                      id="revenueStreaming"
+                      type="number"
+                      value={formData.revenueStreaming}
+                      onChange={(e) => setFormData({ ...formData, revenueStreaming: parseFloat(e.target.value) || 0 })}
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="revenueOther">Other</Label>
+                    <Input
+                      id="revenueOther"
+                      type="number"
+                      value={formData.revenueOther}
+                      onChange={(e) => setFormData({ ...formData, revenueOther: parseFloat(e.target.value) || 0 })}
+                      placeholder="5"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
                 </div>
                 
                 <Separator />

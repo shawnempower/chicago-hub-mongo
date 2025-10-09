@@ -6,10 +6,11 @@ import SurveyForm from "@/components/SurveyForm";
 
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { PublicationProfile } from "@/components/dashboard/PublicationProfile";
-import { PublicationInventory } from "@/components/dashboard/PublicationInventory";
+import { DashboardInventoryManager } from "@/components/dashboard/DashboardInventoryManager";
 import { PublicationKnowledgeBase } from "@/components/dashboard/PublicationKnowledgeBase";
 import { PublicationSettings } from "@/components/dashboard/PublicationSettings";
 import { PublicationStorefront } from "@/components/dashboard/PublicationStorefront";
+import { PublicationFullSummary } from "@/components/dashboard/PublicationFullSummary";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/CustomAuthContext";
 import { Navigate, useSearchParams, useNavigate } from "react-router-dom";
@@ -73,13 +74,14 @@ function DashboardContent() {
         {/* Publication-Specific Dashboard */}
         {selectedPublication ? (
           <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="profile">Profile</TabsTrigger>
               <TabsTrigger value="inventory">Inventory</TabsTrigger>
               <TabsTrigger value="knowledgebase">Knowledgebase</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
               <TabsTrigger value="storefront">Storefront</TabsTrigger>
+              <TabsTrigger value="summary">Summary</TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard" className="space-y-6">
@@ -91,7 +93,7 @@ function DashboardContent() {
             </TabsContent>
 
             <TabsContent value="inventory" className="space-y-6">
-              <PublicationInventory />
+              <DashboardInventoryManager />
             </TabsContent>
 
             <TabsContent value="knowledgebase" className="space-y-6">
@@ -104,6 +106,10 @@ function DashboardContent() {
 
             <TabsContent value="storefront" className="space-y-6">
               <PublicationStorefront />
+            </TabsContent>
+
+            <TabsContent value="summary" className="space-y-6">
+              <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />
             </TabsContent>
           </Tabs>
         ) : (

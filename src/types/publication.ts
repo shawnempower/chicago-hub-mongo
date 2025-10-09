@@ -46,23 +46,40 @@ export interface PublicationFrontend {
     };
   };
   
-  socialMediaProfiles?: Array<{
-    platform: 'facebook' | 'instagram' | 'twitter' | 'linkedin' | 'youtube' | 'tiktok' | 'pinterest' | 'snapchat' | 'threads' | 'other';
-    handle: string;
-    url?: string;
-    verified?: boolean;
-    metrics?: {
-      followers?: number;
-      following?: number;
-      posts?: number;
-      engagementRate?: number;
-      averageReach?: number;
-      averageImpressions?: number;
-    };
-    lastUpdated?: string;
-  }>;
-  
   distributionChannels?: {
+    socialMedia?: Array<{
+      platform: 'facebook' | 'instagram' | 'twitter' | 'linkedin' | 'youtube' | 'tiktok' | 'pinterest' | 'snapchat' | 'threads' | 'other';
+      handle: string;
+      url?: string;
+      verified?: boolean;
+      metrics?: {
+        followers?: number;
+        following?: number;
+        posts?: number;
+        engagementRate?: number;
+        averageReach?: number;
+        averageImpressions?: number;
+      };
+      lastUpdated?: string;
+      advertisingOpportunities?: Array<{
+        name?: string;
+        adFormat?: 'sponsored_post' | 'story_ad' | 'video_ad' | 'carousel_ad' | 'boosted_post' | 'influencer_partnership' | 'takeover' | 'custom';
+        postType?: 'image' | 'video' | 'carousel' | 'story' | 'reel' | 'live';
+        pricing?: {
+          perPost?: number;
+          perStory?: number;
+          monthly?: number;
+          pricingModel?: 'per_post' | 'per_story' | 'monthly' | 'cpm' | 'contact';
+        };
+        specifications?: {
+          imageSize?: string;
+          videoLength?: string;
+          format?: string;
+          aspectRatio?: string;
+        };
+        available?: boolean;
+      }>;
+    }>;
     website?: {
       url?: string;
       cmsplatform?: string;
@@ -160,6 +177,84 @@ export interface PublicationFrontend {
         pricing?: number;
       }>;
     }>;
+    
+    podcasts?: Array<{
+      podcastId?: string;
+      name?: string;
+      description?: string;
+      frequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'irregular';
+      averageDownloads?: number;
+      averageListeners?: number;
+      episodeCount?: number;
+      platforms?: Array<'apple_podcasts' | 'spotify' | 'google_podcasts' | 'amazon_music' | 'stitcher' | 'overcast' | 'castbox' | 'other'>;
+      advertisingOpportunities?: Array<{
+        name?: string;
+        adFormat?: 'pre-roll' | 'mid-roll' | 'post-roll' | 'host-read' | 'programmatic' | 'sponsored_content';
+        duration?: number;
+        pricing?: {
+          cpm?: number;
+          flatRate?: number;
+          pricingModel?: 'cpm' | 'flat' | 'contact';
+        };
+        specifications?: {
+          format?: 'mp3' | 'wav' | 'script';
+          bitrate?: string;
+        };
+        available?: boolean;
+      }>;
+    }>;
+    
+    radioStations?: Array<{
+      stationId?: string;
+      callSign?: string;
+      frequency?: string;
+      format?: 'news_talk' | 'classic_rock' | 'country' | 'pop' | 'hip_hop' | 'jazz' | 'classical' | 'alternative' | 'sports' | 'other';
+      coverageArea?: string;
+      listeners?: number;
+      advertisingOpportunities?: Array<{
+        name?: string;
+        adFormat?: '30_second_spot' | '60_second_spot' | 'live_read' | 'sponsorship' | 'traffic_weather_sponsor';
+        timeSlot?: 'drive_time_morning' | 'drive_time_evening' | 'midday' | 'weekend' | 'overnight';
+        pricing?: {
+          perSpot?: number;
+          weekly?: number;
+          monthly?: number;
+          pricingModel?: 'per_spot' | 'weekly' | 'monthly' | 'contact';
+        };
+        specifications?: {
+          format?: 'mp3' | 'wav' | 'live_script';
+          bitrate?: string;
+          duration?: number;
+        };
+        available?: boolean;
+      }>;
+    }>;
+    
+    streamingVideo?: Array<{
+      channelId?: string;
+      name?: string;
+      platform?: 'youtube' | 'twitch' | 'facebook_live' | 'instagram_live' | 'linkedin_live' | 'custom_streaming' | 'other';
+      subscribers?: number;
+      averageViews?: number;
+      contentType?: 'live_news' | 'recorded_shows' | 'interviews' | 'events' | 'mixed';
+      streamingSchedule?: string;
+      advertisingOpportunities?: Array<{
+        name?: string;
+        adFormat?: 'pre-roll' | 'mid-roll' | 'post-roll' | 'overlay' | 'sponsored_content' | 'product_placement' | 'live_mention';
+        duration?: number;
+        pricing?: {
+          cpm?: number;
+          flatRate?: number;
+          pricingModel?: 'cpm' | 'flat' | 'contact';
+        };
+        specifications?: {
+          format?: 'mp4' | 'mov' | 'avi' | 'script' | 'image_overlay';
+          resolution?: '1080p' | '720p' | '480p' | '4k';
+          aspectRatio?: '16:9' | '9:16' | '1:1' | '4:3';
+        };
+        available?: boolean;
+      }>;
+    }>;
   };
   
   audienceDemographics?: {
@@ -219,6 +314,10 @@ export interface PublicationFrontend {
       digital?: number;
       print?: number;
       events?: number;
+      podcasts?: number;
+      radio?: number;
+      streaming?: number;
+      social?: number;
       other?: number;
     };
     topAdvertiserCategories?: string[];
@@ -228,7 +327,7 @@ export interface PublicationFrontend {
   crossChannelPackages?: Array<{
     name?: string;
     packageName?: string;
-    includedChannels?: Array<'website' | 'print' | 'newsletter' | 'social' | 'events' | 'email'>;
+    includedChannels?: Array<'website' | 'print' | 'newsletter' | 'social' | 'events' | 'email' | 'podcasts' | 'radio' | 'streaming'>;
     pricing?: string;
     details?: string;
     duration?: string;

@@ -1,0 +1,824 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EmpowerLocal Storefront Configuration",
+  "description": "Complete schema for configuring EmpowerLocal Storefront Components including theme, content, and metadata",
+  "type": "object",
+  "required": ["meta", "theme", "components"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "description": "Configuration metadata and versioning information",
+      "required": ["configVersion", "publisher_id", "is_draft"],
+      "properties": {
+        "configVersion": {
+          "type": "string",
+          "description": "Version of the configuration schema being used",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "example": "1.0.0"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this configuration"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when this configuration was last modified"
+        },
+        "publisher_id": {
+          "type": "string",
+          "description": "Unique identifier for the publisher or organization",
+          "minLength": 1
+        },
+        "is_draft": {
+          "type": "boolean",
+          "description": "Whether this configuration is a draft or published version"
+        }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "description": "Visual theming configuration including colors, typography, and layout",
+      "required": ["colors", "typography", "layout"],
+      "properties": {
+        "colors": {
+          "type": "object",
+          "description": "Color palette configuration",
+          "required": ["lightPrimary", "darkPrimary", "mode"],
+          "properties": {
+            "lightPrimary": {
+              "type": "string",
+              "description": "Primary color for light mode",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "darkPrimary": {
+              "type": "string",
+              "description": "Primary color for dark mode",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "gradStart": {
+              "type": "string",
+              "description": "Starting color for gradients",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "gradEnd": {
+              "type": "string",
+              "description": "Ending color for gradients",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "angle": {
+              "type": "number",
+              "description": "Gradient angle in degrees",
+              "minimum": 0,
+              "maximum": 360
+            },
+            "mode": {
+              "type": "string",
+              "description": "Default color mode",
+              "enum": ["light", "dark", "auto"]
+            },
+            "ctaTextColor": {
+              "type": "string",
+              "description": "Text color for call-to-action buttons"
+            }
+          }
+        },
+        "typography": {
+          "type": "object",
+          "description": "Typography configuration",
+          "required": ["primaryFont"],
+          "properties": {
+            "primaryFont": {
+              "type": "string",
+              "description": "Primary font family name"
+            },
+            "fontWeights": {
+              "type": "string",
+              "description": "Semicolon-separated list of font weights to load",
+              "pattern": "^\\d+(;\\d+)*$"
+            }
+          }
+        },
+        "layout": {
+          "type": "object",
+          "description": "Layout and spacing configuration",
+          "properties": {
+            "radius": {
+              "type": "number",
+              "description": "Default border radius in pixels",
+              "minimum": 0
+            },
+            "iconWeight": {
+              "type": "string",
+              "description": "Default icon weight/style",
+              "enum": ["light", "regular", "bold", "fill"]
+            }
+          }
+        },
+        "sectionSettings": {
+          "type": "object",
+          "description": "Per-section theme overrides",
+          "patternProperties": {
+            "^[a-z]+$": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "description": "Color mode for this section",
+                  "enum": ["light", "dark", "auto"]
+                },
+                "accentOverride": {
+                  "type": ["string", "null"],
+                  "description": "Optional accent color override for this section"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "description": "Configuration for individual page components",
+      "properties": {
+        "navbar": {
+          "type": "object",
+          "description": "Navigation bar configuration",
+          "required": ["enabled", "order", "content"],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether this component is enabled"
+            },
+            "order": {
+              "type": "integer",
+              "description": "Display order relative to other components",
+              "minimum": 1
+            },
+            "content": {
+              "type": "object",
+              "required": ["navItems"],
+              "properties": {
+                "logoUrl": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "URL of the logo image"
+                },
+                "navItems": {
+                  "type": "array",
+                  "description": "Navigation menu items",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "label", "href"],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Unique identifier for the nav item"
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "Display text for the nav item"
+                      },
+                      "href": {
+                        "type": "string",
+                        "description": "Link destination (URL or anchor)"
+                      }
+                    }
+                  }
+                },
+                "ctaText": {
+                  "type": "string",
+                  "description": "Call-to-action button text"
+                },
+                "ctaHref": {
+                  "type": "string",
+                  "description": "Call-to-action button destination"
+                }
+              }
+            }
+          }
+        },
+        "hero": {
+          "type": "object",
+          "description": "Hero section configuration",
+          "required": ["enabled", "order", "content"],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "content": {
+              "type": "object",
+              "required": ["title", "description"],
+              "properties": {
+                "tag": {
+                  "type": "string",
+                  "description": "Small tagline or category text above the title"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Main hero headline"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Hero description or subtitle"
+                },
+                "ctaText": {
+                  "type": "string",
+                  "description": "Primary call-to-action button text"
+                },
+                "imageUrl": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Hero background or featured image"
+                },
+                "stats": {
+                  "type": "array",
+                  "description": "Key statistics to display",
+                  "items": {
+                    "type": "object",
+                    "required": ["key", "value"],
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "description": "Statistic number or metric"
+                      },
+                      "value": {
+                        "type": "string",
+                        "description": "Statistic description or label"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "audience": {
+          "type": "object",
+          "description": "Audience demographics section",
+          "required": ["enabled", "order", "content"],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "content": {
+              "type": "object",
+              "required": ["title", "description"],
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Section title"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Section description"
+                },
+                "ageDemographics": {
+                  "type": "array",
+                  "description": "Age distribution data",
+                  "items": {
+                    "type": "object",
+                    "required": ["label", "percentage"],
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "description": "Age range label"
+                      },
+                      "percentage": {
+                        "type": "number",
+                        "description": "Percentage of audience in this age range",
+                        "minimum": 0,
+                        "maximum": 100
+                      }
+                    }
+                  }
+                },
+                "statHighlights": {
+                  "type": "array",
+                  "description": "Key audience statistics",
+                  "items": {
+                    "type": "object",
+                    "required": ["key", "value"],
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "description": "Statistic value (e.g., percentage)"
+                      },
+                      "value": {
+                        "type": "string",
+                        "description": "Statistic description"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "testimonials": {
+          "type": "object",
+          "description": "Customer testimonials section",
+          "required": ["enabled", "order", "content"],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "content": {
+              "type": "object",
+              "required": ["title", "testimonials"],
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Section title"
+                },
+                "subtitle": {
+                  "type": "string",
+                  "description": "Section subtitle"
+                },
+                "testimonials": {
+                  "type": "array",
+                  "description": "Collection of testimonials",
+                  "items": {
+                    "type": "object",
+                    "required": ["quote", "author"],
+                    "properties": {
+                      "quote": {
+                        "type": "string",
+                        "description": "Testimonial text"
+                      },
+                      "author": {
+                        "type": "string",
+                        "description": "Author name"
+                      },
+                      "age": {
+                        "type": "integer",
+                        "description": "Author age",
+                        "minimum": 1,
+                        "maximum": 120
+                      },
+                      "location": {
+                        "type": "string",
+                        "description": "Author location"
+                      },
+                      "company": {
+                        "type": "string",
+                        "description": "Author company"
+                      },
+                      "role": {
+                        "type": "string",
+                        "description": "Author role or title"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "inventory": {
+          "type": "object",
+          "description": "Product/service inventory section",
+          "required": ["enabled", "order", "content"],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "content": {
+              "type": "object",
+              "required": ["title", "channels"],
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Section title"
+                },
+                "subtitle": {
+                  "type": "string",
+                  "description": "Section subtitle"
+                },
+                "channels": {
+                  "type": "array",
+                  "description": "Available channels or services",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "label", "title", "description"],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Unique identifier for the channel"
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "Short label for the channel"
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Channel title"
+                      },
+                      "description": {
+                        "type": "string",
+                        "description": "Detailed channel description"
+                      },
+                      "imageUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "Channel image or illustration"
+                      },
+                      "stats": {
+                        "type": "array",
+                        "description": "Channel-specific statistics",
+                        "items": {
+                          "type": "object",
+                          "required": ["key", "value"],
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "description": "Statistic value"
+                            },
+                            "value": {
+                              "type": "string",
+                              "description": "Statistic description"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "campaign": {
+          "type": "object",
+          "description": "Campaign or call-to-action section",
+          "required": ["enabled", "order", "content"],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "content": {
+              "type": "object",
+              "required": ["title", "description"],
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Section title"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Section description"
+                },
+                "planningCard": {
+                  "type": "object",
+                  "description": "Featured planning or process card",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "description": "Card title"
+                    },
+                    "features": {
+                      "type": "array",
+                      "description": "List of features or steps",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "ctaText": {
+                      "type": "string",
+                      "description": "Call-to-action button text"
+                    }
+                  }
+                },
+                "features": {
+                  "type": "array",
+                  "description": "Key features or benefits",
+                  "items": {
+                    "type": "object",
+                    "required": ["title", "description", "icon"],
+                    "properties": {
+                      "title": {
+                        "type": "string",
+                        "description": "Feature title"
+                      },
+                      "description": {
+                        "type": "string",
+                        "description": "Feature description"
+                      },
+                      "icon": {
+                        "type": "string",
+                        "description": "Icon identifier for the feature"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "contactfaq": {
+          "type": "object",
+          "description": "Contact form and FAQ section",
+          "required": ["enabled", "order", "content"],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "content": {
+              "type": "object",
+              "required": ["title", "description", "formLabels", "faqItems"],
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Section title"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Section description"
+                },
+                "faqTitle": {
+                  "type": "string",
+                  "description": "FAQ subsection title"
+                },
+                "formLabels": {
+                  "type": "object",
+                  "description": "Form field labels and text",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Name field label"
+                    },
+                    "email": {
+                      "type": "string",
+                      "description": "Email field label"
+                    },
+                    "company": {
+                      "type": "string",
+                      "description": "Company field label"
+                    },
+                    "interest": {
+                      "type": "string",
+                      "description": "Interest field label"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message field label"
+                    },
+                    "submit": {
+                      "type": "string",
+                      "description": "Submit button text"
+                    }
+                  }
+                },
+                "faqItems": {
+                  "type": "array",
+                  "description": "Frequently asked questions",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "question", "answer"],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Unique identifier for the FAQ item"
+                      },
+                      "question": {
+                        "type": "string",
+                        "description": "The question"
+                      },
+                      "answer": {
+                        "type": "string",
+                        "description": "The answer"
+                      }
+                    }
+                  }
+                },
+                "contactInfo": {
+                  "type": "object",
+                  "description": "Contact information",
+                  "properties": {
+                    "phone": {
+                      "type": ["string", "null"],
+                      "description": "Contact phone number"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "description": "Contact email address"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "aboutus": {
+          "type": "object",
+          "description": "About us section",
+          "required": ["enabled", "order", "content"],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "content": {
+              "type": "object",
+              "required": ["title", "paragraphs"],
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Section title"
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "description": "About us text content",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "imageUrl": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "About us image"
+                }
+              }
+            }
+          }
+        },
+        "footer": {
+          "type": "object",
+          "description": "Footer section",
+          "required": ["enabled", "order", "content"],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "content": {
+              "type": "object",
+              "required": ["companyName"],
+              "properties": {
+                "companyName": {
+                  "type": "string",
+                  "description": "Company or organization name"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Company description or tagline"
+                },
+                "contactInfo": {
+                  "type": "object",
+                  "description": "Footer contact information",
+                  "properties": {
+                    "phone": {
+                      "type": "string",
+                      "description": "Contact phone number"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "description": "Contact email address"
+                    },
+                    "address": {
+                      "type": "string",
+                      "description": "Physical address"
+                    }
+                  }
+                },
+                "socialLinks": {
+                  "type": "object",
+                  "description": "Social media links",
+                  "properties": {
+                    "linkedin": {
+                      "type": ["string", "null"],
+                      "format": "uri",
+                      "description": "LinkedIn URL"
+                    },
+                    "twitter": {
+                      "type": ["string", "null"],
+                      "format": "uri",
+                      "description": "Twitter/X URL"
+                    },
+                    "facebook": {
+                      "type": ["string", "null"],
+                      "format": "uri",
+                      "description": "Facebook URL"
+                    },
+                    "instagram": {
+                      "type": ["string", "null"],
+                      "format": "uri",
+                      "description": "Instagram URL"
+                    }
+                  }
+                },
+                "navItems": {
+                  "type": "array",
+                  "description": "Footer navigation links",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "label", "href"],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Unique identifier for the nav item"
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "Display text for the nav item"
+                      },
+                      "href": {
+                        "type": "string",
+                        "description": "Link destination"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "seoMetadata": {
+      "type": "object",
+      "description": "Search engine optimization metadata",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Page title for SEO",
+          "maxLength": 60
+        },
+        "description": {
+          "type": "string",
+          "description": "Meta description for search engines",
+          "maxLength": 160
+        },
+        "keywords": {
+          "type": "array",
+          "description": "SEO keywords",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ogImage": {
+          "type": "string",
+          "format": "uri",
+          "description": "Open Graph image URL for social sharing"
+        },
+        "ogTitle": {
+          "type": "string",
+          "description": "Open Graph title for social sharing"
+        },
+        "ogDescription": {
+          "type": "string",
+          "description": "Open Graph description for social sharing"
+        }
+      }
+    },
+    "analytics": {
+      "type": "object",
+      "description": "Analytics and tracking configuration",
+      "properties": {
+        "googleAnalyticsId": {
+          "type": "string",
+          "description": "Google Analytics measurement ID",
+          "pattern": "^(GA_MEASUREMENT_ID|G-[A-Z0-9]+)$"
+        },
+        "facebookPixelId": {
+          "type": "string",
+          "description": "Facebook Pixel ID",
+          "pattern": "^(FB_PIXEL_ID|\\d+)$"
+        }
+      }
+    }
+  }
+}

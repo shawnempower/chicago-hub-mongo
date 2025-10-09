@@ -17,7 +17,7 @@ async function updateWillametteWeekData() {
     console.log('✅ Connected to MongoDB');
 
     // Read the WillametteWeek schema file
-    const schemaPath = path.join(process.cwd(), 'WillametteWeek_Schema.json');
+    const schemaPath = path.join(process.cwd(), 'json_files/publications/WillametteWeek_Schema.json');
     const schemaData = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
     console.log('📄 Loaded WillametteWeek schema file');
 

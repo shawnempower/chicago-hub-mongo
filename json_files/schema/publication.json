@@ -1,0 +1,1795 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Universal Publisher Profile Schema",
+  "type": "object",
+  "properties": {
+    "_id": {
+      "type": ["string", "object"],
+      "description": "MongoDB ObjectId or UUID"
+    },
+    "publicationId": {
+      "type": "integer",
+      "description": "Unique internal publication identifier"
+    },
+    "basicInfo": {
+      "type": "object",
+      "properties": {
+        "publicationName": {
+          "type": "string",
+          "description": "Official publication name"
+        },
+        "websiteUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Primary website URL"
+        },
+        "founded": {
+          "type": ["string", "integer"],
+          "description": "Year founded or founding date"
+        },
+        "publicationType": {
+          "type": "string",
+          "enum": ["daily", "weekly", "monthly", "bi-weekly", "quarterly", "other"],
+          "description": "Publication frequency"
+        },
+        "contentType": {
+          "type": "string",
+          "enum": ["news", "lifestyle", "business", "entertainment", "sports", "alternative", "mixed"],
+          "description": "Primary content focus"
+        },
+        "headquarters": {
+          "type": "string",
+          "description": "Primary business address"
+        },
+        "geographicCoverage": {
+          "type": "string",
+          "enum": ["local", "regional", "state", "national", "international"],
+          "description": "Geographic scope of coverage"
+        },
+        "primaryServiceArea": {
+          "type": "string",
+          "description": "Main geographic market served"
+        },
+        "secondaryMarkets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional markets covered"
+        },
+        "numberOfPublications": {
+          "type": "integer",
+          "default": 1,
+          "description": "Number of publications under this entity"
+        }
+      }
+    },
+    "contactInfo": {
+      "type": "object",
+      "properties": {
+        "mainPhone": {
+          "type": "string",
+          "description": "Primary phone number"
+        },
+        "businessHours": {
+          "type": "string",
+          "description": "Operating hours"
+        },
+        "salesContact": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "preferredContact": {
+              "type": "string",
+              "enum": ["email", "phone", "text", "linkedin"]
+            }
+          }
+        },
+        "editorialContact": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "phone": {
+              "type": "string"
+            }
+          }
+        },
+        "generalManager": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "phone": {
+              "type": "string"
+            }
+          }
+        },
+        "advertisingDirector": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "phone": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "distributionChannels": {
+      "type": "object",
+      "properties": {
+        "website": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "cmsplatform": {
+              "type": "string",
+              "description": "Content management system used"
+            },
+            "metrics": {
+              "type": "object",
+              "properties": {
+                "monthlyVisitors": {
+                  "type": "integer",
+                  "description": "Monthly unique visitors"
+                },
+                "monthlyPageViews": {
+                  "type": "integer",
+                  "description": "Monthly page views"
+                },
+                "averageSessionDuration": {
+                  "type": "number",
+                  "description": "Average session duration in minutes"
+                },
+                "pagesPerSession": {
+                  "type": "number"
+                },
+                "bounceRate": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "mobilePercentage": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "advertisingOpportunities": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "adFormat": {
+                    "type": "string",
+                    "enum": ["300x250 banner", "728x90 banner", "320x50 banner", "300x600 banner", "970x250 banner", "takeover ad", "native", "video", "sponsored content", "custom"]
+                  },
+                  "location": {
+                    "type": "string",
+                    "description": "Where the ad appears on the page"
+                  },
+                  "pricing": {
+                    "type": "object",
+                    "properties": {
+                      "cpm": {
+                        "type": "number",
+                        "description": "Cost per thousand impressions"
+                      },
+                      "flatRate": {
+                        "type": "number",
+                        "description": "Flat monthly/weekly rate"
+                      },
+                      "pricingModel": {
+                        "type": "string",
+                        "enum": ["cpm", "flat", "cpc", "cpa", "contact"]
+                      },
+                      "minimumCommitment": {
+                        "type": "string",
+                        "description": "Minimum booking commitment"
+                      }
+                    }
+                  },
+                  "specifications": {
+                    "type": "object",
+                    "properties": {
+                      "size": {
+                        "type": "string"
+                      },
+                      "format": {
+                        "type": "string"
+                      },
+                      "fileSize": {
+                        "type": "string"
+                      },
+                      "resolution": {
+                        "type": "string"
+                      },
+                      "animationAllowed": {
+                        "type": "boolean"
+                      },
+                      "thirdPartyTags": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "monthlyImpressions": {
+                    "type": "integer"
+                  },
+                  "available": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "hubPricing": {
+                    "type": "array",
+                    "description": "Pricing variations for different marketing hubs",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "hubId": {
+                          "type": "string",
+                          "description": "Unique identifier for the marketing hub"
+                        },
+                        "hubName": {
+                          "type": "string",
+                          "description": "Display name for the marketing hub"
+                        },
+                        "pricing": {
+                          "type": "object",
+                          "properties": {
+                            "cpm": {
+                              "type": "number",
+                              "description": "Cost per thousand impressions"
+                            },
+                            "flatRate": {
+                              "type": "number",
+                              "description": "Flat monthly/weekly rate"
+                            },
+                            "pricingModel": {
+                              "type": "string",
+                              "enum": ["cpm", "flat", "cpc", "cpa", "contact"]
+                            }
+                          }
+                        },
+                        "discount": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100,
+                          "description": "Discount percentage for this hub"
+                        },
+                        "available": {
+                          "type": "boolean",
+                          "default": true,
+                          "description": "Whether this inventory is available to this hub"
+                        },
+                        "minimumCommitment": {
+                          "type": "string",
+                          "description": "Minimum booking commitment for this hub"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "socialMedia": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "platform": {
+                "type": "string",
+                "enum": ["facebook", "instagram", "twitter", "linkedin", "youtube", "tiktok", "pinterest", "snapchat", "threads", "other"]
+              },
+              "handle": {
+                "type": "string",
+                "description": "Username/handle on the platform"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "Direct URL to profile"
+              },
+              "verified": {
+                "type": "boolean",
+                "default": false
+              },
+              "metrics": {
+                "type": "object",
+                "properties": {
+                  "followers": {
+                    "type": "integer"
+                  },
+                  "following": {
+                    "type": "integer"
+                  },
+                  "posts": {
+                    "type": "integer"
+                  },
+                  "engagementRate": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "averageReach": {
+                    "type": "integer"
+                  },
+                  "averageImpressions": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "lastUpdated": {
+                "type": "string",
+                "format": "date"
+              },
+              "advertisingOpportunities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "adFormat": {
+                      "type": "string",
+                      "enum": ["sponsored_post", "story_ad", "video_ad", "carousel_ad", "boosted_post", "influencer_partnership", "takeover", "custom"]
+                    },
+                    "postType": {
+                      "type": "string",
+                      "enum": ["image", "video", "carousel", "story", "reel", "live"]
+                    },
+                    "pricing": {
+                      "type": "object",
+                      "properties": {
+                        "perPost": {
+                          "type": "number",
+                          "description": "Cost per sponsored post"
+                        },
+                        "perStory": {
+                          "type": "number",
+                          "description": "Cost per story placement"
+                        },
+                        "monthly": {
+                          "type": "number",
+                          "description": "Monthly package rate"
+                        },
+                        "pricingModel": {
+                          "type": "string",
+                          "enum": ["per_post", "per_story", "monthly", "cpm", "contact"]
+                        }
+                      }
+                    },
+                    "specifications": {
+                      "type": "object",
+                      "properties": {
+                        "imageSize": {
+                          "type": "string"
+                        },
+                        "videoLength": {
+                          "type": "string"
+                        },
+                        "format": {
+                          "type": "string"
+                        },
+                        "aspectRatio": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "available": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "hubPricing": {
+                      "type": "array",
+                      "description": "Pricing variations for different marketing hubs",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hubId": {
+                            "type": "string",
+                            "description": "Unique identifier for the marketing hub"
+                          },
+                          "hubName": {
+                            "type": "string",
+                            "description": "Display name for the marketing hub"
+                          },
+                          "pricing": {
+                            "type": "object",
+                            "properties": {
+                              "perPost": {
+                                "type": "number"
+                              },
+                              "perStory": {
+                                "type": "number"
+                              },
+                              "monthly": {
+                                "type": "number"
+                              },
+                              "pricingModel": {
+                                "type": "string",
+                                "enum": ["per_post", "per_story", "monthly", "cpm", "contact"]
+                              }
+                            }
+                          },
+                          "discount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100,
+                            "description": "Discount percentage for this hub"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Whether this inventory is available to this hub"
+                          },
+                          "minimumCommitment": {
+                            "type": "string",
+                            "description": "Minimum booking commitment for this hub"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "required": ["platform", "handle"]
+          }
+        },
+        "newsletters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "subject": {
+                "type": "string",
+                "description": "Newsletter topic/focus"
+              },
+              "frequency": {
+                "type": "string",
+                "enum": ["daily", "weekly", "bi-weekly", "monthly", "irregular"]
+              },
+              "sendDay": {
+                "type": "string",
+                "description": "Day(s) of week sent"
+              },
+              "sendTime": {
+                "type": "string",
+                "description": "Time of day sent"
+              },
+              "subscribers": {
+                "type": "integer"
+              },
+              "openRate": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "Average open rate percentage"
+              },
+              "clickThroughRate": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "Average CTR percentage"
+              },
+              "listGrowthRate": {
+                "type": "number",
+                "description": "Monthly subscriber growth rate"
+              },
+              "advertisingOpportunities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "position": {
+                      "type": "string",
+                      "enum": ["header", "footer", "inline", "dedicated"]
+                    },
+                    "dimensions": {
+                      "type": "string"
+                    },
+                    "pricing": {
+                      "type": "object",
+                      "properties": {
+                        "perSend": {
+                          "type": "number"
+                        },
+                        "monthly": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "hubPricing": {
+                      "type": "array",
+                      "description": "Pricing variations for different marketing hubs",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hubId": {
+                            "type": "string",
+                            "description": "Unique identifier for the marketing hub"
+                          },
+                          "hubName": {
+                            "type": "string",
+                            "description": "Display name for the marketing hub"
+                          },
+                          "pricing": {
+                            "type": "object",
+                            "properties": {
+                              "perSend": {
+                                "type": "number"
+                              },
+                              "monthly": {
+                                "type": "number"
+                              }
+                            }
+                          },
+                          "discount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100,
+                            "description": "Discount percentage for this hub"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Whether this inventory is available to this hub"
+                          },
+                          "minimumCommitment": {
+                            "type": "string",
+                            "description": "Minimum booking commitment for this hub"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "print": {
+          "type": "array",
+          "description": "Each print publication tracked separately",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the print publication"
+              },
+              "frequency": {
+                "type": "string",
+                "enum": ["daily", "weekly", "bi-weekly", "monthly", "quarterly"]
+              },
+              "circulation": {
+                "type": "integer",
+                "description": "Total print circulation"
+              },
+              "paidCirculation": {
+                "type": "integer"
+              },
+              "freeCirculation": {
+                "type": "integer"
+              },
+              "distributionArea": {
+                "type": "string",
+                "description": "Geographic area of distribution"
+              },
+              "distributionPoints": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "printSchedule": {
+                "type": "string",
+                "description": "Days of week published"
+              },
+              "advertisingOpportunities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "adFormat": {
+                      "type": "string",
+                      "enum": ["full page", "half page", "quarter page", "eighth page", "business card", "classified", "insert"]
+                    },
+                    "dimensions": {
+                      "type": "string"
+                    },
+                    "color": {
+                      "type": "string",
+                      "enum": ["color", "black and white", "both"]
+                    },
+                    "location": {
+                      "type": "string",
+                      "description": "Preferred page placement"
+                    },
+                    "pricing": {
+                      "type": "object",
+                      "properties": {
+                        "oneTime": {
+                          "type": "number"
+                        },
+                        "fourTimes": {
+                          "type": "number"
+                        },
+                        "twelveTimes": {
+                          "type": "number"
+                        },
+                        "openRate": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "specifications": {
+                      "type": "object",
+                      "properties": {
+                        "format": {
+                          "type": "string"
+                        },
+                        "resolution": {
+                          "type": "string"
+                        },
+                        "bleed": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "hubPricing": {
+                      "type": "array",
+                      "description": "Pricing variations for different marketing hubs",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hubId": {
+                            "type": "string",
+                            "description": "Unique identifier for the marketing hub"
+                          },
+                          "hubName": {
+                            "type": "string",
+                            "description": "Display name for the marketing hub"
+                          },
+                          "pricing": {
+                            "type": "object",
+                            "properties": {
+                              "oneTime": {
+                                "type": "number"
+                              },
+                              "fourTimes": {
+                                "type": "number"
+                              },
+                              "twelveTimes": {
+                                "type": "number"
+                              },
+                              "openRate": {
+                                "type": "number"
+                              }
+                            }
+                          },
+                          "discount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100,
+                            "description": "Discount percentage for this hub"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Whether this inventory is available to this hub"
+                          },
+                          "minimumCommitment": {
+                            "type": "string",
+                            "description": "Minimum booking commitment for this hub"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "frequency": {
+                "type": "string"
+              },
+              "averageAttendance": {
+                "type": "integer"
+              },
+              "targetAudience": {
+                "type": "string"
+              },
+              "location": {
+                "type": "string"
+              },
+              "advertisingOpportunities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "level": {
+                      "type": "string",
+                      "enum": ["title", "presenting", "supporting", "vendor", "booth"]
+                    },
+                    "benefits": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "pricing": {
+                      "type": "object",
+                      "properties": {
+                        "sponsorshipFee": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "hubPricing": {
+                      "type": "array",
+                      "description": "Pricing variations for different marketing hubs",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hubId": {
+                            "type": "string",
+                            "description": "Unique identifier for the marketing hub"
+                          },
+                          "hubName": {
+                            "type": "string",
+                            "description": "Display name for the marketing hub"
+                          },
+                          "pricing": {
+                            "type": "object",
+                            "properties": {
+                              "sponsorshipFee": {
+                                "type": "number"
+                              }
+                            }
+                          },
+                          "discount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100,
+                            "description": "Discount percentage for this hub"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Whether this inventory is available to this hub"
+                          },
+                          "minimumCommitment": {
+                            "type": "string",
+                            "description": "Minimum booking commitment for this hub"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "podcasts": {
+          "type": "array",
+          "description": "Each podcast show tracked separately",
+          "items": {
+            "type": "object",
+            "properties": {
+              "podcastId": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "frequency": {
+                "type": "string",
+                "enum": ["daily", "weekly", "bi-weekly", "monthly", "irregular"]
+              },
+              "averageDownloads": {
+                "type": "integer"
+              },
+              "averageListeners": {
+                "type": "integer"
+              },
+              "episodeCount": {
+                "type": "integer"
+              },
+              "platforms": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["apple_podcasts", "spotify", "google_podcasts", "amazon_music", "stitcher", "overcast", "castbox", "other"]
+                }
+              },
+              "advertisingOpportunities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "adFormat": {
+                      "type": "string",
+                      "enum": ["pre-roll", "mid-roll", "post-roll", "host-read", "programmatic", "sponsored_content"]
+                    },
+                    "duration": {
+                      "type": "integer",
+                      "description": "Ad duration in seconds"
+                    },
+                    "pricing": {
+                      "type": "object",
+                      "properties": {
+                        "cpm": {
+                          "type": "number",
+                          "description": "Cost per thousand downloads"
+                        },
+                        "flatRate": {
+                          "type": "number",
+                          "description": "Flat rate per episode"
+                        },
+                        "pricingModel": {
+                          "type": "string",
+                          "enum": ["cpm", "flat", "contact"]
+                        }
+                      }
+                    },
+                    "specifications": {
+                      "type": "object",
+                      "properties": {
+                        "format": {
+                          "type": "string",
+                          "enum": ["mp3", "wav", "script"]
+                        },
+                        "bitrate": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "available": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "hubPricing": {
+                      "type": "array",
+                      "description": "Pricing variations for different marketing hubs",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hubId": {
+                            "type": "string",
+                            "description": "Unique identifier for the marketing hub"
+                          },
+                          "hubName": {
+                            "type": "string",
+                            "description": "Display name for the marketing hub"
+                          },
+                          "pricing": {
+                            "type": "object",
+                            "properties": {
+                              "cpm": {
+                                "type": "number",
+                                "description": "Cost per thousand downloads"
+                              },
+                              "flatRate": {
+                                "type": "number",
+                                "description": "Flat rate per episode"
+                              },
+                              "pricingModel": {
+                                "type": "string",
+                                "enum": ["cpm", "flat", "contact"]
+                              }
+                            }
+                          },
+                          "discount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100,
+                            "description": "Discount percentage for this hub"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Whether this inventory is available to this hub"
+                          },
+                          "minimumCommitment": {
+                            "type": "string",
+                            "description": "Minimum booking commitment for this hub"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "radioStations": {
+          "type": "array",
+          "description": "Each radio station tracked separately",
+          "items": {
+            "type": "object",
+            "properties": {
+              "stationId": {
+                "type": "string"
+              },
+              "callSign": {
+                "type": "string"
+              },
+              "frequency": {
+                "type": "string"
+              },
+              "format": {
+                "type": "string",
+                "enum": ["news_talk", "classic_rock", "country", "pop", "hip_hop", "jazz", "classical", "alternative", "sports", "other"]
+              },
+              "coverageArea": {
+                "type": "string"
+              },
+              "listeners": {
+                "type": "integer",
+                "description": "Average weekly listeners"
+              },
+              "advertisingOpportunities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "adFormat": {
+                      "type": "string",
+                      "enum": ["30_second_spot", "60_second_spot", "live_read", "sponsorship", "traffic_weather_sponsor"]
+                    },
+                    "timeSlot": {
+                      "type": "string",
+                      "enum": ["drive_time_morning", "drive_time_evening", "midday", "weekend", "overnight"]
+                    },
+                    "pricing": {
+                      "type": "object",
+                      "properties": {
+                        "perSpot": {
+                          "type": "number"
+                        },
+                        "weekly": {
+                          "type": "number"
+                        },
+                        "monthly": {
+                          "type": "number"
+                        },
+                        "pricingModel": {
+                          "type": "string",
+                          "enum": ["per_spot", "weekly", "monthly", "contact"]
+                        }
+                      }
+                    },
+                    "specifications": {
+                      "type": "object",
+                      "properties": {
+                        "format": {
+                          "type": "string",
+                          "enum": ["mp3", "wav", "live_script"]
+                        },
+                        "bitrate": {
+                          "type": "string"
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "description": "Ad duration in seconds"
+                        }
+                      }
+                    },
+                    "available": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "hubPricing": {
+                      "type": "array",
+                      "description": "Pricing variations for different marketing hubs",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hubId": {
+                            "type": "string",
+                            "description": "Unique identifier for the marketing hub"
+                          },
+                          "hubName": {
+                            "type": "string",
+                            "description": "Display name for the marketing hub"
+                          },
+                          "pricing": {
+                            "type": "object",
+                            "properties": {
+                              "perSpot": {
+                                "type": "number"
+                              },
+                              "weekly": {
+                                "type": "number"
+                              },
+                              "monthly": {
+                                "type": "number"
+                              },
+                              "pricingModel": {
+                                "type": "string",
+                                "enum": ["per_spot", "weekly", "monthly", "contact"]
+                              }
+                            }
+                          },
+                          "discount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100,
+                            "description": "Discount percentage for this hub"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Whether this inventory is available to this hub"
+                          },
+                          "minimumCommitment": {
+                            "type": "string",
+                            "description": "Minimum booking commitment for this hub"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "streamingVideo": {
+          "type": "array",
+          "description": "Video channels or streaming services",
+          "items": {
+            "type": "object",
+            "properties": {
+              "channelId": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "platform": {
+                "type": "string",
+                "enum": ["youtube", "twitch", "facebook_live", "instagram_live", "linkedin_live", "custom_streaming", "other"]
+              },
+              "subscribers": {
+                "type": "integer"
+              },
+              "averageViews": {
+                "type": "integer",
+                "description": "Average views per video/stream"
+              },
+              "contentType": {
+                "type": "string",
+                "enum": ["live_news", "recorded_shows", "interviews", "events", "mixed"]
+              },
+              "streamingSchedule": {
+                "type": "string",
+                "description": "Regular streaming schedule"
+              },
+              "advertisingOpportunities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "adFormat": {
+                      "type": "string",
+                      "enum": ["pre-roll", "mid-roll", "post-roll", "overlay", "sponsored_content", "product_placement", "live_mention"]
+                    },
+                    "duration": {
+                      "type": "integer",
+                      "description": "Ad duration in seconds"
+                    },
+                    "pricing": {
+                      "type": "object",
+                      "properties": {
+                        "cpm": {
+                          "type": "number",
+                          "description": "Cost per thousand views"
+                        },
+                        "flatRate": {
+                          "type": "number",
+                          "description": "Flat rate per video/stream"
+                        },
+                        "pricingModel": {
+                          "type": "string",
+                          "enum": ["cpm", "flat", "contact"]
+                        }
+                      }
+                    },
+                    "specifications": {
+                      "type": "object",
+                      "properties": {
+                        "format": {
+                          "type": "string",
+                          "enum": ["mp4", "mov", "avi", "script", "image_overlay"]
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "enum": ["1080p", "720p", "480p", "4k"]
+                        },
+                        "aspectRatio": {
+                          "type": "string",
+                          "enum": ["16:9", "9:16", "1:1", "4:3"]
+                        }
+                      }
+                    },
+                    "available": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "hubPricing": {
+                      "type": "array",
+                      "description": "Pricing variations for different marketing hubs",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hubId": {
+                            "type": "string",
+                            "description": "Unique identifier for the marketing hub"
+                          },
+                          "hubName": {
+                            "type": "string",
+                            "description": "Display name for the marketing hub"
+                          },
+                          "pricing": {
+                            "type": "object",
+                            "properties": {
+                              "cpm": {
+                                "type": "number",
+                                "description": "Cost per thousand views"
+                              },
+                              "flatRate": {
+                                "type": "number",
+                                "description": "Flat rate per video/stream"
+                              },
+                              "pricingModel": {
+                                "type": "string",
+                                "enum": ["cpm", "flat", "contact"]
+                              }
+                            }
+                          },
+                          "discount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100,
+                            "description": "Discount percentage for this hub"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Whether this inventory is available to this hub"
+                          },
+                          "minimumCommitment": {
+                            "type": "string",
+                            "description": "Minimum booking commitment for this hub"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "audienceDemographics": {
+      "type": "object",
+      "properties": {
+        "totalAudience": {
+          "type": "integer",
+          "description": "Total estimated audience reach"
+        },
+        "ageGroups": {
+          "type": "object",
+          "properties": {
+            "18-24": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "25-34": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "35-44": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "45-54": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "55-64": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "65+": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "gender": {
+          "type": "object",
+          "properties": {
+            "male": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "female": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "other": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "householdIncome": {
+          "type": "object",
+          "properties": {
+            "under35k": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "35k-50k": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "50k-75k": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "75k-100k": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "100k-150k": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "over150k": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "education": {
+          "type": "object",
+          "properties": {
+            "highSchool": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "someCollege": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "bachelors": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "graduate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "location": {
+          "type": "string",
+          "description": "Primary geographic audience"
+        },
+        "interests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Primary audience interests"
+        },
+        "targetMarkets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Key target market segments"
+        }
+      }
+    },
+    "editorialInfo": {
+      "type": "object",
+      "properties": {
+        "contentFocus": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Primary content areas covered"
+        },
+        "contentPillars": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Core content themes"
+        },
+        "specialSections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "signatureFeatures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "editorialTeam": {
+          "type": "object",
+          "properties": {
+            "editorInChief": {
+              "type": "string"
+            },
+            "managingEditor": {
+              "type": "string"
+            },
+            "keyWriters": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "contributingWriters": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "businessInfo": {
+      "type": "object",
+      "properties": {
+        "ownershipType": {
+          "type": "string",
+          "enum": ["independent", "chain", "nonprofit", "public", "private", "family-owned"]
+        },
+        "parentCompany": {
+          "type": "string"
+        },
+        "yearsInOperation": {
+          "type": "integer"
+        },
+        "numberOfEmployees": {
+          "type": "integer"
+        },
+        "averageMonthlyRevenue": {
+          "type": "number"
+        },
+        "revenueBreakdown": {
+          "type": "object",
+          "properties": {
+            "digital": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "print": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "events": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "podcasts": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "radio": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "streaming": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "social": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "other": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "topAdvertiserCategories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "clientRetentionRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "crossChannelPackages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "packageName": {
+            "type": "string"
+          },
+          "includedChannels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["website", "print", "newsletter", "social", "events", "email", "podcasts", "radio", "streaming"]
+            }
+          },
+          "pricing": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "string"
+          },
+          "savings": {
+            "type": "number",
+            "description": "Percentage savings vs individual purchases"
+          }
+        }
+      }
+    },
+    "technicalCapabilities": {
+      "type": "object",
+      "properties": {
+        "cmsplatform": {
+          "type": "string"
+        },
+        "emailServiceProvider": {
+          "type": "string"
+        },
+        "adServer": {
+          "type": "string"
+        },
+        "analyticsTools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "crmSystem": {
+          "type": "string"
+        },
+        "paymentProcessing": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["credit cards", "ach", "check", "paypal", "stripe", "square"]
+          }
+        }
+      }
+    },
+    "competitiveInfo": {
+      "type": "object",
+      "properties": {
+        "uniqueValueProposition": {
+          "type": "string"
+        },
+        "keyDifferentiators": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "competitiveAdvantages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "marketShare": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "mainCompetitors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "awards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "award": {
+            "type": "string"
+          },
+          "organization": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "category": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "bookingPolicies": {
+      "type": "object",
+      "properties": {
+        "minimumLeadTime": {
+          "type": "string"
+        },
+        "cancellationPolicy": {
+          "type": "string"
+        },
+        "materialDeadline": {
+          "type": "string"
+        },
+        "paymentTerms": {
+          "type": "string"
+        },
+        "agencyDiscount": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "creditCardsAccepted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "extractedFrom": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["website", "web_search", "manual_entry", "api", "media_kit", "sales_contact"]
+          }
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Data reliability confidence score"
+        },
+        "lastAnalyzed": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "mediaKitDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Date of most recent media kit"
+        },
+        "nextReviewDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "dataCompleteness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage of schema fields populated"
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["verified", "needs_verification", "outdated", "incomplete"]
+        }
+      }
+    },
+    "internalNotes": {
+      "type": "object",
+      "properties": {
+        "operationalNotes": {
+          "type": "string"
+        },
+        "salesApproach": {
+          "type": "string"
+        },
+        "knownChallenges": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "growthOpportunities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "preferredContactTime": {
+          "type": "string"
+        },
+        "responseTime": {
+          "type": "string"
+        },
+        "decisionMakers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": ["publicationId", "basicInfo"],
+  "additionalProperties": false,
+  "indexes": [
+    {
+      "fields": {
+        "publicationId": 1
+      },
+      "unique": true
+    },
+    {
+      "fields": {
+        "basicInfo.geographicCoverage": 1,
+        "basicInfo.primaryServiceArea": 1
+      }
+    },
+    {
+      "fields": {
+        "basicInfo.publicationType": 1,
+        "basicInfo.contentType": 1
+      }
+    },
+    {
+      "fields": {
+        "distributionChannels.website.metrics.monthlyVisitors": -1
+      }
+    },
+    {
+      "fields": {
+        "distributionChannels.print.circulation": -1
+      }
+    },
+    {
+      "fields": {
+        "metadata.lastUpdated": -1
+      }
+    },
+    {
+      "fields": {
+        "metadata.verificationStatus": 1
+      }
+    }
+  ]
+}

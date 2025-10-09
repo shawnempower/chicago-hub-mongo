@@ -17,7 +17,8 @@ import {
   Calendar,
   FileText,
   Eye,
-  Settings
+  Settings,
+  Printer
 } from "lucide-react";
 // MongoDB services removed - using API calls instead
 
@@ -131,12 +132,20 @@ export function DashboardOverview() {
             )}
           </div>
         </div>
-        <Button variant="outline" asChild>
-          <Link to="/dashboard?tab=profile">
-            <Eye className="w-4 h-4 mr-2" />
-            View Profile
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/dashboard?tab=profile">
+              <Eye className="w-4 h-4 mr-2" />
+              View Profile
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/dashboard?tab=summary">
+              <Printer className="w-4 h-4 mr-2" />
+              Full Summary
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}

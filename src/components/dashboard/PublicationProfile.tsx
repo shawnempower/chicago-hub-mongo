@@ -21,7 +21,10 @@ import {
   Instagram,
   Linkedin,
   TrendingUp,
-  Newspaper
+  Newspaper,
+  Mic,
+  Radio,
+  Video
 } from 'lucide-react';
 
 export const PublicationProfile: React.FC = () => {
@@ -385,29 +388,53 @@ export const PublicationProfile: React.FC = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="website" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-8 gap-1">
                   {publication.distributionChannels.website && (
-                    <TabsTrigger value="website" className="flex items-center gap-2">
-                      <Globe className="h-4 w-4" />
+                    <TabsTrigger value="website" className="flex items-center gap-1 text-xs">
+                      <Globe className="h-3 w-3" />
                       Website
                     </TabsTrigger>
                   )}
                   {publication.distributionChannels.newsletters && publication.distributionChannels.newsletters.length > 0 && (
-                    <TabsTrigger value="newsletters" className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Newsletters
+                    <TabsTrigger value="newsletters" className="flex items-center gap-1 text-xs">
+                      <Mail className="h-3 w-3" />
+                      Newsletter
                     </TabsTrigger>
                   )}
                   {publication.distributionChannels.print && (
-                    <TabsTrigger value="print" className="flex items-center gap-2">
-                      <Newspaper className="h-4 w-4" />
+                    <TabsTrigger value="print" className="flex items-center gap-1 text-xs">
+                      <Newspaper className="h-3 w-3" />
                       Print
                     </TabsTrigger>
                   )}
+                  {publication.distributionChannels.socialMedia && publication.distributionChannels.socialMedia.length > 0 && (
+                    <TabsTrigger value="social" className="flex items-center gap-1 text-xs">
+                      <Users className="h-3 w-3" />
+                      Social
+                    </TabsTrigger>
+                  )}
                   {publication.distributionChannels.events && publication.distributionChannels.events.length > 0 && (
-                    <TabsTrigger value="events" className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
+                    <TabsTrigger value="events" className="flex items-center gap-1 text-xs">
+                      <Calendar className="h-3 w-3" />
                       Events
+                    </TabsTrigger>
+                  )}
+                  {publication.distributionChannels.podcasts && publication.distributionChannels.podcasts.length > 0 && (
+                    <TabsTrigger value="podcasts" className="flex items-center gap-1 text-xs">
+                      <Mic className="h-3 w-3" />
+                      Podcasts
+                    </TabsTrigger>
+                  )}
+                  {publication.distributionChannels.radioStations && publication.distributionChannels.radioStations.length > 0 && (
+                    <TabsTrigger value="radio" className="flex items-center gap-1 text-xs">
+                      <Radio className="h-3 w-3" />
+                      Radio
+                    </TabsTrigger>
+                  )}
+                  {publication.distributionChannels.streamingVideo && publication.distributionChannels.streamingVideo.length > 0 && (
+                    <TabsTrigger value="streaming" className="flex items-center gap-1 text-xs">
+                      <Video className="h-3 w-3" />
+                      Streaming
                     </TabsTrigger>
                   )}
                 </TabsList>
@@ -671,6 +698,175 @@ export const PublicationProfile: React.FC = () => {
                               <p className="text-orange-800">{event.targetAudience}</p>
                             </div>
                           )}
+                        </div>
+                      ))}
+                    </div>
+                  </TabsContent>
+                )}
+
+                {/* Social Media Tab */}
+                {publication.distributionChannels.socialMedia && publication.distributionChannels.socialMedia.length > 0 && (
+                  <TabsContent value="social" className="space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Users className="h-5 w-5 text-purple-500" />
+                      <h4 className="font-semibold">Social Media</h4>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {publication.distributionChannels.socialMedia.map((profile, index) => (
+                        <div key={index} className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                          <h5 className="font-medium mb-3 text-purple-800">{profile.platform} - {profile.handle}</h5>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {profile.followers && profile.followers > 0 && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-purple-600 font-medium">Followers:</span>
+                                <p className="font-semibold text-purple-800">{profile.followers.toLocaleString()}</p>
+                              </div>
+                            )}
+                            {profile.engagementRate && profile.engagementRate > 0 && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-purple-600 font-medium">Engagement:</span>
+                                <p className="font-semibold text-purple-800">{profile.engagementRate}%</p>
+                              </div>
+                            )}
+                            {profile.verified && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-purple-600 font-medium">Status:</span>
+                                <p className="font-semibold text-purple-800">Verified</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </TabsContent>
+                )}
+
+                {/* Podcasts Tab */}
+                {publication.distributionChannels.podcasts && publication.distributionChannels.podcasts.length > 0 && (
+                  <TabsContent value="podcasts" className="space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Mic className="h-5 w-5 text-red-500" />
+                      <h4 className="font-semibold">Podcasts</h4>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {publication.distributionChannels.podcasts.map((podcast, index) => (
+                        <div key={index} className="p-4 bg-red-50 rounded-lg border border-red-100">
+                          <h5 className="font-medium mb-3 text-red-800">{podcast.name}</h5>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {podcast.averageListeners && podcast.averageListeners > 0 && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-red-600 font-medium">Avg Listeners:</span>
+                                <p className="font-semibold text-red-800">{podcast.averageListeners.toLocaleString()}</p>
+                              </div>
+                            )}
+                            {podcast.averageDownloads && podcast.averageDownloads > 0 && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-red-600 font-medium">Avg Downloads:</span>
+                                <p className="font-semibold text-red-800">{podcast.averageDownloads.toLocaleString()}</p>
+                              </div>
+                            )}
+                            {podcast.episodeCount && podcast.episodeCount > 0 && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-red-600 font-medium">Episodes:</span>
+                                <p className="font-semibold text-red-800">{podcast.episodeCount}</p>
+                              </div>
+                            )}
+                            {podcast.frequency && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-red-600 font-medium">Frequency:</span>
+                                <p className="font-semibold text-red-800">{podcast.frequency}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {podcast.platforms && podcast.platforms.length > 0 && (
+                            <div className="mt-3 p-3 bg-white rounded">
+                              <span className="text-sm text-red-600 font-medium">Platforms:</span>
+                              <p className="text-red-800">{podcast.platforms.join(', ')}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </TabsContent>
+                )}
+
+                {/* Radio Tab */}
+                {publication.distributionChannels.radioStations && publication.distributionChannels.radioStations.length > 0 && (
+                  <TabsContent value="radio" className="space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Radio className="h-5 w-5 text-yellow-500" />
+                      <h4 className="font-semibold">Radio Stations</h4>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {publication.distributionChannels.radioStations.map((radio, index) => (
+                        <div key={index} className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+                          <h5 className="font-medium mb-3 text-yellow-800">{radio.callSign} - {radio.frequency}</h5>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {radio.listeners && radio.listeners > 0 && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-yellow-600 font-medium">Weekly Listeners:</span>
+                                <p className="font-semibold text-yellow-800">{radio.listeners.toLocaleString()}</p>
+                              </div>
+                            )}
+                            {radio.format && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-yellow-600 font-medium">Format:</span>
+                                <p className="font-semibold text-yellow-800">{radio.format}</p>
+                              </div>
+                            )}
+                            {radio.coverageArea && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-yellow-600 font-medium">Coverage:</span>
+                                <p className="font-semibold text-yellow-800">{radio.coverageArea}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </TabsContent>
+                )}
+
+                {/* Streaming Tab */}
+                {publication.distributionChannels.streamingVideo && publication.distributionChannels.streamingVideo.length > 0 && (
+                  <TabsContent value="streaming" className="space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Video className="h-5 w-5 text-indigo-500" />
+                      <h4 className="font-semibold">Streaming Video</h4>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {publication.distributionChannels.streamingVideo.map((streaming, index) => (
+                        <div key={index} className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                          <h5 className="font-medium mb-3 text-indigo-800">{streaming.name} - {streaming.platform}</h5>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {streaming.subscribers && streaming.subscribers > 0 && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-indigo-600 font-medium">Subscribers:</span>
+                                <p className="font-semibold text-indigo-800">{streaming.subscribers.toLocaleString()}</p>
+                              </div>
+                            )}
+                            {streaming.averageViews && streaming.averageViews > 0 && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-indigo-600 font-medium">Avg Views:</span>
+                                <p className="font-semibold text-indigo-800">{streaming.averageViews.toLocaleString()}</p>
+                              </div>
+                            )}
+                            {streaming.contentType && (
+                              <div className="p-3 bg-white rounded">
+                                <span className="text-sm text-indigo-600 font-medium">Content Type:</span>
+                                <p className="font-semibold text-indigo-800">{streaming.contentType}</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

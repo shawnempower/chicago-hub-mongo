@@ -159,12 +159,97 @@ export interface Event {
   }[];
 }
 
+// Podcast Interface
+export interface Podcast {
+  podcastId?: string;
+  name?: string;
+  description?: string;
+  frequency?: "daily" | "weekly" | "bi-weekly" | "monthly" | "irregular";
+  averageDownloads?: number;
+  averageListeners?: number;
+  episodeCount?: number;
+  platforms?: ("apple_podcasts" | "spotify" | "google_podcasts" | "amazon_music" | "stitcher" | "overcast" | "castbox" | "other")[];
+  advertisingOpportunities?: {
+    name?: string;
+    adFormat?: "pre-roll" | "mid-roll" | "post-roll" | "host-read" | "programmatic" | "sponsored_content";
+    duration?: number; // seconds
+    pricing?: {
+      cpm?: number;
+      flatRate?: number;
+      pricingModel?: "cpm" | "flat" | "contact";
+    };
+    specifications?: {
+      format?: "mp3" | "wav" | "script";
+      bitrate?: string;
+    };
+    available?: boolean;
+  }[];
+}
+
+// Radio Station Interface
+export interface RadioStation {
+  stationId?: string;
+  callSign?: string;
+  frequency?: string;
+  format?: "news_talk" | "classic_rock" | "country" | "pop" | "hip_hop" | "jazz" | "classical" | "alternative" | "sports" | "other";
+  coverageArea?: string;
+  listeners?: number; // average weekly listeners
+  advertisingOpportunities?: {
+    name?: string;
+    adFormat?: "30_second_spot" | "60_second_spot" | "live_read" | "sponsorship" | "traffic_weather_sponsor";
+    timeSlot?: "drive_time_morning" | "drive_time_evening" | "midday" | "weekend" | "overnight";
+    pricing?: {
+      perSpot?: number;
+      weekly?: number;
+      monthly?: number;
+      pricingModel?: "per_spot" | "weekly" | "monthly" | "contact";
+    };
+    specifications?: {
+      format?: "mp3" | "wav" | "live_script";
+      bitrate?: string;
+      duration?: number; // seconds
+    };
+    available?: boolean;
+  }[];
+}
+
+// Streaming Video Interface
+export interface StreamingVideo {
+  channelId?: string;
+  name?: string;
+  platform?: "youtube" | "twitch" | "facebook_live" | "instagram_live" | "linkedin_live" | "custom_streaming" | "other";
+  subscribers?: number;
+  averageViews?: number;
+  contentType?: "live_news" | "recorded_shows" | "interviews" | "events" | "mixed";
+  streamingSchedule?: string;
+  advertisingOpportunities?: {
+    name?: string;
+    adFormat?: "pre-roll" | "mid-roll" | "post-roll" | "overlay" | "sponsored_content" | "product_placement" | "live_mention";
+    duration?: number; // seconds
+    pricing?: {
+      cpm?: number;
+      flatRate?: number;
+      pricingModel?: "cpm" | "flat" | "contact";
+    };
+    specifications?: {
+      format?: "mp4" | "mov" | "avi" | "script" | "image_overlay";
+      resolution?: "1080p" | "720p" | "480p" | "4k";
+      aspectRatio?: "16:9" | "9:16" | "1:1" | "4:3";
+    };
+    available?: boolean;
+  }[];
+}
+
 // Distribution Channels
 export interface DistributionChannels {
   website?: WebsiteChannel;
+  socialMedia?: SocialMediaProfile[];
   newsletters?: Newsletter[];
   print?: PrintChannel[];
   events?: Event[];
+  podcasts?: Podcast[];
+  radioStations?: RadioStation[];
+  streamingVideo?: StreamingVideo[];
 }
 
 // Demographics Interface
@@ -227,6 +312,10 @@ export interface BusinessInfo {
     digital?: number;
     print?: number;
     events?: number;
+    podcasts?: number;
+    radio?: number;
+    streaming?: number;
+    social?: number;
     other?: number;
   };
   topAdvertiserCategories?: string[];
@@ -237,7 +326,7 @@ export interface BusinessInfo {
 export interface CrossChannelPackage {
   name?: string;
   packageName?: string;
-  includedChannels?: ("website" | "print" | "newsletter" | "social" | "events" | "email")[];
+  includedChannels?: ("website" | "print" | "newsletter" | "social" | "events" | "email" | "podcasts" | "radio" | "streaming")[];
   pricing?: string;
   details?: string;
   duration?: string;
@@ -325,7 +414,6 @@ export interface Publication {
   publicationId: number;
   basicInfo: BasicInfo;
   contactInfo?: ContactInfo;
-  socialMediaProfiles?: SocialMediaProfile[];
   distributionChannels?: DistributionChannels;
   audienceDemographics?: AudienceDemographics;
   editorialInfo?: EditorialInfo;
