@@ -1514,20 +1514,20 @@ export class StorefrontConfigurationsService {
   }
 
   async getAll(filters?: {
-    is_draft?: boolean;
-    publisher_id?: string;
+    isDraft?: boolean;
+    publisherId?: string;
     isActive?: boolean;
     publicationId?: string;
   }): Promise<StorefrontConfiguration[]> {
     try {
       const query: any = {};
       
-      if (filters?.is_draft !== undefined) {
-        query['meta.is_draft'] = filters.is_draft;
+      if (filters?.isDraft !== undefined) {
+        query['meta.isDraft'] = filters.isDraft;
       }
       
-      if (filters?.publisher_id) {
-        query['meta.publisher_id'] = filters.publisher_id;
+      if (filters?.publisherId) {
+        query['meta.publisherId'] = filters.publisherId;
       }
       
       if (filters?.isActive !== undefined) {
@@ -1621,7 +1621,7 @@ export class StorefrontConfigurationsService {
         { returnDocument: 'after' }
       );
 
-      return result.value;
+      return result;
     } catch (error) {
       console.error('Error updating storefront configuration:', error);
       throw error;
@@ -1644,7 +1644,7 @@ export class StorefrontConfigurationsService {
         { publicationId },
         { 
           $set: { 
-            'meta.is_draft': false,
+            'meta.isDraft': false,
             'meta.lastUpdated': new Date().toISOString(),
             updatedAt: new Date()
           } 
@@ -1652,7 +1652,7 @@ export class StorefrontConfigurationsService {
         { returnDocument: 'after' }
       );
 
-      return result.value;
+      return result;
     } catch (error) {
       console.error('Error publishing storefront configuration:', error);
       throw error;
@@ -1679,10 +1679,10 @@ export class StorefrontConfigurationsService {
         publicationId: targetPublicationId,
         meta: {
           ...sourceConfig.meta,
-          publisher_id: targetPublisherId,
-          description: `Duplicated from ${sourceConfig.meta.publisher_id} - ${sourceConfig.meta.description}`,
+          publisherId: targetPublisherId,
+          description: `Duplicated from ${sourceConfig.meta.publisherId} - ${sourceConfig.meta.description}`,
           lastUpdated: new Date().toISOString(),
-          is_draft: true, // Always create duplicates as drafts
+          isDraft: true, // Always create duplicates as drafts
         }
       };
 
@@ -1699,19 +1699,38 @@ export class StorefrontConfigurationsService {
   }
 }
 
-// Export service instances
-export const adPackagesService = new AdPackagesService();
-export const leadInquiriesService = new LeadInquiriesService();
-export const userProfilesService = new UserProfilesService();
-export const conversationThreadsService = new ConversationThreadsService();
-export const assistantConversationsService = new AssistantConversationsService();
-export const savedOutletsService = new SavedOutletsService();
-export const savedPackagesService = new SavedPackagesService();
-export const userInteractionsService = new UserInteractionsService();
-export const brandDocumentsService = new BrandDocumentsService();
-export const assistantInstructionsService = new AssistantInstructionsService();
-export const mediaEntitiesService = new MediaEntitiesService();
-export const publicationsService = new PublicationsService();
-export const publicationFilesService = new PublicationFilesService();
-export const storefrontConfigurationsService = new StorefrontConfigurationsService();
-export const surveySubmissionsService = new SurveySubmissionsService();
+// Export service instances - these will be initialized by the server after env vars are loaded
+export let adPackagesService: AdPackagesService;
+export let leadInquiriesService: LeadInquiriesService;
+export let userProfilesService: UserProfilesService;
+export let conversationThreadsService: ConversationThreadsService;
+export let assistantConversationsService: AssistantConversationsService;
+export let savedOutletsService: SavedOutletsService;
+export let savedPackagesService: SavedPackagesService;
+export let userInteractionsService: UserInteractionsService;
+export let brandDocumentsService: BrandDocumentsService;
+export let assistantInstructionsService: AssistantInstructionsService;
+export let mediaEntitiesService: MediaEntitiesService;
+export let publicationsService: PublicationsService;
+export let publicationFilesService: PublicationFilesService;
+export let storefrontConfigurationsService: StorefrontConfigurationsService;
+export let surveySubmissionsService: SurveySubmissionsService;
+
+// Initialize all services - call this after environment variables are loaded
+export const initializeServices = () => {
+  adPackagesService = new AdPackagesService();
+  leadInquiriesService = new LeadInquiriesService();
+  userProfilesService = new UserProfilesService();
+  conversationThreadsService = new ConversationThreadsService();
+  assistantConversationsService = new AssistantConversationsService();
+  savedOutletsService = new SavedOutletsService();
+  savedPackagesService = new SavedPackagesService();
+  userInteractionsService = new UserInteractionsService();
+  brandDocumentsService = new BrandDocumentsService();
+  assistantInstructionsService = new AssistantInstructionsService();
+  mediaEntitiesService = new MediaEntitiesService();
+  publicationsService = new PublicationsService();
+  publicationFilesService = new PublicationFilesService();
+  storefrontConfigurationsService = new StorefrontConfigurationsService();
+  surveySubmissionsService = new SurveySubmissionsService();
+};

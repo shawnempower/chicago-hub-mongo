@@ -1043,16 +1043,84 @@ export const DashboardInventoryManager = () => {
 
         {/* Website Advertising */}
         <TabsContent value="website" className="space-y-4">
+          {/* Website Info Section */}
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Globe className="w-5 h-5" />
-                    Website Advertising
+                    Website Information
                   </CardTitle>
                   <CardDescription>
-                    Manage website advertising opportunities and specifications
+                    Website details, metrics, and technical information
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => openEditDialog(
+                    currentPublication.distributionChannels?.website || { 
+                      url: currentPublication.basicInfo?.websiteUrl || '', 
+                      cmsplatform: '',
+                      metrics: {
+                        monthlyVisitors: 0,
+                        monthlyPageViews: 0,
+                        averageSessionDuration: 0,
+                        pagesPerSession: 0,
+                        bounceRate: 0,
+                        mobilePercentage: 0
+                      }
+                    }, 
+                    'website-container', 
+                    0
+                  )}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Website Info
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <span className="text-muted-foreground text-sm">Website URL:</span>
+                  <p className="font-medium">{currentPublication.distributionChannels?.website?.url || currentPublication.basicInfo?.websiteUrl || 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-sm">CMS Platform:</span>
+                  <p className="font-medium">{currentPublication.distributionChannels?.website?.cmsplatform || 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-sm">Monthly Visitors:</span>
+                  <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.monthlyVisitors?.toLocaleString() || 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-sm">Monthly Page Views:</span>
+                  <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.monthlyPageViews?.toLocaleString() || 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-sm">Bounce Rate:</span>
+                  <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.bounceRate ? `${currentPublication.distributionChannels.website.metrics.bounceRate}%` : 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-sm">Mobile Traffic:</span>
+                  <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.mobilePercentage ? `${currentPublication.distributionChannels.website.metrics.mobilePercentage}%` : 'Not specified'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Website Advertising Opportunities */}
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="w-5 h-5" />
+                    Advertising Opportunities
+                  </CardTitle>
+                  <CardDescription>
+                    Manage website advertising slots and specifications
                   </CardDescription>
                 </div>
                 <Button onClick={addWebsiteOpportunity}>
@@ -2878,6 +2946,140 @@ export const DashboardInventoryManager = () => {
                       onChange={(e) => setEditingItem({ ...editingItem, verified: e.target.checked })}
                     />
                     <Label htmlFor="verified">Verified Account</Label>
+                  </div>
+                </>
+              )}
+
+              {/* Website Container Fields */}
+              {editingType === 'website-container' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="websiteUrl">Website URL</Label>
+                      <Input
+                        id="websiteUrl"
+                        value={editingItem.url || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, url: e.target.value })}
+                        placeholder="https://example.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cmsplatform">CMS Platform</Label>
+                      <Input
+                        id="cmsplatform"
+                        value={editingItem.cmsplatform || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, cmsplatform: e.target.value })}
+                        placeholder="WordPress, Drupal, Custom"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Website Metrics</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="monthlyVisitors">Monthly Visitors</Label>
+                        <Input
+                          id="monthlyVisitors"
+                          type="number"
+                          value={editingItem.metrics?.monthlyVisitors || ''}
+                          onChange={(e) => setEditingItem({ 
+                            ...editingItem, 
+                            metrics: { 
+                              ...editingItem.metrics, 
+                              monthlyVisitors: parseInt(e.target.value) || 0 
+                            } 
+                          })}
+                          placeholder="50000"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="monthlyPageViews">Monthly Page Views</Label>
+                        <Input
+                          id="monthlyPageViews"
+                          type="number"
+                          value={editingItem.metrics?.monthlyPageViews || ''}
+                          onChange={(e) => setEditingItem({ 
+                            ...editingItem, 
+                            metrics: { 
+                              ...editingItem.metrics, 
+                              monthlyPageViews: parseInt(e.target.value) || 0 
+                            } 
+                          })}
+                          placeholder="150000"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="averageSessionDuration">Avg Session Duration (minutes)</Label>
+                        <Input
+                          id="averageSessionDuration"
+                          type="number"
+                          step="0.1"
+                          value={editingItem.metrics?.averageSessionDuration || ''}
+                          onChange={(e) => setEditingItem({ 
+                            ...editingItem, 
+                            metrics: { 
+                              ...editingItem.metrics, 
+                              averageSessionDuration: parseFloat(e.target.value) || 0 
+                            } 
+                          })}
+                          placeholder="3.2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="pagesPerSession">Pages per Session</Label>
+                        <Input
+                          id="pagesPerSession"
+                          type="number"
+                          step="0.1"
+                          value={editingItem.metrics?.pagesPerSession || ''}
+                          onChange={(e) => setEditingItem({ 
+                            ...editingItem, 
+                            metrics: { 
+                              ...editingItem.metrics, 
+                              pagesPerSession: parseFloat(e.target.value) || 0 
+                            } 
+                          })}
+                          placeholder="2.8"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="bounceRate">Bounce Rate (%)</Label>
+                        <Input
+                          id="bounceRate"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={editingItem.metrics?.bounceRate || ''}
+                          onChange={(e) => setEditingItem({ 
+                            ...editingItem, 
+                            metrics: { 
+                              ...editingItem.metrics, 
+                              bounceRate: parseInt(e.target.value) || 0 
+                            } 
+                          })}
+                          placeholder="45"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="mobilePercentage">Mobile Traffic (%)</Label>
+                        <Input
+                          id="mobilePercentage"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={editingItem.metrics?.mobilePercentage || ''}
+                          onChange={(e) => setEditingItem({ 
+                            ...editingItem, 
+                            metrics: { 
+                              ...editingItem.metrics, 
+                              mobilePercentage: parseInt(e.target.value) || 0 
+                            } 
+                          })}
+                          placeholder="65"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </>
               )}

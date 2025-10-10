@@ -8,11 +8,12 @@ export const config = {
     }
     return 'your-super-secret-jwt-key-change-this-in-production-make-it-long-and-random';
   })(),
-  mongoUri: process.env.MONGODB_URI || (() => {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('MONGODB_URI must be set in production');
+  mongoUri: (() => {
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+      throw new Error('MONGODB_URI environment variable is required but not set');
     }
-    return 'mongodb://localhost:27017/chicago-hub';
+    return uri;
   })(),
   
   // Email configuration for future use

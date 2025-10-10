@@ -14,6 +14,8 @@
     "dev:full": "concurrently \"npm run server:dev\" \"npm run dev\"",
     "make-admin": "tsx src/scripts/makeUserAdmin.ts",
     "import:surveys": "tsx src/scripts/importSurveys.ts json_files/surveys",
+    "migrate:storefront": "tsx src/scripts/migrateStorefrontSchema.ts",
+    "cleanup:connections": "tsx src/scripts/cleanupConnections.ts",
     "docker:build": "docker build -f Dockerfile.production -t chicago-hub-api:latest .",
     "docker:run": "docker run -p 3001:3001 --env-file .env chicago-hub-api:latest",
     "docker:push": "docker push 947442015939.dkr.ecr.us-east-2.amazonaws.com/chicago-hub-api:latest"

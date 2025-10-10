@@ -31,7 +31,7 @@ import {
   Copy,
   Upload
 } from 'lucide-react';
-import { StorefrontConfiguration, createDefaultStorefrontConfig } from '@/types/storefront';
+import { StorefrontConfiguration, validateStorefrontConfig } from '@/types/storefront';
 import { getStorefrontConfiguration, createStorefrontConfiguration, updateStorefrontConfiguration } from '@/api/storefront';
 import { StorefrontEditor } from './StorefrontEditor';
 
@@ -43,6 +43,8 @@ export const PublicationStorefront: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [hasChanges, setHasChanges] = useState(false);
+  const [importJson, setImportJson] = useState('');
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedPublication) {
@@ -66,28 +68,49 @@ export const PublicationStorefront: React.FC = () => {
     }
   };
 
-  const handleCreateStorefront = async () => {
+  const handleImportStorefront = async () => {
     if (!selectedPublication) return;
     
     try {
       setSaving(true);
       setError(null);
+      setImportError(null);
       
-      const defaultConfig = createDefaultStorefrontConfig(selectedPublication.basicInfo.publicationName);
-      const newConfig = await createStorefrontConfiguration({
-        ...defaultConfig,
+      // Parse JSON
+      let parsedConfig;
+      try {
+        parsedConfig = JSON.parse(importJson);
+      } catch (parseError) {
+        setImportError('Invalid JSON format. Please check your JSON syntax.');
+        return;
+      }
+      
+      // Validate the configuration
+      const validationErrors = validateStorefrontConfig(parsedConfig);
+      if (validationErrors.length > 0) {
+        setImportError(`Configuration validation failed:\n${validationErrors.join('\n')}`);
+        return;
+      }
+      
+      // Add publication ID and ensure proper structure
+      const configToImport = {
+        ...parsedConfig,
         publicationId: selectedPublication._id!,
         meta: {
-          ...defaultConfig.meta,
-          publisher_id: selectedPublication.basicInfo.publicationName.toLowerCase().replace(/\s+/g, '_')
+          ...parsedConfig.meta,
+          lastUpdated: new Date().toISOString(),
+          publisherId: parsedConfig.meta.publisherId || selectedPublication.basicInfo.publicationName.toLowerCase().replace(/\s+/g, '_')
         }
-      });
+      };
+      
+      const newConfig = await createStorefrontConfiguration(configToImport);
       
       setStorefrontConfig(newConfig);
       setActiveTab('editor');
+      setImportJson(''); // Clear the input
     } catch (err) {
-      console.error('Error creating storefront:', err);
-      setError('Failed to create storefront configuration');
+      console.error('Error importing storefront:', err);
+      setError('Failed to import storefront configuration');
     } finally {
       setSaving(false);
     }
@@ -116,6 +139,39 @@ export const PublicationStorefront: React.FC = () => {
   const handleConfigChange = (config: StorefrontConfiguration) => {
     setStorefrontConfig(config);
     setHasChanges(true);
+  };
+
+  const showSampleConfig = () => {
+    const sampleConfig = {
+      meta: {
+        configVersion: "1.0.0",
+        description: "Sample storefront configuration",
+        publisherId: "sample_publisher",
+        isDraft: true
+      },
+      theme: {
+        colors: {
+          lightPrimary: "#0077b6",
+          darkPrimary: "#003d5c",
+          mode: "light"
+        },
+        typography: {
+          primaryFont: "Inter"
+        }
+      },
+      components: {
+        hero: {
+          enabled: true,
+          order: 1,
+          content: {
+            title: "Welcome to Our Storefront",
+            description: "Your trusted local media partner"
+          }
+        }
+      }
+    };
+    
+    setImportJson(JSON.stringify(sampleConfig, null, 2));
   };
 
   if (!selectedPublication) {
@@ -162,9 +218,9 @@ export const PublicationStorefront: React.FC = () => {
             </>
           )}
           {!storefrontConfig && (
-            <Button onClick={handleCreateStorefront} disabled={saving}>
-              <Plus className="w-4 h-4 mr-2" />
-              {saving ? 'Creating...' : 'Create Storefront'}
+            <Button onClick={handleImportStorefront} disabled={saving || !importJson.trim()}>
+              <Upload className="w-4 h-4 mr-2" />
+              {saving ? 'Importing...' : 'Import Configuration'}
             </Button>
           )}
         </div>
@@ -553,12 +609,12 @@ export const PublicationStorefront: React.FC = () => {
                       type="number"
                       min="0"
                       max="50"
-                      value={storefrontConfig.theme.layout.radius}
+                      value={storefrontConfig.theme.layout?.radius || 0}
                       onChange={(e) => handleConfigChange({
                         ...storefrontConfig,
                         theme: {
                           ...storefrontConfig.theme,
-                          layout: { ...storefrontConfig.theme.layout, radius: parseInt(e.target.value) || 0 }
+                          layout: { ...(storefrontConfig.theme.layout || {}), radius: parseInt(e.target.value) || 0 }
                         }
                       })}
                     />
@@ -567,12 +623,12 @@ export const PublicationStorefront: React.FC = () => {
                   <div>
                     <Label htmlFor="icon-weight">Icon Weight</Label>
                     <Select
-                      value={storefrontConfig.theme.layout.iconWeight}
+                      value={storefrontConfig.theme.layout?.iconWeight || 'regular'}
                       onValueChange={(value: 'light' | 'regular' | 'bold') => handleConfigChange({
                         ...storefrontConfig,
                         theme: {
                           ...storefrontConfig.theme,
-                          layout: { ...storefrontConfig.theme.layout, iconWeight: value }
+                          layout: { ...(storefrontConfig.theme.layout || {}), iconWeight: value }
                         }
                       })}
                     >
@@ -599,7 +655,7 @@ export const PublicationStorefront: React.FC = () => {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                {Object.entries(storefrontConfig.theme.sectionSettings).map(([sectionName, settings]) => (
+                {Object.entries(storefrontConfig.theme.sectionSettings || {}).map(([sectionName, settings]) => (
                   <div key={sectionName} className="border rounded-lg p-4">
                     <h4 className="font-medium capitalize mb-3">{sectionName}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -612,7 +668,7 @@ export const PublicationStorefront: React.FC = () => {
                             theme: {
                               ...storefrontConfig.theme,
                               sectionSettings: {
-                                ...storefrontConfig.theme.sectionSettings,
+                                ...(storefrontConfig.theme.sectionSettings || {}),
                                 [sectionName]: { ...settings, mode: value }
                               }
                             }
@@ -638,7 +694,7 @@ export const PublicationStorefront: React.FC = () => {
                               theme: {
                                 ...storefrontConfig.theme,
                                 sectionSettings: {
-                                  ...storefrontConfig.theme.sectionSettings,
+                                  ...(storefrontConfig.theme.sectionSettings || {}),
                                   [sectionName]: { ...settings, accentOverride: e.target.value || null }
                                 }
                               }
@@ -673,16 +729,16 @@ export const PublicationStorefront: React.FC = () => {
                   <Label htmlFor="seo-title">Page Title</Label>
                   <Input
                     id="seo-title"
-                    value={storefrontConfig.seoMetadata.title}
+                    value={storefrontConfig.seoMetadata?.title || ''}
                     onChange={(e) => handleConfigChange({
                       ...storefrontConfig,
-                      seoMetadata: { ...storefrontConfig.seoMetadata, title: e.target.value }
+                      seoMetadata: { ...(storefrontConfig.seoMetadata || {}), title: e.target.value }
                     })}
                     placeholder="Your Storefront Title"
                     maxLength={60}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    {storefrontConfig.seoMetadata.title.length}/60 characters (recommended)
+                    {(storefrontConfig.seoMetadata?.title || '').length}/60 characters (recommended)
                   </p>
                 </div>
 
@@ -690,17 +746,17 @@ export const PublicationStorefront: React.FC = () => {
                   <Label htmlFor="seo-description">Meta Description</Label>
                   <Textarea
                     id="seo-description"
-                    value={storefrontConfig.seoMetadata.description}
+                    value={storefrontConfig.seoMetadata?.description || ''}
                     onChange={(e) => handleConfigChange({
                       ...storefrontConfig,
-                      seoMetadata: { ...storefrontConfig.seoMetadata, description: e.target.value }
+                      seoMetadata: { ...(storefrontConfig.seoMetadata || {}), description: e.target.value }
                     })}
                     placeholder="A brief description of your storefront..."
                     rows={3}
                     maxLength={160}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    {storefrontConfig.seoMetadata.description.length}/160 characters (recommended)
+                    {(storefrontConfig.seoMetadata?.description || '').length}/160 characters (recommended)
                   </p>
                 </div>
 
@@ -708,18 +764,18 @@ export const PublicationStorefront: React.FC = () => {
                   <Label htmlFor="seo-keywords">Keywords</Label>
                   <Input
                     id="seo-keywords"
-                    value={storefrontConfig.seoMetadata.keywords.join(', ')}
+                    value={(storefrontConfig.seoMetadata?.keywords || []).join(', ')}
                     onChange={(e) => handleConfigChange({
                       ...storefrontConfig,
                       seoMetadata: { 
-                        ...storefrontConfig.seoMetadata, 
+                        ...(storefrontConfig.seoMetadata || {}), 
                         keywords: e.target.value.split(',').map(k => k.trim()).filter(k => k.length > 0)
                       }
                     })}
                     placeholder="advertising, local media, marketing, chicago"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Separate keywords with commas. Current: {storefrontConfig.seoMetadata.keywords.length} keywords
+                    Separate keywords with commas. Current: {(storefrontConfig.seoMetadata?.keywords || []).length} keywords
                   </p>
                 </div>
               </CardContent>
@@ -737,10 +793,10 @@ export const PublicationStorefront: React.FC = () => {
                   <Label htmlFor="og-title">Open Graph Title</Label>
                   <Input
                     id="og-title"
-                    value={storefrontConfig.seoMetadata.ogTitle}
+                    value={storefrontConfig.seoMetadata?.ogTitle || ''}
                     onChange={(e) => handleConfigChange({
                       ...storefrontConfig,
-                      seoMetadata: { ...storefrontConfig.seoMetadata, ogTitle: e.target.value }
+                      seoMetadata: { ...(storefrontConfig.seoMetadata || {}), ogTitle: e.target.value }
                     })}
                     placeholder="Title for social media sharing"
                   />
@@ -750,10 +806,10 @@ export const PublicationStorefront: React.FC = () => {
                   <Label htmlFor="og-description">Open Graph Description</Label>
                   <Textarea
                     id="og-description"
-                    value={storefrontConfig.seoMetadata.ogDescription}
+                    value={storefrontConfig.seoMetadata?.ogDescription || ''}
                     onChange={(e) => handleConfigChange({
                       ...storefrontConfig,
-                      seoMetadata: { ...storefrontConfig.seoMetadata, ogDescription: e.target.value }
+                      seoMetadata: { ...(storefrontConfig.seoMetadata || {}), ogDescription: e.target.value }
                     })}
                     placeholder="Description for social media sharing"
                     rows={3}
@@ -764,20 +820,20 @@ export const PublicationStorefront: React.FC = () => {
                   <Label htmlFor="og-image">Open Graph Image URL</Label>
                   <Input
                     id="og-image"
-                    value={storefrontConfig.seoMetadata.ogImage}
+                    value={storefrontConfig.seoMetadata?.ogImage || ''}
                     onChange={(e) => handleConfigChange({
                       ...storefrontConfig,
-                      seoMetadata: { ...storefrontConfig.seoMetadata, ogImage: e.target.value }
+                      seoMetadata: { ...(storefrontConfig.seoMetadata || {}), ogImage: e.target.value }
                     })}
                     placeholder="https://example.com/og-image.jpg"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Recommended size: 1200x630 pixels
                   </p>
-                  {storefrontConfig.seoMetadata.ogImage && (
+                  {storefrontConfig.seoMetadata?.ogImage && (
                     <div className="mt-2">
                       <img 
-                        src={storefrontConfig.seoMetadata.ogImage} 
+                        src={storefrontConfig.seoMetadata?.ogImage} 
                         alt="Open Graph preview"
                         className="max-w-sm h-auto border rounded"
                         onError={(e) => {
@@ -800,13 +856,13 @@ export const PublicationStorefront: React.FC = () => {
               <CardContent>
                 <div className="border rounded-lg p-4 bg-muted/50">
                   <div className="text-blue-600 text-lg font-medium hover:underline cursor-pointer">
-                    {storefrontConfig.seoMetadata.title || 'Your Storefront Title'}
+                    {storefrontConfig.seoMetadata?.title || 'Your Storefront Title'}
                   </div>
                   <div className="text-green-700 text-sm">
                     https://yoursite.com/storefront/{selectedPublication?.basicInfo.publicationName.toLowerCase().replace(/\s+/g, '-')}
                   </div>
                   <div className="text-gray-600 text-sm mt-1">
-                    {storefrontConfig.seoMetadata.description || 'Your storefront description will appear here...'}
+                    {storefrontConfig.seoMetadata?.description || 'Your storefront description will appear here...'}
                   </div>
                 </div>
               </CardContent>
@@ -826,10 +882,10 @@ export const PublicationStorefront: React.FC = () => {
                   <Label htmlFor="ga-id">Google Analytics Measurement ID</Label>
                   <Input
                     id="ga-id"
-                    value={storefrontConfig.analytics.googleAnalyticsId}
+                    value={storefrontConfig.analytics?.googleAnalyticsId || ''}
                     onChange={(e) => handleConfigChange({
                       ...storefrontConfig,
-                      analytics: { ...storefrontConfig.analytics, googleAnalyticsId: e.target.value }
+                      analytics: { ...(storefrontConfig.analytics || {}), googleAnalyticsId: e.target.value }
                     })}
                     placeholder="G-XXXXXXXXXX or UA-XXXXXXXX-X"
                   />
@@ -857,7 +913,7 @@ export const PublicationStorefront: React.FC = () => {
                   </div>
                 </div>
 
-                {storefrontConfig.analytics.googleAnalyticsId && (
+                {storefrontConfig.analytics?.googleAnalyticsId && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center gap-2">
                       <div className="text-green-600">
@@ -886,10 +942,10 @@ export const PublicationStorefront: React.FC = () => {
                   <Label htmlFor="fb-pixel-id">Facebook Pixel ID</Label>
                   <Input
                     id="fb-pixel-id"
-                    value={storefrontConfig.analytics.facebookPixelId}
+                    value={storefrontConfig.analytics?.facebookPixelId || ''}
                     onChange={(e) => handleConfigChange({
                       ...storefrontConfig,
-                      analytics: { ...storefrontConfig.analytics, facebookPixelId: e.target.value }
+                      analytics: { ...(storefrontConfig.analytics || {}), facebookPixelId: e.target.value }
                     })}
                     placeholder="123456789012345"
                   />
@@ -918,7 +974,7 @@ export const PublicationStorefront: React.FC = () => {
                   </div>
                 </div>
 
-                {storefrontConfig.analytics.facebookPixelId && (
+                {storefrontConfig.analytics?.facebookPixelId && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center gap-2">
                       <div className="text-green-600">
@@ -1228,17 +1284,75 @@ export const PublicationStorefront: React.FC = () => {
         </Tabs>
       ) : (
         <Card className="border-dashed border-2 border-muted-foreground/25">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Store className="h-16 w-16 text-muted-foreground/50 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No Storefront Configuration</h3>
-            <p className="text-muted-foreground mb-6 max-w-md">
-              Create a storefront configuration to start building your publication's advertising storefront 
-              with custom packages, pricing, and automated booking workflows.
-            </p>
-            <Button onClick={handleCreateStorefront} disabled={saving}>
-              <Plus className="w-4 h-4 mr-2" />
-              {saving ? 'Creating...' : 'Create Storefront'}
-            </Button>
+          <CardContent className="py-8">
+            <div className="flex flex-col items-center justify-center text-center mb-8">
+              <Store className="h-16 w-16 text-muted-foreground/50 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Import Storefront Configuration</h3>
+              <p className="text-muted-foreground mb-6 max-w-md">
+                Paste your storefront configuration JSON below to import and validate it for this publication.
+              </p>
+            </div>
+            
+            <div className="space-y-4 max-w-4xl mx-auto">
+              <div className="space-y-2">
+                <Label htmlFor="import-json">Storefront Configuration JSON</Label>
+                <Textarea
+                  id="import-json"
+                  placeholder="Paste your storefront configuration JSON here..."
+                  value={importJson}
+                  onChange={(e) => setImportJson(e.target.value)}
+                  className="min-h-[300px] font-mono text-sm"
+                  disabled={saving}
+                />
+              </div>
+              
+              {importError && (
+                <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                  <p className="text-sm text-destructive whitespace-pre-line">{importError}</p>
+                </div>
+              )}
+              
+              <div className="flex justify-center gap-4">
+                <Button
+                  onClick={handleImportStorefront}
+                  disabled={saving || !importJson.trim()}
+                  className="min-w-[150px]"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {saving ? 'Importing...' : 'Import & Validate'}
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  onClick={showSampleConfig}
+                  disabled={saving}
+                >
+                  Show Sample
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setImportJson('');
+                    setImportError(null);
+                  }}
+                  disabled={saving}
+                >
+                  Clear
+                </Button>
+              </div>
+              
+              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-medium mb-2">Import Requirements:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• JSON must be valid and properly formatted</li>
+                  <li>• Must include required fields: meta, theme, components</li>
+                  <li>• Meta must have: configVersion, publisherId, isDraft</li>
+                  <li>• Theme must have: colors (lightPrimary, darkPrimary, mode), typography (primaryFont)</li>
+                  <li>• Components can be empty object but must be present</li>
+                </ul>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

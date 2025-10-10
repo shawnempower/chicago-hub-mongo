@@ -439,4 +439,10 @@ export class AuthService {
 }
 
 // Export singleton instance
-export const authService = new AuthService();
+// Export service instance - will be initialized after env vars are loaded
+export let authService: AuthService;
+
+// Initialize auth service - call this after environment variables are loaded
+export const initializeAuthService = () => {
+  authService = new AuthService();
+};

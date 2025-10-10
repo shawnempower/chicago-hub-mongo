@@ -757,33 +757,34 @@ export interface StorefrontConfiguration {
   publicationId: string; // Reference to publication
   meta: {
     configVersion: string;
-    description: string;
-    lastUpdated: string;
-    publisher_id: string;
-    is_draft: boolean;
+    description?: string;
+    lastUpdated?: string;
+    publisherId: string;
+    websiteUrl?: string;
+    isDraft: boolean;
   };
   theme: {
     colors: {
       lightPrimary: string;
       darkPrimary: string;
-      gradStart: string;
-      gradEnd: string;
-      angle: number;
-      mode: 'light' | 'dark';
-      ctaTextColor: string;
+      gradStart?: string;
+      gradEnd?: string;
+      angle?: number;
+      mode: 'light' | 'dark' | 'auto';
+      ctaTextColor?: string;
     };
     typography: {
       primaryFont: string;
-      fontWeights: string;
+      fontWeights?: string;
     };
-    layout: {
-      radius: number;
-      iconWeight: 'light' | 'regular' | 'bold';
+    layout?: {
+      radius?: number;
+      iconWeight?: 'light' | 'regular' | 'bold' | 'fill';
     };
-    sectionSettings: {
+    sectionSettings?: {
       [key: string]: {
-        mode: 'light' | 'dark';
-        accentOverride: string | null;
+        mode?: 'light' | 'dark' | 'auto';
+        accentOverride?: string | null;
       };
     };
   };
@@ -792,17 +793,17 @@ export interface StorefrontConfiguration {
     order: number;
     content: Record<string, any>;
   }>;
-  seoMetadata: {
-    title: string;
-    description: string;
-    keywords: string[];
-    ogImage: string;
-    ogTitle: string;
-    ogDescription: string;
+  seoMetadata?: {
+    title?: string;
+    description?: string;
+    keywords?: string[];
+    ogImage?: string;
+    ogTitle?: string;
+    ogDescription?: string;
   };
-  analytics: {
-    googleAnalyticsId: string;
-    facebookPixelId: string;
+  analytics?: {
+    googleAnalyticsId?: string;
+    facebookPixelId?: string;
   };
   isActive?: boolean;
   createdAt: Date;
@@ -1012,8 +1013,8 @@ export const INDEXES = {
   ],
   storefront_configurations: [
     { publicationId: 1 }, // unique per publication
-    { 'meta.publisher_id': 1 },
-    { 'meta.is_draft': 1 },
+    { 'meta.publisherId': 1 },
+    { 'meta.isDraft': 1 },
     { isActive: 1 },
     { updatedAt: -1 },
     { createdAt: -1 }

@@ -15,7 +15,7 @@ import { API_BASE_URL } from '@/config/api';
 import { 
   Trash2, Edit, Plus, Eye, Users, TrendingUp, Award, Building, 
   RefreshCw, Save, X, ExternalLink, Globe, Mail, Phone, Search,
-  BarChart3, PieChart, Target, Briefcase, Share2, FileText,
+  BarChart3, PieChart, Target, Briefcase, FileText,
   Calendar, MapPin, Star, Zap, Upload, Download, AlertCircle,
   CheckCircle, Clock, FileJson
 } from 'lucide-react';
@@ -748,7 +748,7 @@ export const EnhancedPublicationsManagement = () => {
             </DialogHeader>
             
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-7">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="basic" className="flex items-center gap-1">
                   <FileText className="w-3 h-3" />
                   Basic
@@ -764,10 +764,6 @@ export const EnhancedPublicationsManagement = () => {
                 <TabsTrigger value="editorial" className="flex items-center gap-1">
                   <Edit className="w-3 h-3" />
                   Editorial
-                </TabsTrigger>
-                <TabsTrigger value="distribution" className="flex items-center gap-1">
-                  <Share2 className="w-3 h-3" />
-                  Distribution
                 </TabsTrigger>
                 <TabsTrigger value="business" className="flex items-center gap-1">
                   <Building className="w-3 h-3" />
@@ -1260,246 +1256,6 @@ export const EnhancedPublicationsManagement = () => {
                 </div>
               </TabsContent>
               
-              {/* Distribution Channels Tab */}
-              <TabsContent value="distribution" className="space-y-4">
-                <h4 className="font-medium">Website Metrics</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="monthlyVisitors">Monthly Visitors</Label>
-                    <Input
-                      id="monthlyVisitors"
-                      type="number"
-                      value={formData.monthlyVisitors}
-                      onChange={(e) => setFormData({ ...formData, monthlyVisitors: parseInt(e.target.value) || 0 })}
-                      placeholder="730000"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="monthlyPageViews">Monthly Page Views</Label>
-                    <Input
-                      id="monthlyPageViews"
-                      type="number"
-                      value={formData.monthlyPageViews}
-                      onChange={(e) => setFormData({ ...formData, monthlyPageViews: parseInt(e.target.value) || 0 })}
-                      placeholder="2500000"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="averageSessionDuration">Avg Session Duration (min)</Label>
-                    <Input
-                      id="averageSessionDuration"
-                      type="number"
-                      step="0.1"
-                      value={formData.averageSessionDuration}
-                      onChange={(e) => setFormData({ ...formData, averageSessionDuration: parseFloat(e.target.value) || 0 })}
-                      placeholder="3.2"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="pagesPerSession">Pages per Session</Label>
-                    <Input
-                      id="pagesPerSession"
-                      type="number"
-                      step="0.1"
-                      value={formData.pagesPerSession}
-                      onChange={(e) => setFormData({ ...formData, pagesPerSession: parseFloat(e.target.value) || 0 })}
-                      placeholder="2.8"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="bounceRate">Bounce Rate (%)</Label>
-                    <Input
-                      id="bounceRate"
-                      type="number"
-                      value={formData.bounceRate}
-                      onChange={(e) => setFormData({ ...formData, bounceRate: parseInt(e.target.value) || 0 })}
-                      placeholder="45"
-                      min="0"
-                      max="100"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="mobilePercentage">Mobile Traffic (%)</Label>
-                    <Input
-                      id="mobilePercentage"
-                      type="number"
-                      value={formData.mobilePercentage}
-                      onChange={(e) => setFormData({ ...formData, mobilePercentage: parseInt(e.target.value) || 0 })}
-                      placeholder="68"
-                      min="0"
-                      max="100"
-                    />
-                  </div>
-                </div>
-                
-                <Separator />
-                <h4 className="font-medium">Print Distribution</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="printFrequency">Print Frequency</Label>
-                    <Select value={formData.printFrequency} onValueChange={(value) => setFormData({ ...formData, printFrequency: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select frequency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PRINT_FREQUENCIES.map(freq => (
-                          <SelectItem key={freq} value={freq}>
-                            {freq.charAt(0).toUpperCase() + freq.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="circulation">Total Circulation</Label>
-                    <Input
-                      id="circulation"
-                      type="number"
-                      value={formData.circulation}
-                      onChange={(e) => setFormData({ ...formData, circulation: parseInt(e.target.value) || 0 })}
-                      placeholder="25000"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="paidCirculation">Paid Circulation</Label>
-                    <Input
-                      id="paidCirculation"
-                      type="number"
-                      value={formData.paidCirculation}
-                      onChange={(e) => setFormData({ ...formData, paidCirculation: parseInt(e.target.value) || 0 })}
-                      placeholder="0"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="freeCirculation">Free Circulation</Label>
-                    <Input
-                      id="freeCirculation"
-                      type="number"
-                      value={formData.freeCirculation}
-                      onChange={(e) => setFormData({ ...formData, freeCirculation: parseInt(e.target.value) || 0 })}
-                      placeholder="25000"
-                      min="0"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="distributionArea">Distribution Area</Label>
-                    <Input
-                      id="distributionArea"
-                      value={formData.distributionArea}
-                      onChange={(e) => setFormData({ ...formData, distributionArea: e.target.value })}
-                      placeholder="Portland Metro Area"
-                    />
-                  </div>
-                </div>
-                
-                <Separator />
-                <h4 className="font-medium">Newsletter</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="newsletterSubscribers">Newsletter Subscribers</Label>
-                    <Input
-                      id="newsletterSubscribers"
-                      type="number"
-                      value={formData.newsletterSubscribers}
-                      onChange={(e) => setFormData({ ...formData, newsletterSubscribers: parseInt(e.target.value) || 0 })}
-                      placeholder="89000"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="newsletterOpenRate">Newsletter Open Rate (%)</Label>
-                    <Input
-                      id="newsletterOpenRate"
-                      type="number"
-                      value={formData.newsletterOpenRate}
-                      onChange={(e) => setFormData({ ...formData, newsletterOpenRate: parseInt(e.target.value) || 0 })}
-                      placeholder="40"
-                      min="0"
-                      max="100"
-                    />
-                  </div>
-                </div>
-                
-                <Separator />
-                <h4 className="font-medium">Social Media</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="facebookUrl">Facebook URL</Label>
-                    <Input
-                      id="facebookUrl"
-                      value={formData.facebookUrl}
-                      onChange={(e) => setFormData({ ...formData, facebookUrl: e.target.value })}
-                      placeholder="https://facebook.com/publication"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="facebookFollowers">Facebook Followers</Label>
-                    <Input
-                      id="facebookFollowers"
-                      type="number"
-                      value={formData.facebookFollowers}
-                      onChange={(e) => setFormData({ ...formData, facebookFollowers: parseInt(e.target.value) || 0 })}
-                      placeholder="103000"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="instagramUrl">Instagram URL</Label>
-                    <Input
-                      id="instagramUrl"
-                      value={formData.instagramUrl}
-                      onChange={(e) => setFormData({ ...formData, instagramUrl: e.target.value })}
-                      placeholder="https://instagram.com/publication"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="instagramFollowers">Instagram Followers</Label>
-                    <Input
-                      id="instagramFollowers"
-                      type="number"
-                      value={formData.instagramFollowers}
-                      onChange={(e) => setFormData({ ...formData, instagramFollowers: parseInt(e.target.value) || 0 })}
-                      placeholder="81000"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="twitterUrl">Twitter URL</Label>
-                    <Input
-                      id="twitterUrl"
-                      value={formData.twitterUrl}
-                      onChange={(e) => setFormData({ ...formData, twitterUrl: e.target.value })}
-                      placeholder="https://twitter.com/publication"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="twitterFollowers">Twitter Followers</Label>
-                    <Input
-                      id="twitterFollowers"
-                      type="number"
-                      value={formData.twitterFollowers}
-                      onChange={(e) => setFormData({ ...formData, twitterFollowers: parseInt(e.target.value) || 0 })}
-                      placeholder="211000"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
-                    <Input
-                      id="linkedinUrl"
-                      value={formData.linkedinUrl}
-                      onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
-                      placeholder="https://linkedin.com/company/publication"
-                    />
-                  </div>
-                </div>
-              </TabsContent>
               
               {/* Business Info Tab */}
               <TabsContent value="business" className="space-y-4">

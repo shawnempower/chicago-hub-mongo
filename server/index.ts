@@ -3,21 +3,50 @@ import dotenv from 'dotenv';
 // Load environment variables FIRST before any other imports
 dotenv.config();
 
+// Debug environment variables
+console.log('🔍 Environment variables loaded:');
+console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
+console.log('NODE_ENV:', process.env.NODE_ENV || 'undefined');
+console.log('PORT:', process.env.PORT || 'undefined');
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { authService } from '../src/integrations/mongodb/authService';
-import { connectToDatabase } from '../src/integrations/mongodb/client';
+import { connectToDatabase, setupGracefulShutdown } from '../src/integrations/mongodb/client';
 import { emailService } from './emailService';
 import { s3Service } from './s3Service';
-import { brandDocumentsService, adPackagesService, userProfilesService, leadInquiriesService, publicationsService, publicationFilesService, storefrontConfigurationsService, assistantInstructionsService, surveySubmissionsService } from '../src/integrations/mongodb/allServices';
+import { StorefrontImageService } from './storefrontImageService';
+
+// Import the services and initialization function
+import { 
+  initializeServices,
+  adPackagesService,
+  leadInquiriesService,
+  userProfilesService,
+  conversationThreadsService,
+  assistantConversationsService,
+  savedOutletsService,
+  savedPackagesService,
+  userInteractionsService,
+  brandDocumentsService,
+  assistantInstructionsService,
+  mediaEntitiesService,
+  publicationsService,
+  publicationFilesService,
+  storefrontConfigurationsService,
+  surveySubmissionsService
+} from '../src/integrations/mongodb/allServices';
+import { authService, initializeAuthService } from '../src/integrations/mongodb/authService';
 import { getDatabase } from '../src/integrations/mongodb/client';
 import { ObjectId } from 'mongodb';
 import multer from 'multer';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Initialize storefront image service
+const storefrontImageService = new StorefrontImageService(s3Service);
 
 // Middleware
 app.use(helmet());
@@ -886,7 +915,11 @@ app.put('/api/storefront/:publicationId', authenticateToken, async (req: any, re
     }
 
     const { publicationId } = req.params;
-    const config = await storefrontConfigurationsService.update(publicationId, req.body);
+    
+    // Filter out MongoDB internal fields that shouldn't be updated
+    const { _id, createdAt, updatedAt, publicationId: bodyPublicationId, ...updateData } = req.body;
+    
+    const config = await storefrontConfigurationsService.update(publicationId, updateData);
     
     if (!config) {
       return res.status(404).json({ error: 'Storefront configuration not found' });
@@ -895,6 +928,9 @@ app.put('/api/storefront/:publicationId', authenticateToken, async (req: any, re
     res.json(config);
   } catch (error) {
     console.error('Error updating storefront configuration:', error);
+    console.error('Publication ID:', req.params.publicationId);
+    console.error('User ID:', req.user?.id);
+    console.error('Request body keys:', Object.keys(req.body || {}));
     res.status(500).json({ error: 'Failed to update storefront configuration' });
   }
 });
@@ -1060,6 +1096,162 @@ app.get('/api/storefront/templates', async (req, res) => {
   } catch (error) {
     console.error('Error fetching storefront templates:', error);
     res.status(500).json({ error: 'Failed to fetch storefront templates' });
+  }
+});
+
+// ===== STOREFRONT IMAGE ROUTES =====
+
+// Upload storefront image
+app.post('/api/storefront/:publicationId/images', authenticateToken, upload.single('image'), async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const { publicationId } = req.params;
+    const { imageType, channelId } = req.body;
+
+    if (!imageType || !['logo', 'hero', 'channel', 'about', 'ogImage'].includes(imageType)) {
+      return res.status(400).json({ error: 'Valid imageType required (logo, hero, channel, about, ogImage)' });
+    }
+
+    if (imageType === 'channel' && !channelId) {
+      return res.status(400).json({ error: 'channelId required for channel images' });
+    }
+
+    // Check if file is an image
+    if (!req.file.mimetype.startsWith('image/')) {
+      return res.status(400).json({ error: 'File must be an image' });
+    }
+
+    const result = await storefrontImageService.uploadStorefrontImage({
+      userId: req.user.id,
+      publicationId,
+      imageType,
+      channelId,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      buffer: req.file.buffer
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ error: result.error || 'Failed to upload image' });
+    }
+
+    res.json({
+      success: true,
+      url: result.url,
+      imageType,
+      channelId
+    });
+
+  } catch (error) {
+    console.error('Error uploading storefront image:', error);
+    res.status(500).json({ error: 'Failed to upload storefront image' });
+  }
+});
+
+// Replace storefront image
+app.put('/api/storefront/:publicationId/images', authenticateToken, upload.single('image'), async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const { publicationId } = req.params;
+    const { imageType, channelId } = req.body;
+
+    if (!imageType || !['logo', 'hero', 'channel', 'about', 'ogImage'].includes(imageType)) {
+      return res.status(400).json({ error: 'Valid imageType required (logo, hero, channel, about, ogImage)' });
+    }
+
+    if (imageType === 'channel' && !channelId) {
+      return res.status(400).json({ error: 'channelId required for channel images' });
+    }
+
+    // Check if file is an image
+    if (!req.file.mimetype.startsWith('image/')) {
+      return res.status(400).json({ error: 'File must be an image' });
+    }
+
+    const result = await storefrontImageService.replaceStorefrontImage({
+      userId: req.user.id,
+      publicationId,
+      imageType,
+      channelId,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      buffer: req.file.buffer
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ error: result.error || 'Failed to replace image' });
+    }
+
+    res.json({
+      success: true,
+      url: result.url,
+      imageType,
+      channelId
+    });
+
+  } catch (error) {
+    console.error('Error replacing storefront image:', error);
+    res.status(500).json({ error: 'Failed to replace storefront image' });
+  }
+});
+
+// Remove storefront image
+app.delete('/api/storefront/:publicationId/images', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { publicationId } = req.params;
+    const { imageType, channelId } = req.query;
+
+    if (!imageType || !['logo', 'hero', 'channel', 'about', 'ogImage'].includes(imageType as string)) {
+      return res.status(400).json({ error: 'Valid imageType required (logo, hero, channel, about, ogImage)' });
+    }
+
+    if (imageType === 'channel' && !channelId) {
+      return res.status(400).json({ error: 'channelId required for channel images' });
+    }
+
+    const result = await storefrontImageService.removeStorefrontImage(
+      publicationId,
+      imageType as any,
+      channelId as string
+    );
+
+    if (!result.success) {
+      return res.status(500).json({ error: result.error || 'Failed to remove image' });
+    }
+
+    res.json({
+      success: true,
+      imageType,
+      channelId
+    });
+
+  } catch (error) {
+    console.error('Error removing storefront image:', error);
+    res.status(500).json({ error: 'Failed to remove storefront image' });
   }
 });
 
@@ -2041,30 +2233,45 @@ app.use((req, res) => {
 // Start server
 async function startServer() {
   try {
+    // Setup graceful shutdown handlers for MongoDB
+    setupGracefulShutdown();
+    console.log('✅ Graceful shutdown handlers configured');
+
     // Connect to MongoDB
     console.log('Connecting to MongoDB...');
     await connectToDatabase();
-    console.log('Connected to MongoDB successfully!');
+    console.log('✅ Connected to MongoDB successfully!');
+
+    // Initialize all MongoDB services
+    console.log('Initializing MongoDB services...');
+    initializeAuthService();
+    initializeServices();
+    console.log('✅ MongoDB services initialized successfully!');
+
 
     // API routes are defined at module load time (no function call needed)
+    console.log('📋 API routes loaded');
 
     // Check S3 service status
+    console.log('🔍 Checking S3 service...');
     const s3ServiceInstance = s3Service();
     console.log('S3 Service status:', s3ServiceInstance ? 'AVAILABLE' : 'NOT AVAILABLE');
     if (s3ServiceInstance) {
-      console.log('S3 service initialized successfully');
+      console.log('✅ S3 service initialized successfully');
     } else {
-      console.warn('S3 service is not available - file uploads will fail');
+      console.warn('⚠️  S3 service is not available - file uploads will fail');
     }
 
     // Start server
+    console.log('🚀 Starting HTTP server...');
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Authentication server running on port ${PORT}`);
+      console.log(`✅ Authentication server running on port ${PORT}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth/*`);
+      console.log(`📊 Publications API: http://localhost:${PORT}/api/publications`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 }

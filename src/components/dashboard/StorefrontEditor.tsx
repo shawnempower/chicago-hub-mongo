@@ -35,8 +35,79 @@ import {
   ArrowDown,
   Save,
   Plus,
-  X
+  X,
+  Trash2,
+  PlusCircle,
+  MessageSquare,
+  Megaphone,
+  Globe
 } from 'lucide-react';
+
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
+// Available component types that can be added
+const AVAILABLE_COMPONENT_TYPES: ComponentType[] = [
+  'navbar', 'hero', 'audience', 'testimonials', 'inventory', 'campaign', 'contactfaq', 'aboutus', 'footer'
+];
+
+interface AddComponentDropdownProps {
+  onAddComponent: (componentType: ComponentType) => void;
+  existingComponents: ComponentType[];
+}
+
+const AddComponentDropdown: React.FC<AddComponentDropdownProps> = ({ onAddComponent, existingComponents }) => {
+  const availableComponents = AVAILABLE_COMPONENT_TYPES.filter(
+    type => !existingComponents.includes(type)
+  );
+
+  const getComponentIcon = (componentType: ComponentType) => {
+    const icons = {
+      navbar: Navigation,
+      hero: Home,
+      audience: Users,
+      testimonials: MessageSquare,
+      inventory: Package,
+      campaign: Megaphone,
+      contactfaq: Mail,
+      aboutus: Info,
+      footer: Globe
+    };
+    return icons[componentType] || Settings;
+  };
+
+  if (availableComponents.length === 0) {
+    return (
+      <Button variant="ghost" size="sm" disabled>
+        <PlusCircle className="w-4 h-4" />
+      </Button>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <PlusCircle className="w-4 h-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {availableComponents.map(type => {
+          const Icon = getComponentIcon(type);
+          return (
+            <DropdownMenuItem
+              key={type}
+              onClick={() => onAddComponent(type)}
+              className="flex items-center gap-2"
+            >
+              <Icon className="w-4 h-4" />
+              <span className="capitalize">{type}</span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 interface StorefrontEditorProps {
   config: StorefrontConfiguration;
@@ -106,17 +177,165 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
     }
   };
 
+  const addComponent = (componentType: ComponentType) => {
+    if (config.components[componentType]) return; // Component already exists
+    
+    const maxOrder = Math.max(...Object.values(config.components).map(c => c.order), 0);
+    const defaultContent = getDefaultComponentContent(componentType);
+    
+    const updatedConfig = {
+      ...config,
+      components: {
+        ...config.components,
+        [componentType]: {
+          enabled: true,
+          order: maxOrder + 1,
+          content: defaultContent
+        }
+      }
+    };
+    onChange(updatedConfig);
+    setActiveComponent(componentType);
+  };
+
+  const removeComponent = (componentType: ComponentType) => {
+    if (!config.components[componentType]) return;
+    
+    const removedOrder = config.components[componentType].order;
+    const { [componentType]: removed, ...remainingComponents } = config.components;
+    
+    // Reorder remaining components
+    const reorderedComponents = Object.entries(remainingComponents).reduce((acc, [type, component]) => {
+      acc[type] = {
+        ...component,
+        order: component.order > removedOrder ? component.order - 1 : component.order
+      };
+      return acc;
+    }, {} as typeof remainingComponents);
+    
+    const updatedConfig = {
+      ...config,
+      components: reorderedComponents
+    };
+    
+    onChange(updatedConfig);
+    
+    // Set active component to first available component
+    const remainingTypes = Object.keys(reorderedComponents) as ComponentType[];
+    if (remainingTypes.length > 0) {
+      setActiveComponent(remainingTypes[0]);
+    }
+  };
+
+  const getDefaultComponentContent = (componentType: ComponentType) => {
+    switch (componentType) {
+      case 'navbar':
+        return {
+          logoUrl: '',
+          navItems: [
+            { id: 'home', label: 'Home', href: '#hero' },
+            { id: 'about', label: 'About', href: '#aboutus' }
+          ],
+          ctaText: 'Get Started',
+          ctaHref: '#contact'
+        };
+      case 'hero':
+        return {
+          tag: '',
+          title: 'Your Compelling Headline',
+          description: 'Describe your value proposition here',
+          ctaText: 'Get Started',
+          imageUrl: '',
+          stats: []
+        };
+      case 'audience':
+        return {
+          title: 'Your Target Audience',
+          description: 'Learn about the people you can reach',
+          ageDemographics: [],
+          statHighlights: []
+        };
+      case 'testimonials':
+        return {
+          title: 'What Our Customers Say',
+          subtitle: 'Success stories from satisfied clients',
+          testimonials: []
+        };
+      case 'inventory':
+        return {
+          title: 'Our Services',
+          subtitle: 'Explore what we offer',
+          channels: []
+        };
+      case 'campaign':
+        return {
+          title: 'How It Works',
+          description: 'Simple steps to get started',
+          planningCard: {
+            title: 'Get Your Custom Proposal',
+            features: [],
+            ctaText: 'Get Started'
+          },
+          features: []
+        };
+      case 'contactfaq':
+        return {
+          title: 'Get In Touch',
+          description: 'We\'d love to hear from you',
+          faqTitle: 'Frequently Asked Questions',
+          formLabels: {
+            name: 'Full Name',
+            email: 'Email Address',
+            company: 'Company Name',
+            interest: 'Interest',
+            message: 'Message',
+            submit: 'Send Message'
+          },
+          faqItems: [],
+          contactInfo: {
+            phone: '',
+            email: ''
+          }
+        };
+      case 'aboutus':
+        return {
+          title: 'About Us',
+          paragraphs: ['Tell your story here...'],
+          imageUrl: ''
+        };
+      case 'footer':
+        return {
+          companyName: 'Your Company',
+          description: 'Your company description',
+          contactInfo: {
+            phone: '',
+            email: '',
+            address: ''
+          },
+          socialLinks: {
+            linkedin: null,
+            twitter: null,
+            facebook: null,
+            instagram: null
+          },
+          navItems: []
+        };
+      default:
+        return {};
+    }
+  };
+
   const getComponentIcon = (componentType: ComponentType) => {
     const icons = {
       navbar: Navigation,
       hero: Home,
       audience: Users,
-      testimonials: Users,
+      testimonials: MessageSquare,
       inventory: Package,
-      campaign: Zap,
+      campaign: Megaphone,
       contactfaq: Mail,
       aboutus: Info,
-      footer: Settings
+      footer: Globe
     };
     return icons[componentType] || Settings;
   };
@@ -181,12 +400,12 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div>
         <Label>Statistics</Label>
         <div className="space-y-2">
-          {content.stats.map((stat, index) => (
+          {(content.stats || []).map((stat, index) => (
             <div key={index} className="flex gap-2">
               <Input
                 value={stat.key}
                 onChange={(e) => {
-                  const newStats = [...content.stats];
+                  const newStats = [...(content.stats || [])];
                   newStats[index] = { ...stat, key: e.target.value };
                   updateComponentContent('hero', { ...content, stats: newStats });
                 }}
@@ -195,7 +414,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               <Input
                 value={stat.value}
                 onChange={(e) => {
-                  const newStats = [...content.stats];
+                  const newStats = [...(content.stats || [])];
                   newStats[index] = { ...stat, value: e.target.value };
                   updateComponentContent('hero', { ...content, stats: newStats });
                 }}
@@ -205,7 +424,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const newStats = content.stats.filter((_, i) => i !== index);
+                  const newStats = (content.stats || []).filter((_, i) => i !== index);
                   updateComponentContent('hero', { ...content, stats: newStats });
                 }}
               >
@@ -253,12 +472,12 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div>
         <Label>Age Demographics</Label>
         <div className="space-y-2">
-          {content.ageDemographics.map((demo, index) => (
+          {(content.ageDemographics || []).map((demo, index) => (
             <div key={index} className="flex gap-2">
               <Input
                 value={demo.label}
                 onChange={(e) => {
-                  const newDemos = [...content.ageDemographics];
+                  const newDemos = [...(content.ageDemographics || [])];
                   newDemos[index] = { ...demo, label: e.target.value };
                   updateComponentContent('audience', { ...content, ageDemographics: newDemos });
                 }}
@@ -268,7 +487,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 type="number"
                 value={demo.percentage}
                 onChange={(e) => {
-                  const newDemos = [...content.ageDemographics];
+                  const newDemos = [...(content.ageDemographics || [])];
                   newDemos[index] = { ...demo, percentage: parseInt(e.target.value) || 0 };
                   updateComponentContent('audience', { ...content, ageDemographics: newDemos });
                 }}
@@ -278,7 +497,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const newDemos = content.ageDemographics.filter((_, i) => i !== index);
+                  const newDemos = (content.ageDemographics || []).filter((_, i) => i !== index);
                   updateComponentContent('audience', { ...content, ageDemographics: newDemos });
                 }}
               >
@@ -303,12 +522,12 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div>
         <Label>Stat Highlights</Label>
         <div className="space-y-2">
-          {content.statHighlights.map((stat, index) => (
+          {(content.statHighlights || []).map((stat, index) => (
             <div key={index} className="flex gap-2">
               <Input
                 value={stat.key}
                 onChange={(e) => {
-                  const newStats = [...content.statHighlights];
+                  const newStats = [...(content.statHighlights || [])];
                   newStats[index] = { ...stat, key: e.target.value };
                   updateComponentContent('audience', { ...content, statHighlights: newStats });
                 }}
@@ -317,7 +536,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               <Input
                 value={stat.value}
                 onChange={(e) => {
-                  const newStats = [...content.statHighlights];
+                  const newStats = [...(content.statHighlights || [])];
                   newStats[index] = { ...stat, value: e.target.value };
                   updateComponentContent('audience', { ...content, statHighlights: newStats });
                 }}
@@ -327,7 +546,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const newStats = content.statHighlights.filter((_, i) => i !== index);
+                  const newStats = (content.statHighlights || []).filter((_, i) => i !== index);
                   updateComponentContent('audience', { ...content, statHighlights: newStats });
                 }}
               >
@@ -386,12 +605,12 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div>
         <Label>Navigation Items</Label>
         <div className="space-y-2">
-          {content.navItems.map((item, index) => (
+          {(content.navItems || []).map((item, index) => (
             <div key={index} className="grid grid-cols-3 gap-2">
               <Input
                 value={item.label}
                 onChange={(e) => {
-                  const newItems = [...content.navItems];
+                  const newItems = [...(content.navItems || [])];
                   newItems[index] = { ...item, label: e.target.value };
                   updateComponentContent('navbar', { ...content, navItems: newItems });
                 }}
@@ -400,7 +619,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               <Input
                 value={item.href}
                 onChange={(e) => {
-                  const newItems = [...content.navItems];
+                  const newItems = [...(content.navItems || [])];
                   newItems[index] = { ...item, href: e.target.value };
                   updateComponentContent('navbar', { ...content, navItems: newItems });
                 }}
@@ -410,7 +629,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const newItems = content.navItems.filter((_, i) => i !== index);
+                  const newItems = (content.navItems || []).filter((_, i) => i !== index);
                   updateComponentContent('navbar', { ...content, navItems: newItems });
                 }}
               >
@@ -458,7 +677,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div>
         <Label>Advertising Channels</Label>
         <div className="space-y-4">
-          {content.channels.map((channel, index) => (
+          {(content.channels || []).map((channel, index) => (
             <Card key={index} className="p-4">
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
@@ -467,7 +686,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                     <Input
                       value={channel.id}
                       onChange={(e) => {
-                        const newChannels = [...content.channels];
+                        const newChannels = [...(content.channels || [])];
                         newChannels[index] = { ...channel, id: e.target.value };
                         updateComponentContent('inventory', { ...content, channels: newChannels });
                       }}
@@ -479,7 +698,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                     <Input
                       value={channel.label}
                       onChange={(e) => {
-                        const newChannels = [...content.channels];
+                        const newChannels = [...(content.channels || [])];
                         newChannels[index] = { ...channel, label: e.target.value };
                         updateComponentContent('inventory', { ...content, channels: newChannels });
                       }}
@@ -493,7 +712,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   <Input
                     value={channel.title}
                     onChange={(e) => {
-                      const newChannels = [...content.channels];
+                      const newChannels = [...(content.channels || [])];
                       newChannels[index] = { ...channel, title: e.target.value };
                       updateComponentContent('inventory', { ...content, channels: newChannels });
                     }}
@@ -506,7 +725,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   <Textarea
                     value={channel.description}
                     onChange={(e) => {
-                      const newChannels = [...content.channels];
+                      const newChannels = [...(content.channels || [])];
                       newChannels[index] = { ...channel, description: e.target.value };
                       updateComponentContent('inventory', { ...content, channels: newChannels });
                     }}
@@ -519,7 +738,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   <Input
                     value={channel.imageUrl}
                     onChange={(e) => {
-                      const newChannels = [...content.channels];
+                      const newChannels = [...(content.channels || [])];
                       newChannels[index] = { ...channel, imageUrl: e.target.value };
                       updateComponentContent('inventory', { ...content, channels: newChannels });
                     }}
@@ -530,12 +749,12 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 <div>
                   <Label>Statistics</Label>
                   <div className="space-y-2">
-                    {channel.stats.map((stat, statIndex) => (
+                    {(channel.stats || []).map((stat, statIndex) => (
                       <div key={statIndex} className="flex gap-2">
                         <Input
                           value={stat.key}
                           onChange={(e) => {
-                            const newChannels = [...content.channels];
+                            const newChannels = [...(content.channels || [])];
                             const newStats = [...channel.stats];
                             newStats[statIndex] = { ...stat, key: e.target.value };
                             newChannels[index] = { ...channel, stats: newStats };
@@ -546,7 +765,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                         <Input
                           value={stat.value}
                           onChange={(e) => {
-                            const newChannels = [...content.channels];
+                            const newChannels = [...(content.channels || [])];
                             const newStats = [...channel.stats];
                             newStats[statIndex] = { ...stat, value: e.target.value };
                             newChannels[index] = { ...channel, stats: newStats };
@@ -558,7 +777,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const newChannels = [...content.channels];
+                            const newChannels = [...(content.channels || [])];
                             const newStats = channel.stats.filter((_, i) => i !== statIndex);
                             newChannels[index] = { ...channel, stats: newStats };
                             updateComponentContent('inventory', { ...content, channels: newChannels });
@@ -572,7 +791,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const newChannels = [...content.channels];
+                        const newChannels = [...(content.channels || [])];
                         const newStats = [...channel.stats, { key: '', value: '' }];
                         newChannels[index] = { ...channel, stats: newStats };
                         updateComponentContent('inventory', { ...content, channels: newChannels });
@@ -588,7 +807,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   variant="destructive"
                   size="sm"
                   onClick={() => {
-                    const newChannels = content.channels.filter((_, i) => i !== index);
+                    const newChannels = (content.channels || []).filter((_, i) => i !== index);
                     updateComponentContent('inventory', { ...content, channels: newChannels });
                   }}
                 >
@@ -667,16 +886,16 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
             <div>
               <Label>Features</Label>
               <div className="space-y-2">
-                {content.planningCard.features.map((feature, index) => (
+                {(content.planningCard?.features || []).map((feature, index) => (
                   <div key={index} className="flex gap-2">
                     <Input
                       value={feature}
                       onChange={(e) => {
-                        const newFeatures = [...content.planningCard.features];
+                        const newFeatures = [...(content.planningCard?.features || [])];
                         newFeatures[index] = e.target.value;
                         updateComponentContent('campaign', { 
                           ...content, 
-                          planningCard: { ...content.planningCard, features: newFeatures }
+                          planningCard: { ...(content.planningCard || {}), features: newFeatures }
                         });
                       }}
                       placeholder="Feature description"
@@ -685,10 +904,10 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const newFeatures = content.planningCard.features.filter((_, i) => i !== index);
+                        const newFeatures = (content.planningCard?.features || []).filter((_, i) => i !== index);
                         updateComponentContent('campaign', { 
                           ...content, 
-                          planningCard: { ...content.planningCard, features: newFeatures }
+                          planningCard: { ...(content.planningCard || {}), features: newFeatures }
                         });
                       }}
                     >
@@ -719,7 +938,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div>
         <Label>Campaign Features</Label>
         <div className="space-y-2">
-          {content.features.map((feature, index) => (
+          {(content.features || []).map((feature, index) => (
             <Card key={index} className="p-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -727,7 +946,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   <Input
                     value={feature.title}
                     onChange={(e) => {
-                      const newFeatures = [...content.features];
+                      const newFeatures = [...(content.features || [])];
                       newFeatures[index] = { ...feature, title: e.target.value };
                       updateComponentContent('campaign', { ...content, features: newFeatures });
                     }}
@@ -738,7 +957,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   <Input
                     value={feature.icon}
                     onChange={(e) => {
-                      const newFeatures = [...content.features];
+                      const newFeatures = [...(content.features || [])];
                       newFeatures[index] = { ...feature, icon: e.target.value };
                       updateComponentContent('campaign', { ...content, features: newFeatures });
                     }}
@@ -751,7 +970,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 <Textarea
                   value={feature.description}
                   onChange={(e) => {
-                    const newFeatures = [...content.features];
+                    const newFeatures = [...(content.features || [])];
                     newFeatures[index] = { ...feature, description: e.target.value };
                     updateComponentContent('campaign', { ...content, features: newFeatures });
                   }}
@@ -763,7 +982,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 size="sm"
                 className="mt-2"
                 onClick={() => {
-                  const newFeatures = content.features.filter((_, i) => i !== index);
+                  const newFeatures = (content.features || []).filter((_, i) => i !== index);
                   updateComponentContent('campaign', { ...content, features: newFeatures });
                 }}
               >
@@ -915,7 +1134,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div>
         <Label>FAQ Items</Label>
         <div className="space-y-2">
-          {content.faqItems.map((item, index) => (
+          {(content.faqItems || []).map((item, index) => (
             <Card key={index} className="p-3">
               <div className="space-y-2">
                 <div>
@@ -923,7 +1142,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   <Input
                     value={item.question}
                     onChange={(e) => {
-                      const newItems = [...content.faqItems];
+                      const newItems = [...(content.faqItems || [])];
                       newItems[index] = { ...item, question: e.target.value };
                       updateComponentContent('contactfaq', { ...content, faqItems: newItems });
                     }}
@@ -934,7 +1153,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   <Textarea
                     value={item.answer}
                     onChange={(e) => {
-                      const newItems = [...content.faqItems];
+                      const newItems = [...(content.faqItems || [])];
                       newItems[index] = { ...item, answer: e.target.value };
                       updateComponentContent('contactfaq', { ...content, faqItems: newItems });
                     }}
@@ -945,7 +1164,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   variant="destructive"
                   size="sm"
                   onClick={() => {
-                    const newItems = content.faqItems.filter((_, i) => i !== index);
+                    const newItems = (content.faqItems || []).filter((_, i) => i !== index);
                     updateComponentContent('contactfaq', { ...content, faqItems: newItems });
                   }}
                 >
@@ -993,7 +1212,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div>
         <Label>Paragraphs</Label>
         <div className="space-y-2">
-          {content.paragraphs.map((paragraph, index) => (
+          {(content.paragraphs || []).map((paragraph, index) => (
             <div key={index} className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Paragraph {index + 1}</Label>
@@ -1001,7 +1220,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const newParagraphs = content.paragraphs.filter((_, i) => i !== index);
+                    const newParagraphs = (content.paragraphs || []).filter((_, i) => i !== index);
                     updateComponentContent('aboutus', { ...content, paragraphs: newParagraphs });
                   }}
                 >
@@ -1011,7 +1230,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               <Textarea
                 value={paragraph}
                 onChange={(e) => {
-                  const newParagraphs = [...content.paragraphs];
+                  const newParagraphs = [...(content.paragraphs || [])];
                   newParagraphs[index] = e.target.value;
                   updateComponentContent('aboutus', { ...content, paragraphs: newParagraphs });
                 }}
@@ -1149,12 +1368,12 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div>
         <Label>Footer Navigation</Label>
         <div className="space-y-2">
-          {content.navItems.map((item, index) => (
+          {(content.navItems || []).map((item, index) => (
             <div key={index} className="grid grid-cols-3 gap-2">
               <Input
                 value={item.label}
                 onChange={(e) => {
-                  const newItems = [...content.navItems];
+                  const newItems = [...(content.navItems || [])];
                   newItems[index] = { ...item, label: e.target.value };
                   updateComponentContent('footer', { ...content, navItems: newItems });
                 }}
@@ -1163,7 +1382,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               <Input
                 value={item.href}
                 onChange={(e) => {
-                  const newItems = [...content.navItems];
+                  const newItems = [...(content.navItems || [])];
                   newItems[index] = { ...item, href: e.target.value };
                   updateComponentContent('footer', { ...content, navItems: newItems });
                 }}
@@ -1173,7 +1392,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const newItems = content.navItems.filter((_, i) => i !== index);
+                  const newItems = (content.navItems || []).filter((_, i) => i !== index);
                   updateComponentContent('footer', { ...content, navItems: newItems });
                 }}
               >
@@ -1220,7 +1439,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div>
         <Label>Testimonials</Label>
         <div className="space-y-2">
-          {content.testimonials.map((testimonial, index) => (
+          {(content.testimonials || []).map((testimonial, index) => (
             <Card key={index} className="p-3">
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-2">
@@ -1229,7 +1448,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                     <Input
                       value={testimonial.name}
                       onChange={(e) => {
-                        const newTestimonials = [...content.testimonials];
+                        const newTestimonials = [...(content.testimonials || [])];
                         newTestimonials[index] = { ...testimonial, name: e.target.value };
                         updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
                       }}
@@ -1240,7 +1459,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                     <Input
                       value={testimonial.company}
                       onChange={(e) => {
-                        const newTestimonials = [...content.testimonials];
+                        const newTestimonials = [...(content.testimonials || [])];
                         newTestimonials[index] = { ...testimonial, company: e.target.value };
                         updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
                       }}
@@ -1252,7 +1471,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   <Textarea
                     value={testimonial.quote}
                     onChange={(e) => {
-                      const newTestimonials = [...content.testimonials];
+                      const newTestimonials = [...(content.testimonials || [])];
                       newTestimonials[index] = { ...testimonial, quote: e.target.value };
                       updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
                     }}
@@ -1264,7 +1483,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   <Input
                     value={testimonial.imageUrl || ''}
                     onChange={(e) => {
-                      const newTestimonials = [...content.testimonials];
+                      const newTestimonials = [...(content.testimonials || [])];
                       newTestimonials[index] = { ...testimonial, imageUrl: e.target.value || undefined };
                       updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
                     }}
@@ -1275,7 +1494,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   variant="destructive"
                   size="sm"
                   onClick={() => {
-                    const newTestimonials = content.testimonials.filter((_, i) => i !== index);
+                    const newTestimonials = (content.testimonials || []).filter((_, i) => i !== index);
                     updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
                   }}
                 >
@@ -1356,7 +1575,10 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
         {/* Component List */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">Components</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Components</CardTitle>
+              <AddComponentDropdown onAddComponent={addComponent} existingComponents={Object.keys(config.components) as ComponentType[]} />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -1365,14 +1587,16 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 return (
                   <div
                     key={type}
-                    className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
+                    className={`group flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
                       activeComponent === type 
                         ? 'bg-primary text-primary-foreground' 
                         : 'hover:bg-muted'
                     }`}
-                    onClick={() => setActiveComponent(type)}
                   >
-                    <div className="flex items-center gap-2">
+                    <div 
+                      className="flex items-center gap-2 flex-1"
+                      onClick={() => setActiveComponent(type)}
+                    >
                       <Icon className="w-4 h-4" />
                       <span className="text-sm capitalize">{type}</span>
                     </div>
@@ -1382,17 +1606,38 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                       ) : (
                         <EyeOff className="w-4 h-4 text-muted-foreground" />
                       )}
-                      <span className="text-xs text-muted-foreground">{order}</span>
+                      <span className="text-xs text-muted-foreground mr-2">{order}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeComponent(type);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
                     </div>
                   </div>
                 );
               })}
+              
+              {componentsList.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No components added yet</p>
+                  <p className="text-xs">Click the + button to add components</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Component Editor */}
         <Card className="lg:col-span-3">
+          {componentsList.length > 0 && activeComponent && config.components[activeComponent] ? (
+            <>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1427,6 +1672,17 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   >
                     <ArrowDown className="w-4 h-4" />
                   </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to remove the ${activeComponent} component? This action cannot be undone.`)) {
+                        removeComponent(activeComponent);
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1449,6 +1705,22 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               </div>
             )}
           </CardContent>
+            </>
+          ) : (
+            <CardContent>
+              <div className="text-center py-16">
+                <Settings className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Components Added</h3>
+                <p className="text-muted-foreground mb-6">
+                  Start building your storefront by adding components. Each component represents a section of your storefront page.
+                </p>
+                <AddComponentDropdown 
+                  onAddComponent={addComponent} 
+                  existingComponents={Object.keys(config.components) as ComponentType[]} 
+                />
+              </div>
+            </CardContent>
+          )}
         </Card>
       </div>
     </div>

@@ -8,7 +8,7 @@
     "meta": {
       "type": "object",
       "description": "Configuration metadata and versioning information",
-      "required": ["configVersion", "publisher_id", "is_draft"],
+      "required": ["configVersion", "publisherId", "isDraft"],
       "properties": {
         "configVersion": {
           "type": "string",
@@ -25,12 +25,18 @@
           "format": "date-time",
           "description": "ISO 8601 timestamp of when this configuration was last modified"
         },
-        "publisher_id": {
+        "publisherId": {
           "type": "string",
           "description": "Unique identifier for the publisher or organization",
           "minLength": 1
         },
-        "is_draft": {
+        "websiteUrl": {
+          "type": "string",
+          "description": "Website url that hosts the storefront",
+          "format": "uri",
+          "minLength": 1
+        },
+        "isDraft": {
           "type": "boolean",
           "description": "Whether this configuration is a draft or published version"
         }

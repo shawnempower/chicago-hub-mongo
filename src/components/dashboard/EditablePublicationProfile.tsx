@@ -12,17 +12,12 @@ import { updatePublication } from '@/api/publications';
 import { PublicationFrontend } from '@/types/publication';
 import { 
   Building2, 
-  Globe, 
   Phone, 
-  Mail, 
   MapPin, 
   Users, 
   Calendar,
   Save,
-  X,
-  Plus,
-  Trash2,
-  Newspaper
+  X
 } from 'lucide-react';
 
 interface EditablePublicationProfileProps {
@@ -75,51 +70,6 @@ export const EditablePublicationProfile: React.FC<EditablePublicationProfileProp
     }
   };
 
-  // Print publication management functions
-  const addPrintPublication = () => {
-    setFormData(prev => ({
-      ...prev,
-      distributionChannels: {
-        ...prev.distributionChannels,
-        print: [
-          ...(Array.isArray(prev.distributionChannels?.print) ? prev.distributionChannels.print : prev.distributionChannels?.print ? [prev.distributionChannels.print] : []),
-          {
-            name: 'New Publication',
-            frequency: 'weekly' as const,
-            circulation: 5000
-          }
-        ]
-      }
-    }));
-  };
-
-  const updatePrintPublication = (printIndex: number, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      distributionChannels: {
-        ...prev.distributionChannels,
-        print: Array.isArray(prev.distributionChannels?.print) 
-          ? prev.distributionChannels.print.map((printPub, pIndex) =>
-              pIndex === printIndex ? { ...printPub, [field]: value } : printPub
-            )
-          : printIndex === 0 && prev.distributionChannels?.print
-          ? [{ ...prev.distributionChannels.print, [field]: value }]
-          : [{ [field]: value }]
-      }
-    }));
-  };
-
-  const removePrintPublication = (printIndex: number) => {
-    setFormData(prev => ({
-      ...prev,
-      distributionChannels: {
-        ...prev.distributionChannels,
-        print: Array.isArray(prev.distributionChannels?.print) 
-          ? prev.distributionChannels.print.filter((_, pIndex) => pIndex !== printIndex)
-          : []
-      }
-    }));
-  };
 
   const updateBasicInfo = (field: string, value: string) => {
     setFormData(prev => ({
@@ -154,36 +104,45 @@ export const EditablePublicationProfile: React.FC<EditablePublicationProfileProp
     }));
   };
 
-  const addSocialMediaProfile = () => {
+  const updateEditorialContact = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      socialMediaProfiles: [
-        ...(prev.socialMediaProfiles || []),
-        {
-          platform: 'facebook' as const,
-          handle: '',
-          url: '',
-          verified: false
+      contactInfo: {
+        ...prev.contactInfo,
+        editorialContact: {
+          ...prev.contactInfo?.editorialContact,
+          [field]: value
         }
-      ]
+      }
     }));
   };
 
-  const updateSocialMediaProfile = (index: number, field: string, value: any) => {
+  const updateGeneralManager = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      socialMediaProfiles: prev.socialMediaProfiles?.map((profile, i) => 
-        i === index ? { ...profile, [field]: value } : profile
-      )
+      contactInfo: {
+        ...prev.contactInfo,
+        generalManager: {
+          ...prev.contactInfo?.generalManager,
+          [field]: value
+        }
+      }
     }));
   };
 
-  const removeSocialMediaProfile = (index: number) => {
+  const updateAdvertisingDirector = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      socialMediaProfiles: prev.socialMediaProfiles?.filter((_, i) => i !== index)
+      contactInfo: {
+        ...prev.contactInfo,
+        advertisingDirector: {
+          ...prev.contactInfo?.advertisingDirector,
+          [field]: value
+        }
+      }
     }));
   };
+
 
   return (
     <div className="space-y-6">
@@ -331,36 +290,39 @@ export const EditablePublicationProfile: React.FC<EditablePublicationProfileProp
         </Card>
 
         {/* Contact Information */}
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5" />
               Contact Information
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="mainPhone">Main Phone</Label>
-              <Input
-                id="mainPhone"
-                value={formData.contactInfo?.mainPhone || ''}
-                onChange={(e) => updateContactInfo('mainPhone', e.target.value)}
-                placeholder="(555) 123-4567"
-              />
+          <CardContent className="space-y-6">
+            {/* General Contact Info */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="mainPhone">Main Phone</Label>
+                <Input
+                  id="mainPhone"
+                  value={formData.contactInfo?.mainPhone || ''}
+                  onChange={(e) => updateContactInfo('mainPhone', e.target.value)}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+              <div>
+                <Label htmlFor="businessHours">Business Hours</Label>
+                <Input
+                  id="businessHours"
+                  value={formData.contactInfo?.businessHours || ''}
+                  onChange={(e) => updateContactInfo('businessHours', e.target.value)}
+                  placeholder="Monday-Friday 9AM-5PM"
+                />
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="businessHours">Business Hours</Label>
-              <Input
-                id="businessHours"
-                value={formData.contactInfo?.businessHours || ''}
-                onChange={(e) => updateContactInfo('businessHours', e.target.value)}
-                placeholder="Monday-Friday 9AM-5PM"
-              />
-            </div>
-
+            {/* Sales Contact */}
             <div className="space-y-3">
-              <Label>Sales Contact</Label>
+              <Label className="text-base font-semibold">Sales Contact</Label>
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   placeholder="Name"
@@ -373,7 +335,7 @@ export const EditablePublicationProfile: React.FC<EditablePublicationProfileProp
                   onChange={(e) => updateSalesContact('title', e.target.value)}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <Input
                   placeholder="Email"
                   type="email"
@@ -384,6 +346,96 @@ export const EditablePublicationProfile: React.FC<EditablePublicationProfileProp
                   placeholder="Phone"
                   value={formData.contactInfo?.salesContact?.phone || ''}
                   onChange={(e) => updateSalesContact('phone', e.target.value)}
+                />
+                <Select 
+                  value={formData.contactInfo?.salesContact?.preferredContact || ''} 
+                  onValueChange={(value) => updateSalesContact('preferredContact', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Preferred contact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="phone">Phone</SelectItem>
+                    <SelectItem value="text">Text</SelectItem>
+                    <SelectItem value="linkedin">LinkedIn</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Editorial Contact */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Editorial Contact</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  placeholder="Name"
+                  value={formData.contactInfo?.editorialContact?.name || ''}
+                  onChange={(e) => updateEditorialContact('name', e.target.value)}
+                />
+                <Input
+                  placeholder="Title"
+                  value={formData.contactInfo?.editorialContact?.title || ''}
+                  onChange={(e) => updateEditorialContact('title', e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  placeholder="Email"
+                  type="email"
+                  value={formData.contactInfo?.editorialContact?.email || ''}
+                  onChange={(e) => updateEditorialContact('email', e.target.value)}
+                />
+                <Input
+                  placeholder="Phone"
+                  value={formData.contactInfo?.editorialContact?.phone || ''}
+                  onChange={(e) => updateEditorialContact('phone', e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* General Manager */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">General Manager</Label>
+              <div className="grid grid-cols-3 gap-3">
+                <Input
+                  placeholder="Name"
+                  value={formData.contactInfo?.generalManager?.name || ''}
+                  onChange={(e) => updateGeneralManager('name', e.target.value)}
+                />
+                <Input
+                  placeholder="Email"
+                  type="email"
+                  value={formData.contactInfo?.generalManager?.email || ''}
+                  onChange={(e) => updateGeneralManager('email', e.target.value)}
+                />
+                <Input
+                  placeholder="Phone"
+                  value={formData.contactInfo?.generalManager?.phone || ''}
+                  onChange={(e) => updateGeneralManager('phone', e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Advertising Director */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Advertising Director</Label>
+              <div className="grid grid-cols-3 gap-3">
+                <Input
+                  placeholder="Name"
+                  value={formData.contactInfo?.advertisingDirector?.name || ''}
+                  onChange={(e) => updateAdvertisingDirector('name', e.target.value)}
+                />
+                <Input
+                  placeholder="Email"
+                  type="email"
+                  value={formData.contactInfo?.advertisingDirector?.email || ''}
+                  onChange={(e) => updateAdvertisingDirector('email', e.target.value)}
+                />
+                <Input
+                  placeholder="Phone"
+                  value={formData.contactInfo?.advertisingDirector?.phone || ''}
+                  onChange={(e) => updateAdvertisingDirector('phone', e.target.value)}
                 />
               </div>
             </div>
@@ -546,605 +598,9 @@ export const EditablePublicationProfile: React.FC<EditablePublicationProfileProp
           </CardContent>
         </Card>
 
-        {/* Distribution Channels */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Website Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="websiteUrl">Website URL</Label>
-              <Input
-                id="websiteUrl"
-                value={formData.distributionChannels?.website?.url || ''}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  distributionChannels: {
-                    ...prev.distributionChannels,
-                    website: {
-                      ...prev.distributionChannels?.website,
-                      url: e.target.value
-                    }
-                  }
-                }))}
-                placeholder="https://example.com"
-              />
-            </div>
 
-            <div>
-              <Label htmlFor="cmsplatform">CMS Platform</Label>
-              <Input
-                id="cmsplatform"
-                value={formData.distributionChannels?.website?.cmsplatform || ''}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  distributionChannels: {
-                    ...prev.distributionChannels,
-                    website: {
-                      ...prev.distributionChannels?.website,
-                      cmsplatform: e.target.value
-                    }
-                  }
-                }))}
-                placeholder="WordPress, Drupal, Custom, etc."
-              />
-            </div>
 
-            <div>
-              <Label>Website Metrics</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
-                <div>
-                  <Label htmlFor="monthlyVisitors" className="text-xs">Monthly Visitors</Label>
-                  <Input
-                    id="monthlyVisitors"
-                    type="number"
-                    value={formData.distributionChannels?.website?.metrics?.monthlyVisitors || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      distributionChannels: {
-                        ...prev.distributionChannels,
-                        website: {
-                          ...prev.distributionChannels?.website,
-                          metrics: {
-                            ...prev.distributionChannels?.website?.metrics,
-                            monthlyVisitors: parseInt(e.target.value) || undefined
-                          }
-                        }
-                      }
-                    }))}
-                    placeholder="50000"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="monthlyPageViews" className="text-xs">Monthly Page Views</Label>
-                  <Input
-                    id="monthlyPageViews"
-                    type="number"
-                    value={formData.distributionChannels?.website?.metrics?.monthlyPageViews || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      distributionChannels: {
-                        ...prev.distributionChannels,
-                        website: {
-                          ...prev.distributionChannels?.website,
-                          metrics: {
-                            ...prev.distributionChannels?.website?.metrics,
-                            monthlyPageViews: parseInt(e.target.value) || undefined
-                          }
-                        }
-                      }
-                    }))}
-                    placeholder="150000"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="bounceRate" className="text-xs">Bounce Rate (%)</Label>
-                  <Input
-                    id="bounceRate"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.distributionChannels?.website?.metrics?.bounceRate || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      distributionChannels: {
-                        ...prev.distributionChannels,
-                        website: {
-                          ...prev.distributionChannels?.website,
-                          metrics: {
-                            ...prev.distributionChannels?.website?.metrics,
-                            bounceRate: parseInt(e.target.value) || undefined
-                          }
-                        }
-                      }
-                    }))}
-                    placeholder="45"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="sessionDuration" className="text-xs">Avg Session (seconds)</Label>
-                  <Input
-                    id="sessionDuration"
-                    type="number"
-                    value={formData.distributionChannels?.website?.metrics?.averageSessionDuration || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      distributionChannels: {
-                        ...prev.distributionChannels,
-                        website: {
-                          ...prev.distributionChannels?.website,
-                          metrics: {
-                            ...prev.distributionChannels?.website?.metrics,
-                            averageSessionDuration: parseInt(e.target.value) || undefined
-                          }
-                        }
-                      }
-                    }))}
-                    placeholder="180"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="pagesPerSession" className="text-xs">Pages per Session</Label>
-                  <Input
-                    id="pagesPerSession"
-                    type="number"
-                    step="0.1"
-                    value={formData.distributionChannels?.website?.metrics?.pagesPerSession || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      distributionChannels: {
-                        ...prev.distributionChannels,
-                        website: {
-                          ...prev.distributionChannels?.website,
-                          metrics: {
-                            ...prev.distributionChannels?.website?.metrics,
-                            pagesPerSession: parseFloat(e.target.value) || undefined
-                          }
-                        }
-                      }
-                    }))}
-                    placeholder="2.5"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="mobilePercentage" className="text-xs">Mobile Traffic (%)</Label>
-                  <Input
-                    id="mobilePercentage"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.distributionChannels?.website?.metrics?.mobilePercentage || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      distributionChannels: {
-                        ...prev.distributionChannels,
-                        website: {
-                          ...prev.distributionChannels?.website,
-                          metrics: {
-                            ...prev.distributionChannels?.website?.metrics,
-                            mobilePercentage: parseInt(e.target.value) || undefined
-                          }
-                        }
-                      }
-                    }))}
-                    placeholder="65"
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Newsletter Distribution */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                Newsletter Distribution
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setFormData(prev => ({
-                  ...prev,
-                  distributionChannels: {
-                    ...prev.distributionChannels,
-                    newsletters: [
-                      ...(prev.distributionChannels?.newsletters || []),
-                      {
-                        name: 'New Newsletter',
-                        frequency: 'weekly',
-                        subscribers: 0,
-                        openRate: 0,
-                        clickThroughRate: 0
-                      }
-                    ]
-                  }
-                }))}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Newsletter
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {formData.distributionChannels?.newsletters?.map((newsletter, index) => (
-                <div key={index} className="p-4 border rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold">Newsletter #{index + 1}</h4>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setFormData(prev => ({
-                        ...prev,
-                        distributionChannels: {
-                          ...prev.distributionChannels,
-                          newsletters: prev.distributionChannels?.newsletters?.filter((_, i) => i !== index)
-                        }
-                      }))}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Newsletter Name</Label>
-                      <Input
-                        value={newsletter.name || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          distributionChannels: {
-                            ...prev.distributionChannels,
-                            newsletters: prev.distributionChannels?.newsletters?.map((n, i) =>
-                              i === index ? { ...n, name: e.target.value } : n
-                            )
-                          }
-                        }))}
-                        placeholder="Weekly Newsletter"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label>Frequency</Label>
-                      <Select 
-                        value={newsletter.frequency || ''} 
-                        onValueChange={(value) => setFormData(prev => ({
-                          ...prev,
-                          distributionChannels: {
-                            ...prev.distributionChannels,
-                            newsletters: prev.distributionChannels?.newsletters?.map((n, i) =>
-                              i === index ? { ...n, frequency: value as any } : n
-                            )
-                          }
-                        }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="irregular">Irregular</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div>
-                      <Label className="text-xs">Subscribers</Label>
-                      <Input
-                        type="number"
-                        value={newsletter.subscribers || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          distributionChannels: {
-                            ...prev.distributionChannels,
-                            newsletters: prev.distributionChannels?.newsletters?.map((n, i) =>
-                              i === index ? { ...n, subscribers: parseInt(e.target.value) || undefined } : n
-                            )
-                          }
-                        }))}
-                        placeholder="5000"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label className="text-xs">Open Rate (%)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={newsletter.openRate || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          distributionChannels: {
-                            ...prev.distributionChannels,
-                            newsletters: prev.distributionChannels?.newsletters?.map((n, i) =>
-                              i === index ? { ...n, openRate: parseInt(e.target.value) || undefined } : n
-                            )
-                          }
-                        }))}
-                        placeholder="25"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label className="text-xs">Click Rate (%)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={newsletter.clickThroughRate || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          distributionChannels: {
-                            ...prev.distributionChannels,
-                            newsletters: prev.distributionChannels?.newsletters?.map((n, i) =>
-                              i === index ? { ...n, clickThroughRate: parseInt(e.target.value) || undefined } : n
-                            )
-                          }
-                        }))}
-                        placeholder="3"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label className="text-xs">Growth Rate (%)</Label>
-                      <Input
-                        type="number"
-                        value={newsletter.listGrowthRate || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          distributionChannels: {
-                            ...prev.distributionChannels,
-                            newsletters: prev.distributionChannels?.newsletters?.map((n, i) =>
-                              i === index ? { ...n, listGrowthRate: parseInt(e.target.value) || undefined } : n
-                            )
-                          }
-                        }))}
-                        placeholder="5"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )) || (
-                <div className="text-center py-8 text-muted-foreground">
-                  No newsletters configured. Click "Add Newsletter" to create one.
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Print Distribution */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Newspaper className="h-5 w-5" />
-                Print Distribution
-              </div>
-              <Button variant="outline" size="sm" onClick={addPrintPublication}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Publication
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {(() => {
-              const printData = formData.distributionChannels?.print;
-              let printPublications: any[] = [];
-              
-              if (printData) {
-                if (Array.isArray(printData)) {
-                  printPublications = printData;
-                } else {
-                  // Convert old single object format to array
-                  printPublications = [printData];
-                }
-              }
-
-              if (printPublications.length === 0) {
-                return (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Newspaper className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium mb-2">No print publications</p>
-                    <p>Click "Add Publication" to create your first print publication.</p>
-                  </div>
-                );
-              }
-
-              return printPublications.map((printPub, printIndex) => (
-                <div key={printIndex} className="border rounded-lg p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold">Print Publication #{printIndex + 1}</h4>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => removePrintPublication(printIndex)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Publication Name</Label>
-                      <Input
-                        value={printPub.name || ''}
-                        onChange={(e) => updatePrintPublication(printIndex, 'name', e.target.value)}
-                        placeholder="Daily Herald"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Frequency</Label>
-                      <Select 
-                        value={printPub.frequency || ''} 
-                        onValueChange={(value) => updatePrintPublication(printIndex, 'frequency', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select frequency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="quarterly">Quarterly</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Circulation Numbers</Label>
-                    <div className="grid grid-cols-3 gap-3 mt-2">
-                      <div>
-                        <Label className="text-xs">Total Circulation</Label>
-                        <Input
-                          type="number"
-                          value={printPub.circulation || ''}
-                          onChange={(e) => updatePrintPublication(printIndex, 'circulation', parseInt(e.target.value) || undefined)}
-                          placeholder="25000"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs">Paid Circulation</Label>
-                        <Input
-                          type="number"
-                          value={printPub.paidCirculation || ''}
-                          onChange={(e) => updatePrintPublication(printIndex, 'paidCirculation', parseInt(e.target.value) || undefined)}
-                          placeholder="15000"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs">Free Circulation</Label>
-                        <Input
-                          type="number"
-                          value={printPub.freeCirculation || ''}
-                          onChange={(e) => updatePrintPublication(printIndex, 'freeCirculation', parseInt(e.target.value) || undefined)}
-                          placeholder="10000"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Distribution Area</Label>
-                      <Input
-                        value={printPub.distributionArea || ''}
-                        onChange={(e) => updatePrintPublication(printIndex, 'distributionArea', e.target.value)}
-                        placeholder="Chicago Metropolitan Area"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Print Schedule</Label>
-                      <Input
-                        value={printPub.printSchedule || ''}
-                        onChange={(e) => updatePrintPublication(printIndex, 'printSchedule', e.target.value)}
-                        placeholder="Every Thursday"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Distribution Points</Label>
-                    <Textarea
-                      value={printPub.distributionPoints?.join(', ') || ''}
-                      onChange={(e) => updatePrintPublication(printIndex, 'distributionPoints', e.target.value.split(',').map(item => item.trim()).filter(Boolean))}
-                      placeholder="Newsstands, Coffee shops, Libraries, Grocery stores (comma-separated)"
-                      rows={2}
-                    />
-                  </div>
-                </div>
-              ));
-            })()}
-          </CardContent>
-        </Card>
-
-        {/* Social Media Profiles */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Social Media Profiles
-              </div>
-              <Button variant="outline" size="sm" onClick={addSocialMediaProfile}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Profile
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {formData.socialMediaProfiles?.map((profile, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 border rounded-lg">
-                  <Select 
-                    value={profile.platform} 
-                    onValueChange={(value) => updateSocialMediaProfile(index, 'platform', value)}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="facebook">Facebook</SelectItem>
-                      <SelectItem value="twitter">Twitter</SelectItem>
-                      <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="linkedin">LinkedIn</SelectItem>
-                      <SelectItem value="youtube">YouTube</SelectItem>
-                      <SelectItem value="tiktok">TikTok</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Input
-                    placeholder="Handle (without @)"
-                    value={profile.handle}
-                    onChange={(e) => updateSocialMediaProfile(index, 'handle', e.target.value)}
-                    className="flex-1"
-                  />
-                  
-                  <Input
-                    placeholder="Full URL"
-                    value={profile.url || ''}
-                    onChange={(e) => updateSocialMediaProfile(index, 'url', e.target.value)}
-                    className="flex-1"
-                  />
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => removeSocialMediaProfile(index)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              )) || (
-                <p className="text-muted-foreground text-center py-4">
-                  No social media profiles added yet.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

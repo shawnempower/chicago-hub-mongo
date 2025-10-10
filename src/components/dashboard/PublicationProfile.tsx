@@ -5,7 +5,6 @@ import { PublicationFrontend } from '@/types/publication';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Building2, 
   Globe, 
@@ -383,496 +382,183 @@ export const PublicationProfile: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Distribution & Reach
+                Distribution & Reach Overview
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="website" className="w-full">
-                <TabsList className="grid w-full grid-cols-8 gap-1">
-                  {publication.distributionChannels.website && (
-                    <TabsTrigger value="website" className="flex items-center gap-1 text-xs">
-                      <Globe className="h-3 w-3" />
-                      Website
-                    </TabsTrigger>
-                  )}
-                  {publication.distributionChannels.newsletters && publication.distributionChannels.newsletters.length > 0 && (
-                    <TabsTrigger value="newsletters" className="flex items-center gap-1 text-xs">
-                      <Mail className="h-3 w-3" />
-                      Newsletter
-                    </TabsTrigger>
-                  )}
-                  {publication.distributionChannels.print && (
-                    <TabsTrigger value="print" className="flex items-center gap-1 text-xs">
-                      <Newspaper className="h-3 w-3" />
-                      Print
-                    </TabsTrigger>
-                  )}
-                  {publication.distributionChannels.socialMedia && publication.distributionChannels.socialMedia.length > 0 && (
-                    <TabsTrigger value="social" className="flex items-center gap-1 text-xs">
-                      <Users className="h-3 w-3" />
-                      Social
-                    </TabsTrigger>
-                  )}
-                  {publication.distributionChannels.events && publication.distributionChannels.events.length > 0 && (
-                    <TabsTrigger value="events" className="flex items-center gap-1 text-xs">
-                      <Calendar className="h-3 w-3" />
-                      Events
-                    </TabsTrigger>
-                  )}
-                  {publication.distributionChannels.podcasts && publication.distributionChannels.podcasts.length > 0 && (
-                    <TabsTrigger value="podcasts" className="flex items-center gap-1 text-xs">
-                      <Mic className="h-3 w-3" />
-                      Podcasts
-                    </TabsTrigger>
-                  )}
-                  {publication.distributionChannels.radioStations && publication.distributionChannels.radioStations.length > 0 && (
-                    <TabsTrigger value="radio" className="flex items-center gap-1 text-xs">
-                      <Radio className="h-3 w-3" />
-                      Radio
-                    </TabsTrigger>
-                  )}
-                  {publication.distributionChannels.streamingVideo && publication.distributionChannels.streamingVideo.length > 0 && (
-                    <TabsTrigger value="streaming" className="flex items-center gap-1 text-xs">
-                      <Video className="h-3 w-3" />
-                      Streaming
-                    </TabsTrigger>
-                  )}
-                </TabsList>
-
-                {/* Website Tab */}
-                {publication.distributionChannels.website && (
-                  <TabsContent value="website" className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Globe className="h-5 w-5 text-blue-500" />
-                      <h4 className="font-semibold">Website Distribution</h4>
-                      {publication.distributionChannels.website.url && (
-                        <a 
-                          href={publication.distributionChannels.website.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline text-sm"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {publication.distributionChannels.website.metrics?.monthlyVisitors && publication.distributionChannels.website.metrics.monthlyVisitors > 0 && (
-                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                          <p className="text-2xl font-bold text-blue-600">
-                            {publication.distributionChannels.website.metrics.monthlyVisitors.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-blue-800">Monthly Visitors</p>
-                        </div>
-                      )}
-                      {publication.distributionChannels.website.metrics?.monthlyPageViews && publication.distributionChannels.website.metrics.monthlyPageViews > 0 && (
-                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                          <p className="text-2xl font-bold text-blue-600">
-                            {publication.distributionChannels.website.metrics.monthlyPageViews.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-blue-800">Page Views</p>
-                        </div>
-                      )}
-                      {publication.distributionChannels.website.metrics?.averageSessionDuration && publication.distributionChannels.website.metrics.averageSessionDuration > 0 && (
-                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                          <p className="text-2xl font-bold text-blue-600">
-                            {Math.round(publication.distributionChannels.website.metrics.averageSessionDuration)}s
-                          </p>
-                          <p className="text-sm text-blue-800">Avg. Session</p>
-                        </div>
-                      )}
-                      {publication.distributionChannels.website.metrics?.bounceRate && publication.distributionChannels.website.metrics.bounceRate > 0 && (
-                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                          <p className="text-2xl font-bold text-blue-600">
-                            {publication.distributionChannels.website.metrics.bounceRate}%
-                          </p>
-                          <p className="text-sm text-blue-800">Bounce Rate</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {publication.distributionChannels.website.advertisingOpportunities && 
-                     publication.distributionChannels.website.advertisingOpportunities.length > 0 && (
-                      <div className="mt-6">
-                        <h5 className="text-lg font-medium mb-3">Advertising Opportunities</h5>
-                        <div className="flex flex-wrap gap-2">
-                          {publication.distributionChannels.website.advertisingOpportunities.map((ad, index) => (
-                            <Badge key={index} variant="secondary" className="text-sm py-1 px-3">
-                              {ad.name || ad.adFormat}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Website */}
+                {publication.distributionChannels.website?.metrics?.monthlyVisitors && (
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <Globe className="h-6 w-6 text-blue-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-blue-600">
+                      {publication.distributionChannels.website.metrics.monthlyVisitors.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-blue-800">Website Visitors</p>
+                  </div>
                 )}
 
-                {/* Newsletters Tab */}
+                {/* Newsletter Total */}
                 {publication.distributionChannels.newsletters && publication.distributionChannels.newsletters.length > 0 && (
-                  <TabsContent value="newsletters" className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Mail className="h-5 w-5 text-green-500" />
-                      <h4 className="font-semibold">Newsletter Distribution</h4>
-                    </div>
-                    
-                    <div className="space-y-6">
-                      {publication.distributionChannels.newsletters.map((newsletter, index) => (
-                        <div key={index} className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
-                          <div className="flex items-center justify-between mb-4">
-                            <h5 className="text-lg font-medium text-green-800">{newsletter.name || `Newsletter ${index + 1}`}</h5>
-                            <Badge variant="outline" className="text-green-700 border-green-300">
-                              {newsletter.frequency || 'Regular'}
-                            </Badge>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                            {newsletter.subscribers && newsletter.subscribers > 0 && (
-                              <div className="text-center p-3 bg-white rounded">
-                                <p className="text-xl font-bold text-green-600">
-                                  {newsletter.subscribers.toLocaleString()}
-                                </p>
-                                <p className="text-sm text-green-700">Subscribers</p>
-                              </div>
-                            )}
-                            {newsletter.openRate && newsletter.openRate > 0 && (
-                              <div className="text-center p-3 bg-white rounded">
-                                <p className="text-xl font-bold text-green-600">{newsletter.openRate}%</p>
-                                <p className="text-sm text-green-700">Open Rate</p>
-                              </div>
-                            )}
-                            {newsletter.clickThroughRate && newsletter.clickThroughRate > 0 && (
-                              <div className="text-center p-3 bg-white rounded">
-                                <p className="text-xl font-bold text-green-600">{newsletter.clickThroughRate}%</p>
-                                <p className="text-sm text-green-700">Click Rate</p>
-                              </div>
-                            )}
-                            {newsletter.listGrowthRate && newsletter.listGrowthRate > 0 && (
-                              <div className="text-center p-3 bg-white rounded">
-                                <p className="text-xl font-bold text-green-600">{newsletter.listGrowthRate}%</p>
-                                <p className="text-sm text-green-700">Growth Rate</p>
-                              </div>
-                            )}
-                          </div>
-
-                          {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 && (
-                            <div>
-                              <h6 className="font-medium mb-2 text-green-800">Ad Positions</h6>
-                              <div className="flex flex-wrap gap-2">
-                                {newsletter.advertisingOpportunities.map((ad, adIndex) => (
-                                  <Badge key={adIndex} variant="secondary" className="text-sm">
-                                    {ad.position || ad.name}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <Mail className="h-6 w-6 text-green-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-green-600">
+                      {publication.distributionChannels.newsletters
+                        .reduce((total, newsletter) => total + (newsletter.subscribers || 0), 0)
+                        .toLocaleString()}
+                    </p>
+                    <p className="text-sm text-green-800">Newsletter Subscribers</p>
+                  </div>
                 )}
 
-                {/* Print Tab */}
+                {/* Print Total */}
                 {publication.distributionChannels.print && (
-                  <TabsContent value="print" className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Newspaper className="h-5 w-5 text-purple-500" />
-                      <h4 className="font-semibold">Print Distribution</h4>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                      {publication.distributionChannels.print.circulation && publication.distributionChannels.print.circulation > 0 && (
-                        <div className="text-center p-4 bg-purple-50 rounded-lg">
-                          <p className="text-2xl font-bold text-purple-600">
-                            {publication.distributionChannels.print.circulation.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-purple-800">Total Circulation</p>
-                        </div>
-                      )}
-                      {publication.distributionChannels.print.paidCirculation && publication.distributionChannels.print.paidCirculation > 0 && (
-                        <div className="text-center p-4 bg-purple-50 rounded-lg">
-                          <p className="text-2xl font-bold text-purple-600">
-                            {publication.distributionChannels.print.paidCirculation.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-purple-800">Paid Circulation</p>
-                        </div>
-                      )}
-                      {publication.distributionChannels.print.freeCirculation && publication.distributionChannels.print.freeCirculation > 0 && (
-                        <div className="text-center p-4 bg-purple-50 rounded-lg">
-                          <p className="text-2xl font-bold text-purple-600">
-                            {publication.distributionChannels.print.freeCirculation.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-purple-800">Free Circulation</p>
-                        </div>
-                      )}
-                      {publication.distributionChannels.print.frequency && (
-                        <div className="text-center p-4 bg-purple-50 rounded-lg">
-                          <p className="text-2xl font-bold text-purple-600 capitalize">
-                            {publication.distributionChannels.print.frequency}
-                          </p>
-                          <p className="text-sm text-purple-800">Frequency</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {publication.distributionChannels.print.distributionArea && (
-                      <div className="mb-4 p-4 bg-purple-50 rounded-lg">
-                        <h5 className="font-medium mb-2 text-purple-800">Distribution Area</h5>
-                        <p className="text-purple-700">{publication.distributionChannels.print.distributionArea}</p>
-                      </div>
-                    )}
-
-                    {publication.distributionChannels.print.distributionPoints && 
-                     publication.distributionChannels.print.distributionPoints.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="text-lg font-medium mb-3">Distribution Points</h5>
-                        <div className="flex flex-wrap gap-2">
-                          {publication.distributionChannels.print.distributionPoints.map((point, index) => (
-                            <Badge key={index} variant="outline" className="text-sm py-1 px-3 border-purple-300 text-purple-700">
-                              {point}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {publication.distributionChannels.print.advertisingOpportunities && 
-                     publication.distributionChannels.print.advertisingOpportunities.length > 0 && (
-                      <div>
-                        <h5 className="text-lg font-medium mb-3">Ad Formats Available</h5>
-                        <div className="flex flex-wrap gap-2">
-                          {publication.distributionChannels.print.advertisingOpportunities.map((ad, index) => (
-                            <Badge key={index} variant="secondary" className="text-sm py-1 px-3">
-                              {ad.adFormat || ad.name}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <Newspaper className="h-6 w-6 text-purple-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-purple-600">
+                      {(() => {
+                        if (Array.isArray(publication.distributionChannels.print)) {
+                          return publication.distributionChannels.print
+                            .reduce((total, printPub) => total + (printPub.circulation || 0), 0)
+                            .toLocaleString();
+                        }
+                        return (publication.distributionChannels.print.circulation || 0).toLocaleString();
+                      })()}
+                    </p>
+                    <p className="text-sm text-purple-800">Print Circulation</p>
+                  </div>
                 )}
 
-                {/* Events Tab */}
-                {publication.distributionChannels.events && publication.distributionChannels.events.length > 0 && (
-                  <TabsContent value="events" className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Calendar className="h-5 w-5 text-orange-500" />
-                      <h4 className="font-semibold">Events Distribution</h4>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {publication.distributionChannels.events.map((event, index) => (
-                        <div key={index} className="p-4 bg-orange-50 rounded-lg border-l-4 border-orange-500">
-                          <div className="flex items-center justify-between mb-3">
-                            <h5 className="text-lg font-medium text-orange-800">{event.name || `Event ${index + 1}`}</h5>
-                            {event.type && (
-                              <Badge variant="outline" className="text-orange-700 border-orange-300">{event.type}</Badge>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                            {event.frequency && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-orange-600 font-medium">Frequency:</span>
-                                <p className="font-semibold text-orange-800">{event.frequency}</p>
-                              </div>
-                            )}
-                            {event.averageAttendance && event.averageAttendance > 0 && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-orange-600 font-medium">Attendance:</span>
-                                <p className="font-semibold text-orange-800">{event.averageAttendance.toLocaleString()}</p>
-                              </div>
-                            )}
-                            {event.location && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-orange-600 font-medium">Location:</span>
-                                <p className="font-semibold text-orange-800">{event.location}</p>
-                              </div>
-                            )}
-                          </div>
-
-                          {event.targetAudience && (
-                            <div className="p-3 bg-white rounded">
-                              <span className="text-sm text-orange-600 font-medium">Target Audience:</span>
-                              <p className="text-orange-800">{event.targetAudience}</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
-                )}
-
-                {/* Social Media Tab */}
+                {/* Social Media Total */}
                 {publication.distributionChannels.socialMedia && publication.distributionChannels.socialMedia.length > 0 && (
-                  <TabsContent value="social" className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Users className="h-5 w-5 text-purple-500" />
-                      <h4 className="font-semibold">Social Media</h4>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {publication.distributionChannels.socialMedia.map((profile, index) => (
-                        <div key={index} className="p-4 bg-purple-50 rounded-lg border border-purple-100">
-                          <h5 className="font-medium mb-3 text-purple-800">{profile.platform} - {profile.handle}</h5>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {profile.followers && profile.followers > 0 && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-purple-600 font-medium">Followers:</span>
-                                <p className="font-semibold text-purple-800">{profile.followers.toLocaleString()}</p>
-                              </div>
-                            )}
-                            {profile.engagementRate && profile.engagementRate > 0 && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-purple-600 font-medium">Engagement:</span>
-                                <p className="font-semibold text-purple-800">{profile.engagementRate}%</p>
-                              </div>
-                            )}
-                            {profile.verified && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-purple-600 font-medium">Status:</span>
-                                <p className="font-semibold text-purple-800">Verified</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
+                  <div className="text-center p-4 bg-pink-50 rounded-lg">
+                    <Users className="h-6 w-6 text-pink-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-pink-600">
+                      {publication.distributionChannels.socialMedia
+                        .reduce((total, social) => total + (social.metrics?.followers || 0), 0)
+                        .toLocaleString()}
+                    </p>
+                    <p className="text-sm text-pink-800">Social Followers</p>
+                  </div>
                 )}
 
-                {/* Podcasts Tab */}
+                {/* Podcast Total */}
                 {publication.distributionChannels.podcasts && publication.distributionChannels.podcasts.length > 0 && (
-                  <TabsContent value="podcasts" className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Mic className="h-5 w-5 text-red-500" />
-                      <h4 className="font-semibold">Podcasts</h4>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {publication.distributionChannels.podcasts.map((podcast, index) => (
-                        <div key={index} className="p-4 bg-red-50 rounded-lg border border-red-100">
-                          <h5 className="font-medium mb-3 text-red-800">{podcast.name}</h5>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {podcast.averageListeners && podcast.averageListeners > 0 && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-red-600 font-medium">Avg Listeners:</span>
-                                <p className="font-semibold text-red-800">{podcast.averageListeners.toLocaleString()}</p>
-                              </div>
-                            )}
-                            {podcast.averageDownloads && podcast.averageDownloads > 0 && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-red-600 font-medium">Avg Downloads:</span>
-                                <p className="font-semibold text-red-800">{podcast.averageDownloads.toLocaleString()}</p>
-                              </div>
-                            )}
-                            {podcast.episodeCount && podcast.episodeCount > 0 && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-red-600 font-medium">Episodes:</span>
-                                <p className="font-semibold text-red-800">{podcast.episodeCount}</p>
-                              </div>
-                            )}
-                            {podcast.frequency && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-red-600 font-medium">Frequency:</span>
-                                <p className="font-semibold text-red-800">{podcast.frequency}</p>
-                              </div>
-                            )}
-                          </div>
-
-                          {podcast.platforms && podcast.platforms.length > 0 && (
-                            <div className="mt-3 p-3 bg-white rounded">
-                              <span className="text-sm text-red-600 font-medium">Platforms:</span>
-                              <p className="text-red-800">{podcast.platforms.join(', ')}</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
+                  <div className="text-center p-4 bg-red-50 rounded-lg">
+                    <Mic className="h-6 w-6 text-red-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-red-600">
+                      {publication.distributionChannels.podcasts
+                        .reduce((total, podcast) => total + (podcast.averageListeners || 0), 0)
+                        .toLocaleString()}
+                    </p>
+                    <p className="text-sm text-red-800">Podcast Listeners</p>
+                  </div>
                 )}
 
-                {/* Radio Tab */}
+                {/* Radio Total */}
                 {publication.distributionChannels.radioStations && publication.distributionChannels.radioStations.length > 0 && (
-                  <TabsContent value="radio" className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Radio className="h-5 w-5 text-yellow-500" />
-                      <h4 className="font-semibold">Radio Stations</h4>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {publication.distributionChannels.radioStations.map((radio, index) => (
-                        <div key={index} className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
-                          <h5 className="font-medium mb-3 text-yellow-800">{radio.callSign} - {radio.frequency}</h5>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {radio.listeners && radio.listeners > 0 && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-yellow-600 font-medium">Weekly Listeners:</span>
-                                <p className="font-semibold text-yellow-800">{radio.listeners.toLocaleString()}</p>
-                              </div>
-                            )}
-                            {radio.format && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-yellow-600 font-medium">Format:</span>
-                                <p className="font-semibold text-yellow-800">{radio.format}</p>
-                              </div>
-                            )}
-                            {radio.coverageArea && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-yellow-600 font-medium">Coverage:</span>
-                                <p className="font-semibold text-yellow-800">{radio.coverageArea}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
+                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                    <Radio className="h-6 w-6 text-yellow-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-yellow-600">
+                      {publication.distributionChannels.radioStations
+                        .reduce((total, radio) => total + (radio.listeners || 0), 0)
+                        .toLocaleString()}
+                    </p>
+                    <p className="text-sm text-yellow-800">Radio Listeners</p>
+                  </div>
                 )}
 
-                {/* Streaming Tab */}
+                {/* Streaming Total */}
                 {publication.distributionChannels.streamingVideo && publication.distributionChannels.streamingVideo.length > 0 && (
-                  <TabsContent value="streaming" className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Video className="h-5 w-5 text-indigo-500" />
-                      <h4 className="font-semibold">Streaming Video</h4>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {publication.distributionChannels.streamingVideo.map((streaming, index) => (
-                        <div key={index} className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-                          <h5 className="font-medium mb-3 text-indigo-800">{streaming.name} - {streaming.platform}</h5>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {streaming.subscribers && streaming.subscribers > 0 && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-indigo-600 font-medium">Subscribers:</span>
-                                <p className="font-semibold text-indigo-800">{streaming.subscribers.toLocaleString()}</p>
-                              </div>
-                            )}
-                            {streaming.averageViews && streaming.averageViews > 0 && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-indigo-600 font-medium">Avg Views:</span>
-                                <p className="font-semibold text-indigo-800">{streaming.averageViews.toLocaleString()}</p>
-                              </div>
-                            )}
-                            {streaming.contentType && (
-                              <div className="p-3 bg-white rounded">
-                                <span className="text-sm text-indigo-600 font-medium">Content Type:</span>
-                                <p className="font-semibold text-indigo-800">{streaming.contentType}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
+                  <div className="text-center p-4 bg-indigo-50 rounded-lg">
+                    <Video className="h-6 w-6 text-indigo-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-indigo-600">
+                      {publication.distributionChannels.streamingVideo
+                        .reduce((total, streaming) => total + (streaming.subscribers || 0), 0)
+                        .toLocaleString()}
+                    </p>
+                    <p className="text-sm text-indigo-800">Streaming Subscribers</p>
+                  </div>
                 )}
-              </Tabs>
+
+                {/* Events Total */}
+                {publication.distributionChannels.events && publication.distributionChannels.events.length > 0 && (
+                  <div className="text-center p-4 bg-orange-50 rounded-lg">
+                    <Calendar className="h-6 w-6 text-orange-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-orange-600">
+                      {publication.distributionChannels.events
+                        .reduce((total, event) => total + (event.expectedAttendance || 0), 0)
+                        .toLocaleString()}
+                    </p>
+                    <p className="text-sm text-orange-800">Event Attendance</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Total Reach Summary */}
+              <div className="mt-6 pt-4 border-t">
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-2">Total Combined Reach</p>
+                  <p className="text-3xl font-bold text-primary">
+                    {(() => {
+                      let totalReach = 0;
+                      
+                      // Website visitors
+                      if (publication.distributionChannels.website?.metrics?.monthlyVisitors) {
+                        totalReach += publication.distributionChannels.website.metrics.monthlyVisitors;
+                      }
+                      
+                      // Newsletter subscribers
+                      if (publication.distributionChannels.newsletters) {
+                        totalReach += publication.distributionChannels.newsletters
+                          .reduce((total, newsletter) => total + (newsletter.subscribers || 0), 0);
+                      }
+                      
+                      // Print circulation
+                      if (publication.distributionChannels.print) {
+                        if (Array.isArray(publication.distributionChannels.print)) {
+                          totalReach += publication.distributionChannels.print
+                            .reduce((total, printPub) => total + (printPub.circulation || 0), 0);
+                        } else {
+                          totalReach += publication.distributionChannels.print.circulation || 0;
+                        }
+                      }
+                      
+                      // Social media followers
+                      if (publication.distributionChannels.socialMedia) {
+                        totalReach += publication.distributionChannels.socialMedia
+                          .reduce((total, social) => total + (social.metrics?.followers || 0), 0);
+                      }
+                      
+                      // Podcast listeners
+                      if (publication.distributionChannels.podcasts) {
+                        totalReach += publication.distributionChannels.podcasts
+                          .reduce((total, podcast) => total + (podcast.averageListeners || 0), 0);
+                      }
+                      
+                      // Radio listeners
+                      if (publication.distributionChannels.radioStations) {
+                        totalReach += publication.distributionChannels.radioStations
+                          .reduce((total, radio) => total + (radio.listeners || 0), 0);
+                      }
+                      
+                      // Streaming subscribers
+                      if (publication.distributionChannels.streamingVideo) {
+                        totalReach += publication.distributionChannels.streamingVideo
+                          .reduce((total, streaming) => total + (streaming.subscribers || 0), 0);
+                      }
+                      
+                      // Event attendance
+                      if (publication.distributionChannels.events) {
+                        totalReach += publication.distributionChannels.events
+                          .reduce((total, event) => total + (event.expectedAttendance || 0), 0);
+                      }
+                      
+                      return totalReach.toLocaleString();
+                    })()}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}

@@ -77,8 +77,8 @@ export const getStorefrontConfigurationById = async (id: string): Promise<Storef
 
 // Get all storefront configurations with optional filtering
 export const getStorefrontConfigurations = async (filters: {
-  is_draft?: boolean;
-  publisher_id?: string;
+  isDraft?: boolean;
+  publisherId?: string;
   isActive?: boolean;
   publicationId?: string;
 } = {}): Promise<StorefrontConfiguration[]> => {
@@ -87,12 +87,12 @@ export const getStorefrontConfigurations = async (filters: {
     
     const query: any = {};
     
-    if (filters.is_draft !== undefined) {
-      query['meta.is_draft'] = filters.is_draft;
+    if (filters.isDraft !== undefined) {
+      query['meta.isDraft'] = filters.isDraft;
     }
     
-    if (filters.publisher_id) {
-      query['meta.publisher_id'] = filters.publisher_id;
+    if (filters.publisherId) {
+      query['meta.publisherId'] = filters.publisherId;
     }
     
     if (filters.isActive !== undefined) {
@@ -140,7 +140,7 @@ export const updateStorefrontConfiguration = async (
       { returnDocument: 'after' }
     );
 
-    return result.value;
+    return result;
   } catch (error) {
     console.error('Error updating storefront configuration:', error);
     throw new Error('Failed to update storefront configuration');
@@ -174,7 +174,7 @@ export const updateStorefrontConfigurationById = async (
       { returnDocument: 'after' }
     );
 
-    return result.value;
+    return result;
   } catch (error) {
     console.error('Error updating storefront configuration by ID:', error);
     throw new Error('Failed to update storefront configuration');
@@ -194,7 +194,7 @@ export const deleteStorefrontConfiguration = async (publicationId: string): Prom
   }
 };
 
-// Publish storefront configuration (set is_draft to false)
+// Publish storefront configuration (set isDraft to false)
 export const publishStorefrontConfiguration = async (publicationId: string): Promise<StorefrontConfiguration | null> => {
   try {
     const collection = await getStorefrontCollection();
@@ -203,7 +203,7 @@ export const publishStorefrontConfiguration = async (publicationId: string): Pro
       { publicationId },
       { 
         $set: { 
-          'meta.is_draft': false,
+          'meta.isDraft': false,
           'meta.lastUpdated': new Date().toISOString(),
           updatedAt: new Date()
         } 
@@ -211,7 +211,7 @@ export const publishStorefrontConfiguration = async (publicationId: string): Pro
       { returnDocument: 'after' }
     );
 
-    return result.value;
+    return result;
   } catch (error) {
     console.error('Error publishing storefront configuration:', error);
     throw new Error('Failed to publish storefront configuration');
@@ -245,10 +245,10 @@ export const duplicateStorefrontConfiguration = async (
       publicationId: targetPublicationId,
       meta: {
         ...sourceConfig.meta,
-        publisher_id: targetPublisherId,
-        description: `Duplicated from ${sourceConfig.meta.publisher_id} - ${sourceConfig.meta.description}`,
+        publisherId: targetPublisherId,
+        description: `Duplicated from ${sourceConfig.meta.publisherId} - ${sourceConfig.meta.description}`,
         lastUpdated: new Date().toISOString(),
-        is_draft: true, // Always create duplicates as drafts
+        isDraft: true, // Always create duplicates as drafts
       }
     };
 
@@ -270,7 +270,7 @@ export const getStorefrontConfigurationsByPublisherId = async (publisherId: stri
     const collection = await getStorefrontCollection();
     
     return await collection
-      .find({ 'meta.publisher_id': publisherId })
+      .find({ 'meta.publisherId': publisherId })
       .sort({ updatedAt: -1 })
       .toArray();
   } catch (error) {
@@ -315,7 +315,7 @@ export const searchStorefrontConfigurations = async (searchTerm: string): Promis
     return await collection
       .find({
         $or: [
-          { 'meta.publisher_id': searchRegex },
+          { 'meta.publisherId': searchRegex },
           { 'meta.description': searchRegex },
           { 'components.hero.content.title': searchRegex },
           { 'components.hero.content.description': searchRegex },
@@ -346,7 +346,7 @@ export const getActiveStorefrontConfigurationsCount = async (): Promise<number> 
 export const getDraftStorefrontConfigurationsCount = async (): Promise<number> => {
   try {
     const collection = await getStorefrontCollection();
-    return await collection.countDocuments({ 'meta.is_draft': true });
+    return await collection.countDocuments({ 'meta.isDraft': true });
   } catch (error) {
     console.error('Error counting draft storefront configurations:', error);
     throw new Error('Failed to count draft storefront configurations');

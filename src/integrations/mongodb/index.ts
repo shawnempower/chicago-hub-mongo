@@ -12,7 +12,9 @@ export {
   mongoClient, 
   connectToDatabase, 
   getDatabase, 
-  getPublicationsCollection 
+  getPublicationsCollection,
+  closeConnection,
+  setupGracefulShutdown
 } from './client';
 
 export {
