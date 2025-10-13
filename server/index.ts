@@ -1974,11 +1974,11 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       }
       
       // Social media count
-      if (pub.socialMediaProfiles) {
-        inventoryByType.social += pub.socialMediaProfiles.length;
+      if (pub.distributionChannels?.socialMedia) {
+        inventoryByType.social += pub.distributionChannels.socialMedia.length;
         
         // Aggregate social followers and engagement
-        pub.socialMediaProfiles.forEach(profile => {
+        pub.distributionChannels.socialMedia.forEach(profile => {
           if (profile.metrics?.followers) {
             audienceMetrics.totalSocialFollowers += profile.metrics.followers;
           }
