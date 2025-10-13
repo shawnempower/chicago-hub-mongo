@@ -17,6 +17,9 @@ export interface DashboardStats {
     events: number;
     social: number;
     crossChannel: number;
+    podcasts: number;
+    streamingVideo: number;
+    radioStations: number;
   };
   
   publicationsByType: {
@@ -48,6 +51,9 @@ export interface DashboardStats {
     totalWebsiteVisitors: number;
     totalNewsletterSubscribers: number;
     totalSocialFollowers: number;
+    totalPodcastListeners: number;
+    totalStreamingSubscribers: number;
+    totalRadioListeners: number;
     averageEngagementRate: number;
   };
   
@@ -55,6 +61,9 @@ export interface DashboardStats {
     averageWebsiteAdPrice: number;
     averageNewsletterAdPrice: number;
     averagePrintAdPrice: number;
+    averagePodcastAdPrice: number;
+    averageStreamingAdPrice: number;
+    averageRadioAdPrice: number;
     totalInventoryValue: number;
   };
 }

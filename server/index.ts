@@ -1840,7 +1840,10 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       print: 0,
       events: 0,
       social: 0,
-      crossChannel: 0
+      crossChannel: 0,
+      podcasts: 0,
+      streamingVideo: 0,
+      radioStations: 0
     };
     
     const publicationsByType = {
@@ -1873,13 +1876,19 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       totalNewsletterSubscribers: 0,
       totalSocialFollowers: 0,
       totalEngagementRates: 0,
-      engagementRateCount: 0
+      engagementRateCount: 0,
+      totalPodcastListeners: 0,
+      totalStreamingSubscribers: 0,
+      totalRadioListeners: 0
     };
     
     const pricingData = {
       websiteAdPrices: [] as number[],
       newsletterAdPrices: [] as number[],
       printAdPrices: [] as number[],
+      podcastAdPrices: [] as number[],
+      streamingAdPrices: [] as number[],
+      radioAdPrices: [] as number[],
       totalValue: 0
     };
 
@@ -1924,19 +1933,28 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
         }
       }
       
-      if (pub.distributionChannels?.print?.advertisingOpportunities) {
-        const printAds = pub.distributionChannels.print.advertisingOpportunities.length;
-        inventoryByType.print += printAds;
-        adInventoryCount += printAds;
-        
-        // Collect print pricing data
-        pub.distributionChannels.print.advertisingOpportunities.forEach(ad => {
-          const price = ad.pricing?.oneTime || ad.pricing?.fourTimes || ad.pricing?.twelveTimes;
-          if (price) {
-            pricingData.printAdPrices.push(price);
-            pricingData.totalValue += price;
+      // Handle print distribution channels (can be array or object)
+      if (pub.distributionChannels?.print) {
+        const printChannels = Array.isArray(pub.distributionChannels.print) 
+          ? pub.distributionChannels.print 
+          : [pub.distributionChannels.print];
+          
+        for (const printChannel of printChannels) {
+          if (printChannel?.advertisingOpportunities) {
+            const printAds = printChannel.advertisingOpportunities.length;
+            inventoryByType.print += printAds;
+            adInventoryCount += printAds;
+            
+            // Collect print pricing data
+            printChannel.advertisingOpportunities.forEach(ad => {
+              const price = ad.pricing?.oneTime || ad.pricing?.fourTimes || ad.pricing?.twelveTimes;
+              if (price) {
+                pricingData.printAdPrices.push(price);
+                pricingData.totalValue += price;
+              }
+            });
           }
-        });
+        }
       }
       
       if (pub.distributionChannels?.events) {
@@ -1974,6 +1992,81 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       // Aggregate website visitors
       if (pub.distributionChannels?.website?.metrics?.monthlyVisitors) {
         audienceMetrics.totalWebsiteVisitors += pub.distributionChannels.website.metrics.monthlyVisitors;
+      }
+      
+      // Handle podcasts
+      if (pub.distributionChannels?.podcasts) {
+        for (const podcast of pub.distributionChannels.podcasts) {
+          if (podcast.advertisingOpportunities) {
+            const podcastAds = podcast.advertisingOpportunities.length;
+            inventoryByType.podcasts += podcastAds;
+            adInventoryCount += podcastAds;
+            
+            // Collect podcast pricing data
+            podcast.advertisingOpportunities.forEach(ad => {
+              const price = ad.pricing?.perEpisode || ad.pricing?.monthly || ad.pricing?.flatRate;
+              if (price) {
+                pricingData.podcastAdPrices.push(price);
+                pricingData.totalValue += price;
+              }
+            });
+          }
+          
+          // Aggregate podcast listeners
+          if (podcast.averageDownloads) {
+            audienceMetrics.totalPodcastListeners += podcast.averageDownloads;
+          }
+        }
+      }
+
+      // Handle streaming video
+      if (pub.distributionChannels?.streamingVideo) {
+        for (const stream of pub.distributionChannels.streamingVideo) {
+          if (stream.advertisingOpportunities) {
+            const streamingAds = stream.advertisingOpportunities.length;
+            inventoryByType.streamingVideo += streamingAds;
+            adInventoryCount += streamingAds;
+            
+            // Collect streaming pricing data
+            stream.advertisingOpportunities.forEach(ad => {
+              const price = ad.pricing?.flatRate || ad.pricing?.cpm;
+              if (price) {
+                pricingData.streamingAdPrices.push(price);
+                pricingData.totalValue += price;
+              }
+            });
+          }
+          
+          // Aggregate streaming subscribers
+          if (stream.subscribers) {
+            audienceMetrics.totalStreamingSubscribers += stream.subscribers;
+          }
+        }
+      }
+
+      // Handle radio stations
+      if (pub.distributionChannels?.radioStations) {
+        for (const radio of pub.distributionChannels.radioStations) {
+          if (radio.advertisingOpportunities) {
+            const radioAds = radio.advertisingOpportunities.length;
+            inventoryByType.radioStations += radioAds;
+            adInventoryCount += radioAds;
+            
+            // Collect radio pricing data
+            radio.advertisingOpportunities.forEach(ad => {
+              const price = ad.pricing?.per30sec || ad.pricing?.per60sec || ad.pricing?.flatRate;
+              if (price) {
+                pricingData.radioAdPrices.push(price);
+                pricingData.totalValue += price;
+              }
+            });
+          }
+          
+          // Aggregate radio listeners
+          if (radio.listeners) {
+            audienceMetrics.totalRadioListeners += radio.listeners;
+          }
+        }
       }
       
       // Categorize publications by type
@@ -2025,6 +2118,9 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
         totalWebsiteVisitors: audienceMetrics.totalWebsiteVisitors,
         totalNewsletterSubscribers: audienceMetrics.totalNewsletterSubscribers,
         totalSocialFollowers: audienceMetrics.totalSocialFollowers,
+        totalPodcastListeners: audienceMetrics.totalPodcastListeners,
+        totalStreamingSubscribers: audienceMetrics.totalStreamingSubscribers,
+        totalRadioListeners: audienceMetrics.totalRadioListeners,
         averageEngagementRate: audienceMetrics.engagementRateCount > 0 
           ? Math.round((audienceMetrics.totalEngagementRates / audienceMetrics.engagementRateCount) * 100) / 100
           : 0
@@ -2034,6 +2130,9 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
         averageWebsiteAdPrice: calculateAverage(pricingData.websiteAdPrices),
         averageNewsletterAdPrice: calculateAverage(pricingData.newsletterAdPrices),
         averagePrintAdPrice: calculateAverage(pricingData.printAdPrices),
+        averagePodcastAdPrice: calculateAverage(pricingData.podcastAdPrices),
+        averageStreamingAdPrice: calculateAverage(pricingData.streamingAdPrices),
+        averageRadioAdPrice: calculateAverage(pricingData.radioAdPrices),
         totalInventoryValue: Math.round(pricingData.totalValue)
       }
     };

@@ -178,6 +178,33 @@ export const AdminDashboard = () => {
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.inventoryByType?.crossChannel ?? 0)}
                     </span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Radio className="h-4 w-4 text-indigo-500" />
+                      <span className="text-sm">Podcasts</span>
+                    </div>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.inventoryByType?.podcasts ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm">Streaming</span>
+                    </div>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.inventoryByType?.streamingVideo ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Radio className="h-4 w-4 text-rose-500" />
+                      <span className="text-sm">Radio</span>
+                    </div>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.inventoryByType?.radioStations ?? 0)}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -214,6 +241,27 @@ export const AdminDashboard = () => {
                     </div>
                     <p className="text-xs text-muted-foreground">Social Media Followers</p>
                   </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-indigo-600">
+                      {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 
+                        (stats?.audienceMetrics?.totalPodcastListeners ?? 0).toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Podcast Listeners</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 
+                        (stats?.audienceMetrics?.totalStreamingSubscribers ?? 0).toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Streaming Subscribers</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-rose-600">
+                      {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 
+                        (stats?.audienceMetrics?.totalRadioListeners ?? 0).toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Radio Listeners</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -248,6 +296,27 @@ export const AdminDashboard = () => {
                     <span className="font-semibold">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
                         `$${(stats?.pricingInsights?.averagePrintAdPrice ?? 0).toLocaleString()}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Podcast Ads</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                        `$${(stats?.pricingInsights?.averagePodcastAdPrice ?? 0).toLocaleString()}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Streaming Ads</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                        `$${(stats?.pricingInsights?.averageStreamingAdPrice ?? 0).toLocaleString()}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Radio Ads</span>
+                    <span className="font-semibold">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                        `$${(stats?.pricingInsights?.averageRadioAdPrice ?? 0).toLocaleString()}`}
                     </span>
                   </div>
                   <div className="pt-2 border-t">
