@@ -1,5 +1,21 @@
 # 🚀 Chicago Hub API - Production Deployment Guide
 
+## 🎯 Quick Deployment (Recommended)
+
+**Use the automated script to prevent platform compatibility issues:**
+
+```bash
+./deploy-to-ecs.sh
+```
+
+This script automatically handles the platform compatibility fix and prevents the recurring `linux/amd64` deployment errors.
+
+---
+
+## Manual Deployment Steps
+
+If you prefer to run commands manually, follow the steps below:
+
 ## Prerequisites
 
 1. **AWS CLI configured** with appropriate permissions
@@ -11,12 +27,16 @@
 
 ## Step 1: Build and Push Docker Image
 
-### ⚠️ Important: Platform Compatibility
-The Dockerfile is now configured to automatically build for `linux/amd64` platform, which is required for ECS Fargate. You no longer need to specify the platform manually.
+### ⚠️ Critical: Platform Compatibility Fix
+**MUST use `docker buildx build --platform linux/amd64`** to prevent the recurring deployment error:
+`"CannotPullContainerError: image Manifest does not contain descriptor matching platform 'linux/amd64'"`
+
+This error occurs when Docker builds images for the local platform (e.g., arm64 on M1 Macs) instead of the required ECS Fargate platform (linux/amd64).
 
 ```bash
-# Build production image (automatically uses linux/amd64)
-docker build -f Dockerfile.production -t chicago-hub-api:latest .
+# Build production image with EXPLICIT platform targeting (REQUIRED for ECS Fargate)
+# This prevents the recurring "Manifest does not contain descriptor matching platform 'linux/amd64'" error
+docker buildx build --platform linux/amd64 -f Dockerfile.production -t chicago-hub-api:latest . --load
 
 # Tag for ECR
 docker tag chicago-hub-api:latest 947442015939.dkr.ecr.us-east-2.amazonaws.com/chicago-hub-api:latest
