@@ -1,0 +1,695 @@
+{
+  "publicationId": 5003,
+  "basicInfo": {
+    "publicationName": "New - Chicago News Weekly",
+    "websiteUrl": "https://cnwmedia.com",
+    "founded": "Not specified",
+    "publicationType": "weekly",
+    "contentType": "news",
+    "headquarters": "Chicago, Illinois",
+    "geographicCoverage": "local",
+    "primaryServiceArea": "Chicago's South, West, and North Sides",
+    "secondaryMarkets": [
+      "Hyde Park",
+      "Chatham", 
+      "Austin",
+      "Roseland"
+    ],
+    "numberOfPublications": 1
+  },
+  "contactInfo": {
+    "mainPhone": "404-202-8583",
+    "businessHours": "Standard business hours",
+    "salesContact": {
+      "name": "Cheryl Mainor",
+      "title": "CEO/Publisher",
+      "email": "cheryl@cnwmedia.com",
+      "phone": "404-202-8583",
+      "preferredContact": "email"
+    },
+    "generalManager": {
+      "name": "Cheryl Mainor",
+      "email": "cheryl@cnwmedia.com",
+      "phone": "404-202-8583"
+    }
+  },
+  "distributionChannels": {
+    "website": {
+      "url": "https://cnwmedia.com",
+      "cmsplatform": "Not specified",
+      "metrics": {
+        "monthlyVisitors": 85000,
+        "monthlyPageViews": null,
+        "averageSessionDuration": null,
+        "pagesPerSession": null,
+        "bounceRate": null,
+        "mobilePercentage": null
+      },
+      "advertisingOpportunities": [
+        {
+          "name": "Monthly Banner Ad",
+          "adFormat": "300x250 banner",
+          "location": "Various placements",
+          "pricing": {
+            "flatRate": 3000,
+            "pricingModel": "flat",
+            "minimumCommitment": "1 month"
+          },
+          "specifications": {
+            "size": "Various sizes",
+            "format": "Standard web formats",
+            "animationAllowed": true,
+            "thirdPartyTags": true
+          },
+          "available": true,
+          "hubPricing": [
+            {
+              "hubId": "chicago-hub",
+              "hubName": "Chicago Hub",
+              "pricing": {
+                "flatRate": 3000,
+                "pricingModel": "flat"
+              },
+              "discount": 0,
+              "available": true,
+              "minimumCommitment": "1 month"
+            },
+            {
+              "hubId": "national-hub", 
+              "hubName": "National Hub",
+              "pricing": {
+                "flatRate": 3000,
+                "pricingModel": "flat"
+              },
+              "discount": 0,
+              "available": true,
+              "minimumCommitment": "1 month"
+            }
+          ]
+        },
+        {
+          "name": "Leaderboard",
+          "adFormat": "728x90 banner",
+          "location": "Header placement",
+          "pricing": {
+            "flatRate": 3000,
+            "pricingModel": "flat",
+            "minimumCommitment": "1 month"
+          },
+          "specifications": {
+            "size": "728x90 pixels",
+            "format": "Standard web formats",
+            "animationAllowed": true,
+            "thirdPartyTags": true
+          },
+          "available": true
+        },
+        {
+          "name": "Home Page Takeover",
+          "adFormat": "takeover ad",
+          "location": "Full site homepage",
+          "pricing": {
+            "flatRate": 3500,
+            "pricingModel": "flat",
+            "minimumCommitment": "1 month"
+          },
+          "specifications": {
+            "size": "Full site",
+            "format": "Custom",
+            "animationAllowed": true,
+            "thirdPartyTags": true
+          },
+          "available": true
+        },
+        {
+          "name": "Road Block Ad",
+          "adFormat": "takeover ad", 
+          "location": "Full site",
+          "pricing": {
+            "flatRate": 10000,
+            "pricingModel": "flat",
+            "minimumCommitment": "1 month"
+          },
+          "specifications": {
+            "size": "Full site",
+            "format": "Custom",
+            "animationAllowed": true,
+            "thirdPartyTags": true
+          },
+          "available": true
+        }
+      ]
+    },
+    "socialMedia": [
+      {
+        "platform": "facebook",
+        "handle": "Not specified",
+        "url": "Not specified",
+        "verified": false,
+        "metrics": {
+          "followers": 10702,
+          "engagementRate": null,
+          "averageReach": null,
+          "averageImpressions": null
+        },
+        "advertisingOpportunities": [
+          {
+            "name": "Facebook Sponsored Post",
+            "adFormat": "sponsored_post",
+            "postType": "image",
+            "pricing": {
+              "pricingModel": "contact"
+            },
+            "available": true
+          }
+        ]
+      },
+      {
+        "platform": "instagram",
+        "handle": "Not specified",
+        "url": "Not specified", 
+        "verified": false,
+        "metrics": {
+          "followers": 13200,
+          "engagementRate": null,
+          "averageReach": null,
+          "averageImpressions": null
+        },
+        "advertisingOpportunities": [
+          {
+            "name": "Instagram Sponsored Post",
+            "adFormat": "sponsored_post",
+            "postType": "image",
+            "pricing": {
+              "pricingModel": "contact"
+            },
+            "available": true
+          }
+        ]
+      },
+      {
+        "platform": "youtube",
+        "handle": "Not specified",
+        "url": "Not specified",
+        "verified": false,
+        "metrics": {
+          "followers": 11500,
+          "engagementRate": null,
+          "averageReach": 11500,
+          "averageImpressions": null
+        },
+        "advertisingOpportunities": [
+          {
+            "name": "30-Second Video Ad",
+            "adFormat": "video_ad",
+            "postType": "video",
+            "pricing": {
+              "perPost": 750,
+              "pricingModel": "per_post"
+            },
+            "specifications": {
+              "videoLength": "30 seconds",
+              "format": "MP4",
+              "aspectRatio": "16:9"
+            },
+            "available": true
+          },
+          {
+            "name": "60-Second Video Ad",
+            "adFormat": "video_ad",
+            "postType": "video",
+            "pricing": {
+              "perPost": 1500,
+              "pricingModel": "per_post"
+            },
+            "specifications": {
+              "videoLength": "60 seconds",
+              "format": "MP4",
+              "aspectRatio": "16:9"
+            },
+            "available": true
+          }
+        ]
+      }
+    ],
+    "newsletters": [
+      {
+        "name": "The Stay Ready Playbook",
+        "subject": "Community news and insights",
+        "frequency": "weekly",
+        "sendDay": "Not specified",
+        "sendTime": "Not specified",
+        "subscribers": 11000,
+        "openRate": 72,
+        "clickThroughRate": null,
+        "listGrowthRate": null,
+        "advertisingOpportunities": [
+          {
+            "name": "Newsletter Takeover",
+            "position": "dedicated",
+            "dimensions": "Full integration",
+            "pricing": {
+              "perSend": 1000
+            },
+            "hubPricing": [
+              {
+                "hubId": "chicago-hub",
+                "hubName": "Chicago Hub",
+                "pricing": {
+                  "perSend": 1000
+                },
+                "discount": 0,
+                "available": true
+              }
+            ]
+          },
+          {
+            "name": "Weekly Insertion",
+            "position": "inline",
+            "dimensions": "728x90 pixels",
+            "pricing": {
+              "monthly": 3000
+            }
+          }
+        ]
+      }
+    ],
+    "print": [
+      {
+        "name": "Chicago News Weekly",
+        "frequency": "weekly",
+        "circulation": 25000,
+        "paidCirculation": null,
+        "freeCirculation": null,
+        "distributionArea": "Chicago metropolitan area",
+        "distributionPoints": [
+          "130 outlets across Chicago"
+        ],
+        "printSchedule": "Weekly",
+        "advertisingOpportunities": [
+          {
+            "name": "Full Page",
+            "adFormat": "full page",
+            "dimensions": "11\" x 14\"",
+            "color": "both",
+            "location": "Throughout publication",
+            "pricing": {
+              "oneTime": 3000,
+              "fourTimes": null,
+              "twelveTimes": 2400,
+              "openRate": 5000
+            },
+            "specifications": {
+              "format": "Print ready",
+              "resolution": "300 DPI",
+              "bleed": true
+            },
+            "hubPricing": [
+              {
+                "hubId": "chicago-hub",
+                "hubName": "Chicago Hub",
+                "pricing": {
+                  "oneTime": 3000,
+                  "twelveTimes": 2400
+                },
+                "discount": 20,
+                "available": true
+              }
+            ]
+          },
+          {
+            "name": "Half Page",
+            "adFormat": "half page",
+            "dimensions": "6.5\" x 14\"",
+            "color": "both",
+            "location": "Throughout publication",
+            "pricing": {
+              "oneTime": 1500,
+              "fourTimes": null,
+              "twelveTimes": 1200,
+              "openRate": 2500
+            },
+            "specifications": {
+              "format": "Print ready",
+              "resolution": "300 DPI",
+              "bleed": true
+            },
+            "hubPricing": [
+              {
+                "hubId": "chicago-hub",
+                "hubName": "Chicago Hub",
+                "pricing": {
+                  "oneTime": 1500,
+                  "twelveTimes": 1200
+                },
+                "discount": 20,
+                "available": true
+              }
+            ]
+          },
+          {
+            "name": "Quarter Page",
+            "adFormat": "quarter page",
+            "dimensions": "Not specified",
+            "color": "both",
+            "location": "Throughout publication",
+            "pricing": {
+              "oneTime": 750,
+              "fourTimes": null,
+              "twelveTimes": null,
+              "openRate": null
+            },
+            "specifications": {
+              "format": "Print ready",
+              "resolution": "300 DPI",
+              "bleed": false
+            }
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "name": "Annual Events Program",
+        "type": "Community events",
+        "frequency": "Quarterly",
+        "averageAttendance": 600,
+        "targetAudience": "Chicago community members",
+        "location": "Chicago venues",
+        "advertisingOpportunities": [
+          {
+            "level": "title",
+            "benefits": [
+              "Brand visibility",
+              "Community engagement",
+              "Networking opportunities"
+            ],
+            "pricing": {
+              "sponsorshipFee": 50000
+            }
+          },
+          {
+            "level": "presenting",
+            "benefits": [
+              "Brand visibility",
+              "Community engagement"
+            ],
+            "pricing": {
+              "sponsorshipFee": 25000
+            }
+          },
+          {
+            "level": "supporting",
+            "benefits": [
+              "Brand visibility"
+            ],
+            "pricing": {
+              "sponsorshipFee": 5000
+            }
+          }
+        ]
+      }
+    ],
+    "podcasts": [
+      {
+        "podcastId": "cnw-network",
+        "name": "CNW Network Podcast",
+        "description": "Multi-show network covering community topics",
+        "frequency": "weekly",
+        "averageDownloads": 1500,
+        "averageListeners": 1500,
+        "episodeCount": null,
+        "platforms": [
+          "apple_podcasts",
+          "spotify",
+          "google_podcasts"
+        ],
+        "advertisingOpportunities": [
+          {
+            "name": "Starter Package",
+            "adFormat": "host-read",
+            "duration": 30,
+            "pricing": {
+              "flatRate": 375,
+              "pricingModel": "flat"
+            },
+            "specifications": {
+              "format": "script",
+              "bitrate": "Standard"
+            },
+            "available": true
+          },
+          {
+            "name": "Standard Package", 
+            "adFormat": "host-read",
+            "duration": 60,
+            "pricing": {
+              "flatRate": 975,
+              "pricingModel": "flat"
+            },
+            "specifications": {
+              "format": "script",
+              "bitrate": "Standard"
+            },
+            "available": true
+          },
+          {
+            "name": "Premium Package",
+            "adFormat": "sponsored_content",
+            "duration": 120,
+            "pricing": {
+              "flatRate": 2750,
+              "pricingModel": "flat"
+            },
+            "specifications": {
+              "format": "script",
+              "bitrate": "Standard"
+            },
+            "available": true
+          }
+        ]
+      }
+    ]
+  },
+  "audienceDemographics": {
+    "totalAudience": 161200,
+    "ageGroups": {
+      "18-24": 15,
+      "25-34": 30,
+      "35-44": 25,
+      "45-54": 20,
+      "55-64": 8,
+      "65+": 2
+    },
+    "gender": {
+      "male": 45,
+      "female": 55,
+      "other": 0
+    },
+    "householdIncome": {
+      "under35k": 10,
+      "35k-50k": 15,
+      "50k-75k": 25,
+      "75k-100k": 30,
+      "100k-150k": 15,
+      "over150k": 5
+    },
+    "education": {
+      "highSchool": 25,
+      "someCollege": 35,
+      "bachelors": 30,
+      "graduate": 10
+    },
+    "location": "Chicago metropolitan area",
+    "interests": [
+      "Community news",
+      "Cultural events",
+      "Local politics",
+      "Business development",
+      "African American culture"
+    ],
+    "targetMarkets": [
+      "African American professionals",
+      "Chicago families",
+      "Community leaders",
+      "Local business owners"
+    ]
+  },
+  "editorialInfo": {
+    "contentFocus": [
+      "Community news",
+      "Cultural stories",
+      "Local journalism",
+      "African American issues"
+    ],
+    "contentPillars": [
+      "Community impact",
+      "Cultural storytelling", 
+      "Local journalism",
+      "Black community advocacy"
+    ],
+    "specialSections": [
+      "Cultural front page",
+      "Community spotlight",
+      "Business features"
+    ],
+    "editorialTeam": {
+      "editorInChief": "Not specified",
+      "managingEditor": "Not specified",
+      "keyWriters": [],
+      "contributingWriters": []
+    }
+  },
+  "businessInfo": {
+    "ownershipType": "private",
+    "parentCompany": "CNW Media LLC",
+    "yearsInOperation": null,
+    "numberOfEmployees": null,
+    "averageMonthlyRevenue": null,
+    "revenueBreakdown": {
+      "digital": 30,
+      "print": 40,
+      "events": 15,
+      "podcasts": 10,
+      "social": 5
+    },
+    "topAdvertiserCategories": [
+      "Community organizations",
+      "Local businesses",
+      "Political campaigns",
+      "Cultural events"
+    ],
+    "clientRetentionRate": null
+  },
+  "crossChannelPackages": [
+    {
+      "name": "Community Impact Package",
+      "packageName": "Community Impact",
+      "includedChannels": [
+        "print",
+        "newsletter",
+        "podcasts",
+        "social"
+      ],
+      "pricing": "$2,200/month",
+      "details": "1/4 page print + podcast + newsletter + social media",
+      "duration": "Monthly",
+      "savings": 20
+    },
+    {
+      "name": "Visibility Builder Package",
+      "packageName": "Visibility Builder",
+      "includedChannels": [
+        "print",
+        "website",
+        "podcasts",
+        "social"
+      ],
+      "pricing": "$4,500/month",
+      "details": "1/2 page print + podcast + digital + social media",
+      "duration": "Monthly",
+      "savings": 25
+    },
+    {
+      "name": "Brand Integration Package",
+      "packageName": "Brand Integration",
+      "includedChannels": [
+        "print",
+        "website",
+        "podcasts",
+        "social"
+      ],
+      "pricing": "$7,000/month",
+      "details": "Full page + full podcast + homepage + social media",
+      "duration": "Monthly", 
+      "savings": 30
+    }
+  ],
+  "technicalCapabilities": {
+    "cmsplatform": "Not specified",
+    "emailServiceProvider": "Not specified",
+    "adServer": "Not specified",
+    "analyticsTools": [
+      "Not specified"
+    ],
+    "crmSystem": "Not specified",
+    "paymentProcessing": [
+      "credit cards",
+      "check"
+    ]
+  },
+  "competitiveInfo": {
+    "uniqueValueProposition": "Only Black owned multi platform option that still has a print distribution in Chicago",
+    "keyDifferentiators": [
+      "Multi-platform Black-owned media",
+      "Print legacy with digital innovation",
+      "Community trust and authenticity",
+      "Cultural leadership"
+    ],
+    "competitiveAdvantages": [
+      "One of only five remaining Black-owned print media organizations in Chicago",
+      "Strong community connections",
+      "Multi-generational reach",
+      "Cultural authenticity"
+    ],
+    "marketShare": null,
+    "mainCompetitors": [
+      "Other Chicago community publications",
+      "Digital-only Black media outlets"
+    ]
+  },
+  "awards": [
+    {
+      "award": "New America Media Communicator of the Year",
+      "organization": "New America Media",
+      "year": null,
+      "category": "Media Excellence"
+    },
+    {
+      "award": "Presidential Lifetime Achievement Award",
+      "organization": "Presidential Office",
+      "year": null,
+      "category": "Community Service"
+    }
+  ],
+  "bookingPolicies": {
+    "minimumLeadTime": "Varies by medium",
+    "cancellationPolicy": "Standard media terms",
+    "materialDeadline": "Varies by publication schedule",
+    "paymentTerms": "Net 30",
+    "agencyDiscount": null,
+    "creditCardsAccepted": true
+  },
+  "metadata": {
+    "extractedFrom": [
+      "manual_entry",
+      "media_kit"
+    ],
+    "confidence": 0.85,
+    "lastAnalyzed": "2025-01-15T00:00:00Z",
+    "lastUpdated": "2025-01-15T00:00:00Z",
+    "createdAt": "2025-01-15T00:00:00Z",
+    "mediaKitDate": "2025-01-15",
+    "nextReviewDate": "2025-04-15",
+    "dataCompleteness": 75,
+    "verificationStatus": "needs_verification"
+  },
+  "internalNotes": {
+    "operationalNotes": "Active participant in Chicago Hub and National Hub programs. Strong community presence with cultural leadership position.",
+    "salesApproach": "Focus on community impact and cultural authenticity. Emphasize multi-platform reach and special hub pricing.",
+    "knownChallenges": [
+      "Competition from digital-only outlets",
+      "Print circulation challenges"
+    ],
+    "growthOpportunities": [
+      "Expand digital presence",
+      "Leverage hub program benefits",
+      "Grow event programming"
+    ],
+    "preferredContactTime": "Business hours",
+    "responseTime": "24-48 hours typical",
+    "decisionMakers": [
+      "Cheryl Mainor (CEO/Publisher)"
+    ]
+  }
+}

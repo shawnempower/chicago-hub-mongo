@@ -1,5 +1,6 @@
 # Multi-stage build for production optimization
-FROM node:18-alpine AS builder
+# Explicitly specify linux/amd64 platform for ECS Fargate compatibility
+FROM --platform=linux/amd64 node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -11,7 +12,8 @@ COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 # Production stage
-FROM node:18-alpine AS production
+# Explicitly specify linux/amd64 platform for ECS Fargate compatibility
+FROM --platform=linux/amd64 node:18-alpine AS production
 
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init

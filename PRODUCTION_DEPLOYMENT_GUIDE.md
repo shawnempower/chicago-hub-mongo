@@ -11,16 +11,19 @@
 
 ## Step 1: Build and Push Docker Image
 
+### ⚠️ Important: Platform Compatibility
+The Dockerfile is now configured to automatically build for `linux/amd64` platform, which is required for ECS Fargate. You no longer need to specify the platform manually.
+
 ```bash
-# Build production image
+# Build production image (automatically uses linux/amd64)
 docker build -f Dockerfile.production -t chicago-hub-api:latest .
 
 # Tag for ECR
-docker tag chicago-hub-api:latest YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/chicago-hub-api:latest
+docker tag chicago-hub-api:latest 947442015939.dkr.ecr.us-east-2.amazonaws.com/chicago-hub-api:latest
 
 # Push to ECR
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
-docker push YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/chicago-hub-api:latest
+aws ecr get-login-password --region us-east-2 --profile "Connection 1" | docker login --username AWS --password-stdin 947442015939.dkr.ecr.us-east-2.amazonaws.com
+docker push 947442015939.dkr.ecr.us-east-2.amazonaws.com/chicago-hub-api:latest
 ```
 
 ## Step 2: Store Secrets in AWS Systems Manager

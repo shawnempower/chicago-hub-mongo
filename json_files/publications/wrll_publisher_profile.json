@@ -1,0 +1,649 @@
+{
+  "publicationId": 5004,
+  "basicInfo": {
+    "publicationName": "New - WRLL 1450 AM",
+    "websiteUrl": "https://www.wrll1450.com/",
+    "founded": 2007,
+    "publicationType": "daily",
+    "contentType": "mixed",
+    "headquarters": "800 South Wells Street, Suite 170, Chicago, IL 60607",
+    "geographicCoverage": "regional",
+    "primaryServiceArea": "Chicago Metropolitan Area, Latino communities",
+    "secondaryMarkets": ["Cicero", "Suburban Latino populations"],
+    "numberOfPublications": 1
+  },
+  "contactInfo": {
+    "mainPhone": "(773) 247-6200",
+    "businessHours": "24/7 broadcast operation",
+    "salesContact": {
+      "name": "Vincent Montesano",
+      "title": "Sales Director / Program Liaison",
+      "email": "vincent@midwaybroadcasting.com",
+      "phone": "(617) 270-4457",
+      "preferredContact": "email"
+    },
+    "generalManager": {
+      "name": "Melody Spann Cooper",
+      "email": "melody@midwaybroadcasting.com",
+      "phone": "(773) 247-6200"
+    }
+  },
+  "distributionChannels": {
+    "website": {
+      "url": "https://www.wrll1450.com/",
+      "cmsplatform": "Shared with WVON platform",
+      "metrics": {
+        "monthlyVisitors": 125000,
+        "monthlyPageViews": 500000,
+        "mobilePercentage": 60
+      },
+      "advertisingOpportunities": [
+        {
+          "name": "Large Banner",
+          "adFormat": "970x250 banner",
+          "location": "Header placement",
+          "pricing": {
+            "flatRate": 3000,
+            "pricingModel": "flat",
+            "minimumCommitment": "1 week"
+          },
+          "specifications": {
+            "size": "1181x146",
+            "format": "JPG, PNG, GIF, HTML5",
+            "fileSize": "150KB max",
+            "animationAllowed": true,
+            "thirdPartyTags": true
+          },
+          "available": true,
+          "hubPricing": [
+            {
+              "hubId": "chicago_hub",
+              "hubName": "Chicago Media Hub",
+              "pricing": {
+                "flatRate": 1000,
+                "pricingModel": "flat"
+              },
+              "discount": 35,
+              "available": true,
+              "minimumCommitment": "1 week"
+            }
+          ]
+        },
+        {
+          "name": "Standard Banner",
+          "adFormat": "300x250 banner",
+          "location": "Content area",
+          "pricing": {
+            "flatRate": 2000,
+            "pricingModel": "flat",
+            "minimumCommitment": "1 week"
+          },
+          "specifications": {
+            "size": "300x250",
+            "format": "JPG, PNG, GIF, HTML5",
+            "fileSize": "150KB max",
+            "animationAllowed": true,
+            "thirdPartyTags": true
+          },
+          "available": true,
+          "hubPricing": [
+            {
+              "hubId": "chicago_hub",
+              "hubName": "Chicago Media Hub",
+              "pricing": {
+                "flatRate": 750,
+                "pricingModel": "flat"
+              },
+              "discount": 35,
+              "available": true,
+              "minimumCommitment": "1 week"
+            }
+          ]
+        },
+        {
+          "name": "Website Takeover",
+          "adFormat": "takeover ad",
+          "location": "Full site integration",
+          "pricing": {
+            "flatRate": 8000,
+            "pricingModel": "contact",
+            "minimumCommitment": "1 week"
+          },
+          "specifications": {
+            "size": "Full site",
+            "format": "Custom",
+            "thirdPartyTags": true
+          },
+          "available": true,
+          "hubPricing": [
+            {
+              "hubId": "chicago_hub",
+              "hubName": "Chicago Media Hub",
+              "pricing": {
+                "flatRate": 5000,
+                "pricingModel": "flat"
+              },
+              "discount": 38,
+              "available": true,
+              "minimumCommitment": "1 week"
+            }
+          ]
+        }
+      ]
+    },
+    "socialMedia": [
+      {
+        "platform": "facebook",
+        "handle": "Shared with WVON",
+        "verified": false,
+        "metrics": {
+          "followers": 40000,
+          "engagementRate": 5.5
+        },
+        "lastUpdated": "2025-10-10",
+        "advertisingOpportunities": [
+          {
+            "name": "Sponsored Post",
+            "adFormat": "sponsored_post",
+            "postType": "image",
+            "pricing": {
+              "perPost": 500,
+              "pricingModel": "per_post"
+            },
+            "available": true
+          }
+        ]
+      },
+      {
+        "platform": "instagram",
+        "handle": "Shared with WVON",
+        "verified": false,
+        "metrics": {
+          "followers": 13000,
+          "engagementRate": 6.2
+        },
+        "lastUpdated": "2025-10-10",
+        "advertisingOpportunities": [
+          {
+            "name": "Sponsored Post",
+            "adFormat": "sponsored_post",
+            "postType": "image",
+            "pricing": {
+              "perPost": 300,
+              "pricingModel": "per_post"
+            },
+            "available": true
+          }
+        ]
+      }
+    ],
+    "newsletters": [
+      {
+        "name": "WVON/WRLL Weekly Newsletter",
+        "subject": "Latino community news and programming updates",
+        "frequency": "weekly",
+        "sendDay": "Weekly",
+        "subscribers": 25000,
+        "openRate": 25,
+        "clickThroughRate": 3.5,
+        "listGrowthRate": 2.5,
+        "advertisingOpportunities": [
+          {
+            "name": "Large Newsletter Ad",
+            "position": "header",
+            "dimensions": "1181x146",
+            "pricing": {
+              "perSend": 1000,
+              "monthly": 3000
+            },
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "perSend": 750,
+                  "monthly": 2000
+                },
+                "discount": 35,
+                "available": true,
+                "minimumCommitment": "1 month"
+              }
+            ]
+          },
+          {
+            "name": "Newsletter Takeover",
+            "position": "dedicated",
+            "dimensions": "Full newsletter",
+            "pricing": {
+              "perSend": 4000
+            },
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "perSend": 4000
+                },
+                "discount": 0,
+                "available": true,
+                "minimumCommitment": "1 send"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "name": "Annual Latino Community Events",
+        "type": "Community celebrations and cultural events",
+        "frequency": "10 events annually",
+        "averageAttendance": 25000,
+        "targetAudience": "Latino community, families",
+        "location": "Chicago metropolitan area",
+        "advertisingOpportunities": [
+          {
+            "level": "presenting",
+            "benefits": ["Title sponsorship", "On-air mentions", "Event signage", "Digital promotion"],
+            "pricing": {
+              "sponsorshipFee": 100000
+            },
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "sponsorshipFee": 75000
+                },
+                "discount": 25,
+                "available": true,
+                "minimumCommitment": "Full event cycle"
+              }
+            ]
+          },
+          {
+            "level": "title",
+            "benefits": ["Event naming rights", "Premium signage", "Radio integration"],
+            "pricing": {
+              "sponsorshipFee": 50000
+            },
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "sponsorshipFee": 37500
+                },
+                "discount": 25,
+                "available": true,
+                "minimumCommitment": "Full event cycle"
+              }
+            ]
+          },
+          {
+            "level": "supporting",
+            "benefits": ["Event signage", "Radio mentions", "Digital inclusion"],
+            "pricing": {
+              "sponsorshipFee": 15000
+            },
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "sponsorshipFee": 11250
+                },
+                "discount": 25,
+                "available": true,
+                "minimumCommitment": "Full event cycle"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "radioStations": [
+      {
+        "stationId": "WRLL_1450",
+        "callSign": "WRLL 1450 AM",
+        "frequency": "1450 AM",
+        "format": "alternative",
+        "coverageArea": "Chicago Metropolitan Area",
+        "listeners": 150000,
+        "advertisingOpportunities": [
+          {
+            "name": "Morning Drive - La Voz de América Latina",
+            "adFormat": "60_second_spot",
+            "timeSlot": "drive_time_morning",
+            "pricing": {
+              "perSpot": 270,
+              "pricingModel": "per_spot"
+            },
+            "specifications": {
+              "format": "mp3",
+              "duration": 60
+            },
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "weekly": 1000,
+                  "monthly": 3000,
+                  "pricingModel": "weekly"
+                },
+                "discount": 35,
+                "available": true,
+                "minimumCommitment": "1 week"
+              }
+            ]
+          },
+          {
+            "name": "Morning Drive - La Voz de América Latina",
+            "adFormat": "30_second_spot",
+            "timeSlot": "drive_time_morning",
+            "pricing": {
+              "perSpot": 175,
+              "pricingModel": "per_spot"
+            },
+            "specifications": {
+              "format": "mp3",
+              "duration": 30
+            },
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "weekly": 750,
+                  "monthly": 2000,
+                  "pricingModel": "weekly"
+                },
+                "discount": 35,
+                "available": true,
+                "minimumCommitment": "1 week"
+              }
+            ]
+          },
+          {
+            "name": "Midday - Cafecito con Vicky",
+            "adFormat": "60_second_spot",
+            "timeSlot": "midday",
+            "pricing": {
+              "perSpot": 250,
+              "pricingModel": "per_spot"
+            },
+            "specifications": {
+              "format": "mp3",
+              "duration": 60
+            },
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "weekly": 1000,
+                  "monthly": 3000,
+                  "pricingModel": "weekly"
+                },
+                "discount": 35,
+                "available": true,
+                "minimumCommitment": "1 week"
+              }
+            ]
+          },
+          {
+            "name": "Radio Takeover Package",
+            "adFormat": "sponsorship",
+            "timeSlot": "drive_time_morning",
+            "pricing": {
+              "monthly": 23000,
+              "pricingModel": "contact"
+            },
+            "specifications": {
+              "format": "mp3",
+              "duration": 60
+            },
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "monthly": 15000,
+                  "pricingModel": "monthly"
+                },
+                "discount": 35,
+                "available": true,
+                "minimumCommitment": "1 month"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "streamingVideo": [
+      {
+        "channelId": "VONtv_WRLL",
+        "name": "VONtv Latino Content",
+        "platform": "custom_streaming",
+        "subscribers": 117000000,
+        "averageViews": 78125,
+        "contentType": "mixed",
+        "streamingSchedule": "On-demand and live programming",
+        "advertisingOpportunities": [
+          {
+            "name": "30-Second Video Ad",
+            "adFormat": "pre-roll",
+            "duration": 30,
+            "pricing": {
+              "flatRate": 2000,
+              "pricingModel": "flat"
+            },
+            "specifications": {
+              "format": "mp4",
+              "resolution": "1080p",
+              "aspectRatio": "16:9"
+            },
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "flatRate": 2000,
+                  "pricingModel": "flat"
+                },
+                "discount": 0,
+                "available": true,
+                "minimumCommitment": "1 placement"
+              }
+            ]
+          },
+          {
+            "name": "60-Second Video Ad",
+            "adFormat": "pre-roll",
+            "duration": 60,
+            "pricing": {
+              "flatRate": 3500,
+              "pricingModel": "flat"
+            },
+            "specifications": {
+              "format": "mp4",
+              "resolution": "1080p",
+              "aspectRatio": "16:9"
+            },
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "flatRate": 3500,
+                  "pricingModel": "flat"
+                },
+                "discount": 0,
+                "available": true,
+                "minimumCommitment": "1 placement"
+              }
+            ]
+          },
+          {
+            "name": "Special Takeover",
+            "adFormat": "sponsored_content",
+            "duration": 120,
+            "pricing": {
+              "flatRate": 15000,
+              "pricingModel": "contact"
+            },
+            "specifications": {
+              "format": "mp4",
+              "resolution": "1080p",
+              "aspectRatio": "16:9"
+            },
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago_hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "flatRate": 15000,
+                  "pricingModel": "flat"
+                },
+                "discount": 0,
+                "available": true,
+                "minimumCommitment": "1 campaign"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "audienceDemographics": {
+    "totalAudience": 150000,
+    "ageGroups": {
+      "18-24": 3,
+      "25-34": 4,
+      "35-44": 22,
+      "45-54": 22,
+      "55-64": 24,
+      "65+": 25
+    },
+    "gender": {
+      "male": 25,
+      "female": 75
+    },
+    "householdIncome": {
+      "under35k": 30,
+      "35k-50k": 19,
+      "50k-75k": 40,
+      "75k-100k": 8,
+      "100k-150k": 3,
+      "over150k": 0
+    },
+    "education": {
+      "highSchool": 50,
+      "someCollege": 30,
+      "bachelors": 15,
+      "graduate": 5
+    },
+    "location": "Chicago Metropolitan Area, Latino communities",
+    "interests": ["Latino culture", "Regional Mexican music", "Community news", "Spanish-language content"],
+    "targetMarkets": ["Latino households", "Spanish-speaking community", "Cultural preservation advocates"]
+  },
+  "editorialInfo": {
+    "contentFocus": ["Latino community news", "Regional Mexican music", "Cultural programming", "Community empowerment"],
+    "contentPillars": ["Community empowerment", "Latino culture preservation", "Music programming", "Local business support"],
+    "specialSections": ["Morning news and commentary", "Midday community focus", "Music programming"],
+    "editorialTeam": {
+      "keyWriters": ["Carlos Rojas de Morelos", "Vicky Corces", "Pepe Mondragon", "Fernando Jaramillo", "Javier del Real"]
+    }
+  },
+  "businessInfo": {
+    "ownershipType": "private",
+    "parentCompany": "Midway Broadcasting Corporation",
+    "yearsInOperation": 18,
+    "revenueBreakdown": {
+      "radio": 70,
+      "digital": 15,
+      "events": 10,
+      "streaming": 5
+    },
+    "topAdvertiserCategories": ["Latino businesses", "Community organizations", "National brands targeting Latino market"],
+    "clientRetentionRate": 80
+  },
+  "crossChannelPackages": [
+    {
+      "name": "Chicago Hub Premium Package",
+      "packageName": "Multi-channel Latino marketing solution",
+      "includedChannels": ["radio", "website", "newsletter", "events"],
+      "pricing": "Contact for custom package pricing",
+      "details": "Comprehensive Latino community outreach across radio, digital, and events",
+      "duration": "Weekly or monthly commitments available",
+      "savings": 35
+    },
+    {
+      "name": "Digital + Radio Combo",
+      "packageName": "Traditional and digital integration",
+      "includedChannels": ["radio", "website", "newsletter"],
+      "pricing": "Bundled pricing available",
+      "details": "Radio spots combined with digital banner and newsletter placement",
+      "duration": "Monthly minimum",
+      "savings": 25
+    }
+  ],
+  "technicalCapabilities": {
+    "cmsplatform": "Shared with WVON platform",
+    "adServer": "Broadcast quality ad serving",
+    "analyticsTools": ["Radio ratings", "Website analytics", "Social media insights"],
+    "paymentProcessing": ["credit cards", "ach", "check"]
+  },
+  "competitiveInfo": {
+    "uniqueValueProposition": "Authentic Latino voice with community trust and cultural preservation focus",
+    "keyDifferentiators": [
+      "Only 24/7 Spanish-language radio in Chicago market since 2021",
+      "Talented, established Latino broadcasters with massive community influence",
+      "Direct connection to Latino community decision-makers",
+      "Strong female audience skew (75%)"
+    ],
+    "competitiveAdvantages": [
+      "Fastest growing Latino media outlet in Chicago",
+      "Black and female-owned enterprise",
+      "Deep community trust and authenticity",
+      "Multi-channel integration capabilities"
+    ],
+    "marketShare": 15
+  },
+  "bookingPolicies": {
+    "minimumLeadTime": "48 hours for radio, 5 days for digital",
+    "cancellationPolicy": "30 days notice required",
+    "materialDeadline": "48 hours before flight date",
+    "paymentTerms": "Net 30 days",
+    "agencyDiscount": 0,
+    "creditCardsAccepted": true
+  },
+  "metadata": {
+    "extractedFrom": ["media_kit", "manual_entry", "sales_contact"],
+    "confidence": 0.95,
+    "lastAnalyzed": "2025-10-10T00:00:00Z",
+    "lastUpdated": "2025-10-10T00:00:00Z",
+    "createdAt": "2025-10-10T00:00:00Z",
+    "mediaKitDate": "2025-10-10",
+    "nextReviewDate": "2025-11-10",
+    "dataCompleteness": 92,
+    "verificationStatus": "verified"
+  },
+  "internalNotes": {
+    "operationalNotes": "Active Chicago Hub participant with strong uptake. Same day response typical for inquiries.",
+    "salesApproach": "Focus on authentic Latino community connection and cultural preservation messaging. Emphasize female audience skew and community trust.",
+    "knownChallenges": ["Shared digital assets with WVON may limit exclusive targeting"],
+    "growthOpportunities": ["Expanding digital presence", "Enhanced streaming content", "Community event expansion"],
+    "preferredContactTime": "Business hours, email preferred",
+    "responseTime": "Same day typical",
+    "decisionMakers": ["Vincent Montesano (Sales)", "Melody Spann Cooper (CEO)"]
+  }
+}

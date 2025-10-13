@@ -1,0 +1,345 @@
+{
+  "publicationId": 5001,
+  "basicInfo": {
+    "publicationName": "New - AirGo Radio",
+    "websiteUrl": "https://airgoradio.com/",
+    "founded": 2015,
+    "publicationType": "weekly",
+    "contentType": "mixed",
+    "headquarters": "1434 West 51st Street, Chicago, IL 60609",
+    "geographicCoverage": "national",
+    "primaryServiceArea": "Chicago, Illinois",
+    "secondaryMarkets": ["National progressive communities", "International progressive communities"],
+    "numberOfPublications": 1
+  },
+  "contactInfo": {
+    "salesContact": {
+      "name": "Daniel Kisslinger",
+      "title": "Co-Founder",
+      "email": "contact@respairmedia.com",
+      "preferredContact": "email"
+    },
+    "editorialContact": {
+      "name": "Daniel Kisslinger",
+      "title": "Co-Founder & Host",
+      "email": "contact@respairmedia.com"
+    },
+    "generalManager": {
+      "name": "Daniel Kisslinger",
+      "email": "contact@respairmedia.com"
+    }
+  },
+  "distributionChannels": {
+    "website": {
+      "url": "https://airgoradio.com/",
+      "advertisingOpportunities": [
+        {
+          "name": "Website Display Advertising",
+          "adFormat": "custom",
+          "location": "Website placement",
+          "pricing": {
+            "pricingModel": "contact"
+          },
+          "available": true,
+          "hubPricing": [
+            {
+              "hubId": "chicago-hub",
+              "hubName": "Chicago Media Hub",
+              "pricing": {
+                "pricingModel": "contact"
+              },
+              "available": true
+            }
+          ]
+        }
+      ]
+    },
+    "socialMedia": [
+      {
+        "platform": "instagram",
+        "handle": "@airgoradio",
+        "url": "https://instagram.com/airgoradio",
+        "verified": false,
+        "metrics": {
+          "followers": 6562
+        },
+        "advertisingOpportunities": [
+          {
+            "name": "Instagram Sponsored Posts",
+            "adFormat": "sponsored_post",
+            "postType": "image",
+            "pricing": {
+              "pricingModel": "contact"
+            },
+            "available": true
+          }
+        ]
+      },
+      {
+        "platform": "facebook",
+        "handle": "AirGoRadio",
+        "verified": false,
+        "metrics": {
+          "followers": 1075
+        },
+        "advertisingOpportunities": [
+          {
+            "name": "Facebook Sponsored Posts",
+            "adFormat": "sponsored_post",
+            "postType": "image",
+            "pricing": {
+              "pricingModel": "contact"
+            },
+            "available": true
+          }
+        ]
+      },
+      {
+        "platform": "twitter",
+        "handle": "@AirGoRadio",
+        "verified": false,
+        "advertisingOpportunities": [
+          {
+            "name": "Twitter Sponsored Posts",
+            "adFormat": "sponsored_post",
+            "postType": "image",
+            "pricing": {
+              "pricingModel": "contact"
+            },
+            "available": true
+          }
+        ]
+      }
+    ],
+    "podcasts": [
+      {
+        "podcastId": "airgo-radio-main",
+        "name": "AirGo Radio",
+        "description": "Reshaping culture for the more liberatory and creative through longform conversations with movement workers, artists, rappers, poets, musicians, organizers, and changemakers",
+        "frequency": "weekly",
+        "averageDownloads": 145000,
+        "episodeCount": 378,
+        "platforms": ["apple_podcasts", "spotify", "other"],
+        "advertisingOpportunities": [
+          {
+            "name": "Single Pre-Roll Ad",
+            "adFormat": "pre-roll",
+            "duration": 45,
+            "pricing": {
+              "flatRate": 375,
+              "pricingModel": "flat"
+            },
+            "specifications": {
+              "format": "script",
+              "bitrate": "Standard podcast quality"
+            },
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago-hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "flatRate": 375,
+                  "pricingModel": "flat"
+                },
+                "available": true,
+                "minimumCommitment": "Contact for details"
+              }
+            ]
+          },
+          {
+            "name": "Ten Pre-Roll Ad Package",
+            "adFormat": "pre-roll",
+            "duration": 45,
+            "pricing": {
+              "flatRate": 3500,
+              "pricingModel": "flat"
+            },
+            "specifications": {
+              "format": "script",
+              "bitrate": "Standard podcast quality"
+            },
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago-hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "flatRate": 3500,
+                  "pricingModel": "flat"
+                },
+                "available": true,
+                "minimumCommitment": "10 consecutive episodes"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "name": "Live Podcast Recordings",
+        "type": "Live recording events",
+        "frequency": "occasional",
+        "targetAudience": "Chicago progressive community, artists, activists",
+        "location": "Chicago area venues",
+        "advertisingOpportunities": [
+          {
+            "level": "supporting",
+            "benefits": ["Event sponsorship mention", "Community engagement"],
+            "pricing": {
+              "sponsorshipFee": 0
+            },
+            "hubPricing": [
+              {
+                "hubId": "chicago-hub",
+                "hubName": "Chicago Media Hub",
+                "pricing": {
+                  "sponsorshipFee": 0
+                },
+                "available": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Listening Clubs",
+        "type": "Community listening events",
+        "frequency": "monthly",
+        "targetAudience": "Progressive community members",
+        "location": "Chicago community spaces",
+        "advertisingOpportunities": [
+          {
+            "level": "supporting",
+            "benefits": ["Event sponsorship mention", "Community connection"],
+            "pricing": {
+              "sponsorshipFee": 0
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "audienceDemographics": {
+    "totalAudience": 153000,
+    "ageGroups": {
+      "18-24": 20,
+      "25-34": 46,
+      "35-44": 20,
+      "45-54": 10,
+      "55-64": 3,
+      "65+": 1
+    },
+    "gender": {
+      "male": 45,
+      "female": 50,
+      "other": 5
+    },
+    "householdIncome": {
+      "under35k": 25,
+      "35k-50k": 20,
+      "50k-75k": 25,
+      "75k-100k": 15,
+      "100k-150k": 10,
+      "over150k": 5
+    },
+    "education": {
+      "highSchool": 5,
+      "someCollege": 15,
+      "bachelors": 50,
+      "graduate": 30
+    },
+    "location": "Chicago metropolitan area with national reach",
+    "interests": ["Social justice", "Activism", "Arts", "Community organizing", "Political analysis", "Movement work"],
+    "targetMarkets": ["Artists", "Activists", "Educators", "Community organizers", "Progressive professionals", "Students", "Movement workers"]
+  },
+  "editorialInfo": {
+    "contentFocus": ["Social justice movements", "Activism", "Arts and culture", "Community organizing", "Political commentary"],
+    "contentPillars": ["Movement worker interviews", "Artist spotlights and conversations", "Community organizing stories", "Political analysis and commentary"],
+    "specialSections": ["Weekly longform interviews", "GoBack listening club series"],
+    "signatureFeatures": ["Notable guest interviews", "Chicago movement focus", "National progressive reach"],
+    "editorialTeam": {
+      "editorInChief": "Daniel Kisslinger",
+      "managingEditor": "Damon Williams",
+      "keyWriters": ["Daniel Kisslinger", "Damon Williams"],
+      "contributingWriters": ["Rocío Santos", "Rivka Yeker", "Troi Valles"]
+    }
+  },
+  "businessInfo": {
+    "ownershipType": "independent",
+    "parentCompany": "Respair Production & Media",
+    "yearsInOperation": 10,
+    "numberOfEmployees": 5,
+    "revenueBreakdown": {
+      "digital": 20,
+      "podcasts": 70,
+      "events": 5,
+      "social": 5
+    },
+    "topAdvertiserCategories": ["Social justice organizations", "Cultural organizations", "Educational institutions", "Mission-aligned businesses", "Community-focused businesses"]
+  },
+  "crossChannelPackages": [
+    {
+      "name": "Movement Media Package",
+      "packageName": "Podcast + Social + Website Bundle",
+      "includedChannels": ["podcasts", "social", "website"],
+      "pricing": "Contact for custom rates",
+      "details": "Comprehensive package for mission-aligned organizations",
+      "duration": "Negotiable",
+      "savings": 15
+    }
+  ],
+  "technicalCapabilities": {
+    "emailServiceProvider": "Unknown",
+    "analyticsTools": ["Podcast analytics", "Social media insights"],
+    "paymentProcessing": ["check", "paypal"]
+  },
+  "competitiveInfo": {
+    "uniqueValueProposition": "10-year archive of Chicago movement and arts conversations with authentic voice within progressive/liberation movements",
+    "keyDifferentiators": [
+      "Movement media focus with national reach",
+      "Long-form interview format", 
+      "Established relationships with prominent activists and artists",
+      "Community-based approach to content creation",
+      "Integration of arts and activism"
+    ],
+    "competitiveAdvantages": [
+      "Deep community connections within Chicago social justice ecosystem",
+      "Cross-platform distribution (podcast + terrestrial radio)",
+      "378+ episode archive spanning 10 years",
+      "Notable guest network including Angela Davis, Mariame Kaba, Mayor Brandon Johnson"
+    ],
+    "marketShare": 15,
+    "mainCompetitors": ["Other Chicago progressive media outlets", "National movement media platforms"]
+  },
+  "awards": [],
+  "bookingPolicies": {
+    "minimumLeadTime": "Contact for details",
+    "cancellationPolicy": "Contact for details", 
+    "materialDeadline": "Contact for details",
+    "paymentTerms": "Contact for details",
+    "agencyDiscount": 0,
+    "creditCardsAccepted": false
+  },
+  "metadata": {
+    "extractedFrom": ["website", "media_kit", "manual_entry"],
+    "confidence": 0.85,
+    "lastAnalyzed": "2025-10-10T00:00:00Z",
+    "lastUpdated": "2025-10-10T00:00:00Z",
+    "createdAt": "2025-10-10T00:00:00Z",
+    "mediaKitDate": "2025-10-10",
+    "nextReviewDate": "2025-12-10",
+    "dataCompleteness": 78,
+    "verificationStatus": "needs_verification"
+  },
+  "internalNotes": {
+    "operationalNotes": "Active participant in Chicago Media Hub program. Rates and inventory allocation need confirmation for Hub sales vs. direct sales.",
+    "salesApproach": "Mission-aligned approach recommended. Focus on social justice, arts, and community organizing sectors.",
+    "knownChallenges": ["Hub program rates need clarification", "Website advertising specs not provided", "Payment terms unclear"],
+    "growthOpportunities": ["Expand social media advertising", "Develop event sponsorship packages", "Clarify Hub program benefits"],
+    "preferredContactTime": "Business hours",
+    "responseTime": "Unknown",
+    "decisionMakers": ["Daniel Kisslinger", "Damon Williams"]
+  }
+}
