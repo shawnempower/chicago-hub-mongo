@@ -20,6 +20,7 @@ import {
 import { usePublication } from '@/contexts/PublicationContext';
 import { PublicationFrontend } from '@/types/publication';
 import { updatePublication, getPublicationById } from '@/api/publications';
+import { HubPricingEditor, HubPrice } from './HubPricingEditor';
 
 export const DashboardInventoryManager = () => {
   const { selectedPublication, setSelectedPublication } = usePublication();
@@ -129,6 +130,25 @@ export const DashboardInventoryManager = () => {
     // For container types, we don't need editingIndex since we're editing the container itself
     const isContainerType = editingType?.includes('-container');
     if (!isContainerType && editingIndex < 0) return;
+
+    // Clean up hub pricing - remove any invalid entries
+    if (editingItem.hubPricing && Array.isArray(editingItem.hubPricing)) {
+      editingItem.hubPricing = editingItem.hubPricing.filter((hp: any) => {
+        // Must have a hubId and hubName
+        if (!hp.hubId || !hp.hubName) return false;
+        // Must have some pricing data
+        if (!hp.pricing || typeof hp.pricing !== 'object') return false;
+        return true;
+      });
+    }
+
+    console.log('💾 Saving edited item:', {
+      editingType,
+      editingIndex,
+      editingSubIndex,
+      hasHubPricing: editingItem.hubPricing?.length > 0,
+      hubPricingCount: editingItem.hubPricing?.length || 0
+    });
 
     try {
       let updatedPublication = { ...currentPublication };
@@ -1021,16 +1041,8 @@ export const DashboardInventoryManager = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">{currentPublication.basicInfo.publicationName}</h2>
-          <p className="text-muted-foreground">Advertising Inventory & Packages</p>
-        </div>
-      </div>
-
       {/* Inventory Tabs */}
-      <Tabs key={currentPublication._id} value={activeTab} onValueChange={handleTabChange}>
+      <Tabs key={currentPublication._id} value={activeTab} onValueChange={handleTabChange} className="shadow-sm rounded-lg">
         <TabsList className="grid w-full grid-cols-7 lg:grid-cols-7">
           <TabsTrigger value="website">Website</TabsTrigger>
           <TabsTrigger value="newsletters">Newsletters</TabsTrigger>
@@ -1042,185 +1054,161 @@ export const DashboardInventoryManager = () => {
         </TabsList>
 
         {/* Website Advertising */}
-        <TabsContent value="website" className="space-y-4">
+        <TabsContent value="website" className="space-y-6">
           {/* Website Info Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="w-5 h-5" />
-                    Website Information
-                  </CardTitle>
-                  <CardDescription>
-                    Website details, metrics, and technical information
-                  </CardDescription>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => openEditDialog(
-                    currentPublication.distributionChannels?.website || { 
-                      url: currentPublication.basicInfo?.websiteUrl || '', 
-                      cmsplatform: '',
-                      metrics: {
-                        monthlyVisitors: 0,
-                        monthlyPageViews: 0,
-                        averageSessionDuration: 0,
-                        pagesPerSession: 0,
-                        bounceRate: 0,
-                        mobilePercentage: 0
-                      }
-                    }, 
-                    'website-container', 
-                    0
-                  )}
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Website Info
-                </Button>
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+                <Globe className="w-5 h-5" />
+                Website Information
+              </h3>
+              <Button
+                variant="outline"
+                onClick={() => openEditDialog(
+                  currentPublication.distributionChannels?.website || { 
+                    url: currentPublication.basicInfo?.websiteUrl || '', 
+                    cmsplatform: '',
+                    metrics: {
+                      monthlyVisitors: 0,
+                      monthlyPageViews: 0,
+                      averageSessionDuration: 0,
+                      pagesPerSession: 0,
+                      bounceRate: 0,
+                      mobilePercentage: 0
+                    }
+                  }, 
+                  'website-container', 
+                  0
+                )}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Website Info
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <span className="text-muted-foreground text-sm">Website URL</span>
+                <p className="font-medium">{currentPublication.distributionChannels?.website?.url || currentPublication.basicInfo?.websiteUrl || 'Not specified'}</p>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <span className="text-muted-foreground text-sm">Website URL:</span>
-                  <p className="font-medium">{currentPublication.distributionChannels?.website?.url || currentPublication.basicInfo?.websiteUrl || 'Not specified'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-sm">CMS Platform:</span>
-                  <p className="font-medium">{currentPublication.distributionChannels?.website?.cmsplatform || 'Not specified'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-sm">Monthly Visitors:</span>
-                  <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.monthlyVisitors?.toLocaleString() || 'Not specified'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-sm">Monthly Page Views:</span>
-                  <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.monthlyPageViews?.toLocaleString() || 'Not specified'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-sm">Bounce Rate:</span>
-                  <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.bounceRate ? `${currentPublication.distributionChannels.website.metrics.bounceRate}%` : 'Not specified'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-sm">Mobile Traffic:</span>
-                  <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.mobilePercentage ? `${currentPublication.distributionChannels.website.metrics.mobilePercentage}%` : 'Not specified'}</p>
-                </div>
+              <div>
+                <span className="text-muted-foreground text-sm">CMS Platform</span>
+                <p className="font-medium">{currentPublication.distributionChannels?.website?.cmsplatform || 'Not specified'}</p>
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <span className="text-muted-foreground text-sm">Monthly Visitors</span>
+                <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.monthlyVisitors?.toLocaleString() || 'Not specified'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-sm">Monthly Page Views</span>
+                <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.monthlyPageViews?.toLocaleString() || 'Not specified'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-sm">Bounce Rate</span>
+                <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.bounceRate ? `${currentPublication.distributionChannels.website.metrics.bounceRate}%` : 'Not specified'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-sm">Mobile Traffic</span>
+                <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.mobilePercentage ? `${currentPublication.distributionChannels.website.metrics.mobilePercentage}%` : 'Not specified'}</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
 
           {/* Website Advertising Opportunities */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="w-5 h-5" />
-                    Advertising Opportunities
-                  </CardTitle>
-                  <CardDescription>
-                    Manage website advertising slots and specifications
-                  </CardDescription>
-                </div>
-                <Button onClick={addWebsiteOpportunity}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Ad Slot
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {currentPublication.distributionChannels?.website?.advertisingOpportunities?.map((opportunity, index) => (
-                  <Card key={index} className="p-4">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="font-semibold">{opportunity.name}</h4>
-                        <Badge variant="outline">{opportunity.adFormat}</Badge>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(opportunity, 'website', index)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => removeWebsiteOpportunity(index)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+                <Target className="w-5 h-5" />
+                Advertising Opportunities
+              </h3>
+              <Button onClick={addWebsiteOpportunity}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Ad Slot
+              </Button>
+            </div>
+            <div className="space-y-4">
+              {currentPublication.distributionChannels?.website?.advertisingOpportunities?.map((opportunity, index) => (
+                <Card key={index} className="p-4">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="font-semibold">{opportunity.name}</h4>
+                      <Badge variant="secondary">{opportunity.adFormat}</Badge>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Location:</span>
-                        <span className="ml-2 font-medium">{opportunity.location}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Size:</span>
-                        <span className="ml-2 font-medium">{opportunity.specifications?.size}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Price:</span>
-                        <span className="ml-2 font-medium">${opportunity.pricing?.flatRate}/month</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Impressions:</span>
-                        <span className="ml-2 font-medium">{opportunity.monthlyImpressions?.toLocaleString()}/month</span>
-                      </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(opportunity, 'website', index)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeWebsiteOpportunity(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                  </Card>
-                ))}
-                
-                {(!currentPublication.distributionChannels?.website?.advertisingOpportunities || 
-                  currentPublication.distributionChannels.website.advertisingOpportunities.length === 0) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Globe className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">No Website Ads</h3>
-                    <p className="mb-4">Create your first website advertising opportunity.</p>
-                    <Button onClick={addWebsiteOpportunity}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Website Ad
-                    </Button>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Location:</span>
+                      <span className="ml-2 font-medium">{opportunity.location}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Size:</span>
+                      <span className="ml-2 font-medium">{opportunity.specifications?.size}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Price:</span>
+                      <span className="ml-2 font-medium">${opportunity.pricing?.flatRate}/month</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Impressions:</span>
+                      <span className="ml-2 font-medium">{opportunity.monthlyImpressions?.toLocaleString()}/month</span>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              
+              {(!currentPublication.distributionChannels?.website?.advertisingOpportunities || 
+                currentPublication.distributionChannels.website.advertisingOpportunities.length === 0) && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Globe className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">No Website Ads</h3>
+                  <p className="mb-4">Create your first website advertising opportunity.</p>
+                  <Button onClick={addWebsiteOpportunity}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Website Ad
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
         {/* Podcasts */}
-        <TabsContent value="podcasts" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mic className="w-5 h-5" />
-                    Podcast Channels
-                  </CardTitle>
-                  <CardDescription>
-                    Manage podcast channels and advertising opportunities
-                  </CardDescription>
-                </div>
-                <Button onClick={() => addDistributionChannel('podcasts')}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Podcast
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {currentPublication.distributionChannels?.podcasts?.map((podcast, index) => (
+        <TabsContent value="podcasts" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+              <Mic className="w-5 h-5" />
+              Podcast Channels
+            </h3>
+            <Button onClick={() => addDistributionChannel('podcasts')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Podcast
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
+            {currentPublication.distributionChannels?.podcasts?.map((podcast, index) => (
                   <Card key={index} className="p-4">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h4 className="font-semibold">{podcast.name}</h4>
-                        <Badge variant="outline">{podcast.frequency}</Badge>
+                        <Badge variant="secondary">{podcast.frequency}</Badge>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -1310,47 +1298,37 @@ export const DashboardInventoryManager = () => {
                   </Card>
                 ))}
                 
-                {(!currentPublication.distributionChannels?.podcasts || 
-                  currentPublication.distributionChannels.podcasts.length === 0) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Mic className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">No Podcasts</h3>
-                    <p className="mb-4">Create your first podcast channel using the button above.</p>
-                  </div>
-                )}
+            {(!currentPublication.distributionChannels?.podcasts || 
+              currentPublication.distributionChannels.podcasts.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Mic className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Podcasts</h3>
+                <p className="mb-4">Create your first podcast channel using the button above.</p>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </TabsContent>
 
         {/* Radio Stations */}
-        <TabsContent value="radio" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Radio className="w-5 h-5" />
-                    Radio Stations
-                  </CardTitle>
-                  <CardDescription>
-                    Manage radio stations and advertising opportunities
-                  </CardDescription>
-                </div>
-                <Button onClick={() => addDistributionChannel('radio')}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Radio Station
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {currentPublication.distributionChannels?.radioStations?.map((station, index) => (
+        <TabsContent value="radio" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+              <Radio className="w-5 h-5" />
+              Radio Stations
+            </h3>
+            <Button onClick={() => addDistributionChannel('radio')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Radio Station
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
+            {currentPublication.distributionChannels?.radioStations?.map((station, index) => (
                   <Card key={index} className="p-4">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h4 className="font-semibold">{station.callSign}</h4>
-                        <Badge variant="outline">{station.frequency}</Badge>
+                        <Badge variant="secondary">{station.frequency}</Badge>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -1440,47 +1418,37 @@ export const DashboardInventoryManager = () => {
                   </Card>
                 ))}
                 
-                {(!currentPublication.distributionChannels?.radioStations || 
-                  currentPublication.distributionChannels.radioStations.length === 0) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Radio className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">No Radio Stations</h3>
-                    <p className="mb-4">Add your first radio station using the button above.</p>
-                  </div>
-                )}
+            {(!currentPublication.distributionChannels?.radioStations || 
+              currentPublication.distributionChannels.radioStations.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Radio className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Radio Stations</h3>
+                <p className="mb-4">Add your first radio station using the button above.</p>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </TabsContent>
 
         {/* Streaming Video */}
-        <TabsContent value="streaming" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Video className="w-5 h-5" />
-                    Streaming Channels
-                  </CardTitle>
-                  <CardDescription>
-                    Manage streaming video channels and advertising opportunities
-                  </CardDescription>
-                </div>
-                <Button onClick={() => addDistributionChannel('streaming')}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Streaming Channel
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {currentPublication.distributionChannels?.streamingVideo?.map((channel, index) => (
+        <TabsContent value="streaming" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+              <Video className="w-5 h-5" />
+              Streaming Channels
+            </h3>
+            <Button onClick={() => addDistributionChannel('streaming')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Streaming Channel
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
+            {currentPublication.distributionChannels?.streamingVideo?.map((channel, index) => (
                   <Card key={index} className="p-4">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h4 className="font-semibold">{channel.name}</h4>
-                        <Badge variant="outline">{channel.platform}</Badge>
+                        <Badge variant="secondary">{channel.platform}</Badge>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -1570,43 +1538,33 @@ export const DashboardInventoryManager = () => {
                   </Card>
                 ))}
                 
-                {(!currentPublication.distributionChannels?.streamingVideo || 
-                  currentPublication.distributionChannels.streamingVideo.length === 0) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">No Streaming Channels</h3>
-                    <p className="mb-4">Create your first streaming video channel using the button above.</p>
-                  </div>
-                )}
+            {(!currentPublication.distributionChannels?.streamingVideo || 
+              currentPublication.distributionChannels.streamingVideo.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Streaming Channels</h3>
+                <p className="mb-4">Create your first streaming video channel using the button above.</p>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </TabsContent>
 
         {/* Print Publications */}
-        <TabsContent value="print" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Printer className="w-5 h-5" />
-                    Print Publications
-                  </CardTitle>
-                  <CardDescription>
-                    Manage print publications and advertising opportunities
-                  </CardDescription>
-                </div>
-                <Button onClick={() => addDistributionChannel('print')}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Print Publication
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Convert single print object to array for consistent handling */}
-                {(() => {
+        <TabsContent value="print" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+              <Printer className="w-5 h-5" />
+              Print Publications
+            </h3>
+            <Button onClick={() => addDistributionChannel('print')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Print Publication
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Convert single print object to array for consistent handling */}
+            {(() => {
                   let printArray = [];
                   if (currentPublication.distributionChannels?.print) {
                     if (Array.isArray(currentPublication.distributionChannels.print)) {
@@ -1625,7 +1583,7 @@ export const DashboardInventoryManager = () => {
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <h4 className="font-semibold">{publication.name}</h4>
-                          <Badge variant="outline">{publication.frequency}</Badge>
+                          <Badge variant="secondary">{publication.frequency}</Badge>
                         </div>
                         <div className="flex gap-2">
                           <Button
@@ -1712,279 +1670,257 @@ export const DashboardInventoryManager = () => {
                   ));
                 })()}
                 
-                {!currentPublication.distributionChannels?.print && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Printer className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">No Print Publications</h3>
-                    <p className="mb-4">Add your first print publication using the button above.</p>
-                  </div>
-                )}
+            {!currentPublication.distributionChannels?.print && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Printer className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Print Publications</h3>
+                <p className="mb-4">Add your first print publication using the button above.</p>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </TabsContent>
 
         {/* Other tabs can be implemented similarly... */}
-        <TabsContent value="newsletters" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="w-5 h-5" />
-                    Newsletter Advertising
-                  </CardTitle>
-                  <CardDescription>
-                    Manage newsletter channels and advertising opportunities
-                  </CardDescription>
-                </div>
-                <Button onClick={addNewsletter}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Newsletter
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {currentPublication.distributionChannels?.newsletters?.map((newsletter, index) => (
-                  <Card key={index} className="p-4">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="font-semibold">{newsletter.name}</h4>
-                        <Badge variant="outline">{newsletter.frequency}</Badge>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addNewsletterOpportunity(index)}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add Ad
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(newsletter, 'newsletter-container', index)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => removeDistributionChannel('newsletters', index)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Subject:</span>
-                        <span className="ml-2 font-medium">{newsletter.subject}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Subscribers:</span>
-                        <span className="ml-2 font-medium">{newsletter.subscribers?.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Frequency:</span>
-                        <span className="ml-2 font-medium">{newsletter.frequency}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Ads:</span>
-                        <span className="ml-2 font-medium">{newsletter.advertisingOpportunities?.length || 0}</span>
-                      </div>
-                    </div>
-
-                    {/* Advertising Opportunities */}
-                    <div className="mt-4">
-                      <h5 className="font-medium text-sm mb-2">Advertising Opportunities</h5>
-                      {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 ? (
-                        <div className="space-y-2">
-                          {newsletter.advertisingOpportunities.map((ad, adIndex) => (
-                            <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                              <div className="flex-1">
-                                <span className="font-medium">{ad.name}</span>
-                                <span className="text-muted-foreground ml-2">
-                                  {ad.position} • {ad.dimensions} • {ad.pricing ? `$${ad.pricing.perSend || ad.pricing.flatRate || 'Custom'}` : 'Custom'}
-                                </span>
-                              </div>
-                              <div className="flex gap-1">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => openEditDialog(ad, 'newsletter', index, adIndex)}
-                                >
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                                  onClick={() => removeNewsletterOpportunity(index, adIndex)}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-                
-                {(!currentPublication.distributionChannels?.newsletters || 
-                  currentPublication.distributionChannels.newsletters.length === 0) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Mail className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">No Newsletters</h3>
-                    <p className="mb-4">Create your first newsletter.</p>
+        <TabsContent value="newsletters" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+              <Mail className="w-5 h-5" />
+              Newsletter Advertising
+            </h3>
+            <Button onClick={addNewsletter}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Newsletter
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
+            {currentPublication.distributionChannels?.newsletters?.map((newsletter, index) => (
+              <Card key={index} className="p-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h4 className="font-semibold">{newsletter.name}</h4>
+                    <Badge variant="secondary">{newsletter.frequency}</Badge>
                   </div>
-                )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addNewsletterOpportunity(index)}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Ad
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditDialog(newsletter, 'newsletter-container', index)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeDistributionChannel('newsletters', index)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Subject:</span>
+                    <span className="ml-2 font-medium">{newsletter.subject}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Subscribers:</span>
+                    <span className="ml-2 font-medium">{newsletter.subscribers?.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Frequency:</span>
+                    <span className="ml-2 font-medium">{newsletter.frequency}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Ads:</span>
+                    <span className="ml-2 font-medium">{newsletter.advertisingOpportunities?.length || 0}</span>
+                  </div>
+                </div>
+
+                {/* Advertising Opportunities */}
+                <div className="mt-4">
+                  <h5 className="font-medium text-sm mb-2">Advertising Opportunities</h5>
+                  {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 ? (
+                    <div className="space-y-2">
+                      {newsletter.advertisingOpportunities.map((ad, adIndex) => (
+                        <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                          <div className="flex-1">
+                            <span className="font-medium">{ad.name}</span>
+                            <span className="text-muted-foreground ml-2">
+                              {ad.position} • {ad.dimensions} • {ad.pricing ? `$${ad.pricing.perSend || ad.pricing.flatRate || 'Custom'}` : 'Custom'}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => openEditDialog(ad, 'newsletter', index, adIndex)}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              onClick={() => removeNewsletterOpportunity(index, adIndex)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                  )}
+                </div>
+              </Card>
+            ))}
+            
+            {(!currentPublication.distributionChannels?.newsletters || 
+              currentPublication.distributionChannels.newsletters.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Mail className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Newsletters</h3>
+                <p className="mb-4">Create your first newsletter.</p>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="social" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    Social Media Advertising
-                  </CardTitle>
-                  <CardDescription>
-                    Manage social media profiles and advertising opportunities
-                  </CardDescription>
-                </div>
-                <Button onClick={addSocialMediaProfile}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Profile
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {currentPublication.distributionChannels?.socialMedia?.map((profile, index) => (
-                  <Card key={index} className="p-4">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="font-semibold capitalize">{profile.platform}</h4>
-                        <Badge variant="outline">@{profile.handle}</Badge>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(profile, 'social-media-container', index)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => removeDistributionChannel('socialMedia', index)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Platform:</span>
-                        <span className="ml-2 font-medium capitalize">{profile.platform}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Followers:</span>
-                        <span className="ml-2 font-medium">{profile.metrics?.followers?.toLocaleString() || 'N/A'}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Verified:</span>
-                        <span className="ml-2 font-medium">{profile.verified ? 'Yes' : 'No'}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Ads:</span>
-                        <span className="ml-2 font-medium">{profile.advertisingOpportunities?.length || 0}</span>
-                      </div>
-                    </div>
-
-                    {/* Advertising Opportunities */}
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-sm">Advertising Opportunities</h5>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => addSocialMediaOpportunity(index)}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add Ad
-                        </Button>
-                      </div>
-                      
-                      {profile.advertisingOpportunities && profile.advertisingOpportunities.length > 0 ? (
-                        <div className="space-y-2">
-                          {profile.advertisingOpportunities.map((ad, adIndex) => (
-                            <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                              <div className="flex-1">
-                                <span className="font-medium">{ad.name}</span>
-                                <span className="text-muted-foreground ml-2">
-                                  {ad.adType} • {ad.duration} • {ad.pricing ? `$${ad.pricing.perPost || ad.pricing.flatRate || 'Custom'}` : 'Custom'}
-                                </span>
-                              </div>
-                              <div className="flex gap-1">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => openEditDialog(ad, 'social-media-ad', index, adIndex)}
-                                >
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                                  onClick={() => removeSocialMediaOpportunity(index, adIndex)}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-                
-                {(!currentPublication.distributionChannels?.socialMedia || 
-                  currentPublication.distributionChannels.socialMedia.length === 0) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">No Social Media</h3>
-                    <p className="mb-4">Add your first social media profile.</p>
+        <TabsContent value="social" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+              <Users className="w-5 h-5" />
+              Social Media Advertising
+            </h3>
+            <Button onClick={addSocialMediaProfile}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Profile
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
+            {currentPublication.distributionChannels?.socialMedia?.map((profile, index) => (
+              <Card key={index} className="p-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h4 className="font-semibold capitalize">{profile.platform}</h4>
+                    <Badge variant="secondary">@{profile.handle}</Badge>
                   </div>
-                )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditDialog(profile, 'social-media-container', index)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeDistributionChannel('socialMedia', index)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Platform:</span>
+                    <span className="ml-2 font-medium capitalize">{profile.platform}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Followers:</span>
+                    <span className="ml-2 font-medium">{profile.metrics?.followers?.toLocaleString() || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Verified:</span>
+                    <span className="ml-2 font-medium">{profile.verified ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Ads:</span>
+                    <span className="ml-2 font-medium">{profile.advertisingOpportunities?.length || 0}</span>
+                  </div>
+                </div>
+
+                {/* Advertising Opportunities */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => addSocialMediaOpportunity(index)}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Ad
+                    </Button>
+                  </div>
+                  
+                  {profile.advertisingOpportunities && profile.advertisingOpportunities.length > 0 ? (
+                    <div className="space-y-2">
+                      {profile.advertisingOpportunities.map((ad, adIndex) => (
+                        <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                          <div className="flex-1">
+                            <span className="font-medium">{ad.name}</span>
+                            <span className="text-muted-foreground ml-2">
+                              {ad.adType} • {ad.duration} • {ad.pricing ? `$${ad.pricing.perPost || ad.pricing.flatRate || 'Custom'}` : 'Custom'}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => openEditDialog(ad, 'social-media-ad', index, adIndex)}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              onClick={() => removeSocialMediaOpportunity(index, adIndex)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                  )}
+                </div>
+              </Card>
+            ))}
+            
+            {(!currentPublication.distributionChannels?.socialMedia || 
+              currentPublication.distributionChannels.socialMedia.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Social Media</h3>
+                <p className="mb-4">Add your first social media profile.</p>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
       {/* Edit Dialog */}
       <Dialog open={editingItem !== null} onOpenChange={(open) => !open && closeEditDialog()}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="w-auto max-w-max max-h-[90vh] flex flex-col overflow-x-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               Edit {editingType === 'website' ? 'Website' : 
                    editingType === 'newsletter' ? 'Newsletter' :
@@ -2010,7 +1946,7 @@ export const DashboardInventoryManager = () => {
           </DialogHeader>
           
           {editingItem && (
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto overflow-x-hidden flex-1 pr-2">
               
               {/* Website Ad Fields */}
               {editingType === 'website' && (
@@ -2063,34 +1999,37 @@ export const DashboardInventoryManager = () => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="flatRate">Flat Rate ($/month)</Label>
-                      <Input
-                        id="flatRate"
-                        type="number"
-                        value={editingItem.pricing?.flatRate || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            flatRate: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                        placeholder="100"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="monthlyImpressions">Monthly Impressions</Label>
-                      <Input
-                        id="monthlyImpressions"
-                        type="number"
-                        value={editingItem.monthlyImpressions || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, monthlyImpressions: parseInt(e.target.value) || 0 })}
-                        placeholder="10000"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="monthlyImpressions">Monthly Impressions</Label>
+                    <Input
+                      id="monthlyImpressions"
+                      type="number"
+                      value={editingItem.monthlyImpressions || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, monthlyImpressions: parseInt(e.target.value) || 0 })}
+                      placeholder="10000"
+                    />
                   </div>
+
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'flatRate', label: 'Flat Rate', placeholder: '100' },
+                      { key: 'cpm', label: 'CPM', placeholder: '5' }
+                    ]}
+                    pricingModels={[
+                      { value: 'flat', label: '/month' },
+                      { value: 'cpm', label: '/1000 impressions' },
+                      { value: 'cpc', label: '/click' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
                 </>
               )}
 
@@ -2118,33 +2057,35 @@ export const DashboardInventoryManager = () => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="dimensions">Dimensions</Label>
-                      <Input
-                        id="dimensions"
-                        value={editingItem.dimensions || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, dimensions: e.target.value })}
-                        placeholder="600x200, 300x250"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="perSend">Per Send ($)</Label>
-                      <Input
-                        id="perSend"
-                        type="number"
-                        value={editingItem.pricing?.perSend || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            perSend: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                        placeholder="50"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="dimensions">Dimensions</Label>
+                    <Input
+                      id="dimensions"
+                      value={editingItem.dimensions || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, dimensions: e.target.value })}
+                      placeholder="600x200, 300x250"
+                    />
                   </div>
+
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'perSend', label: 'Per Send', placeholder: '50' },
+                      { key: 'monthly', label: 'Monthly Rate', placeholder: '200' }
+                    ]}
+                    pricingModels={[
+                      { value: 'per_send', label: '/send' },
+                      { value: 'monthly', label: '/month' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
                 </>
               )}
 
@@ -2220,78 +2161,28 @@ export const DashboardInventoryManager = () => {
                       placeholder="Front page, Back page, Inside front cover"
                     />
                   </div>
-                  
-                  <div className="space-y-3">
-                    <Label className="text-base font-semibold">Pricing</Label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="oneTime">One Time ($)</Label>
-                        <Input
-                          id="oneTime"
-                          type="number"
-                          value={editingItem.pricing?.oneTime || ''}
-                          onChange={(e) => setEditingItem({ 
-                            ...editingItem, 
-                            pricing: { 
-                              ...editingItem.pricing, 
-                              oneTime: parseFloat(e.target.value) || 0 
-                            } 
-                          })}
-                          placeholder="500"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="fourTimes">4 Times ($)</Label>
-                        <Input
-                          id="fourTimes"
-                          type="number"
-                          value={editingItem.pricing?.fourTimes || ''}
-                          onChange={(e) => setEditingItem({ 
-                            ...editingItem, 
-                            pricing: { 
-                              ...editingItem.pricing, 
-                              fourTimes: parseFloat(e.target.value) || 0 
-                            } 
-                          })}
-                          placeholder="450"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="twelveTimes">12 Times ($)</Label>
-                        <Input
-                          id="twelveTimes"
-                          type="number"
-                          value={editingItem.pricing?.twelveTimes || ''}
-                          onChange={(e) => setEditingItem({ 
-                            ...editingItem, 
-                            pricing: { 
-                              ...editingItem.pricing, 
-                              twelveTimes: parseFloat(e.target.value) || 0 
-                            } 
-                          })}
-                          placeholder="400"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="openRate">Open Rate ($)</Label>
-                        <Input
-                          id="openRate"
-                          type="number"
-                          value={editingItem.pricing?.openRate || ''}
-                          onChange={(e) => setEditingItem({ 
-                            ...editingItem, 
-                            pricing: { 
-                              ...editingItem.pricing, 
-                              openRate: parseFloat(e.target.value) || 0 
-                            } 
-                          })}
-                          placeholder="550"
-                        />
-                      </div>
-                    </div>
-                  </div>
+
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'oneTime', label: 'One Time', placeholder: '500' },
+                      { key: 'fourTimes', label: '4 Times', placeholder: '450' },
+                      { key: 'twelveTimes', label: '12 Times', placeholder: '400' },
+                      { key: 'openRate', label: 'Open Rate', placeholder: '550' }
+                    ]}
+                    pricingModels={[
+                      { value: 'one_time', label: '/issue' },
+                      { value: 'package', label: '/package' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
                   
                   <div className="space-y-3">
                     <Label className="text-base font-semibold">Specifications</Label>
@@ -2370,35 +2261,36 @@ export const DashboardInventoryManager = () => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="duration">Duration (seconds)</Label>
-                      <Input
-                        id="duration"
-                        type="number"
-                        value={editingItem.duration || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || 30 })}
-                        placeholder="30"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="perEpisode">Per Episode ($)</Label>
-                      <Input
-                        id="perEpisode"
-                        type="number"
-                        value={editingItem.pricing?.perEpisode || editingItem.pricing?.flatRate || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            perEpisode: parseFloat(e.target.value) || 0,
-                            flatRate: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                        placeholder="100"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="duration">Duration (seconds)</Label>
+                    <Input
+                      id="duration"
+                      type="number"
+                      value={editingItem.duration || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || 30 })}
+                      placeholder="30"
+                    />
                   </div>
+
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'flatRate', label: 'Per Episode', placeholder: '100' },
+                      { key: 'cpm', label: 'CPM', placeholder: '25' }
+                    ]}
+                    pricingModels={[
+                      { value: 'flat', label: '/episode' },
+                      { value: 'cpm', label: '/1000 downloads' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
                 </>
               )}
 
@@ -2426,34 +2318,37 @@ export const DashboardInventoryManager = () => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="duration">Duration</Label>
-                      <Input
-                        id="duration"
-                        value={editingItem.duration || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, duration: e.target.value })}
-                        placeholder="30 seconds, 60 seconds"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="per30Second">Per 30-Second ($)</Label>
-                      <Input
-                        id="per30Second"
-                        type="number"
-                        value={editingItem.pricing?.per30Second || editingItem.pricing?.flatRate || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            per30Second: parseFloat(e.target.value) || 0,
-                            flatRate: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                        placeholder="150"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="duration">Duration</Label>
+                    <Input
+                      id="duration"
+                      value={editingItem.duration || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, duration: e.target.value })}
+                      placeholder="30 seconds, 60 seconds"
+                    />
                   </div>
+
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'perSpot', label: 'Per Spot', placeholder: '150' },
+                      { key: 'weekly', label: 'Weekly', placeholder: '500' },
+                      { key: 'monthly', label: 'Monthly', placeholder: '1800' }
+                    ]}
+                    pricingModels={[
+                      { value: 'per_spot', label: '/spot' },
+                      { value: 'weekly', label: '/week' },
+                      { value: 'monthly', label: '/month' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
                 </>
               )}
 
@@ -2481,35 +2376,36 @@ export const DashboardInventoryManager = () => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="duration">Duration (seconds)</Label>
-                      <Input
-                        id="duration"
-                        type="number"
-                        value={editingItem.duration || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || 15 })}
-                        placeholder="15"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="perThousandViews">Per 1000 Views ($)</Label>
-                      <Input
-                        id="perThousandViews"
-                        type="number"
-                        value={editingItem.pricing?.perThousandViews || editingItem.pricing?.flatRate || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            perThousandViews: parseFloat(e.target.value) || 0,
-                            flatRate: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                        placeholder="15"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="duration">Duration (seconds)</Label>
+                    <Input
+                      id="duration"
+                      type="number"
+                      value={editingItem.duration || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || 15 })}
+                      placeholder="15"
+                    />
                   </div>
+
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'cpm', label: 'CPM', placeholder: '15' },
+                      { key: 'flatRate', label: 'Flat Rate', placeholder: '100' }
+                    ]}
+                    pricingModels={[
+                      { value: 'cpm', label: '/1000 views' },
+                      { value: 'flat', label: '/video' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
                 </>
               )}
 
@@ -2537,34 +2433,37 @@ export const DashboardInventoryManager = () => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="duration">Duration</Label>
-                      <Input
-                        id="duration"
-                        value={editingItem.duration || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, duration: e.target.value })}
-                        placeholder="24h, 1 week"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="perPost">Per Post ($)</Label>
-                      <Input
-                        id="perPost"
-                        type="number"
-                        value={editingItem.pricing?.perPost || editingItem.pricing?.flatRate || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            perPost: parseFloat(e.target.value) || 0,
-                            flatRate: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                        placeholder="100"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="duration">Duration</Label>
+                    <Input
+                      id="duration"
+                      value={editingItem.duration || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, duration: e.target.value })}
+                      placeholder="24h, 1 week"
+                    />
                   </div>
+
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'perPost', label: 'Per Post', placeholder: '100' },
+                      { key: 'perStory', label: 'Per Story', placeholder: '75' },
+                      { key: 'monthly', label: 'Monthly', placeholder: '500' }
+                    ]}
+                    pricingModels={[
+                      { value: 'per_post', label: '/post' },
+                      { value: 'per_story', label: '/story' },
+                      { value: 'monthly', label: '/month' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
                 </>
               )}
 
@@ -3112,15 +3011,17 @@ export const DashboardInventoryManager = () => {
                   </div>
                 </div>
               )}
-              
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={closeEditDialog}>
-                  Cancel
-                </Button>
-                <Button onClick={saveEditedItem}>
-                  Save Changes
-                </Button>
-              </div>
+            </div>
+          )}
+          
+          {editingItem && (
+            <div className="flex justify-end space-x-2 pt-4 border-t flex-shrink-0">
+              <Button variant="outline" onClick={closeEditDialog}>
+                Cancel
+              </Button>
+              <Button onClick={saveEditedItem}>
+                Save Changes
+              </Button>
             </div>
           )}
         </DialogContent>

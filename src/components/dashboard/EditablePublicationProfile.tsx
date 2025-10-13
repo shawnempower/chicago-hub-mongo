@@ -149,8 +149,7 @@ export const EditablePublicationProfile: React.FC<EditablePublicationProfileProp
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Edit Publication Profile</h2>
-          <p className="text-muted-foreground">Update information for {selectedPublication.basicInfo.publicationName}</p>
+          <p className="text-muted-foreground font-serif">Edit Publication Information</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onCancel}>
@@ -168,7 +167,7 @@ export const EditablePublicationProfile: React.FC<EditablePublicationProfileProp
         {/* Basic Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Building2 className="h-5 w-5" />
               Basic Information
             </CardTitle>
@@ -292,7 +291,7 @@ export const EditablePublicationProfile: React.FC<EditablePublicationProfileProp
         {/* Contact Information */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Phone className="h-5 w-5" />
               Contact Information
             </CardTitle>
@@ -445,7 +444,7 @@ export const EditablePublicationProfile: React.FC<EditablePublicationProfileProp
         {/* Audience Demographics */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Users className="h-5 w-5" />
               Audience Demographics
             </CardTitle>

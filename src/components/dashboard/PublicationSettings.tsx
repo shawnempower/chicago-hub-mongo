@@ -90,9 +90,8 @@ export const PublicationSettings: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Publication Settings</h2>
-          <p className="text-muted-foreground">
-            Configure settings for {selectedPublication.basicInfo.publicationName}
+          <p className="text-muted-foreground font-serif">
+            Publication Settings
           </p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
@@ -105,7 +104,7 @@ export const PublicationSettings: React.FC = () => {
         {/* Visibility Settings */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Eye className="h-5 w-5" />
               Visibility & Privacy
             </CardTitle>
@@ -158,7 +157,7 @@ export const PublicationSettings: React.FC = () => {
         {/* Notification Settings */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Bell className="h-5 w-5" />
               Notifications
             </CardTitle>
@@ -225,7 +224,7 @@ export const PublicationSettings: React.FC = () => {
         {/* Advertising Settings */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Shield className="h-5 w-5" />
               Advertising Policies
             </CardTitle>
@@ -293,7 +292,7 @@ export const PublicationSettings: React.FC = () => {
         {/* Branding Settings */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Palette className="h-5 w-5" />
               Branding & Appearance
             </CardTitle>
@@ -366,7 +365,7 @@ export const PublicationSettings: React.FC = () => {
       {/* Danger Zone */}
       <Card className="border-destructive">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
+          <CardTitle className="flex items-center gap-2 text-destructive font-sans text-base">
             <AlertTriangle className="h-5 w-5" />
             Danger Zone
           </CardTitle>

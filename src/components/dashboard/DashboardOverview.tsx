@@ -116,44 +116,12 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold">{publication.basicInfo.publicationName}</h2>
-          <div className="text-muted-foreground flex items-center gap-2">
-            <Badge variant="outline">{publication.basicInfo.publicationType}</Badge>
-            <span>•</span>
-            <span>{publication.basicInfo.geographicCoverage} coverage</span>
-            {publication.basicInfo.primaryServiceArea && (
-              <>
-                <span>•</span>
-                <span>{publication.basicInfo.primaryServiceArea}</span>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link to="/dashboard?tab=profile">
-              <Eye className="w-4 h-4 mr-2" />
-              View Profile
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/dashboard?tab=summary">
-              <Printer className="w-4 h-4 mr-2" />
-              Full Summary
-            </Link>
-          </Button>
-        </div>
-      </div>
-
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
                 {stat.title}
               </CardTitle>
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
@@ -175,7 +143,7 @@ export function DashboardOverview() {
         {/* Quick Actions */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Package className="h-5 w-5" />
               Quick Actions
             </CardTitle>
@@ -201,7 +169,7 @@ export function DashboardOverview() {
         {/* Recent Activity */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <MessageCircle className="h-5 w-5" />
               Recent Activity
             </CardTitle>

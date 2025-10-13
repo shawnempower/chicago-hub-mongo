@@ -20,6 +20,7 @@ import {
 import { usePublications } from '@/hooks/usePublications';
 import { PublicationFrontend } from '@/types/publication';
 import { getPublicationById } from '@/api/publications';
+import { HubPricingEditor, HubPrice } from '../dashboard/HubPricingEditor';
 
 export const PublicationInventoryManager = () => {
   const [selectedPublicationId, setSelectedPublicationId] = useState<string>('');
@@ -102,6 +103,25 @@ export const PublicationInventoryManager = () => {
     // For container types, we don't need editingIndex since we're editing the container itself
     const isContainerType = editingType?.includes('-container');
     if (!isContainerType && editingIndex < 0) return;
+
+    // Clean up hub pricing - remove any invalid entries
+    if (editingItem.hubPricing && Array.isArray(editingItem.hubPricing)) {
+      editingItem.hubPricing = editingItem.hubPricing.filter((hp: any) => {
+        // Must have a hubId and hubName
+        if (!hp.hubId || !hp.hubName) return false;
+        // Must have some pricing data
+        if (!hp.pricing || typeof hp.pricing !== 'object') return false;
+        return true;
+      });
+    }
+
+    console.log('💾 Saving edited item:', {
+      editingType,
+      editingIndex,
+      editingSubIndex,
+      hasHubPricing: editingItem.hubPricing?.length > 0,
+      hubPricingCount: editingItem.hubPricing?.length || 0
+    });
 
     try {
       let updatedPublication = { ...currentPublication };
@@ -943,7 +963,7 @@ export const PublicationInventoryManager = () => {
       </div>
 
       {/* Inventory Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="shadow-sm rounded-lg">
         <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="website" className="flex items-center gap-1 text-sm">
             <Globe className="w-3 h-3" />
@@ -986,14 +1006,7 @@ export const PublicationInventoryManager = () => {
         {/* Website Advertising */}
         <TabsContent value="website" className="space-y-4">
           <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold">Website Channel</h3>
-              {currentPublication.distributionChannels?.website && (
-                <p className="text-sm text-muted-foreground">
-                  {currentPublication.distributionChannels.website.url} • {currentPublication.distributionChannels.website.metrics?.monthlyVisitors?.toLocaleString()} monthly visitors
-                </p>
-              )}
-            </div>
+            <h3 className="font-sans font-semibold" style={{ fontSize: '1.0rem' }}>Website Channel</h3>
             <div className="flex gap-2">
               {currentPublication.distributionChannels?.website && (
                 <Button 
@@ -1090,7 +1103,7 @@ export const PublicationInventoryManager = () => {
         {/* Newsletter Advertising */}
         <TabsContent value="newsletter" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Newsletters</h3>
+            <h3 className="font-sans font-semibold" style={{ fontSize: '1.0rem' }}>Newsletters</h3>
             <Button onClick={addNewsletter}>
               <Plus className="w-4 h-4 mr-2" />
               Add Newsletter
@@ -1105,7 +1118,7 @@ export const PublicationInventoryManager = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="text-lg font-semibold">{newsletter.name || 'Unnamed Newsletter'}</h4>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {newsletter.frequency || 'Not Set'}
                         </Badge>
                       </div>
@@ -1242,7 +1255,7 @@ export const PublicationInventoryManager = () => {
         {/* Cross-Channel Packages */}
         <TabsContent value="packages" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Cross-Channel Packages</h3>
+            <h3 className="font-sans font-semibold" style={{ fontSize: '1.0rem' }}>Cross-Channel Packages</h3>
             <Button onClick={addCrossChannelPackage}>
               <Plus className="w-4 h-4 mr-2" />
               Add Package
@@ -1262,7 +1275,7 @@ export const PublicationInventoryManager = () => {
                             {pkg.savings}% savings
                           </Badge>
                         )}
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {pkg.duration}
                         </Badge>
                       </div>
@@ -1335,7 +1348,7 @@ export const PublicationInventoryManager = () => {
         {/* Print Publications */}
         <TabsContent value="print" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Print Publications</h3>
+            <h3 className="font-sans font-semibold" style={{ fontSize: '1.0rem' }}>Print Publications</h3>
             <Button onClick={() => addDistributionChannel('print')}>
               <Plus className="w-4 h-4 mr-2" />
               Add Print Publication
@@ -1355,7 +1368,7 @@ export const PublicationInventoryManager = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="text-lg font-semibold">{printPub.name || 'Unnamed Publication'}</h4>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {printPub.frequency || 'Not Set'}
                         </Badge>
                       </div>
@@ -1494,7 +1507,7 @@ export const PublicationInventoryManager = () => {
         {/* Event Sponsorships */}
         <TabsContent value="events" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Event Sponsorships</h3>
+            <h3 className="font-sans font-semibold" style={{ fontSize: '1.0rem' }}>Event Sponsorships</h3>
             <Button onClick={addEvent}>
               <Plus className="w-4 h-4 mr-2" />
               Add Event
@@ -1628,7 +1641,7 @@ export const PublicationInventoryManager = () => {
         {/* Social Media Management */}
         <TabsContent value="social" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Social Media Profiles</h3>
+            <h3 className="font-sans font-semibold" style={{ fontSize: '1.0rem' }}>Social Media Profiles</h3>
             <Button onClick={addSocialMediaProfile}>
               <Plus className="w-4 h-4 mr-2" />
               Add Profile
@@ -1648,7 +1661,7 @@ export const PublicationInventoryManager = () => {
                             Verified
                           </Badge>
                         )}
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           @{profile.handle}
                         </Badge>
                       </div>
@@ -1784,7 +1797,7 @@ export const PublicationInventoryManager = () => {
         {/* Podcasts Management */}
         <TabsContent value="podcasts" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Podcast Channels</h3>
+            <h3 className="font-sans font-semibold" style={{ fontSize: '1.0rem' }}>Podcast Channels</h3>
             <Button onClick={() => addDistributionChannel('podcasts')}>
               <Plus className="w-4 h-4 mr-2" />
               Add Podcast
@@ -1799,7 +1812,7 @@ export const PublicationInventoryManager = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="text-lg font-semibold">{podcast.name || 'Unnamed Podcast'}</h4>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {podcast.frequency || 'Not Set'}
                         </Badge>
                       </div>
@@ -1927,7 +1940,7 @@ export const PublicationInventoryManager = () => {
         {/* Radio Management */}
         <TabsContent value="radio" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Radio Stations</h3>
+            <h3 className="font-sans font-semibold" style={{ fontSize: '1.0rem' }}>Radio Stations</h3>
             <Button onClick={() => addDistributionChannel('radio')}>
               <Plus className="w-4 h-4 mr-2" />
               Add Radio Station
@@ -1942,7 +1955,7 @@ export const PublicationInventoryManager = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="text-lg font-semibold">{station.callSign || 'Unnamed Station'}</h4>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {station.frequency || 'Not Set'}
                         </Badge>
                       </div>
@@ -2070,7 +2083,7 @@ export const PublicationInventoryManager = () => {
         {/* Streaming Video Management */}
         <TabsContent value="streaming" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Streaming Video Channels</h3>
+            <h3 className="font-sans font-semibold" style={{ fontSize: '1.0rem' }}>Streaming Video Channels</h3>
             <Button onClick={() => addDistributionChannel('streaming')}>
               <Plus className="w-4 h-4 mr-2" />
               Add Streaming Channel
@@ -2085,7 +2098,7 @@ export const PublicationInventoryManager = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="text-lg font-semibold">{channel.name || 'Unnamed Channel'}</h4>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {channel.platform || 'Not Set'}
                         </Badge>
                       </div>
@@ -2213,8 +2226,8 @@ export const PublicationInventoryManager = () => {
 
       {/* Edit Dialog */}
       <Dialog open={editingItem !== null} onOpenChange={(open) => !open && closeEditDialog()}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               Edit {editingType === 'website' ? 'Website' : 
                    editingType === 'newsletter' ? 'Newsletter' :
@@ -2252,7 +2265,7 @@ export const PublicationInventoryManager = () => {
           </DialogHeader>
 
           {editingItem && (
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto flex-1 pr-2">
               
               {/* Newsletter Container Fields */}
               {editingType === 'newsletter-container' && (
@@ -3519,99 +3532,194 @@ export const PublicationInventoryManager = () => {
                   />
                 </div>
               )}
+                </>
+              )}
 
               {/* Pricing Section */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Pricing</Label>
-                
                 {editingType === 'website' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="flatRate">Flat Rate ($)</Label>
-                      <Input
-                        id="flatRate"
-                        type="number"
-                        value={editingItem.pricing?.flatRate || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            flatRate: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cpm">CPM ($)</Label>
-                      <Input
-                        id="cpm"
-                        type="number"
-                        value={editingItem.pricing?.cpm || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            cpm: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                      />
-                    </div>
-                  </div>
+                <HubPricingEditor
+                  defaultPricing={editingItem.pricing || {}}
+                  hubPricing={editingItem.hubPricing || []}
+                  pricingFields={[
+                    { key: 'flatRate', label: 'Flat Rate', placeholder: '100' },
+                    { key: 'cpm', label: 'CPM', placeholder: '5' }
+                  ]}
+                  pricingModels={[
+                    { value: 'flat', label: '/month' },
+                    { value: 'cpm', label: '/1000 impressions' },
+                    { value: 'cpc', label: '/click' },
+                    { value: 'contact', label: 'Contact for pricing' }
+                  ]}
+                  onDefaultPricingChange={(pricing) => 
+                    setEditingItem({ ...editingItem, pricing })
+                  }
+                  onHubPricingChange={(hubPricing) => 
+                    setEditingItem({ ...editingItem, hubPricing })
+                  }
+                />
                 )}
 
                 {editingType === 'newsletter' && (
-                  <div>
-                    <Label htmlFor="perSend">Per Send ($)</Label>
-                    <Input
-                      id="perSend"
-                      type="number"
-                      value={editingItem.pricing?.perSend || ''}
-                      onChange={(e) => setEditingItem({ 
-                        ...editingItem, 
-                        pricing: { 
-                          ...editingItem.pricing, 
-                          perSend: parseFloat(e.target.value) || 0 
-                        } 
-                      })}
-                    />
-                  </div>
+                <HubPricingEditor
+                  defaultPricing={editingItem.pricing || {}}
+                  hubPricing={editingItem.hubPricing || []}
+                  pricingFields={[
+                    { key: 'perSend', label: 'Per Send', placeholder: '50' },
+                    { key: 'monthly', label: 'Monthly Rate', placeholder: '200' }
+                  ]}
+                  pricingModels={[
+                    { value: 'per_send', label: '/send' },
+                    { value: 'monthly', label: '/month' },
+                    { value: 'contact', label: 'Contact for pricing' }
+                  ]}
+                  onDefaultPricingChange={(pricing) => 
+                    setEditingItem({ ...editingItem, pricing })
+                  }
+                  onHubPricingChange={(hubPricing) => 
+                    setEditingItem({ ...editingItem, hubPricing })
+                  }
+                />
                 )}
 
                 {editingType === 'print' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="oneTime">One Time ($)</Label>
-                      <Input
-                        id="oneTime"
-                        type="number"
-                        value={editingItem.pricing?.oneTime || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            oneTime: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="fourTimes">4 Times ($)</Label>
-                      <Input
-                        id="fourTimes"
-                        type="number"
-                        value={editingItem.pricing?.fourTimes || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            fourTimes: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+                <HubPricingEditor
+                  defaultPricing={editingItem.pricing || {}}
+                  hubPricing={editingItem.hubPricing || []}
+                  pricingFields={[
+                    { key: 'oneTime', label: 'One Time', placeholder: '500' },
+                    { key: 'fourTimes', label: '4 Times', placeholder: '450' },
+                    { key: 'twelveTimes', label: '12 Times', placeholder: '400' },
+                    { key: 'openRate', label: 'Open Rate', placeholder: '550' }
+                  ]}
+                  pricingModels={[
+                    { value: 'one_time', label: '/issue' },
+                    { value: 'package', label: '/package' },
+                    { value: 'contact', label: 'Contact for pricing' }
+                  ]}
+                  onDefaultPricingChange={(pricing) => 
+                    setEditingItem({ ...editingItem, pricing })
+                  }
+                  onHubPricingChange={(hubPricing) => 
+                    setEditingItem({ ...editingItem, hubPricing })
+                  }
+                />
+              )}
+
+              {editingType === 'podcast-ad' && (
+                <HubPricingEditor
+                  defaultPricing={editingItem.pricing || {}}
+                  hubPricing={editingItem.hubPricing || []}
+                  pricingFields={[
+                    { key: 'flatRate', label: 'Per Episode', placeholder: '100' },
+                    { key: 'cpm', label: 'CPM', placeholder: '25' }
+                  ]}
+                  pricingModels={[
+                    { value: 'flat', label: '/episode' },
+                    { value: 'cpm', label: '/1000 downloads' },
+                    { value: 'contact', label: 'Contact for pricing' }
+                  ]}
+                  onDefaultPricingChange={(pricing) => 
+                    setEditingItem({ ...editingItem, pricing })
+                  }
+                  onHubPricingChange={(hubPricing) => 
+                    setEditingItem({ ...editingItem, hubPricing })
+                  }
+                />
+              )}
+
+              {editingType === 'radio-ad' && (
+                <HubPricingEditor
+                  defaultPricing={editingItem.pricing || {}}
+                  hubPricing={editingItem.hubPricing || []}
+                  pricingFields={[
+                    { key: 'perSpot', label: 'Per Spot', placeholder: '150' },
+                    { key: 'weekly', label: 'Weekly', placeholder: '500' },
+                    { key: 'monthly', label: 'Monthly', placeholder: '1800' }
+                  ]}
+                  pricingModels={[
+                    { value: 'per_spot', label: '/spot' },
+                    { value: 'weekly', label: '/week' },
+                    { value: 'monthly', label: '/month' },
+                    { value: 'contact', label: 'Contact for pricing' }
+                  ]}
+                  onDefaultPricingChange={(pricing) => 
+                    setEditingItem({ ...editingItem, pricing })
+                  }
+                  onHubPricingChange={(hubPricing) => 
+                    setEditingItem({ ...editingItem, hubPricing })
+                  }
+                />
+              )}
+
+              {editingType === 'streaming-ad' && (
+                <HubPricingEditor
+                  defaultPricing={editingItem.pricing || {}}
+                  hubPricing={editingItem.hubPricing || []}
+                  pricingFields={[
+                    { key: 'cpm', label: 'CPM', placeholder: '15' },
+                    { key: 'flatRate', label: 'Flat Rate', placeholder: '100' }
+                  ]}
+                  pricingModels={[
+                    { value: 'cpm', label: '/1000 views' },
+                    { value: 'flat', label: '/video' },
+                    { value: 'contact', label: 'Contact for pricing' }
+                  ]}
+                  onDefaultPricingChange={(pricing) => 
+                    setEditingItem({ ...editingItem, pricing })
+                  }
+                  onHubPricingChange={(hubPricing) => 
+                    setEditingItem({ ...editingItem, hubPricing })
+                  }
+                />
+              )}
+
+              {editingType === 'social-media-ad' && (
+                <HubPricingEditor
+                  defaultPricing={editingItem.pricing || {}}
+                  hubPricing={editingItem.hubPricing || []}
+                  pricingFields={[
+                    { key: 'perPost', label: 'Per Post', placeholder: '100' },
+                    { key: 'perStory', label: 'Per Story', placeholder: '75' },
+                    { key: 'monthly', label: 'Monthly', placeholder: '500' }
+                  ]}
+                  pricingModels={[
+                    { value: 'per_post', label: '/post' },
+                    { value: 'per_story', label: '/story' },
+                    { value: 'monthly', label: '/month' },
+                    { value: 'contact', label: 'Contact for pricing' }
+                  ]}
+                  onDefaultPricingChange={(pricing) => 
+                    setEditingItem({ ...editingItem, pricing })
+                  }
+                  onHubPricingChange={(hubPricing) => 
+                    setEditingItem({ ...editingItem, hubPricing })
+                  }
+                />
+              )}
+
+              {editingType === 'print-ad' && (
+                <HubPricingEditor
+                  defaultPricing={editingItem.pricing || {}}
+                  hubPricing={editingItem.hubPricing || []}
+                  pricingFields={[
+                    { key: 'oneTime', label: 'One Time', placeholder: '500' },
+                    { key: 'fourTimes', label: '4 Times', placeholder: '450' },
+                    { key: 'twelveTimes', label: '12 Times', placeholder: '400' },
+                    { key: 'openRate', label: 'Open Rate', placeholder: '550' }
+                  ]}
+                  pricingModels={[
+                    { value: 'one_time', label: '/issue' },
+                    { value: 'package', label: '/package' },
+                    { value: 'contact', label: 'Contact for pricing' }
+                  ]}
+                  onDefaultPricingChange={(pricing) => 
+                    setEditingItem({ ...editingItem, pricing })
+                  }
+                  onHubPricingChange={(hubPricing) => 
+                    setEditingItem({ ...editingItem, hubPricing })
+                  }
+                />
+              )}
 
               {/* Monthly Impressions */}
               {(editingType === 'website') && (
@@ -3725,19 +3833,24 @@ export const PublicationInventoryManager = () => {
                     />
                   </div>
                   
-                  <div>
-                    <Label htmlFor="pricing">Pricing ($)</Label>
-                    <Input
-                      id="pricing"
-                      type="number"
-                      value={editingItem.pricing || ''}
-                      onChange={(e) => setEditingItem({ 
-                        ...editingItem, 
-                        pricing: parseFloat(e.target.value) || 0 
-                      })}
-                      placeholder="250"
-                    />
-                  </div>
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'sponsorshipFee', label: 'Sponsorship Fee', placeholder: '2500' }
+                    ]}
+                    pricingModels={[
+                      { value: 'one_time', label: '/event' },
+                      { value: 'annual', label: '/year' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
                 </>
               )}
 
@@ -3755,12 +3868,10 @@ export const PublicationInventoryManager = () => {
                   <Label htmlFor="available">Available</Label>
                 </div>
               )}
-                </>
-              )}
             </div>
           )}
 
-          <div className="flex justify-end gap-2 mt-6">
+          <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
             <Button variant="outline" onClick={closeEditDialog}>
               Cancel
             </Button>

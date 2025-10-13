@@ -11,11 +11,23 @@ import { PublicationKnowledgeBase } from "@/components/dashboard/PublicationKnow
 import { PublicationSettings } from "@/components/dashboard/PublicationSettings";
 import { PublicationStorefront } from "@/components/dashboard/PublicationStorefront";
 import { PublicationFullSummary } from "@/components/dashboard/PublicationFullSummary";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/CustomAuthContext";
-import { Navigate, useSearchParams, useNavigate } from "react-router-dom";
+import { Navigate, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { PublicationProvider, usePublication } from "@/contexts/PublicationContext";
 import { PublicationSelector } from "@/components/PublicationSelector";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { 
+  LayoutDashboard, 
+  User, 
+  Package, 
+  BookOpen, 
+  Settings, 
+  Store, 
+  FileText,
+  Eye,
+  Printer
+} from "lucide-react";
 
 // Internal Dashboard Component (wrapped by PublicationProvider)
 function DashboardContent() {
@@ -46,6 +58,37 @@ function DashboardContent() {
     navigate(`/dashboard?tab=${value}`);
   };
 
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'inventory', label: 'Inventory', icon: Package },
+    { id: 'knowledgebase', label: 'Knowledge Base', icon: BookOpen },
+    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'storefront', label: 'Storefront', icon: Store },
+    { id: 'summary', label: 'Summary', icon: FileText },
+  ];
+
+  const renderContent = () => {
+    switch (currentTab) {
+      case 'dashboard':
+        return <DashboardOverview />;
+      case 'profile':
+        return <PublicationProfile />;
+      case 'inventory':
+        return <DashboardInventoryManager />;
+      case 'knowledgebase':
+        return <PublicationKnowledgeBase />;
+      case 'settings':
+        return <PublicationSettings />;
+      case 'storefront':
+        return <PublicationStorefront />;
+      case 'summary':
+        return <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />;
+      default:
+        return <DashboardOverview />;
+    }
+  };
+
   if (authLoading || publicationLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -66,52 +109,67 @@ function DashboardContent() {
       <Header onAssistantClick={handleAssistantClick} onSurveyClick={() => setIsSurveyOpen(true)} />
       
       <main className="container mx-auto px-6 py-8">
-        {/* Publication Selector */}
+        {/* Publication Selector with Action Buttons */}
         <div className="mb-8 p-4 bg-card border border-border rounded-lg">
-          <PublicationSelector />
+          <div className="flex items-center justify-between">
+            <PublicationSelector />
+            {selectedPublication && currentTab === 'dashboard' && (
+              <div className="flex gap-2 ml-4">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/dashboard?tab=profile">
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Profile
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/dashboard?tab=summary">
+                    <Printer className="w-4 h-4 mr-2" />
+                    Full Summary
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Publication-Specific Dashboard */}
         {selectedPublication ? (
-          <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
-              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-              <TabsTrigger value="profile">Profile</TabsTrigger>
-              <TabsTrigger value="inventory">Inventory</TabsTrigger>
-              <TabsTrigger value="knowledgebase">Knowledgebase</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-              <TabsTrigger value="storefront">Storefront</TabsTrigger>
-              <TabsTrigger value="summary">Summary</TabsTrigger>
-            </TabsList>
+          <div className="flex gap-6">
+            {/* Vertical Left Navigation */}
+            <aside className="w-64 flex-shrink-0">
+              <nav className="p-2 sticky top-6">
+                <div className="space-y-1">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = currentTab === item.id;
+                    
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleTabChange(item.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 text-sm rounded-md transition-colors",
+                          isActive
+                            ? "bg-[#DDDBD2] font-semibold"
+                            : "hover:bg-[#E2E0D8]"
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
+            </aside>
 
-            <TabsContent value="dashboard" className="space-y-6">
-              <DashboardOverview />
-            </TabsContent>
-
-            <TabsContent value="profile" className="space-y-6">
-              <PublicationProfile />
-            </TabsContent>
-
-            <TabsContent value="inventory" className="space-y-6">
-              <DashboardInventoryManager />
-            </TabsContent>
-
-            <TabsContent value="knowledgebase" className="space-y-6">
-              <PublicationKnowledgeBase />
-            </TabsContent>
-
-            <TabsContent value="settings" className="space-y-6">
-              <PublicationSettings />
-            </TabsContent>
-
-            <TabsContent value="storefront" className="space-y-6">
-              <PublicationStorefront />
-            </TabsContent>
-
-            <TabsContent value="summary" className="space-y-6">
-              <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />
-            </TabsContent>
-          </Tabs>
+            {/* Main Content Area */}
+            <div className="flex-1 min-w-0">
+              <div className="space-y-6">
+                {renderContent()}
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="text-center py-12">
             <h2 className="text-2xl font-semibold mb-4">Select a Publication</h2>
