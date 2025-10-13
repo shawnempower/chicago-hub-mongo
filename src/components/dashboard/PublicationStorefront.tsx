@@ -195,9 +195,8 @@ export const PublicationStorefront: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Storefront</h2>
-          <p className="text-muted-foreground">
-            Manage your advertising storefront for {selectedPublication.basicInfo.publicationName}
+          <p className="text-muted-foreground font-serif">
+            Storefront
           </p>
         </div>
         <div className="flex gap-2">
@@ -265,7 +264,7 @@ export const PublicationStorefront: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 font-sans text-base">
                     <Store className="h-5 w-5" />
                     Status
                   </CardTitle>
@@ -284,7 +283,7 @@ export const PublicationStorefront: React.FC = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 font-sans text-base">
                     <Layout className="h-5 w-5" />
                     Components
                   </CardTitle>
@@ -303,7 +302,7 @@ export const PublicationStorefront: React.FC = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 font-sans text-base">
                     <Palette className="h-5 w-5" />
                     Theme
                   </CardTitle>
@@ -327,7 +326,7 @@ export const PublicationStorefront: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
+                <CardTitle className="font-sans text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 flex-wrap">
@@ -365,7 +364,7 @@ export const PublicationStorefront: React.FC = () => {
             {/* Colors Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Colors</CardTitle>
+                <CardTitle className="font-sans text-base">Colors</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Customize the color scheme for your storefront.
                 </p>
@@ -538,7 +537,7 @@ export const PublicationStorefront: React.FC = () => {
             {/* Typography Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Typography</CardTitle>
+                <CardTitle className="font-sans text-base">Typography</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Configure fonts and text styling.
                 </p>
@@ -595,7 +594,7 @@ export const PublicationStorefront: React.FC = () => {
             {/* Layout Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Layout</CardTitle>
+                <CardTitle className="font-sans text-base">Layout</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Configure layout and design elements.
                 </p>
@@ -649,7 +648,7 @@ export const PublicationStorefront: React.FC = () => {
             {/* Section Settings */}
             <Card>
               <CardHeader>
-                <CardTitle>Section Settings</CardTitle>
+                <CardTitle className="font-sans text-base">Section Settings</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Configure individual section appearance.
                 </p>
@@ -719,7 +718,7 @@ export const PublicationStorefront: React.FC = () => {
           <TabsContent value="seo" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Basic SEO</CardTitle>
+                <CardTitle className="font-sans text-base">Basic SEO</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Configure basic search engine optimization settings.
                 </p>
@@ -783,7 +782,7 @@ export const PublicationStorefront: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Open Graph (Social Media)</CardTitle>
+                <CardTitle className="font-sans text-base">Open Graph (Social Media)</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Configure how your storefront appears when shared on social media.
                 </p>
@@ -848,7 +847,7 @@ export const PublicationStorefront: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>SEO Preview</CardTitle>
+                <CardTitle className="font-sans text-base">SEO Preview</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Preview how your storefront might appear in search results.
                 </p>
@@ -872,7 +871,7 @@ export const PublicationStorefront: React.FC = () => {
           <TabsContent value="analytics" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Google Analytics</CardTitle>
+                <CardTitle className="font-sans text-base">Google Analytics</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Track visitor behavior and storefront performance with Google Analytics.
                 </p>
@@ -932,7 +931,7 @@ export const PublicationStorefront: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Facebook Pixel</CardTitle>
+                <CardTitle className="font-sans text-base">Facebook Pixel</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Track conversions and optimize Facebook advertising campaigns.
                 </p>
@@ -993,7 +992,7 @@ export const PublicationStorefront: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Tracking Events</CardTitle>
+                <CardTitle className="font-sans text-base">Tracking Events</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Events that will be automatically tracked on your storefront.
                 </p>
@@ -1051,7 +1050,7 @@ export const PublicationStorefront: React.FC = () => {
           <TabsContent value="settings" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Publication Information</CardTitle>
+                <CardTitle className="font-sans text-base">Publication Information</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Basic information about your publication and storefront.
                 </p>
@@ -1120,7 +1119,7 @@ export const PublicationStorefront: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Storefront Status</CardTitle>
+                <CardTitle className="font-sans text-base">Storefront Status</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Control the visibility and status of your storefront.
                 </p>
@@ -1184,7 +1183,7 @@ export const PublicationStorefront: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Advanced Settings</CardTitle>
+                <CardTitle className="font-sans text-base">Advanced Settings</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Advanced configuration and maintenance options.
                 </p>
@@ -1251,7 +1250,7 @@ export const PublicationStorefront: React.FC = () => {
 
             <Card className="border-red-200">
               <CardHeader>
-                <CardTitle className="text-red-700">Danger Zone</CardTitle>
+                <CardTitle className="text-red-700 font-sans text-base">Danger Zone</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Irreversible actions that affect your storefront.
                 </p>

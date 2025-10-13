@@ -4,6 +4,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Building2, ChevronDown } from 'lucide-react';
 
+// Color system for tags with light backgrounds and darker text
+const getTagColors = (value: string): { bg: string; text: string } => {
+  const colorMap: Record<string, { bg: string; text: string }> = {
+    // Frequency types
+    'daily': { bg: 'bg-blue-50', text: 'text-blue-700' },
+    'weekly': { bg: 'bg-purple-50', text: 'text-purple-700' },
+    'monthly': { bg: 'bg-pink-50', text: 'text-pink-700' },
+    'other': { bg: 'bg-gray-50', text: 'text-gray-700' },
+    
+    // Geographic coverage
+    'local': { bg: 'bg-green-50', text: 'text-green-700' },
+    'regional': { bg: 'bg-orange-50', text: 'text-orange-700' },
+    'national': { bg: 'bg-red-50', text: 'text-red-700' },
+    'international': { bg: 'bg-indigo-50', text: 'text-indigo-700' },
+  };
+  
+  return colorMap[value?.toLowerCase()] || { bg: 'bg-gray-50', text: 'text-gray-700' };
+};
+
+// Capitalize first letter of each word
+const capitalizeWords = (text: string): string => {
+  if (!text) return '';
+  return text
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 export const PublicationSelector: React.FC = () => {
   const { selectedPublication, setSelectedPublication, availablePublications, loading, error } = usePublication();
 
@@ -37,7 +65,7 @@ export const PublicationSelector: React.FC = () => {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+      <span className="text-[1.09375rem] font-medium text-muted-foreground whitespace-nowrap font-serif">
         Active Publication
       </span>
       <Select 
@@ -71,14 +99,22 @@ export const PublicationSelector: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <div className="font-medium">{publication.basicInfo.publicationName}</div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  <div className="text-xs flex items-center gap-2">
                     {publication.basicInfo.publicationType && (
-                      <Badge variant="outline" className="text-xs">
-                        {publication.basicInfo.publicationType}
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs border-0 ${getTagColors(publication.basicInfo.publicationType).bg} ${getTagColors(publication.basicInfo.publicationType).text}`}
+                      >
+                        {capitalizeWords(publication.basicInfo.publicationType)}
                       </Badge>
                     )}
                     {publication.basicInfo.geographicCoverage && (
-                      <span>{publication.basicInfo.geographicCoverage}</span>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs border-0 ${getTagColors(publication.basicInfo.geographicCoverage).bg} ${getTagColors(publication.basicInfo.geographicCoverage).text}`}
+                      >
+                        {capitalizeWords(publication.basicInfo.geographicCoverage)}
+                      </Badge>
                     )}
                   </div>
                 </div>

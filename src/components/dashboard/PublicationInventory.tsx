@@ -314,7 +314,7 @@ export const PublicationInventory: React.FC = () => {
                 <div className="flex items-center gap-3 mb-2">
                   <Globe className="h-5 w-5 text-blue-600" />
                   <h4 className="text-lg font-semibold">Website</h4>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="secondary" className="text-xs">
                     {publication.distributionChannels.website.url ? 'Active' : 'Not Set'}
                   </Badge>
                 </div>
@@ -392,7 +392,7 @@ export const PublicationInventory: React.FC = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <Mail className="h-5 w-5 text-green-600" />
                     <h4 className="text-lg font-semibold">{newsletter.name || 'Unnamed Newsletter'}</h4>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="secondary" className="text-xs">
                       {newsletter.frequency || 'Not Set'}
                     </Badge>
                   </div>
@@ -475,7 +475,7 @@ export const PublicationInventory: React.FC = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <Newspaper className="h-5 w-5 text-blue-600" />
                     <h4 className="text-lg font-semibold">{printPub.name || 'Print Publication'}</h4>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="secondary" className="text-xs">
                       {printPub.frequency || 'Not Set'}
                     </Badge>
                   </div>
@@ -554,7 +554,7 @@ export const PublicationInventory: React.FC = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <Users className="h-5 w-5 text-purple-600" />
                     <h4 className="text-lg font-semibold">{social.platform || 'Social Media'}</h4>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="secondary" className="text-xs">
                       {social.handle || 'Not Set'}
                     </Badge>
                   </div>
@@ -633,7 +633,7 @@ export const PublicationInventory: React.FC = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <Calendar className="h-5 w-5 text-orange-600" />
                     <h4 className="text-lg font-semibold">{event.name || 'Event'}</h4>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="secondary" className="text-xs">
                       {event.frequency || 'One-time'}
                     </Badge>
                   </div>
@@ -712,7 +712,7 @@ export const PublicationInventory: React.FC = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <Mic className="h-5 w-5 text-red-600" />
                     <h4 className="text-lg font-semibold">{podcast.name || 'Podcast'}</h4>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="secondary" className="text-xs">
                       {podcast.frequency || 'Not Set'}
                     </Badge>
                   </div>
@@ -791,7 +791,7 @@ export const PublicationInventory: React.FC = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <Radio className="h-5 w-5 text-yellow-600" />
                     <h4 className="text-lg font-semibold">{radio.callSign || 'Radio Station'}</h4>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="secondary" className="text-xs">
                       {radio.frequency || 'Not Set'}
                     </Badge>
                   </div>
@@ -870,7 +870,7 @@ export const PublicationInventory: React.FC = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <Video className="h-5 w-5 text-indigo-600" />
                     <h4 className="text-lg font-semibold">{streaming.name || 'Streaming Channel'}</h4>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="secondary" className="text-xs">
                       {streaming.platform || 'Not Set'}
                     </Badge>
                   </div>

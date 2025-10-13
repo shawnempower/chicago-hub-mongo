@@ -225,9 +225,8 @@ export const PublicationKnowledgeBase: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Knowledge Base</h2>
-          <p className="text-muted-foreground">
-            Media kits, rate cards, and resources for {selectedPublication.basicInfo.publicationName}
+          <p className="text-muted-foreground font-serif">
+            Knowledge base (media kits, rate cards, and resources) for {selectedPublication.basicInfo.publicationName}
           </p>
         </div>
         <Button onClick={() => setShowUploadForm(!showUploadForm)}>
@@ -288,7 +287,7 @@ export const PublicationKnowledgeBase: React.FC = () => {
       {showUploadForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Upload New File</CardTitle>
+            <CardTitle className="font-sans text-base">Upload New File</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -346,7 +345,7 @@ export const PublicationKnowledgeBase: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Files & Resources</CardTitle>
+            <CardTitle className="font-sans text-base">Files & Resources</CardTitle>
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />

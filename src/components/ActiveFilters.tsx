@@ -104,12 +104,12 @@ export function ActiveFilters({
             <Badge
               key={complexity}
               variant="secondary"
-              className="pl-2 pr-1 py-1 gap-1 bg-orange-100 text-orange-800 hover:bg-orange-200"
+              className="pl-2 pr-1 py-1 gap-1 bg-orange-100 text-orange-800 hover:bg-[#F9F8F3]"
             >
               {complexityLabels[complexity as keyof typeof complexityLabels]}
               <button
                 onClick={() => onComplexityChange(complexity)}
-                className="ml-1 hover:bg-orange-300 rounded-full p-0.5"
+                className="ml-1 hover:bg-[#F9F8F3] rounded-full p-0.5"
               >
                 <X className="h-3 w-3" />
               </button>

@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/CustomAuthContext";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { User, ChevronDown } from "lucide-react";
+import mediahubLogo from "@/assets/mediahub-logo.svg";
 
 interface HeaderProps {
   onAssistantClick: () => void;
@@ -18,15 +19,17 @@ export function Header({ onAssistantClick, onSurveyClick }: HeaderProps) {
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
   
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-border">
+    <header className="sticky top-0 z-40 backdrop-blur-[20px] border-b border-border" style={{ backgroundColor: 'hsl(42 30% 95% / 0.3)' }}>
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-8">
           <Link to="/" className="hover:opacity-80 transition-opacity">
-            <h1 className="text-xl font-bold text-primary font-serif">
-              Chicago Media Hub
-            </h1>
+            <img 
+              src={mediahubLogo} 
+              alt="Chicago Media Hub" 
+              className="h-8 w-auto"
+            />
           </Link>
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden md:flex items-center space-x-6 text-sm">
             {user && (
               <Link 
                 to="/dashboard" 
@@ -59,18 +62,6 @@ export function Header({ onAssistantClick, onSurveyClick }: HeaderProps) {
             >
               Ad Packages
             </Link>
-            {isAdmin && (
-              <Link 
-                to="/admin" 
-                className={`transition-colors ${
-                  location.pathname === '/admin' 
-                    ? 'text-primary font-medium' 
-                    : 'text-muted-foreground hover:text-primary'
-                }`}
-              >
-                Admin
-              </Link>
-            )}
           </nav>
         </div>
         

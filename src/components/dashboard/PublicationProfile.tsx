@@ -26,6 +26,41 @@ import {
   Video
 } from 'lucide-react';
 
+// Color system for tags with light backgrounds and darker text
+const getTagColors = (value: string): { bg: string; text: string } => {
+  const colorMap: Record<string, { bg: string; text: string }> = {
+    // Publication types
+    'daily': { bg: 'bg-blue-50', text: 'text-blue-700' },
+    'weekly': { bg: 'bg-purple-50', text: 'text-purple-700' },
+    'monthly': { bg: 'bg-pink-50', text: 'text-pink-700' },
+    'other': { bg: 'bg-gray-50', text: 'text-gray-700' },
+    
+    // Content types
+    'mixed': { bg: 'bg-teal-50', text: 'text-teal-700' },
+    'news': { bg: 'bg-blue-50', text: 'text-blue-700' },
+    'entertainment': { bg: 'bg-purple-50', text: 'text-purple-700' },
+    'lifestyle': { bg: 'bg-pink-50', text: 'text-pink-700' },
+    'business': { bg: 'bg-orange-50', text: 'text-orange-700' },
+    
+    // Geographic coverage
+    'local': { bg: 'bg-green-50', text: 'text-green-700' },
+    'regional': { bg: 'bg-orange-50', text: 'text-orange-700' },
+    'national': { bg: 'bg-red-50', text: 'text-red-700' },
+    'international': { bg: 'bg-indigo-50', text: 'text-indigo-700' },
+  };
+  
+  return colorMap[value?.toLowerCase()] || { bg: 'bg-gray-50', text: 'text-gray-700' };
+};
+
+// Capitalize first letter of each word
+const capitalizeWords = (text: string): string => {
+  if (!text) return '';
+  return text
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 export const PublicationProfile: React.FC = () => {
   const { selectedPublication, setSelectedPublication } = usePublication();
   const [isEditing, setIsEditing] = useState(false);
@@ -63,8 +98,7 @@ export const PublicationProfile: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">{publication.basicInfo.publicationName}</h2>
-          <p className="text-muted-foreground">Publication Profile & Information</p>
+          <p className="text-muted-foreground font-serif">Publication Profile & Information</p>
         </div>
         <Button variant="outline" onClick={() => setIsEditing(true)}>
           <Edit3 className="w-4 h-4 mr-2" />
@@ -76,26 +110,37 @@ export const PublicationProfile: React.FC = () => {
         {/* Basic Information */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Building2 className="h-5 w-5" />
               Basic Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Publication Name</label>
+              <p className="mt-1 text-lg font-semibold">{publication.basicInfo.publicationName}</p>
+            </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Publication Type</label>
                 <div className="mt-1">
-                  <Badge variant="outline">
-                    {publication.basicInfo.publicationType || 'Not specified'}
+                  <Badge 
+                    variant="outline"
+                    className={`border-0 ${publication.basicInfo.publicationType ? getTagColors(publication.basicInfo.publicationType).bg + ' ' + getTagColors(publication.basicInfo.publicationType).text : ''}`}
+                  >
+                    {publication.basicInfo.publicationType ? capitalizeWords(publication.basicInfo.publicationType) : 'Not specified'}
                   </Badge>
                 </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Content Type</label>
                 <div className="mt-1">
-                  <Badge variant="outline">
-                    {publication.basicInfo.contentType || 'Not specified'}
+                  <Badge 
+                    variant="outline"
+                    className={`border-0 ${publication.basicInfo.contentType ? getTagColors(publication.basicInfo.contentType).bg + ' ' + getTagColors(publication.basicInfo.contentType).text : ''}`}
+                  >
+                    {publication.basicInfo.contentType ? capitalizeWords(publication.basicInfo.contentType) : 'Not specified'}
                   </Badge>
                 </div>
               </div>
@@ -106,7 +151,7 @@ export const PublicationProfile: React.FC = () => {
                 <label className="text-sm font-medium text-muted-foreground">Geographic Coverage</label>
                 <div className="mt-1 flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>{publication.basicInfo.geographicCoverage || 'Not specified'}</span>
+                  <span>{publication.basicInfo.geographicCoverage ? capitalizeWords(publication.basicInfo.geographicCoverage) : 'Not specified'}</span>
                 </div>
               </div>
               <div>
@@ -148,7 +193,7 @@ export const PublicationProfile: React.FC = () => {
         {/* Contact Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Phone className="h-5 w-5" />
               Contact Information
             </CardTitle>
@@ -163,10 +208,10 @@ export const PublicationProfile: React.FC = () => {
 
             {publication.contactInfo?.salesContact && (
               <div>
-                <h4 className="font-medium text-sm">Sales Contact</h4>
-                <div className="mt-2 space-y-1 text-sm">
+                <label className="text-sm font-medium text-muted-foreground">Sales Contact</label>
+                <div className="mt-2 p-3 bg-muted/50 rounded-md space-y-1 text-sm">
                   {publication.contactInfo.salesContact.name && (
-                    <p>{publication.contactInfo.salesContact.name}</p>
+                    <p className="font-medium">{publication.contactInfo.salesContact.name}</p>
                   )}
                   {publication.contactInfo.salesContact.title && (
                     <p className="text-muted-foreground">{publication.contactInfo.salesContact.title}</p>
@@ -191,7 +236,7 @@ export const PublicationProfile: React.FC = () => {
 
             {publication.contactInfo?.businessHours && (
               <div>
-                <h4 className="font-medium text-sm">Business Hours</h4>
+                <label className="text-sm font-medium text-muted-foreground">Business Hours</label>
                 <p className="text-sm text-muted-foreground mt-1">
                   {publication.contactInfo.businessHours}
                 </p>
@@ -204,7 +249,7 @@ export const PublicationProfile: React.FC = () => {
         {publication.socialMediaProfiles && publication.socialMediaProfiles.length > 0 && (
           <Card className="lg:col-span-3">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 font-sans text-base">
                 <Users className="h-5 w-5" />
                 Social Media Presence
               </CardTitle>
@@ -246,23 +291,56 @@ export const PublicationProfile: React.FC = () => {
         {publication.audienceDemographics && (
           <Card className="lg:col-span-3">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 font-sans text-base">
                 <Users className="h-5 w-5" />
                 Audience Demographics
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {/* First Row: Total Audience, Audience Interests, Target Markets */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 {/* Total Audience */}
                 {publication.audienceDemographics.totalAudience && (
-                  <div className="text-center">
-                    <h4 className="font-medium mb-2">Total Audience</h4>
-                    <p className="text-2xl font-bold text-primary">
+                  <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-100">
+                    <Users className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                    <p className="text-3xl font-bold text-gray-900 mb-2">
                       {publication.audienceDemographics.totalAudience.toLocaleString()}
                     </p>
+                    <p className="text-sm text-gray-600 font-medium">Total Audience</p>
                   </div>
                 )}
 
+                {/* Audience Interests */}
+                {publication.audienceDemographics.interests && publication.audienceDemographics.interests.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-3">Audience Interests</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {publication.audienceDemographics.interests.map((interest, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {interest}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Target Markets */}
+                {publication.audienceDemographics.targetMarkets && publication.audienceDemographics.targetMarkets.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-3">Target Markets</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {publication.audienceDemographics.targetMarkets.map((market, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {market}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Second Row: Age Distribution, Gender Distribution, Household Income */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Age Groups */}
                 {publication.audienceDemographics.ageGroups && (
                   <div>
@@ -339,39 +417,6 @@ export const PublicationProfile: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              {/* Additional Audience Info */}
-              {(publication.audienceDemographics.interests || publication.audienceDemographics.targetMarkets) && (
-                <div className="mt-6 pt-6 border-t">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {publication.audienceDemographics.interests && publication.audienceDemographics.interests.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-3">Audience Interests</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {publication.audienceDemographics.interests.map((interest, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {interest}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {publication.audienceDemographics.targetMarkets && publication.audienceDemographics.targetMarkets.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-3">Target Markets</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {publication.audienceDemographics.targetMarkets.map((market, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {market}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         )}
@@ -380,7 +425,7 @@ export const PublicationProfile: React.FC = () => {
         {publication.distributionChannels && (
           <Card className="lg:col-span-3">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 font-sans text-base">
                 <TrendingUp className="h-5 w-5" />
                 Distribution & Reach Overview
               </CardTitle>

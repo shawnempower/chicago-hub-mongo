@@ -94,13 +94,9 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
           <p className="text-xl text-gray-600 mb-4 print:text-lg">
             {publication.basicInfo.tagline}
           </p>
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500 print:text-xs">
-            <span>Est. {publication.basicInfo.yearEstablished}</span>
-            <span>•</span>
-            <span>{publication.basicInfo.publicationType}</span>
-            <span>•</span>
-            <span>{publication.basicInfo.language}</span>
-          </div>
+          <p className="text-sm text-muted-foreground text-center">
+            Est. {publication.basicInfo.yearEstablished} • {publication.basicInfo.publicationType} • {publication.basicInfo.language}
+          </p>
         </div>
 
         {/* Contact Information */}
@@ -1405,7 +1401,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
       </div>
 
       {/* Print styles */}
-      <style jsx>{`
+      <style>{`
         @media print {
           body {
             -webkit-print-color-adjust: exact;
