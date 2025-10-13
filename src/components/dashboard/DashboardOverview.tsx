@@ -18,7 +18,8 @@ import {
   FileText,
   Eye,
   Settings,
-  Printer
+  Printer,
+  Play
 } from "lucide-react";
 // MongoDB services removed - using API calls instead
 
@@ -47,7 +48,31 @@ export function DashboardOverview() {
 
   const publication = selectedPublication;
 
-  // Mock data - in real implementation, this would come from API
+  // Calculate metrics from publication data
+  const calculateNewsletterSubscribers = () => {
+    if (!publication.distributionChannels?.newsletters) return 0;
+    return publication.distributionChannels.newsletters.reduce((total, newsletter) => 
+      total + (newsletter.subscribers || 0), 0);
+  };
+
+  const calculateSocialFollowers = () => {
+    if (!publication.distributionChannels?.socialMedia) return 0;
+    return publication.distributionChannels.socialMedia.reduce((total, profile) => 
+      total + (profile.metrics?.followers || 0), 0);
+  };
+
+  const calculatePodcastListeners = () => {
+    if (!publication.distributionChannels?.podcasts) return 0;
+    return publication.distributionChannels.podcasts.reduce((total, podcast) => 
+      total + (podcast.averageListeners || 0), 0);
+  };
+
+  const calculateStreamingSubscribers = () => {
+    if (!publication.distributionChannels?.streamingVideo) return 0;
+    return publication.distributionChannels.streamingVideo.reduce((total, stream) => 
+      total + (stream.subscribers || 0), 0);
+  };
+
   const stats = [
     {
       title: "Monthly Visitors",
@@ -57,24 +82,46 @@ export function DashboardOverview() {
     },
     {
       title: "Newsletter Subscribers",
-      value: publication.distributionChannels?.newsletter?.metrics?.subscribers?.toLocaleString() || "-",
+      value: calculateNewsletterSubscribers() > 0 ? calculateNewsletterSubscribers().toLocaleString() : "-",
       icon: Mail,
       color: "text-green-500"
     },
     {
-      title: "Print Circulation",
-      value: publication.distributionChannels?.print?.circulation?.toLocaleString() || "-",
-      icon: Newspaper,
-      color: "text-purple-500"
-    },
-    {
       title: "Social Followers",
-      value: publication.socialMediaProfiles?.reduce((total, profile) => 
-        total + (profile.metrics?.followers || 0), 0)?.toLocaleString() || "-",
+      value: calculateSocialFollowers() > 0 ? calculateSocialFollowers().toLocaleString() : "-",
       icon: Users,
       color: "text-pink-500"
+    },
+    {
+      title: "Podcast Listeners",
+      value: calculatePodcastListeners() > 0 ? calculatePodcastListeners().toLocaleString() : "-",
+      icon: MessageCircle,
+      color: "text-orange-500"
     }
   ];
+
+  // Additional stats for streaming and print (if they exist)
+  const additionalStats = [];
+  
+  if (publication.distributionChannels?.print?.circulation) {
+    additionalStats.push({
+      title: "Print Circulation",
+      value: publication.distributionChannels.print.circulation.toLocaleString(),
+      icon: Newspaper,
+      color: "text-purple-500"
+    });
+  }
+
+  if (calculateStreamingSubscribers() > 0) {
+    additionalStats.push({
+      title: "Streaming Subscribers",
+      value: calculateStreamingSubscribers().toLocaleString(),
+      icon: Play,
+      color: "text-red-500"
+    });
+  }
+
+  const allStats = [...stats, ...additionalStats];
 
   const recentActivity = [
     { type: "booking", message: "New ad booking for Newsletter Header", time: "2 hours ago" },
@@ -117,8 +164,8 @@ export function DashboardOverview() {
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+        {allStats.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
