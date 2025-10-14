@@ -56,16 +56,38 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
 
     setSaving(true);
     try {
-      const updatedPublication = await updatePublication(selectedPublication._id, formData);
+      // Ensure we send the complete publication data with all changes
+      // Remove system-managed fields that shouldn't be updated
+      const { metadata, _id, createdAt, updatedAt, ...cleanFormData } = formData;
+      const { _id: selectedId, createdAt: selectedCreatedAt, updatedAt: selectedUpdatedAt, ...selectedData } = selectedPublication;
+      
+      const fullUpdateData = {
+        ...selectedData,
+        ...cleanFormData,
+        // Merge metadata properly if it exists
+        ...(metadata && {
+          metadata: {
+            ...selectedPublication.metadata,
+            ...metadata
+          }
+        })
+      };
+
+      console.log('💾 Saving inventory changes for publication:', selectedPublication._id);
+      const updatedPublication = await updatePublication(selectedPublication._id, fullUpdateData);
+      
       if (updatedPublication) {
         onSave(updatedPublication);
         toast({
           title: "Success",
           description: "Advertising inventory updated successfully."
         });
+        console.log('✅ Inventory saved successfully');
+      } else {
+        throw new Error('No updated publication returned from API');
       }
     } catch (error) {
-      console.error('Error updating inventory:', error);
+      console.error('❌ Error updating inventory:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update inventory.",
@@ -81,22 +103,46 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
     if (!selectedPublication?._id) return;
 
     try {
-      const updatedPublication = await updatePublication(selectedPublication._id, updatedData);
+      // Merge the updated data with the current form data to ensure we don't lose any changes
+      // Remove system-managed fields that shouldn't be updated
+      const { metadata: updatedMetadata, _id: updatedId, createdAt: updatedCreatedAt, updatedAt: updatedUpdatedAt, ...cleanUpdatedData } = updatedData;
+      const { metadata: formMetadata, _id: formId, createdAt: formCreatedAt, updatedAt: formUpdatedAt, ...cleanFormData } = formData;
+      const { _id: selectedId, createdAt: selectedCreatedAt, updatedAt: selectedUpdatedAt, ...selectedData } = selectedPublication;
+      
+      const fullUpdateData = {
+        ...selectedData,
+        ...cleanFormData,
+        ...cleanUpdatedData,
+        // Merge all metadata properly
+        ...((updatedMetadata || formMetadata) && {
+          metadata: {
+            ...selectedPublication.metadata,
+            ...formMetadata,
+            ...updatedMetadata
+          }
+        })
+      };
+
+      const updatedPublication = await updatePublication(selectedPublication._id, fullUpdateData);
       if (updatedPublication) {
         setFormData(updatedPublication);
         onSave(updatedPublication);
+        
         if (successMessage) {
           toast({
             title: "Success",
             description: successMessage
           });
         }
+      } else {
+        throw new Error('No updated publication returned from API');
       }
     } catch (error) {
-      console.error('Error auto-saving:', error);
+      console.error('❌ Error auto-saving:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save changes. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to save changes. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     }

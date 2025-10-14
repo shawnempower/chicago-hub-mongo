@@ -958,9 +958,19 @@ export class PublicationsService {
 
   async update(id: string, updates: PublicationUpdate): Promise<Publication | null> {
     try {
+      // Handle metadata updates carefully to avoid field conflicts
+      // Remove immutable fields that MongoDB won't allow us to update
+      const { metadata, _id, createdAt, updatedAt, ...otherUpdates } = updates;
       const updateData = {
-        ...updates,
-        'metadata.lastUpdated': new Date()
+        ...otherUpdates,
+        ...(metadata && {
+          metadata: {
+            ...metadata,
+            lastUpdated: new Date()
+          }
+        }),
+        // Only set metadata.lastUpdated if no metadata object is provided
+        ...(!metadata && { 'metadata.lastUpdated': new Date() })
       };
       
       const query: any = { $or: [] };

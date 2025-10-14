@@ -157,10 +157,15 @@ export const PublicationInventory: React.FC = () => {
   }
 
   const handleSave = (updatedPublication: PublicationFrontend) => {
+    console.log('📄 Inventory changes saved, updating UI');
     setSelectedPublication(updatedPublication);
     setIsEditing(false);
     // Reload inventory data to reflect changes
     loadInventoryData();
+    toast({
+      title: "Success",
+      description: "Inventory changes have been saved and applied."
+    });
   };
 
   const handleCancel = () => {

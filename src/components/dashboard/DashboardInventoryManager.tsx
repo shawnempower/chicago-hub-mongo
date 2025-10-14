@@ -22,6 +22,21 @@ import { PublicationFrontend } from '@/types/publication';
 import { updatePublication, getPublicationById } from '@/api/publications';
 import { HubPricingEditor, HubPrice } from './HubPricingEditor';
 
+// Helper function to validate inventory item data
+const validateInventoryItem = (item: any, type: string): boolean => {
+  if (!item) return false;
+  
+  // Basic validation for all types
+  if (type.includes('-container')) {
+    return true; // Container validation is less strict
+  }
+  
+  // Validate advertising opportunities
+  if (!item.name && !item.title) return false;
+  
+  return true;
+};
+
 export const DashboardInventoryManager = () => {
   const { selectedPublication, setSelectedPublication } = usePublication();
   const { toast } = useToast();
@@ -50,7 +65,9 @@ export const DashboardInventoryManager = () => {
         
         if (publicationData) {
           setCurrentPublication(publicationData);
+          console.log('📄 Publication loaded in inventory manager:', publicationData._id);
         } else {
+          console.error('❌ Publication not found:', selectedPublication._id);
           toast({
             title: "Error",
             description: "Publication not found",
@@ -89,23 +106,54 @@ export const DashboardInventoryManager = () => {
   const handleUpdatePublication = async (updatedData: Partial<PublicationFrontend>) => {
     if (!currentPublication?._id) return;
 
+    setLoading(true);
     try {
-      const updated = await updatePublication(currentPublication._id, updatedData);
+      // Ensure we're sending the full publication data, not just a partial update
+      // Remove system-managed fields that shouldn't be updated
+      const { metadata, _id, createdAt, updatedAt, ...cleanUpdatedData } = updatedData;
+      const { _id: currentId, createdAt: currentCreatedAt, updatedAt: currentUpdatedAt, ...currentData } = currentPublication;
+      
+      const fullUpdateData = {
+        ...currentData,
+        ...cleanUpdatedData,
+        // Merge metadata properly if it exists
+        ...(metadata && {
+          metadata: {
+            ...currentPublication.metadata,
+            ...metadata
+          }
+        })
+      };
+
+      const updated = await updatePublication(currentPublication._id, fullUpdateData);
       if (updated) {
+        // Update both local state and context to keep them in sync
         setCurrentPublication(updated);
-        setSelectedPublication(updated); // Also update the context
+        setSelectedPublication(updated);
+        
+        console.log('✅ Publication updated successfully:', updated._id);
         toast({
           title: "Success",
-          description: "Publication updated successfully"
+          description: "Inventory updated successfully"
         });
+        return updated;
+      } else {
+        throw new Error('No updated publication returned from API');
       }
     } catch (error) {
-      console.error('Error updating publication:', error);
+      console.error('❌ Error updating publication:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update publication';
       toast({
         title: "Error",
-        description: "Failed to update publication",
+        description: errorMessage,
         variant: "destructive"
       });
+      
+      // Re-throw the error so calling functions can handle it
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -150,8 +198,24 @@ export const DashboardInventoryManager = () => {
       hubPricingCount: editingItem.hubPricing?.length || 0
     });
 
+    // Validate the item before saving
+    if (!validateInventoryItem(editingItem, editingType)) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields before saving.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
-      let updatedPublication = { ...currentPublication };
+      // Create a deep copy to avoid mutation issues
+      const updatedPublication = JSON.parse(JSON.stringify(currentPublication));
+
+      // Ensure distributionChannels exists
+      if (!updatedPublication.distributionChannels) {
+        updatedPublication.distributionChannels = {};
+      }
 
       switch (editingType) {
         case 'website':
@@ -161,81 +225,96 @@ export const DashboardInventoryManager = () => {
           break;
 
         case 'newsletter':
-          if (updatedPublication.distributionChannels?.newsletters && editingSubIndex >= 0) {
-            updatedPublication.distributionChannels.newsletters[editingIndex].advertisingOpportunities![editingSubIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.newsletters && 
+              editingSubIndex >= 0 && 
+              updatedPublication.distributionChannels.newsletters[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.newsletters[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
           }
           break;
 
         case 'print':
-          if (updatedPublication.distributionChannels?.print && Array.isArray(updatedPublication.distributionChannels.print) && editingSubIndex >= 0) {
-            updatedPublication.distributionChannels.print[editingIndex].advertisingOpportunities![editingSubIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.print && 
+              Array.isArray(updatedPublication.distributionChannels.print) && 
+              editingSubIndex >= 0 &&
+              updatedPublication.distributionChannels.print[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.print[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
           }
           break;
 
         case 'podcast':
-          if (updatedPublication.distributionChannels?.podcasts && editingSubIndex >= 0) {
-            updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities![editingSubIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.podcasts && 
+              editingSubIndex >= 0 &&
+              updatedPublication.distributionChannels.podcasts[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
           }
           break;
 
         case 'radio':
-          if (updatedPublication.distributionChannels?.radioStations && editingSubIndex >= 0) {
-            updatedPublication.distributionChannels.radioStations[editingIndex].advertisingOpportunities![editingSubIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.radioStations && 
+              editingSubIndex >= 0 &&
+              updatedPublication.distributionChannels.radioStations[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.radioStations[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
           }
           break;
 
         case 'streaming':
-          if (updatedPublication.distributionChannels?.streamingVideo && editingSubIndex >= 0) {
-            updatedPublication.distributionChannels.streamingVideo[editingIndex].advertisingOpportunities![editingSubIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.streamingVideo && 
+              editingSubIndex >= 0 &&
+              updatedPublication.distributionChannels.streamingVideo[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.streamingVideo[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
           }
           break;
 
-        // Container types
+        // Container types - these update entire channel objects
         case 'website-container':
-          updatedPublication.distributionChannels = {
-            ...updatedPublication.distributionChannels,
-            website: editingItem
-          };
+          updatedPublication.distributionChannels.website = editingItem;
           break;
 
         case 'newsletter-container':
-          if (updatedPublication.distributionChannels?.newsletters) {
+          if (updatedPublication.distributionChannels?.newsletters && editingIndex >= 0) {
             updatedPublication.distributionChannels.newsletters[editingIndex] = editingItem;
           }
           break;
 
         case 'print-container':
-          if (updatedPublication.distributionChannels?.print && Array.isArray(updatedPublication.distributionChannels.print)) {
+          if (updatedPublication.distributionChannels?.print && 
+              Array.isArray(updatedPublication.distributionChannels.print) && 
+              editingIndex >= 0) {
             updatedPublication.distributionChannels.print[editingIndex] = editingItem;
           }
           break;
 
         case 'podcast-container':
-          if (updatedPublication.distributionChannels?.podcasts) {
+          if (updatedPublication.distributionChannels?.podcasts && editingIndex >= 0) {
             updatedPublication.distributionChannels.podcasts[editingIndex] = editingItem;
           }
           break;
 
         case 'radio-container':
-          if (updatedPublication.distributionChannels?.radioStations) {
+          if (updatedPublication.distributionChannels?.radioStations && editingIndex >= 0) {
             updatedPublication.distributionChannels.radioStations[editingIndex] = editingItem;
           }
           break;
 
         case 'streaming-container':
-          if (updatedPublication.distributionChannels?.streamingVideo) {
+          if (updatedPublication.distributionChannels?.streamingVideo && editingIndex >= 0) {
             updatedPublication.distributionChannels.streamingVideo[editingIndex] = editingItem;
           }
           break;
+
+        default:
+          console.warn('Unknown editing type:', editingType);
+          return;
       }
 
+      // Send the complete updated publication to the API
       await handleUpdatePublication(updatedPublication);
       closeEditDialog();
     } catch (error) {
       console.error('Error saving edited item:', error);
       toast({
         title: "Error",
-        description: "Failed to save changes",
+        description: error instanceof Error ? error.message : "Failed to save changes",
         variant: "destructive"
       });
     }
