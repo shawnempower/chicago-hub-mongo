@@ -998,18 +998,6 @@ export const EnhancedPublicationsManagement = () => {
               
               {/* Audience Demographics Tab */}
               <TabsContent value="audience" className="space-y-4">
-                <div>
-                  <Label htmlFor="totalAudience">Total Audience</Label>
-                  <Input
-                    id="totalAudience"
-                    type="number"
-                    value={formData.totalAudience}
-                    onChange={(e) => setFormData({ ...formData, totalAudience: parseInt(e.target.value) || 0 })}
-                    placeholder="1000000"
-                  />
-                </div>
-                
-                <Separator />
                 <h4 className="font-medium">Age Groups (%)</h4>
                 <div className="grid grid-cols-5 gap-4">
                   <div>
@@ -1593,10 +1581,6 @@ export const EnhancedPublicationsManagement = () => {
                       <MapPin className="w-3 h-3" />
                       {publication.geographicCoverage || 'Local'}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      {publication.audienceDemographics?.totalAudience?.toLocaleString() || 'Unknown'} audience
-                    </div>
                   </div>
                   
                   {publication.businessInfo?.uniqueValueProposition && (
@@ -1671,7 +1655,6 @@ export const EnhancedPublicationsManagement = () => {
               <div>
                 <h4 className="font-semibold mb-2">Audience</h4>
                 <dl className="space-y-1 text-sm">
-                  <div><dt className="inline font-medium">Total:</dt> <dd className="inline ml-1">{selectedPublication.audienceDemographics?.totalAudience?.toLocaleString() || 'N/A'}</dd></div>
                   <div><dt className="inline font-medium">Markets:</dt> <dd className="inline ml-1">{selectedPublication.audienceDemographics?.targetMarkets?.join(', ') || 'N/A'}</dd></div>
                 </dl>
               </div>

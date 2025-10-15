@@ -91,11 +91,16 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
           <h1 className="text-4xl font-bold text-gray-900 mb-2 print:text-3xl">
             {publication.basicInfo.publicationName}
           </h1>
-          <p className="text-xl text-gray-600 mb-4 print:text-lg">
-            {publication.basicInfo.tagline}
-          </p>
+          {publication.basicInfo.contentType && (
+            <p className="text-xl text-gray-600 mb-4 print:text-lg capitalize">
+              {publication.basicInfo.contentType} Publication
+            </p>
+          )}
           <p className="text-sm text-muted-foreground text-center">
-            Est. {publication.basicInfo.yearEstablished} • {publication.basicInfo.publicationType} • {publication.basicInfo.language}
+            {publication.basicInfo.founded && `Est. ${publication.basicInfo.founded}`}
+            {publication.basicInfo.founded && publication.basicInfo.publicationType && ' • '}
+            {publication.basicInfo.publicationType && `${publication.basicInfo.publicationType.charAt(0).toUpperCase() + publication.basicInfo.publicationType.slice(1)}`}
+            {publication.basicInfo.geographicCoverage && ` • ${publication.basicInfo.geographicCoverage.charAt(0).toUpperCase() + publication.basicInfo.geographicCoverage.slice(1)}`}
           </p>
         </div>
 
@@ -110,11 +115,12 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
           <CardContent className="print:pt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-2">
               <div>
-                <p className="font-medium">Address</p>
-                <p className="text-sm text-gray-600">
-                  {publication.contactInfo.address?.street}<br />
-                  {publication.contactInfo.address?.city}, {publication.contactInfo.address?.state} {publication.contactInfo.address?.zipCode}
-                </p>
+                {publication.basicInfo.headquarters && (
+                  <>
+                    <p className="font-medium">Headquarters</p>
+                    <p className="text-sm text-gray-600">{publication.basicInfo.headquarters}</p>
+                  </>
+                )}
                 {publication.contactInfo.businessHours && (
                   <>
                     <p className="font-medium mt-2">Business Hours</p>
@@ -128,14 +134,8 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                   {publication.contactInfo.mainPhone && (
                     <>Phone: {publication.contactInfo.mainPhone}<br /></>
                   )}
-                  {publication.contactInfo.phone && (
-                    <>Phone: {publication.contactInfo.phone}<br /></>
-                  )}
-                  {publication.contactInfo.email && (
-                    <>Email: {publication.contactInfo.email}<br /></>
-                  )}
-                  {publication.contactInfo.website && (
-                    <>Website: {publication.contactInfo.website}</>
+                  {publication.basicInfo.websiteUrl && (
+                    <>Website: {publication.basicInfo.websiteUrl}</>
                   )}
                 </p>
               </div>
@@ -197,9 +197,9 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
           <CardContent className="print:pt-0">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:gap-2">
               <div>
-                <p className="font-medium">Annual Revenue</p>
+                <p className="font-medium">Avg Monthly Revenue</p>
                 <p className="text-2xl font-bold text-green-600 print:text-lg">
-                  {formatCurrency(publication.businessInfo.annualRevenue)}
+                  {formatCurrency(publication.businessInfo.averageMonthlyRevenue)}
                 </p>
               </div>
               <div>
@@ -211,7 +211,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               <div>
                 <p className="font-medium">Founded</p>
                 <p className="text-2xl font-bold print:text-lg">
-                  {publication.basicInfo.yearEstablished}
+                  {publication.basicInfo.founded || 'Not specified'}
                 </p>
               </div>
             </div>
@@ -220,29 +220,29 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               <div className="mt-4 print:mt-2">
                 <p className="font-medium mb-2">Revenue Breakdown</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm print:text-xs">
-                  {publication.businessInfo.revenueBreakdown.revenueDigital && (
-                    <div>Digital: {formatCurrency(publication.businessInfo.revenueBreakdown.revenueDigital)}</div>
+                  {publication.businessInfo.revenueBreakdown.digital && (
+                    <div>Digital: {formatCurrency(publication.businessInfo.revenueBreakdown.digital)}</div>
                   )}
-                  {publication.businessInfo.revenueBreakdown.revenuePrint && (
-                    <div>Print: {formatCurrency(publication.businessInfo.revenueBreakdown.revenuePrint)}</div>
+                  {publication.businessInfo.revenueBreakdown.print && (
+                    <div>Print: {formatCurrency(publication.businessInfo.revenueBreakdown.print)}</div>
                   )}
-                  {publication.businessInfo.revenueBreakdown.revenueEvents && (
-                    <div>Events: {formatCurrency(publication.businessInfo.revenueBreakdown.revenueEvents)}</div>
+                  {publication.businessInfo.revenueBreakdown.events && (
+                    <div>Events: {formatCurrency(publication.businessInfo.revenueBreakdown.events)}</div>
                   )}
-                  {publication.businessInfo.revenueBreakdown.revenuePodcasts && (
-                    <div>Podcasts: {formatCurrency(publication.businessInfo.revenueBreakdown.revenuePodcasts)}</div>
+                  {publication.businessInfo.revenueBreakdown.podcasts && (
+                    <div>Podcasts: {formatCurrency(publication.businessInfo.revenueBreakdown.podcasts)}</div>
                   )}
-                  {publication.businessInfo.revenueBreakdown.revenueRadio && (
-                    <div>Radio: {formatCurrency(publication.businessInfo.revenueBreakdown.revenueRadio)}</div>
+                  {publication.businessInfo.revenueBreakdown.radio && (
+                    <div>Radio: {formatCurrency(publication.businessInfo.revenueBreakdown.radio)}</div>
                   )}
-                  {publication.businessInfo.revenueBreakdown.revenueStreaming && (
-                    <div>Streaming: {formatCurrency(publication.businessInfo.revenueBreakdown.revenueStreaming)}</div>
+                  {publication.businessInfo.revenueBreakdown.streaming && (
+                    <div>Streaming: {formatCurrency(publication.businessInfo.revenueBreakdown.streaming)}</div>
                   )}
-                  {publication.businessInfo.revenueBreakdown.revenueSocial && (
-                    <div>Social: {formatCurrency(publication.businessInfo.revenueBreakdown.revenueSocial)}</div>
+                  {publication.businessInfo.revenueBreakdown.social && (
+                    <div>Social: {formatCurrency(publication.businessInfo.revenueBreakdown.social)}</div>
                   )}
-                  {publication.businessInfo.revenueBreakdown.revenueOther && (
-                    <div>Other: {formatCurrency(publication.businessInfo.revenueBreakdown.revenueOther)}</div>
+                  {publication.businessInfo.revenueBreakdown.other && (
+                    <div>Other: {formatCurrency(publication.businessInfo.revenueBreakdown.other)}</div>
                   )}
                 </div>
               </div>
@@ -276,7 +276,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     </div>
                     <div>
                       <p className="font-medium">Monthly Visitors</p>
-                      <p className="text-sm font-semibold">{formatNumber(publication.distributionChannels.website.monthlyUniqueVisitors)}</p>
+                      <p className="text-sm font-semibold">{formatNumber(publication.distributionChannels.website.metrics?.monthlyVisitors)}</p>
                     </div>
                   </div>
 
@@ -346,7 +346,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     <div key={index} className="bg-green-50 rounded-lg p-4 print:bg-gray-50">
                       <h4 className="font-semibold mb-3">{newsletter.name || `Newsletter ${index + 1}`}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:gap-2 text-sm mb-3">
-                        <div>Subscribers: {formatNumber(newsletter.subscriberCount)}</div>
+                        <div>Subscribers: {formatNumber(newsletter.subscribers)}</div>
                         <div>Open Rate: {newsletter.openRate}%</div>
                         <div>Click Rate: {newsletter.clickThroughRate}%</div>
                         <div>Frequency: {newsletter.frequency}</div>
@@ -361,17 +361,17 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                                   <div>
                                     <p className="font-medium">{ad.name}</p>
-                                    <p>Format: {ad.adFormat}</p>
                                     <p>Position: {ad.position}</p>
+                                    {ad.dimensions && <p>Dimensions: {ad.dimensions}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Pricing</p>
-                                    {ad.pricing?.flatRate && <p>Flat Rate: ${ad.pricing.flatRate}</p>}
-                                    {ad.pricing?.cpm && <p>CPM: ${ad.pricing.cpm}</p>}
+                                    {ad.pricing?.perSend && <p>Per Send: ${ad.pricing.perSend}</p>}
+                                    {ad.pricing?.monthly && <p>Monthly: ${ad.pricing.monthly}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Details</p>
-                                    <p>Available: {ad.available ? 'Yes' : 'No'}</p>
+                                    <p>Available: Newsletter advertising available</p>
                                   </div>
                                 </div>
                               </div>
@@ -396,11 +396,10 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                   {(Array.isArray(publication.distributionChannels.print) ? publication.distributionChannels.print : [publication.distributionChannels.print]).map((print, index) => (
                     <div key={index} className="bg-orange-50 rounded-lg p-4 print:bg-gray-50">
                       <h4 className="font-semibold mb-3">{print.name || `Print Publication ${index + 1}`}</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:gap-2 text-sm mb-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:gap-2 text-sm mb-3">
                         <div>Circulation: {formatNumber(print.circulation)}</div>
                         <div>Frequency: {print.frequency}</div>
                         <div>Distribution Area: {print.distributionArea}</div>
-                        <div>Format: {print.format}</div>
                       </div>
                       
                       {print.advertisingOpportunities && print.advertisingOpportunities.length > 0 && (
@@ -412,26 +411,25 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
                                   <div>
                                     <p className="font-medium">{ad.name}</p>
-                                    <p>Size: {ad.size}</p>
-                                    <p>Color: {ad.color}</p>
+                                    <p>Format: {ad.adFormat}</p>
+                                    {ad.dimensions && <p>Size: {ad.dimensions}</p>}
+                                    {ad.color && <p>Color: {ad.color}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Pricing</p>
                                     {ad.pricing?.oneTime && <p>One Time: ${ad.pricing.oneTime}</p>}
-                                    {ad.pricing?.threeTimes && <p>3x Rate: ${ad.pricing.threeTimes}</p>}
-                                    {ad.pricing?.sixTimes && <p>6x Rate: ${ad.pricing.sixTimes}</p>}
+                                    {ad.pricing?.fourTimes && <p>4x Rate: ${ad.pricing.fourTimes}</p>}
                                     {ad.pricing?.twelveTimes && <p>12x Rate: ${ad.pricing.twelveTimes}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Specifications</p>
                                     {ad.specifications?.format && <p>Format: {ad.specifications.format}</p>}
                                     {ad.specifications?.resolution && <p>Resolution: {ad.specifications.resolution}</p>}
-                                    <p>Bleed: {ad.specifications?.bleed ? 'Required' : 'Not required'}</p>
+                                    {ad.specifications?.bleed !== undefined && <p>Bleed: {ad.specifications.bleed ? 'Required' : 'Not required'}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Details</p>
-                                    <p>Page: {ad.preferredPage}</p>
-                                    <p>Available: {ad.available ? 'Yes' : 'No'}</p>
+                                    {ad.location && <p>Location: {ad.location}</p>}
                                   </div>
                                 </div>
                               </div>
@@ -457,10 +455,10 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     <div key={index} className="bg-purple-50 rounded-lg p-4 print:bg-gray-50">
                       <h4 className="font-semibold mb-3">{social.platform} - {social.handle}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:gap-2 text-sm mb-3">
-                        <div>Followers: {formatNumber(social.followers)}</div>
-                        <div>Engagement Rate: {social.engagementRate}%</div>
+                        <div>Followers: {formatNumber(social.metrics?.followers)}</div>
+                        <div>Engagement Rate: {social.metrics?.engagementRate}%</div>
                         <div>Verified: {social.verified ? 'Yes' : 'No'}</div>
-                        <div>URL: {social.profileUrl}</div>
+                        <div>URL: {social.url}</div>
                       </div>
                       
                       {social.advertisingOpportunities && social.advertisingOpportunities.length > 0 && (
@@ -473,18 +471,18 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                   <div>
                                     <p className="font-medium">{ad.name}</p>
                                     <p>Format: {ad.adFormat}</p>
-                                    <p>Type: {ad.contentType}</p>
+                                    {ad.postType && <p>Post Type: {ad.postType}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Pricing</p>
                                     {ad.pricing?.perPost && <p>Per Post: ${ad.pricing.perPost}</p>}
                                     {ad.pricing?.perStory && <p>Per Story: ${ad.pricing.perStory}</p>}
-                                    {ad.pricing?.perVideo && <p>Per Video: ${ad.pricing.perVideo}</p>}
+                                    {ad.pricing?.monthly && <p>Monthly: ${ad.pricing.monthly}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Specifications</p>
                                     {ad.specifications?.imageSize && <p>Image Size: {ad.specifications.imageSize}</p>}
-                                    {ad.specifications?.videoLength && <p>Video Length: {ad.specifications.videoLength}s</p>}
+                                    {ad.specifications?.videoLength && <p>Video Length: {ad.specifications.videoLength}</p>}
                                     <p>Available: {ad.available ? 'Yes' : 'No'}</p>
                                   </div>
                                 </div>
@@ -511,9 +509,9 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     <div key={index} className="bg-green-50 rounded-lg p-4 print:bg-gray-50">
                       <h4 className="font-semibold mb-3">{event.name}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:gap-2 text-sm mb-3">
-                        <div>Expected Attendance: {formatNumber(event.expectedAttendance)}</div>
+                        <div>Expected Attendance: {formatNumber(event.averageAttendance)}</div>
                         <div>Location: {event.location}</div>
-                        <div>Type: {event.eventType}</div>
+                        <div>Type: {event.type}</div>
                         <div>Frequency: {event.frequency}</div>
                       </div>
                       {event.date && <div className="text-sm mb-3">Date: {new Date(event.date).toLocaleDateString()}</div>}
@@ -526,17 +524,22 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                               <div key={adIndex} className="bg-white p-3 rounded border print:border-gray-300">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                                   <div>
-                                    <p className="font-medium">{ad.name}</p>
-                                    <p>Type: {ad.sponsorshipType}</p>
-                                    <p>Location: {ad.location}</p>
+                                    <p className="font-medium">Sponsorship Level</p>
+                                    <p className="capitalize">{ad.level}</p>
                                   </div>
                                   <div>
                                     <p className="font-medium">Pricing</p>
-                                    {ad.pricing?.flatRate && <p>Flat Rate: ${ad.pricing.flatRate}</p>}
+                                    {ad.pricing && <p>${ad.pricing}</p>}
                                   </div>
                                   <div>
-                                    <p className="font-medium">Details</p>
-                                    <p>Available: {ad.available ? 'Yes' : 'No'}</p>
+                                    <p className="font-medium">Benefits</p>
+                                    {ad.benefits && ad.benefits.length > 0 && (
+                                      <ul className="text-xs list-disc list-inside">
+                                        {ad.benefits.slice(0, 3).map((benefit, i) => (
+                                          <li key={i}>{benefit}</li>
+                                        ))}
+                                      </ul>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -580,17 +583,17 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                   <div>
                                     <p className="font-medium">{ad.name}</p>
                                     <p>Format: {ad.adFormat}</p>
-                                    <p>Duration: {ad.duration}s</p>
+                                    {ad.duration && <p>Duration: {ad.duration}s</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Pricing</p>
-                                    {ad.pricing?.perSpot && <p>Per Spot: ${ad.pricing.perSpot}</p>}
+                                    {ad.pricing?.flatRate && <p>Flat Rate: ${ad.pricing.flatRate}</p>}
                                     {ad.pricing?.cpm && <p>CPM: ${ad.pricing.cpm}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Specifications</p>
-                                    {ad.specifications?.audioFormat && <p>Format: {ad.specifications.audioFormat}</p>}
-                                    {ad.specifications?.bitRate && <p>Bit Rate: {ad.specifications.bitRate}</p>}
+                                    {ad.specifications?.format && <p>Format: {ad.specifications.format}</p>}
+                                    {ad.specifications?.bitrate && <p>Bit Rate: {ad.specifications.bitrate}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Details</p>
@@ -636,17 +639,18 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                   <div>
                                     <p className="font-medium">{ad.name}</p>
                                     <p>Format: {ad.adFormat}</p>
-                                    <p>Time Slot: {ad.timeSlot}</p>
+                                    {ad.timeSlot && <p>Time Slot: {ad.timeSlot.replace(/_/g, ' ')}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Pricing</p>
                                     {ad.pricing?.perSpot && <p>Per Spot: ${ad.pricing.perSpot}</p>}
-                                    {ad.pricing?.perWeek && <p>Per Week: ${ad.pricing.perWeek}</p>}
+                                    {ad.pricing?.weekly && <p>Per Week: ${ad.pricing.weekly}</p>}
+                                    {ad.pricing?.monthly && <p>Per Month: ${ad.pricing.monthly}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Specifications</p>
-                                    {ad.specifications?.audioFormat && <p>Format: {ad.specifications.audioFormat}</p>}
-                                    {ad.specifications?.maxLength && <p>Max Length: {ad.specifications.maxLength}s</p>}
+                                    {ad.specifications?.format && <p>Format: {ad.specifications.format}</p>}
+                                    {ad.specifications?.duration && <p>Duration: {ad.specifications.duration}s</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Details</p>
@@ -692,16 +696,16 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                   <div>
                                     <p className="font-medium">{ad.name}</p>
                                     <p>Format: {ad.adFormat}</p>
-                                    <p>Duration: {ad.duration}s</p>
+                                    {ad.duration && <p>Duration: {ad.duration}s</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Pricing</p>
-                                    {ad.pricing?.perVideo && <p>Per Video: ${ad.pricing.perVideo}</p>}
+                                    {ad.pricing?.flatRate && <p>Flat Rate: ${ad.pricing.flatRate}</p>}
                                     {ad.pricing?.cpm && <p>CPM: ${ad.pricing.cpm}</p>}
                                   </div>
                                   <div>
                                     <p className="font-medium">Specifications</p>
-                                    {ad.specifications?.videoFormat && <p>Format: {ad.specifications.videoFormat}</p>}
+                                    {ad.specifications?.format && <p>Format: {ad.specifications.format}</p>}
                                     {ad.specifications?.resolution && <p>Resolution: {ad.specifications.resolution}</p>}
                                   </div>
                                   <div>
@@ -732,15 +736,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               </CardTitle>
             </CardHeader>
             <CardContent className="print:pt-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:gap-2">
-                {publication.audienceDemographics.totalAudience && (
-                  <div>
-                    <p className="font-medium">Total Audience</p>
-                    <p className="text-2xl font-bold text-blue-600 print:text-lg">
-                      {formatNumber(publication.audienceDemographics.totalAudience)}
-                    </p>
-                  </div>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-2">
                 {publication.audienceDemographics.location && (
                   <div>
                     <p className="font-medium">Primary Location</p>
@@ -758,6 +754,9 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                   </div>
                 )}
               </div>
+
+              {/* Divider */}
+              <hr className="border-t border-gray-200 my-4 print:my-2" />
 
               {/* Age Groups */}
               {publication.audienceDemographics.ageGroups && (
@@ -1327,13 +1326,13 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     let totalReach = 0;
                     
                     // Website visitors
-                    if (publication.distributionChannels.website?.monthlyUniqueVisitors) {
-                      totalReach += publication.distributionChannels.website.monthlyUniqueVisitors;
+                    if (publication.distributionChannels.website?.metrics?.monthlyVisitors) {
+                      totalReach += publication.distributionChannels.website.metrics.monthlyVisitors;
                     }
                     
                     // Newsletter subscribers
                     publication.distributionChannels.newsletters?.forEach(newsletter => {
-                      if (newsletter.subscriberCount) totalReach += newsletter.subscriberCount;
+                      if (newsletter.subscribers) totalReach += newsletter.subscribers;
                     });
                     
                     // Print circulation
@@ -1345,12 +1344,12 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     
                     // Social media followers
                     publication.distributionChannels.socialMedia?.forEach(social => {
-                      if (social.followers) totalReach += social.followers;
+                      if (social.metrics?.followers) totalReach += social.metrics.followers;
                     });
                     
                     // Event attendance
                     publication.distributionChannels.events?.forEach(event => {
-                      if (event.expectedAttendance) totalReach += event.expectedAttendance;
+                      if (event.averageAttendance) totalReach += event.averageAttendance;
                     });
                     
                     // Podcast listeners
@@ -1372,14 +1371,14 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       <>
                         <p className="font-medium text-lg">Total Potential Reach: {formatNumber(totalReach)}</p>
                         <div className="mt-2 space-y-1">
-                          {publication.distributionChannels.website?.monthlyUniqueVisitors && (
-                            <p>• Website: {formatNumber(publication.distributionChannels.website.monthlyUniqueVisitors)} monthly visitors</p>
+                          {publication.distributionChannels.website?.metrics?.monthlyVisitors && (
+                            <p>• Website: {formatNumber(publication.distributionChannels.website.metrics.monthlyVisitors)} monthly visitors</p>
                           )}
                           {publication.distributionChannels.newsletters && publication.distributionChannels.newsletters.length > 0 && (
-                            <p>• Newsletter: {formatNumber(publication.distributionChannels.newsletters.reduce((sum, n) => sum + (n.subscriberCount || 0), 0))} subscribers</p>
+                            <p>• Newsletter: {formatNumber(publication.distributionChannels.newsletters.reduce((sum, n) => sum + (n.subscribers || 0), 0))} subscribers</p>
                           )}
                           {publication.distributionChannels.socialMedia && publication.distributionChannels.socialMedia.length > 0 && (
-                            <p>• Social Media: {formatNumber(publication.distributionChannels.socialMedia.reduce((sum, s) => sum + (s.followers || 0), 0))} followers</p>
+                            <p>• Social Media: {formatNumber(publication.distributionChannels.socialMedia.reduce((sum, s) => sum + (s.metrics?.followers || 0), 0))} followers</p>
                           )}
                           {publication.distributionChannels.podcasts && publication.distributionChannels.podcasts.length > 0 && (
                             <p>• Podcasts: {formatNumber(publication.distributionChannels.podcasts.reduce((sum, p) => sum + (p.averageListeners || 0), 0))} listeners</p>

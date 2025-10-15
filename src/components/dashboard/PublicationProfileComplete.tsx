@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { updatePublication } from '@/api/publications';
 import { 
@@ -73,8 +72,8 @@ export const PublicationProfile: React.FC = () => {
       
       const updatedPublication = await updatePublication(selectedPublication._id, finalData);
       if (updatedPublication) {
-    setSelectedPublication(updatedPublication);
-    setIsEditing(false);
+        setSelectedPublication(updatedPublication);
+        setIsEditing(false);
         toast({
           title: "Success",
           description: "Publication profile updated successfully."
@@ -125,15 +124,15 @@ export const PublicationProfile: React.FC = () => {
   // ============ EDIT MODE ============
   if (isEditing) {
     return (
-      <div className="space-y-6 max-w-6xl mx-auto p-4">
+      <div className="space-y-6 max-w-6xl mx-auto">
         <div className="flex items-center justify-between pb-4 border-b">
-        <div>
+          <div>
             <h2 className="text-2xl font-bold">Edit Publisher Profile</h2>
             <p className="text-sm text-muted-foreground">
               Publisher ID: {selectedPublication.publicationId} | 
               Last Updated: {new Date(formData.metadata?.lastUpdated || '').toLocaleDateString()}
             </p>
-        </div>
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowSchemaDebug(!showSchemaDebug)} size="sm">
               {showSchemaDebug ? 'Hide' : 'Show'} Schema
@@ -145,8 +144,8 @@ export const PublicationProfile: React.FC = () => {
             <Button onClick={handleSave} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
               {saving ? 'Saving...' : 'Save Changes'}
-        </Button>
-      </div>
+            </Button>
+          </div>
         </div>
 
         <SchemaFieldLegend />
@@ -188,7 +187,7 @@ export const PublicationProfile: React.FC = () => {
                 <Input type="number" value={getFieldValue('basicInfo.founded')} onChange={(e) => updateField('basicInfo.founded', parseInt(e.target.value) || '')} placeholder="Year (YYYY)" />
               </SchemaField>
             </div>
-            
+
             <SchemaField mappingStatus="full" schemaPath="basicInfo.websiteUrl" showSchemaPath={showSchemaDebug}>
               <Label>Website <span className="text-red-500">*</span></Label>
               <Input type="url" value={getFieldValue('basicInfo.websiteUrl')} onChange={(e) => updateField('basicInfo.websiteUrl', e.target.value)} placeholder="https://" />
@@ -210,7 +209,7 @@ export const PublicationProfile: React.FC = () => {
                   <Input type="tel" value={getFieldValue('contactInfo.salesContact.phone')} onChange={(e) => updateField('contactInfo.salesContact.phone', e.target.value)} placeholder="(555) 555-5555" />
                 </SchemaField>
               </div>
-                </div>
+            </div>
 
             <div className="border-t pt-4">
               <h4 className="font-medium mb-3">Sales Contact</h4>
@@ -241,22 +240,12 @@ export const PublicationProfile: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SchemaField mappingStatus="none" schemaPath="businessInfo.legalEntity" warningMessage="Schema field does not exist" showSchemaPath={showSchemaDebug}>
                 <Label>Legal Entity</Label>
-                <Input value="Not in schema" disabled className="bg-gray-100 cursor-not-allowed text-gray-500" />
+                <Input placeholder="Full legal business name" disabled className="bg-gray-100 cursor-not-allowed" />
               </SchemaField>
 
               <SchemaField mappingStatus="full" schemaPath="businessInfo.parentCompany" showSchemaPath={showSchemaDebug}>
                 <Label>Parent Company</Label>
                 <Input value={getFieldValue('businessInfo.parentCompany')} onChange={(e) => updateField('businessInfo.parentCompany', e.target.value)} />
-              </SchemaField>
-
-              <SchemaField mappingStatus="none" schemaPath="businessInfo.taxId" warningMessage="Schema field does not exist" showSchemaPath={showSchemaDebug}>
-                <Label>Tax ID/EIN</Label>
-                <Input value="Not in schema" disabled className="bg-gray-100 cursor-not-allowed text-gray-500" placeholder="XX-XXXXXXX" />
-              </SchemaField>
-
-              <SchemaField mappingStatus="partial" schemaPath="basicInfo.headquarters" warningMessage="Using headquarters field for business address" showSchemaPath={showSchemaDebug}>
-                <Label>Business Address</Label>
-                <Textarea value={getFieldValue('basicInfo.headquarters')} onChange={(e) => updateField('basicInfo.headquarters', e.target.value)} placeholder="Full address for contracts/invoicing" rows={2} />
               </SchemaField>
 
               <SchemaField mappingStatus="full" schemaPath="businessInfo.ownershipType" showSchemaPath={showSchemaDebug}>
@@ -278,7 +267,7 @@ export const PublicationProfile: React.FC = () => {
                 <Label>Years in Operation</Label>
                 <Input type="number" value={getFieldValue('businessInfo.yearsInOperation')} onChange={(e) => updateField('businessInfo.yearsInOperation', parseInt(e.target.value) || '')} />
               </SchemaField>
-              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -308,7 +297,7 @@ export const PublicationProfile: React.FC = () => {
           </div>
           <CardContent className="space-y-6">
             {/* Digital */}
-              <div>
+            <div>
               <h3 className="font-semibold mb-3 border-b pb-2">Digital</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <SchemaField mappingStatus="full" schemaPath="distributionChannels.website.metrics.monthlyVisitors" showSchemaPath={showSchemaDebug}>
@@ -329,7 +318,7 @@ export const PublicationProfile: React.FC = () => {
             </div>
 
             {/* Social Media Summary */}
-              <div>
+            <div>
               <h3 className="font-semibold mb-3 border-b pb-2">Social Media</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SchemaField mappingStatus="partial" schemaPath="distributionChannels.socialMedia" warningMessage="Calculated from all platforms" showSchemaPath={showSchemaDebug}>
@@ -343,52 +332,40 @@ export const PublicationProfile: React.FC = () => {
                   <Textarea value={transformers.formatSocialPlatforms(formData.distributionChannels?.socialMedia)} disabled rows={2} className="bg-gray-50" />
                   <p className="text-xs text-muted-foreground mt-1">Auto-generated</p>
                 </SchemaField>
-                </div>
               </div>
+            </div>
           </CardContent>
         </Card>
 
         {/* AUDIENCE SNAPSHOT */}
         <Card>
-          <div className="py-3 px-6 border-b mb-6 flex items-center justify-between" style={{ backgroundColor: '#E6E4DC' }}>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
             <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Audience Snapshot</h2>
-            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400">
-              Partial Mapping
-            </Badge>
           </div>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <SchemaField mappingStatus="partial" schemaPath="audienceDemographics.ageGroups" warningMessage="Read-only summary" showSchemaPath={showSchemaDebug}>
                 <Label>Age</Label>
                 <Input value={transformers.ageGroupsToText(getFieldValue('audienceDemographics.ageGroups'))} readOnly className="bg-gray-50" />
-                <p className="text-xs text-muted-foreground">View only - edit in demographics section</p>
-                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 text-xs">
-                  Partial Mapping: Read-only summary
-                </Badge>
-              </div>
+                <p className="text-xs text-muted-foreground mt-1">View only - edit in demographics section</p>
+              </SchemaField>
 
-              <div className="space-y-2">
+              <SchemaField mappingStatus="partial" schemaPath="audienceDemographics.householdIncome" warningMessage="Read-only summary" showSchemaPath={showSchemaDebug}>
                 <Label>Income</Label>
                 <Input value={transformers.incomeToText(getFieldValue('audienceDemographics.householdIncome'))} readOnly className="bg-gray-50" />
-                <p className="text-xs text-muted-foreground">View only - edit in demographics section</p>
-                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 text-xs">
-                  Partial Mapping: Read-only summary
-                </Badge>
-                    </div>
+                <p className="text-xs text-muted-foreground mt-1">View only - edit in demographics section</p>
+              </SchemaField>
 
-              <div className="space-y-2">
+              <SchemaField mappingStatus="partial" schemaPath="audienceDemographics.education" warningMessage="Read-only summary" showSchemaPath={showSchemaDebug}>
                 <Label>Education</Label>
                 <Input value={transformers.educationToText(getFieldValue('audienceDemographics.education'))} readOnly className="bg-gray-50" />
-                <p className="text-xs text-muted-foreground">View only - edit in demographics section</p>
-                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 text-xs">
-                  Partial Mapping: Read-only summary
-                </Badge>
-              </div>
+                <p className="text-xs text-muted-foreground mt-1">View only - edit in demographics section</p>
+              </SchemaField>
 
-              <div className="space-y-2">
+              <SchemaField mappingStatus="full" schemaPath="audienceDemographics.location" showSchemaPath={showSchemaDebug}>
                 <Label>Geography</Label>
                 <Input value={getFieldValue('audienceDemographics.location')} onChange={(e) => updateField('audienceDemographics.location', e.target.value)} placeholder="Primary markets" />
-              </div>
+              </SchemaField>
             </div>
           </CardContent>
         </Card>
@@ -412,7 +389,7 @@ export const PublicationProfile: React.FC = () => {
                     <Plus className="w-4 h-4 mr-1" />
                     Add
                   </Button>
-                    </div>
+                </div>
                 {differentiators.map((diff, index) => (
                   <div key={index} className="flex gap-2">
                     <Input value={diff} onChange={(e) => {
@@ -422,70 +399,44 @@ export const PublicationProfile: React.FC = () => {
                     }} placeholder="Enter a differentiator" />
                     <Button type="button" variant="ghost" size="icon" onClick={() => setDifferentiators(differentiators.filter((_, i) => i !== index))}>
                       <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
+                    </Button>
                   </div>
                 ))}
               </div>
             </SchemaField>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
 
         {/* CHANNELS OFFERED */}
         <Card>
           <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
             <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Channels Offered</h2>
           </div>
-            <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">Select all channels you offer advertising on</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {[
-                { label: 'Website Advertising', path: 'distributionChannels.website' },
-                { label: 'Email/Newsletter', path: 'distributionChannels.newsletters' },
-                { label: 'Print Advertising', path: 'distributionChannels.print' },
-                { label: 'Social Media', path: 'distributionChannels.socialMedia' },
-                { label: 'Podcast Advertising', path: 'distributionChannels.podcasts' },
-                { label: 'Streaming Video', path: 'distributionChannels.streamingVideo' },
-                { label: 'Radio', path: 'distributionChannels.radioStations' },
-                { label: 'Television', path: 'distributionChannels.television' },
-                { label: 'Events/Sponsorships', path: 'distributionChannels.events' }
-              ].map(channel => {
-                const hasChannel = getFieldValue(channel.path);
-                const isActive = Array.isArray(hasChannel) ? hasChannel.length > 0 : !!hasChannel;
-                
-                return (
-                  <button
-                    key={channel.label}
-                    type="button"
-                    onClick={() => {
-                      // Note: This won't save since there's no schema field for "channels offered"
-                      // It only shows what channels have data
-                      toast({
-                        title: "Info",
-                        description: "Channel selection is based on your inventory. Add inventory items to enable channels.",
-                        variant: "default"
-                      });
-                    }}
-                    className={`p-3 rounded-lg border-2 text-sm text-left transition-colors ${
-                      isActive 
-                        ? 'bg-green-50 border-green-300 text-green-800 hover:bg-green-100' 
-                        : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                        isActive ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                      }`}>
-                        {isActive && <span className="text-white text-xs">✓</span>}
-                      </div>
-                      <span>{channel.label}</span>
+          <CardContent>
+            <SchemaField mappingStatus="partial" warningMessage="Auto-detected from inventory" showSchemaPath={showSchemaDebug}>
+              <p className="text-sm text-muted-foreground mb-3">Channels are detected based on your inventory. Manage in the Inventory section.</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {[
+                  { label: 'Website Advertising', path: 'distributionChannels.website' },
+                  { label: 'Email/Newsletter', path: 'distributionChannels.newsletters' },
+                  { label: 'Print Advertising', path: 'distributionChannels.print' },
+                  { label: 'Social Media', path: 'distributionChannels.socialMedia' },
+                  { label: 'Podcast Advertising', path: 'distributionChannels.podcasts' },
+                  { label: 'Streaming Video', path: 'distributionChannels.streamingVideo' },
+                  { label: 'Radio', path: 'distributionChannels.radioStations' },
+                  { label: 'Events/Sponsorships', path: 'distributionChannels.events' }
+                ].map(channel => {
+                  const hasChannel = getFieldValue(channel.path);
+                  const isActive = Array.isArray(hasChannel) ? hasChannel.length > 0 : !!hasChannel;
+                  
+                  return (
+                    <div key={channel.label} className={`p-2 rounded border text-sm ${isActive ? 'bg-green-50 border-green-300 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                      {isActive ? '✓' : '○'} {channel.label}
                     </div>
-                  </button>
-                );
-              })}
-                  </div>
-            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 text-xs mt-4">
-              Partial Mapping: Auto-detected from inventory
-                        </Badge>
+                  );
+                })}
+              </div>
+            </SchemaField>
           </CardContent>
         </Card>
 
@@ -511,8 +462,8 @@ export const PublicationProfile: React.FC = () => {
             <Save className="w-4 h-4 mr-2" />
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
-                    </div>
-                  </div>
+        </div>
+      </div>
     );
   }
 
@@ -532,7 +483,7 @@ export const PublicationProfile: React.FC = () => {
           <Edit3 className="w-4 h-4 mr-2" />
           Edit Profile
         </Button>
-              </div>
+      </div>
 
       {/* ESSENTIAL INFORMATION */}
       <Card>
@@ -549,15 +500,15 @@ export const PublicationProfile: React.FC = () => {
               <p className="text-sm font-medium text-muted-foreground">Type</p>
               <p className="mt-1">{get('basicInfo.publicationType') || 'Not specified'}</p>
             </div>
-                  <div>
+            <div>
               <p className="text-sm font-medium text-muted-foreground">Market</p>
               <p className="mt-1">{get('basicInfo.primaryServiceArea') || 'Not specified'}</p>
-                            </div>
+            </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Founded</p>
               <p className="mt-1">{get('basicInfo.founded') || 'Not specified'}</p>
-                          </div>
-                        </div>
+            </div>
+          </div>
 
           <div>
             <p className="text-sm font-medium text-muted-foreground">Website</p>
@@ -579,8 +530,8 @@ export const PublicationProfile: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-muted-foreground mb-2">Sales Contact</p>
               <p>{get('contactInfo.advertisingDirector.name') || 'Not specified'} | {get('contactInfo.advertisingDirector.email') || 'Not specified'} | {get('contactInfo.advertisingDirector.phone') || 'Not specified'}</p>
-                    </div>
-                  </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -595,15 +546,15 @@ export const PublicationProfile: React.FC = () => {
               <p className="text-sm font-medium text-muted-foreground">Parent Company</p>
               <p className="mt-1">{get('businessInfo.parentCompany') || 'Not specified'}</p>
             </div>
-                  <div>
+            <div>
               <p className="text-sm font-medium text-muted-foreground">Ownership Type</p>
               <p className="mt-1">{get('businessInfo.ownershipType') || 'Not specified'}</p>
-                            </div>
+            </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Years in Operation</p>
               <p className="mt-1">{get('businessInfo.yearsInOperation') || 'Not specified'}</p>
-                          </div>
-                        </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -616,11 +567,11 @@ export const PublicationProfile: React.FC = () => {
           <div>
             <p className="text-sm font-medium text-muted-foreground">Primary Coverage</p>
             <p className="mt-1">{get('basicInfo.primaryServiceArea') || 'Not specified'}</p>
-                    </div>
+          </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Secondary Coverage</p>
             <p className="mt-1">{transformers.arrayToString(get('basicInfo.secondaryMarkets')) || 'Not specified'}</p>
-                  </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -736,19 +687,19 @@ export const PublicationProfile: React.FC = () => {
           <div>
             <p className="text-sm font-medium text-muted-foreground">Age</p>
             <p className="mt-1">{transformers.ageGroupsToText(get('audienceDemographics.ageGroups')) || 'Not specified'}</p>
-                  </div>
+          </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Income</p>
             <p className="mt-1">{transformers.incomeToText(get('audienceDemographics.householdIncome')) || 'Not specified'}</p>
-                  </div>
+          </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Education</p>
             <p className="mt-1">{transformers.educationToText(get('audienceDemographics.education')) || 'Not specified'}</p>
-                  </div>
+          </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Geography</p>
             <p className="mt-1">{get('audienceDemographics.location') || 'Not specified'}</p>
-                  </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -761,7 +712,7 @@ export const PublicationProfile: React.FC = () => {
           <div>
             <p className="text-sm font-medium text-muted-foreground">Market Position</p>
             <p className="mt-1">{get('competitiveInfo.uniqueValueProposition') || 'Not specified'}</p>
-                  </div>
+          </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-2">What Makes Them Unique</p>
             {(get('competitiveInfo.keyDifferentiators') || []).length > 0 ? (
@@ -772,8 +723,8 @@ export const PublicationProfile: React.FC = () => {
               </ul>
             ) : (
               <p className="text-gray-400 italic">No differentiators listed</p>
-                )}
-              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -804,9 +755,9 @@ export const PublicationProfile: React.FC = () => {
                 </div>
               );
             })}
-              </div>
-            </CardContent>
-          </Card>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* NOTES */}
       <Card>

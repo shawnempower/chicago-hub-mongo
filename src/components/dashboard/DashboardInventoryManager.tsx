@@ -21,6 +21,7 @@ import { usePublication } from '@/contexts/PublicationContext';
 import { PublicationFrontend } from '@/types/publication';
 import { updatePublication, getPublicationById } from '@/api/publications';
 import { HubPricingEditor, HubPrice } from './HubPricingEditor';
+import { GeneralTermsEditor, GeneralTerms } from './GeneralTermsEditor';
 
 // Helper function to validate inventory item data
 const validateInventoryItem = (item: any, type: string): boolean => {
@@ -46,7 +47,7 @@ export const DashboardInventoryManager = () => {
   
   // Edit dialog states
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [editingType, setEditingType] = useState<'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'podcast' | 'radio' | 'streaming' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'social-media-ad' | 'print-ad' | null>(null);
+  const [editingType, setEditingType] = useState<'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'podcast' | 'radio' | 'streaming' | 'television' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'television-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'television-ad' | 'social-media-ad' | 'print-ad' | null>(null);
   const [editingIndex, setEditingIndex] = useState<number>(-1);
   const [editingSubIndex, setEditingSubIndex] = useState<number>(-1); // for newsletter ads within newsletters
 
@@ -155,6 +156,131 @@ export const DashboardInventoryManager = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // General Terms Handlers
+  const handleSaveWebsiteGeneralTerms = async (terms: GeneralTerms) => {
+    await handleUpdatePublication({
+      distributionChannels: {
+        ...currentPublication.distributionChannels,
+        website: {
+          ...currentPublication.distributionChannels?.website,
+          generalTerms: terms
+        }
+      }
+    });
+  };
+
+  const handleSaveNewsletterGeneralTerms = async (index: number, terms: GeneralTerms) => {
+    const newsletters = [...(currentPublication.distributionChannels?.newsletters || [])];
+    newsletters[index] = {
+      ...newsletters[index],
+      generalTerms: terms
+    };
+    await handleUpdatePublication({
+      distributionChannels: {
+        ...currentPublication.distributionChannels,
+        newsletters
+      }
+    });
+  };
+
+  const handleSavePrintGeneralTerms = async (index: number, terms: GeneralTerms) => {
+    const print = [...(currentPublication.distributionChannels?.print || [])];
+    print[index] = {
+      ...print[index],
+      generalTerms: terms
+    };
+    await handleUpdatePublication({
+      distributionChannels: {
+        ...currentPublication.distributionChannels,
+        print
+      }
+    });
+  };
+
+  const handleSaveEventGeneralTerms = async (index: number, terms: GeneralTerms) => {
+    const events = [...(currentPublication.distributionChannels?.events || [])];
+    events[index] = {
+      ...events[index],
+      generalTerms: terms
+    };
+    await handleUpdatePublication({
+      distributionChannels: {
+        ...currentPublication.distributionChannels,
+        events
+      }
+    });
+  };
+
+  const handleSavePodcastGeneralTerms = async (index: number, terms: GeneralTerms) => {
+    const podcasts = [...(currentPublication.distributionChannels?.podcasts || [])];
+    podcasts[index] = {
+      ...podcasts[index],
+      generalTerms: terms
+    };
+    await handleUpdatePublication({
+      distributionChannels: {
+        ...currentPublication.distributionChannels,
+        podcasts
+      }
+    });
+  };
+
+  const handleSaveRadioGeneralTerms = async (index: number, terms: GeneralTerms) => {
+    const radioStations = [...(currentPublication.distributionChannels?.radioStations || [])];
+    radioStations[index] = {
+      ...radioStations[index],
+      generalTerms: terms
+    };
+    await handleUpdatePublication({
+      distributionChannels: {
+        ...currentPublication.distributionChannels,
+        radioStations
+      }
+    });
+  };
+
+  const handleSaveStreamingGeneralTerms = async (index: number, terms: GeneralTerms) => {
+    const streamingVideo = [...(currentPublication.distributionChannels?.streamingVideo || [])];
+    streamingVideo[index] = {
+      ...streamingVideo[index],
+      generalTerms: terms
+    };
+    await handleUpdatePublication({
+      distributionChannels: {
+        ...currentPublication.distributionChannels,
+        streamingVideo
+      }
+    });
+  };
+
+  const handleSaveTelevisionGeneralTerms = async (index: number, terms: GeneralTerms) => {
+    const television = [...(currentPublication.distributionChannels?.television || [])];
+    television[index] = {
+      ...television[index],
+      generalTerms: terms
+    };
+    await handleUpdatePublication({
+      distributionChannels: {
+        ...currentPublication.distributionChannels,
+        television
+      }
+    });
+  };
+
+  const handleSaveSocialMediaGeneralTerms = async (index: number, terms: GeneralTerms) => {
+    const socialMedia = [...(currentPublication.distributionChannels?.socialMedia || [])];
+    socialMedia[index] = {
+      ...socialMedia[index],
+      generalTerms: terms
+    };
+    await handleUpdatePublication({
+      distributionChannels: {
+        ...currentPublication.distributionChannels,
+        socialMedia
+      }
+    });
   };
 
   // Edit dialog handlers
@@ -693,6 +819,145 @@ export const DashboardInventoryManager = () => {
     }
   };
 
+  // Television functions
+  const addTelevisionStation = async () => {
+    if (!currentPublication) return;
+    
+    const newStation = {
+      stationId: `tv-${Date.now()}`,
+      callSign: 'NEW-TV',
+      channel: '',
+      network: 'independent' as const,
+      coverageArea: '',
+      viewers: 0,
+      advertisingOpportunities: []
+    };
+
+    const updatedTelevision = [...(currentPublication.distributionChannels?.television || []), newStation];
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          television: updatedTelevision
+        }
+      });
+      toast({
+        title: "Success",
+        description: "TV station added successfully"
+      });
+    } catch (error) {
+      console.error('Error adding TV station:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add TV station",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const removeTelevisionStation = async (index: number) => {
+    if (!currentPublication?.distributionChannels?.television) return;
+    
+    const updatedTelevision = currentPublication.distributionChannels.television.filter((_, i) => i !== index);
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          television: updatedTelevision
+        }
+      });
+      toast({
+        title: "Success",
+        description: "TV station removed successfully"
+      });
+    } catch (error) {
+      console.error('Error removing TV station:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove TV station",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addTelevisionOpportunity = async (stationIndex: number) => {
+    if (!currentPublication?.distributionChannels?.television?.[stationIndex]) return;
+    
+    const newOpportunity = {
+      name: 'New Ad Spot',
+      adFormat: '30_second_spot' as const,
+      daypart: 'prime_time' as const,
+      pricing: {
+        perSpot: 0,
+        pricingModel: 'per_spot' as const
+      },
+      available: true
+    };
+
+    const updatedTelevision = [...currentPublication.distributionChannels.television];
+    const updatedOpportunities = [...(updatedTelevision[stationIndex].advertisingOpportunities || []), newOpportunity];
+    
+    updatedTelevision[stationIndex] = {
+      ...updatedTelevision[stationIndex],
+      advertisingOpportunities: updatedOpportunities
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          television: updatedTelevision
+        }
+      });
+      toast({
+        title: "Success",
+        description: "TV ad product added successfully"
+      });
+    } catch (error) {
+      console.error('Error adding TV opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add TV ad product",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const removeTelevisionOpportunity = async (stationIndex: number, adIndex: number) => {
+    if (!currentPublication?.distributionChannels?.television?.[stationIndex]?.advertisingOpportunities?.[adIndex]) return;
+    
+    const updatedTelevision = [...currentPublication.distributionChannels.television];
+    const updatedOpportunities = [...updatedTelevision[stationIndex].advertisingOpportunities];
+    
+    updatedOpportunities.splice(adIndex, 1);
+    
+    updatedTelevision[stationIndex] = {
+      ...updatedTelevision[stationIndex],
+      advertisingOpportunities: updatedOpportunities
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          television: updatedTelevision
+        }
+      });
+      toast({
+        title: "Success",
+        description: "TV ad product removed successfully"
+      });
+    } catch (error) {
+      console.error('Error removing TV opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove TV ad product",
+        variant: "destructive"
+      });
+    }
+  };
   // Remove functions
   const removeWebsiteOpportunity = (index: number) => {
     if (!currentPublication?.distributionChannels?.website?.advertisingOpportunities) return;
@@ -715,7 +980,7 @@ export const DashboardInventoryManager = () => {
     });
   };
 
-  const removeDistributionChannel = async (channelType: 'podcasts' | 'radio' | 'streaming' | 'print' | 'newsletters' | 'socialMedia', index: number) => {
+  const removeDistributionChannel = async (channelType: 'podcasts' | 'radio' | 'streaming' | 'print' | 'newsletters' | 'socialMedia' | 'television', index: number) => {
     if (!currentPublication) return;
     
     let channelKey: string;
@@ -738,6 +1003,9 @@ export const DashboardInventoryManager = () => {
         break;
       case 'socialMedia':
         channelKey = 'socialMedia';
+        break;
+      case 'television':
+        channelKey = 'television';
         break;
     }
 
@@ -1122,14 +1390,15 @@ export const DashboardInventoryManager = () => {
     <div className="space-y-6">
       {/* Inventory Tabs */}
       <Tabs key={currentPublication._id} value={activeTab} onValueChange={handleTabChange} className="shadow-sm rounded-lg">
-        <TabsList className="grid w-full grid-cols-7 lg:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8 gap-0">
           <TabsTrigger value="website">Website</TabsTrigger>
           <TabsTrigger value="newsletters">Newsletters</TabsTrigger>
           <TabsTrigger value="print">Print</TabsTrigger>
           <TabsTrigger value="podcasts">Podcasts</TabsTrigger>
           <TabsTrigger value="radio">Radio</TabsTrigger>
           <TabsTrigger value="streaming">Streaming</TabsTrigger>
-          <TabsTrigger value="social">Social Media</TabsTrigger>
+          <TabsTrigger value="television">TV</TabsTrigger>
+          <TabsTrigger value="social">Social</TabsTrigger>
         </TabsList>
 
         {/* Website Advertising */}
@@ -1164,30 +1433,33 @@ export const DashboardInventoryManager = () => {
                 Edit Website Info
               </Button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div>
-                <span className="text-muted-foreground text-sm">Website URL</span>
-                <p className="font-medium">{currentPublication.distributionChannels?.website?.url || currentPublication.basicInfo?.websiteUrl || 'Not specified'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-sm">CMS Platform</span>
-                <p className="font-medium">{currentPublication.distributionChannels?.website?.cmsplatform || 'Not specified'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-sm">Monthly Visitors</span>
-                <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.monthlyVisitors?.toLocaleString() || 'Not specified'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-sm">Monthly Page Views</span>
-                <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.monthlyPageViews?.toLocaleString() || 'Not specified'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-sm">Bounce Rate</span>
-                <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.bounceRate ? `${currentPublication.distributionChannels.website.metrics.bounceRate}%` : 'Not specified'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-sm">Mobile Traffic</span>
-                <p className="font-medium">{currentPublication.distributionChannels?.website?.metrics?.mobilePercentage ? `${currentPublication.distributionChannels.website.metrics.mobilePercentage}%` : 'Not specified'}</p>
+            {/* Specifications Container */}
+            <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Website URL</span>
+                  <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.url || currentPublication.basicInfo?.websiteUrl || 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">CMS Platform</span>
+                  <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.cmsplatform || 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Monthly Visitors</span>
+                  <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.metrics?.monthlyVisitors?.toLocaleString() || 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Monthly Page Views</span>
+                  <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.metrics?.monthlyPageViews?.toLocaleString() || 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Bounce Rate</span>
+                  <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.metrics?.bounceRate ? `${currentPublication.distributionChannels.website.metrics.bounceRate}%` : 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Mobile Traffic</span>
+                  <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.metrics?.mobilePercentage ? `${currentPublication.distributionChannels.website.metrics.mobilePercentage}%` : 'Not specified'}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -1210,9 +1482,9 @@ export const DashboardInventoryManager = () => {
               {currentPublication.distributionChannels?.website?.advertisingOpportunities?.map((opportunity, index) => (
                 <Card key={index} className="p-4">
                   <div className="flex justify-between items-start mb-4">
-                    <div>
+                    <div className="flex items-center gap-2">
                       <h4 className="font-semibold">{opportunity.name}</h4>
-                      <Badge variant="secondary">{opportunity.adFormat}</Badge>
+                      <Badge variant="secondary">{opportunity.adFormat?.charAt(0).toUpperCase() + opportunity.adFormat?.slice(1)}</Badge>
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -1233,20 +1505,20 @@ export const DashboardInventoryManager = () => {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Location:</span>
+                      <span className="text-muted-foreground">Location</span>
                       <span className="ml-2 font-medium">{opportunity.location}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Size:</span>
+                      <span className="text-muted-foreground">Size</span>
                       <span className="ml-2 font-medium">{opportunity.specifications?.size}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Price:</span>
-                      <span className="ml-2 font-medium">${opportunity.pricing?.flatRate}/month</span>
+                      <span className="text-muted-foreground">Impressions</span>
+                      <span className="ml-2 font-medium">{opportunity.monthlyImpressions?.toLocaleString()}/month</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Impressions:</span>
-                      <span className="ml-2 font-medium">{opportunity.monthlyImpressions?.toLocaleString()}/month</span>
+                      <span className="text-muted-foreground">Price</span>
+                      <span className="ml-2 font-medium">${opportunity.pricing?.flatRate}/month</span>
                     </div>
                   </div>
                 </Card>
@@ -1266,6 +1538,13 @@ export const DashboardInventoryManager = () => {
               )}
             </div>
           </div>
+
+          {/* General Terms */}
+          <GeneralTermsEditor
+            terms={currentPublication.distributionChannels?.website?.generalTerms}
+            onSave={handleSaveWebsiteGeneralTerms}
+            channelName="Website"
+          />
         </TabsContent>
 
         {/* Podcasts */}
@@ -1285,9 +1564,9 @@ export const DashboardInventoryManager = () => {
             {currentPublication.distributionChannels?.podcasts?.map((podcast, index) => (
                   <Card key={index} className="p-4">
                     <div className="flex justify-between items-start mb-4">
-                      <div>
+                      <div className="flex items-center gap-3">
                         <h4 className="font-semibold">{podcast.name}</h4>
-                        <Badge variant="secondary">{podcast.frequency}</Badge>
+                        <Badge variant="secondary">{podcast.frequency?.charAt(0).toUpperCase() + podcast.frequency?.slice(1)}</Badge>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -1306,22 +1585,25 @@ export const DashboardInventoryManager = () => {
                         </Button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-                      <div>
-                        <span className="text-muted-foreground">Downloads:</span>
-                        <span className="ml-2 font-medium">{podcast.averageDownloads?.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Listeners:</span>
-                        <span className="ml-2 font-medium">{podcast.averageListeners?.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Episodes:</span>
-                        <span className="ml-2 font-medium">{podcast.episodeCount}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Platforms:</span>
-                        <span className="ml-2 font-medium">{podcast.platforms?.join(', ')}</span>
+                    {/* Specifications Container */}
+                    <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Downloads</span>
+                          <span className="ml-2 font-medium">{podcast.averageDownloads?.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Listeners</span>
+                          <span className="ml-2 font-medium">{podcast.averageListeners?.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Episodes</span>
+                          <span className="ml-2 font-medium">{podcast.episodeCount}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Platforms</span>
+                          <span className="ml-2 font-medium">{podcast.platforms?.join(', ')}</span>
+                        </div>
                       </div>
                     </div>
                     
@@ -1374,6 +1656,7 @@ export const DashboardInventoryManager = () => {
                         <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                       )}
                     </div>
+
                   </Card>
                 ))}
                 
@@ -1385,6 +1668,22 @@ export const DashboardInventoryManager = () => {
                 <p className="mb-4">Create your first podcast channel using the button above.</p>
               </div>
             )}
+
+            {/* General Terms for Podcasts */}
+            <GeneralTermsEditor
+              terms={currentPublication.distributionChannels?.podcasts?.[0]?.generalTerms}
+              onSave={(terms) => {
+                // Update all podcasts with the same general terms
+                const podcasts = currentPublication.distributionChannels?.podcasts?.map(p => ({ ...p, generalTerms: terms })) || [];
+                handleUpdatePublication({
+                  distributionChannels: {
+                    ...currentPublication.distributionChannels,
+                    podcasts
+                  }
+                });
+              }}
+              channelName="Podcasts"
+            />
           </div>
         </TabsContent>
 
@@ -1405,9 +1704,9 @@ export const DashboardInventoryManager = () => {
             {currentPublication.distributionChannels?.radioStations?.map((station, index) => (
                   <Card key={index} className="p-4">
                     <div className="flex justify-between items-start mb-4">
-                      <div>
+                      <div className="flex items-center gap-3">
                         <h4 className="font-semibold">{station.callSign}</h4>
-                        <Badge variant="secondary">{station.frequency}</Badge>
+                        <Badge variant="secondary">{station.frequency?.charAt(0).toUpperCase() + station.frequency?.slice(1)}</Badge>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -1426,22 +1725,25 @@ export const DashboardInventoryManager = () => {
                         </Button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-                      <div>
-                        <span className="text-muted-foreground">Format:</span>
-                        <span className="ml-2 font-medium">{station.format}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Coverage:</span>
-                        <span className="ml-2 font-medium">{station.coverageArea}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Listeners:</span>
-                        <span className="ml-2 font-medium">{station.listeners?.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Ads:</span>
-                        <span className="ml-2 font-medium">{station.advertisingOpportunities?.length || 0}</span>
+                    {/* Specifications Container */}
+                    <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Format</span>
+                          <span className="ml-2 font-medium">{station.format}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Coverage</span>
+                          <span className="ml-2 font-medium">{station.coverageArea}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Listeners</span>
+                          <span className="ml-2 font-medium">{station.listeners?.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Ads</span>
+                          <span className="ml-2 font-medium">{station.advertisingOpportunities?.length || 0}</span>
+                        </div>
                       </div>
                     </div>
                     
@@ -1494,6 +1796,7 @@ export const DashboardInventoryManager = () => {
                         <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                       )}
                     </div>
+
                   </Card>
                 ))}
                 
@@ -1505,6 +1808,22 @@ export const DashboardInventoryManager = () => {
                 <p className="mb-4">Add your first radio station using the button above.</p>
               </div>
             )}
+
+            {/* General Terms for Radio */}
+            <GeneralTermsEditor
+              terms={currentPublication.distributionChannels?.radioStations?.[0]?.generalTerms}
+              onSave={(terms) => {
+                // Update all radio stations with the same general terms
+                const radioStations = currentPublication.distributionChannels?.radioStations?.map(r => ({ ...r, generalTerms: terms })) || [];
+                handleUpdatePublication({
+                  distributionChannels: {
+                    ...currentPublication.distributionChannels,
+                    radioStations
+                  }
+                });
+              }}
+              channelName="Radio"
+            />
           </div>
         </TabsContent>
 
@@ -1525,9 +1844,9 @@ export const DashboardInventoryManager = () => {
             {currentPublication.distributionChannels?.streamingVideo?.map((channel, index) => (
                   <Card key={index} className="p-4">
                     <div className="flex justify-between items-start mb-4">
-                      <div>
+                      <div className="flex items-center gap-3">
                         <h4 className="font-semibold">{channel.name}</h4>
-                        <Badge variant="secondary">{channel.platform}</Badge>
+                        <Badge variant="secondary">{channel.platform?.charAt(0).toUpperCase() + channel.platform?.slice(1)}</Badge>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -1546,22 +1865,25 @@ export const DashboardInventoryManager = () => {
                         </Button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-                      <div>
-                        <span className="text-muted-foreground">Subscribers:</span>
-                        <span className="ml-2 font-medium">{channel.subscribers?.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Avg Views:</span>
-                        <span className="ml-2 font-medium">{channel.averageViews?.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Content:</span>
-                        <span className="ml-2 font-medium">{channel.contentType}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Ads:</span>
-                        <span className="ml-2 font-medium">{channel.advertisingOpportunities?.length || 0}</span>
+                    {/* Specifications Container */}
+                    <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Subscribers</span>
+                          <span className="ml-2 font-medium">{channel.subscribers?.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Avg Views</span>
+                          <span className="ml-2 font-medium">{channel.averageViews?.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Content</span>
+                          <span className="ml-2 font-medium">{channel.contentType}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Ads</span>
+                          <span className="ml-2 font-medium">{channel.advertisingOpportunities?.length || 0}</span>
+                        </div>
                       </div>
                     </div>
                     
@@ -1614,6 +1936,7 @@ export const DashboardInventoryManager = () => {
                         <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                       )}
                     </div>
+
                   </Card>
                 ))}
                 
@@ -1625,6 +1948,22 @@ export const DashboardInventoryManager = () => {
                 <p className="mb-4">Create your first streaming video channel using the button above.</p>
               </div>
             )}
+
+            {/* General Terms for Streaming */}
+            <GeneralTermsEditor
+              terms={currentPublication.distributionChannels?.streamingVideo?.[0]?.generalTerms}
+              onSave={(terms) => {
+                // Update all streaming channels with the same general terms
+                const streamingVideo = currentPublication.distributionChannels?.streamingVideo?.map(s => ({ ...s, generalTerms: terms })) || [];
+                handleUpdatePublication({
+                  distributionChannels: {
+                    ...currentPublication.distributionChannels,
+                    streamingVideo
+                  }
+                });
+              }}
+              channelName="Streaming"
+            />
           </div>
         </TabsContent>
 
@@ -1660,9 +1999,9 @@ export const DashboardInventoryManager = () => {
                   return printArray.map((publication, index) => (
                     <Card key={index} className="p-4">
                       <div className="flex justify-between items-start mb-4">
-                        <div>
+                        <div className="flex items-center gap-3">
                           <h4 className="font-semibold">{publication.name}</h4>
-                          <Badge variant="secondary">{publication.frequency}</Badge>
+                          <Badge variant="secondary">{publication.frequency?.charAt(0).toUpperCase() + publication.frequency?.slice(1)}</Badge>
                         </div>
                         <div className="flex gap-2">
                           <Button
@@ -1681,18 +2020,21 @@ export const DashboardInventoryManager = () => {
                           </Button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Circulation:</span>
-                          <span className="ml-2 font-medium">{publication.circulation?.toLocaleString()}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Frequency:</span>
-                          <span className="ml-2 font-medium">{publication.frequency}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Ads:</span>
-                          <span className="ml-2 font-medium">{publication.advertisingOpportunities?.length || 0}</span>
+                      {/* Specifications Container */}
+                      <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Circulation</span>
+                            <span className="ml-2 font-medium">{publication.circulation?.toLocaleString()}</span>
+                          </div>
+                          <div>
+                          <span className="text-muted-foreground">Frequency</span>
+                          <span className="ml-2 font-medium">{publication.frequency?.charAt(0).toUpperCase() + publication.frequency?.slice(1)}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Ads</span>
+                            <span className="ml-2 font-medium">{publication.advertisingOpportunities?.length || 0}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -1745,6 +2087,7 @@ export const DashboardInventoryManager = () => {
                           <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                         )}
                       </div>
+
                     </Card>
                   ));
                 })()}
@@ -1756,6 +2099,22 @@ export const DashboardInventoryManager = () => {
                 <p className="mb-4">Add your first print publication using the button above.</p>
               </div>
             )}
+
+            {/* General Terms for Print */}
+            <GeneralTermsEditor
+              terms={currentPublication.distributionChannels?.print?.[0]?.generalTerms}
+              onSave={(terms) => {
+                // Update all print publications with the same general terms
+                const print = currentPublication.distributionChannels?.print?.map(p => ({ ...p, generalTerms: terms })) || [];
+                handleUpdatePublication({
+                  distributionChannels: {
+                    ...currentPublication.distributionChannels,
+                    print
+                  }
+                });
+              }}
+              channelName="Print"
+            />
           </div>
         </TabsContent>
 
@@ -1776,9 +2135,9 @@ export const DashboardInventoryManager = () => {
             {currentPublication.distributionChannels?.newsletters?.map((newsletter, index) => (
               <Card key={index} className="p-4">
                 <div className="flex justify-between items-start mb-4">
-                  <div>
+                  <div className="flex items-center gap-3">
                     <h4 className="font-semibold">{newsletter.name}</h4>
-                    <Badge variant="secondary">{newsletter.frequency}</Badge>
+                    <Badge variant="secondary">{newsletter.frequency?.charAt(0).toUpperCase() + newsletter.frequency?.slice(1)}</Badge>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -1805,22 +2164,29 @@ export const DashboardInventoryManager = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Subject:</span>
-                    <span className="ml-2 font-medium">{newsletter.subject}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Subscribers:</span>
-                    <span className="ml-2 font-medium">{newsletter.subscribers?.toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Frequency:</span>
-                    <span className="ml-2 font-medium">{newsletter.frequency}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Ads:</span>
-                    <span className="ml-2 font-medium">{newsletter.advertisingOpportunities?.length || 0}</span>
+                {/* Specifications Container */}
+                <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Subject</span>
+                      <span className="ml-2 font-medium">{newsletter.subject}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Subscribers</span>
+                      <span className="ml-2 font-medium">{newsletter.subscribers?.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Open Rate</span>
+                      <span className="ml-2 font-medium">{newsletter.openRate ? `${newsletter.openRate}%` : 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Frequency</span>
+                      <span className="ml-2 font-medium">{newsletter.frequency?.charAt(0).toUpperCase() + newsletter.frequency?.slice(1)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Ads</span>
+                      <span className="ml-2 font-medium">{newsletter.advertisingOpportunities?.length || 0}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -1862,6 +2228,7 @@ export const DashboardInventoryManager = () => {
                     <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                   )}
                 </div>
+
               </Card>
             ))}
             
@@ -1873,6 +2240,22 @@ export const DashboardInventoryManager = () => {
                 <p className="mb-4">Create your first newsletter.</p>
               </div>
             )}
+
+            {/* General Terms for Newsletters */}
+            <GeneralTermsEditor
+              terms={currentPublication.distributionChannels?.newsletters?.[0]?.generalTerms}
+              onSave={(terms) => {
+                // Update all newsletters with the same general terms
+                const newsletters = currentPublication.distributionChannels?.newsletters?.map(n => ({ ...n, generalTerms: terms })) || [];
+                handleUpdatePublication({
+                  distributionChannels: {
+                    ...currentPublication.distributionChannels,
+                    newsletters
+                  }
+                });
+              }}
+              channelName="Newsletters"
+            />
           </div>
         </TabsContent>
 
@@ -1892,7 +2275,7 @@ export const DashboardInventoryManager = () => {
             {currentPublication.distributionChannels?.socialMedia?.map((profile, index) => (
               <Card key={index} className="p-4">
                 <div className="flex justify-between items-start mb-4">
-                  <div>
+                  <div className="flex items-center gap-3">
                     <h4 className="font-semibold capitalize">{profile.platform}</h4>
                     <Badge variant="secondary">@{profile.handle}</Badge>
                   </div>
@@ -1913,24 +2296,33 @@ export const DashboardInventoryManager = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Platform:</span>
-                    <span className="ml-2 font-medium capitalize">{profile.platform}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Followers:</span>
-                    <span className="ml-2 font-medium">{profile.metrics?.followers?.toLocaleString() || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Verified:</span>
-                    <span className="ml-2 font-medium">{profile.verified ? 'Yes' : 'No'}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Ads:</span>
-                    <span className="ml-2 font-medium">{profile.advertisingOpportunities?.length || 0}</span>
+                {/* Specifications Container */}
+                <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Followers</span>
+                      <span className="ml-2 font-medium">{profile.metrics?.followers?.toLocaleString() || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Verified</span>
+                      <span className="ml-2 font-medium">{profile.verified ? 'Yes' : 'No'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Ads</span>
+                      <span className="ml-2 font-medium">{profile.advertisingOpportunities?.length || 0}</span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Specifications */}
+                {profile.specifications && (
+                  <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                    <div className="flex items-start gap-2">
+                      <span className="text-sm font-medium text-muted-foreground min-w-fit">Specifications:</span>
+                      <span className="text-sm">{profile.specifications}</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Advertising Opportunities */}
                 <div className="mt-4">
@@ -1981,6 +2373,7 @@ export const DashboardInventoryManager = () => {
                     <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                   )}
                 </div>
+
               </Card>
             ))}
             
@@ -1992,6 +2385,163 @@ export const DashboardInventoryManager = () => {
                 <p className="mb-4">Add your first social media profile.</p>
               </div>
             )}
+
+            {/* General Terms for Social Media */}
+            <GeneralTermsEditor
+              terms={currentPublication.distributionChannels?.socialMedia?.[0]?.generalTerms}
+              onSave={(terms) => {
+                // Update all social media profiles with the same general terms
+                const socialMedia = currentPublication.distributionChannels?.socialMedia?.map(s => ({ ...s, generalTerms: terms })) || [];
+                handleUpdatePublication({
+                  distributionChannels: {
+                    ...currentPublication.distributionChannels,
+                    socialMedia
+                  }
+                });
+              }}
+              channelName="Social Media"
+            />
+          </div>
+        </TabsContent>
+
+        {/* Television Advertising */}
+        <TabsContent value="television" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+              <Video className="w-5 h-5" />
+              Television Advertising
+            </h3>
+            <Button onClick={() => addTelevisionStation()} size="sm" className="gap-2">
+              <Plus className="w-4 h-4" />
+              Add TV Station
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {currentPublication.distributionChannels?.television?.map((station, index) => (
+              <Card key={index} className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-base">{station.callSign || `TV Station ${index + 1}`}</h4>
+                    {/* Specifications Container */}
+                    <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        {station.channel && (
+                          <div>
+                            <span className="text-muted-foreground">Channel</span>
+                            <span className="ml-2 font-medium">{station.channel}</span>
+                          </div>
+                        )}
+                        {station.network && (
+                          <div>
+                            <span className="text-muted-foreground">Network</span>
+                            <span className="ml-2 font-medium">{station.network}</span>
+                          </div>
+                        )}
+                        {station.viewers && (
+                          <div>
+                            <span className="text-muted-foreground">Viewers</span>
+                            <span className="ml-2 font-medium">{station.viewers.toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => openEditDialog(station, 'television-container', index)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => removeTelevisionStation(index)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Ad Products</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => addTelevisionOpportunity(index)}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Ad Product
+                    </Button>
+                  </div>
+                  
+                  {station.advertisingOpportunities && station.advertisingOpportunities.length > 0 ? (
+                    <div className="space-y-2">
+                      {station.advertisingOpportunities.map((ad, adIndex) => (
+                        <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                          <div className="flex-1">
+                            <span className="font-medium">{ad.name}</span>
+                            <span className="text-muted-foreground ml-2">
+                              {ad.adFormat} • {ad.daypart} • ${ad.pricing?.perSpot || 'Custom'}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => openEditDialog(ad, 'television-ad', index, adIndex)}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              onClick={() => removeTelevisionOpportunity(index, adIndex)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No ad products yet</p>
+                  )}
+                </div>
+
+              </Card>
+            ))}
+            
+            {(!currentPublication.distributionChannels?.television || 
+              currentPublication.distributionChannels.television.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No TV Stations</h3>
+                <p className="mb-4">Add your first television station.</p>
+              </div>
+            )}
+
+            {/* General Terms for Television */}
+            <GeneralTermsEditor
+              terms={currentPublication.distributionChannels?.television?.[0]?.generalTerms}
+              onSave={(terms) => {
+                // Update all TV stations with the same general terms
+                const television = currentPublication.distributionChannels?.television?.map(t => ({ ...t, generalTerms: terms })) || [];
+                handleUpdatePublication({
+                  distributionChannels: {
+                    ...currentPublication.distributionChannels,
+                    television
+                  }
+                });
+              }}
+              channelName="Television"
+            />
           </div>
         </TabsContent>
       </Tabs>
@@ -2914,6 +3464,16 @@ export const DashboardInventoryManager = () => {
                         placeholder="2.5"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="specifications">Specifications</Label>
+                    <Input
+                      id="specifications"
+                      value={editingItem.specifications || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, specifications: e.target.value })}
+                      placeholder="e.g., Image, Carousel, or Video, 1080x1080 (1:1 ratio), JPG, PNG, MP4"
+                    />
                   </div>
                   
                   <div className="flex items-center space-x-2">

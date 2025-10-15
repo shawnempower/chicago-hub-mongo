@@ -52,6 +52,7 @@ export interface PublicationFrontend {
       handle: string;
       url?: string;
       verified?: boolean;
+      specifications?: string;
       metrics?: {
         followers?: number;
         following?: number;
@@ -79,6 +80,15 @@ export interface PublicationFrontend {
         };
         available?: boolean;
       }>;
+      generalTerms?: {
+        leadTime?: string;
+        materialDeadline?: string;
+        paymentTerms?: string;
+        cancellationPolicy?: string;
+        agencyCommission?: string;
+        specifications?: string;
+        additionalTerms?: string;
+      };
     }>;
     website?: {
       url?: string;
@@ -112,6 +122,15 @@ export interface PublicationFrontend {
         monthlyImpressions?: number;
         available?: boolean;
       }>;
+      generalTerms?: {
+        leadTime?: string;
+        materialDeadline?: string;
+        paymentTerms?: string;
+        cancellationPolicy?: string;
+        agencyCommission?: string;
+        specifications?: string;
+        additionalTerms?: string;
+      };
     };
     
     newsletters?: Array<{
@@ -133,6 +152,15 @@ export interface PublicationFrontend {
           monthly?: number;
         };
       }>;
+      generalTerms?: {
+        leadTime?: string;
+        materialDeadline?: string;
+        paymentTerms?: string;
+        cancellationPolicy?: string;
+        agencyCommission?: string;
+        specifications?: string;
+        additionalTerms?: string;
+      };
     }>;
     
     print?: Array<{
@@ -153,7 +181,11 @@ export interface PublicationFrontend {
         pricing?: {
           oneTime?: number;
           fourTimes?: number;
+          sixTimes?: number;
           twelveTimes?: number;
+          thirteenTimes?: number;
+          twentySixTimes?: number;
+          fiftyTwoTimes?: number;
           openRate?: number;
         };
         specifications?: {
@@ -162,6 +194,15 @@ export interface PublicationFrontend {
           bleed?: boolean;
         };
       }>;
+      generalTerms?: {
+        leadTime?: string;
+        materialDeadline?: string;
+        paymentTerms?: string;
+        cancellationPolicy?: string;
+        agencyCommission?: string;
+        specifications?: string;
+        additionalTerms?: string;
+      };
     }>;
     
     events?: Array<{
@@ -176,6 +217,15 @@ export interface PublicationFrontend {
         benefits?: string[];
         pricing?: number;
       }>;
+      generalTerms?: {
+        leadTime?: string;
+        materialDeadline?: string;
+        paymentTerms?: string;
+        cancellationPolicy?: string;
+        agencyCommission?: string;
+        specifications?: string;
+        additionalTerms?: string;
+      };
     }>;
     
     podcasts?: Array<{
@@ -202,6 +252,15 @@ export interface PublicationFrontend {
         };
         available?: boolean;
       }>;
+      generalTerms?: {
+        leadTime?: string;
+        materialDeadline?: string;
+        paymentTerms?: string;
+        cancellationPolicy?: string;
+        agencyCommission?: string;
+        specifications?: string;
+        additionalTerms?: string;
+      };
     }>;
     
     radioStations?: Array<{
@@ -228,6 +287,15 @@ export interface PublicationFrontend {
         };
         available?: boolean;
       }>;
+      generalTerms?: {
+        leadTime?: string;
+        materialDeadline?: string;
+        paymentTerms?: string;
+        cancellationPolicy?: string;
+        agencyCommission?: string;
+        specifications?: string;
+        additionalTerms?: string;
+      };
     }>;
     
     streamingVideo?: Array<{
@@ -254,6 +322,50 @@ export interface PublicationFrontend {
         };
         available?: boolean;
       }>;
+      generalTerms?: {
+        leadTime?: string;
+        materialDeadline?: string;
+        paymentTerms?: string;
+        cancellationPolicy?: string;
+        agencyCommission?: string;
+        specifications?: string;
+        additionalTerms?: string;
+      };
+    }>;
+    
+    television?: Array<{
+      stationId?: string;
+      callSign?: string;
+      channel?: string;
+      network?: 'abc' | 'nbc' | 'cbs' | 'fox' | 'pbs' | 'cw' | 'independent' | 'cable' | 'other';
+      coverageArea?: string;
+      viewers?: number;
+      advertisingOpportunities?: Array<{
+        name?: string;
+        adFormat?: '30_second_spot' | '60_second_spot' | '15_second_spot' | 'sponsored_segment' | 'product_placement' | 'billboard';
+        daypart?: 'prime_time' | 'daytime' | 'early_morning' | 'late_night' | 'weekend' | 'sports';
+        pricing?: {
+          perSpot?: number;
+          weekly?: number;
+          monthly?: number;
+          pricingModel?: 'per_spot' | 'weekly' | 'monthly' | 'contact';
+        };
+        specifications?: {
+          format?: 'mpeg2' | 'h264' | 'prores' | 'live_script';
+          resolution?: '1080p' | '720p' | '4k';
+          duration?: number;
+        };
+        available?: boolean;
+      }>;
+      generalTerms?: {
+        leadTime?: string;
+        materialDeadline?: string;
+        paymentTerms?: string;
+        cancellationPolicy?: string;
+        agencyCommission?: string;
+        specifications?: string;
+        additionalTerms?: string;
+      };
     }>;
   };
   
@@ -403,4 +515,14 @@ export interface PublicationType {
   id: string;
   name: string;
   count: number;
+}
+
+// Hub Pricing interface for consistent use across inventory
+export interface HubPricing {
+  hubId: string;
+  hubName: string;
+  pricing: any; // Flexible pricing object since it varies by type
+  discount?: number;
+  available?: boolean;
+  minimumCommitment?: string;
 }

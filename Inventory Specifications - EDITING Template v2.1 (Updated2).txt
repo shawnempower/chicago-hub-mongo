@@ -1,0 +1,679 @@
+# Inventory Edit Mode UI Specification
+
+## Overview
+Edit mode for managing advertising inventory across all channels. Uses per-category editing approach with no summary sections.
+
+## Layout Structure
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Header                                                       │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Inventory Specifications                                │ │
+│ │ [Cancel] [Save Changes]                                 │ │
+│ └─────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│ Channel Categories (Accordion)                              │
+│                                                             │
+│ ┌──────────────────────────────────────────────────────┐   │
+│ │ 🌐 DIGITAL                                          ▼│   │
+│ │ ┌────────────────────────────────────────────────┐   │   │
+│ │ │ Website Products                               │   │   │
+│ │ │ [+ Add Product]                                │   │   │
+│ │ │                                                │   │   │
+│ │ │ Product 1: Leaderboard (728x90)               │   │   │
+│ │ │ Standard Rate: $50 CPM                        │   │   │
+│ │ │ Chicago Hub: $32.50 CPM (-35%)                │   │   │
+│ │ │ [Edit] [Delete]                               │   │   │
+│ │ └────────────────────────────────────────────────┘   │   │
+│ └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│ ┌──────────────────────────────────────────────────────┐   │
+│ │ 📰 PRINT                                           ▼│   │
+│ │ [Content when expanded]                             │   │
+│ └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│ [+ Add New Category]                                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Category Structure
+
+### Available Categories (7 total)
+1. **Digital** (🌐) - Website, Email/Newsletters
+2. **Print** (📰) - Print publications
+3. **Streaming** (🎙️) - Podcast, Video/OTT
+4. **Broadcast** (📻) - Radio, TV
+5. **Social** (📱) - Social media platforms
+6. **Experiential** (🎪) - Events
+7. **Packages** (📦) - Cross-channel packages
+
+### Per-Category Editing
+
+Each category expands to show:
+- **Subcategories** (if applicable)
+- **Product list** with inline editing
+- **Add product** button
+- **General terms** section
+
+## Digital Category Edit Interface
+
+```
+🌐 DIGITAL ▼
+
+┌─────────────────────────────────────────────────────────┐
+│ Website Products                        [+ Add Product] │
+├─────────────────────────────────────────────────────────┤
+│ Product: Leaderboard                                    │
+│ ├─ Dimensions: [728x90]                                 │
+│ ├─ Standard Rate:                                       │
+│ │  ├─ Rate Type: [CPM ▼]                               │
+│ │  └─ Amount: [$50]                                     │
+│ ├─ Hub Rates:                                           │
+│ │  └─ Chicago Hub: [$32.50] (-35%)                     │
+│ ├─ Specs:                                               │
+│ │  ├─ File Types: [JPG, PNG, GIF]                      │
+│ │  ├─ Max Size: [150KB]                                 │
+│ │  └─ Animation: [✓ Allowed]                           │
+│ └─ [Save] [Cancel] [Delete]                            │
+├─────────────────────────────────────────────────────────┤
+│ [Show 3 more products...]                               │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ Email Newsletters                       [+ Add Product] │
+├─────────────────────────────────────────────────────────┤
+│ Newsletter: Daily Brief                                 │
+│ ├─ Subscribers: [10,000]                                │
+│ ├─ Frequency: [Daily ▼]                                 │
+│ ├─ Products:                                            │
+│ │  ├─ Top Banner                                        │
+│ │  │  ├─ Standard: [$500/send]                          │
+│ │  │  └─ Hub: [$350/send] (-30%)                       │
+│ │  └─ [+ Add Product]                                   │
+│ └─ [Save] [Cancel] [Delete Newsletter]                 │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ General Terms                                           │
+│ ├─ Lead Time: [5 business days]                         │
+│ ├─ Material Deadline: [3 days before]                   │
+│ ├─ Payment Terms: [Net 30]                              │
+│ └─ Cancellation: [7 days notice]                        │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Print Category Edit Interface
+
+```
+📰 PRINT ▼
+
+┌─────────────────────────────────────────────────────────┐
+│ Publication: Weekly Tribune          [+ Add Publication]│
+├─────────────────────────────────────────────────────────┤
+│ Details:                                                │
+│ ├─ Circulation: [25,000]                                │
+│ ├─ Frequency: [Weekly ▼]                                │
+│ ├─ Distribution: [Free pickup, Mail]                    │
+│ └─ Print Day: [Thursday]                                │
+├─────────────────────────────────────────────────────────┤
+│ Display Advertising                     [+ Add Product] │
+│                                                         │
+│ Full Page                                               │
+│ ├─ Dimensions: [10" x 13"]                              │
+│ ├─ Standard Rates:                                      │
+│ │  ├─ 1x: [$3,500]                                      │
+│ │  ├─ 13x: [$3,150]                                     │
+│ │  └─ 26x: [$2,800]                                     │
+│ ├─ Hub Rates (Chicago):                                 │
+│ │  ├─ 1x: [$2,100] (-40%)                              │
+│ │  ├─ 13x: [$1,890] (-40%)                             │
+│ │  └─ 26x: [$1,680] (-40%)                             │
+│ ├─ Color: [Full color ▼]                                │
+│ └─ [Save] [Cancel] [Delete]                            │
+│                                                         │
+│ [Show 13 more sizes...]                                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Streaming Category Edit Interface
+
+```
+🎙️ STREAMING ▼
+
+┌─────────────────────────────────────────────────────────┐
+│ Podcast Shows                          [+ Add Show]     │
+├─────────────────────────────────────────────────────────┤
+│ Show: Weekly News Podcast                               │
+│ ├─ Average Listeners: [5,000]                           │
+│ ├─ Frequency: [Weekly ▼]                                │
+│ ├─ Duration: [45 minutes]                               │
+│ ├─ Products:                                            │
+│ │  ├─ Pre-roll (30 sec)                                 │
+│ │  │  ├─ Standard: [$200/episode]                       │
+│ │  │  └─ Hub: [$140/episode] (-30%)                    │
+│ │  ├─ Mid-roll (60 sec)                                 │
+│ │  │  ├─ Standard: [$350/episode]                       │
+│ │  │  └─ Hub: [$245/episode] (-30%)                    │
+│ │  └─ [+ Add Product]                                   │
+│ └─ [Save] [Cancel] [Delete Show]                       │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ Video/OTT Channels                     [+ Add Channel]  │
+├─────────────────────────────────────────────────────────┤
+│ Channel: YouTube Channel                                │
+│ ├─ Subscribers: [25,000]                                │
+│ ├─ Average Views: [10,000/video]                        │
+│ ├─ Products:                                            │
+│ │  ├─ Sponsored Video                                   │
+│ │  │  ├─ Standard: [$2,500]                             │
+│ │  │  └─ Hub: [$1,750] (-30%)                          │
+│ │  └─ [+ Add Product]                                   │
+│ └─ [Save] [Cancel] [Delete Channel]                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Broadcast Category Edit Interface
+
+```
+📻 BROADCAST ▼
+
+┌─────────────────────────────────────────────────────────┐
+│ Radio Stations                         [+ Add Station]  │
+├─────────────────────────────────────────────────────────┤
+│ Station: WXYZ 101.5 FM                                  │
+│ ├─ Format: [News/Talk ▼]                                │
+│ ├─ Coverage: [Metro Chicago]                            │
+│ ├─ Weekly Listeners: [50,000]                           │
+│ ├─ Spots:                                               │
+│ │  ├─ 30-second spot                                    │
+│ │  │  ├─ Standard: [$250/spot]                          │
+│ │  │  └─ Hub: Not available                            │
+│ │  └─ [+ Add Spot]                                      │
+│ └─ [Save] [Cancel] [Delete Station]                    │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ TV Stations                            [+ Add Station]  │
+├─────────────────────────────────────────────────────────┤
+│ Station: Channel 7                                      │
+│ ├─ Network: [Local ▼]                                   │
+│ ├─ Coverage: [Metro region]                             │
+│ ├─ Products:                                            │
+│ │  ├─ 30-second spot                                    │
+│ │  │  ├─ Prime time: [$1,500/spot]                      │
+│ │  │  └─ Off-peak: [$500/spot]                         │
+│ │  └─ [+ Add Product]                                   │
+│ └─ [Save] [Cancel] [Delete Station]                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Social Media Category Edit Interface
+
+```
+📱 SOCIAL MEDIA ▼
+
+┌─────────────────────────────────────────────────────────┐
+│ Social Platforms                       [+ Add Platform] │
+├─────────────────────────────────────────────────────────┤
+│ Platform: Facebook                                      │
+│ ├─ Handle: [@publisher]                                 │
+│ ├─ Followers: [50,000]                                  │
+│ ├─ Engagement Rate: [3.5]%                              │
+│ ├─ Products:                                            │
+│ │  ├─ Sponsored Post                                    │
+│ │  │  ├─ Standard: [$500/post]                          │
+│ │  │  └─ Hub: Not available                            │
+│ │  └─ [+ Add Product]                                   │
+│ └─ [Save] [Cancel] [Delete Platform]                   │
+├─────────────────────────────────────────────────────────┤
+│ Platform: Instagram                                     │
+│ ├─ Handle: [@publisher]                                 │
+│ ├─ Followers: [35,000]                                  │
+│ ├─ Engagement Rate: [4.2]%                              │
+│ ├─ Products:                                            │
+│ │  ├─ Story Post                                        │
+│ │  │  ├─ Standard: [$300/story]                         │
+│ │  │  └─ Hub: Not available                            │
+│ │  ├─ Feed Post                                         │
+│ │  │  ├─ Standard: [$600/post]                          │
+│ │  │  └─ Hub: Not available                            │
+│ │  └─ [+ Add Product]                                   │
+│ └─ [Save] [Cancel] [Delete Platform]                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Experiential Category Edit Interface
+
+```
+🎪 EXPERIENTIAL ▼
+
+┌─────────────────────────────────────────────────────────┐
+│ Events                                 [+ Add Event]    │
+├─────────────────────────────────────────────────────────┤
+│ Event: Annual Summer Festival                           │
+│ ├─ Frequency: [Annual ▼]                                │
+│ ├─ Average Attendance: [5,000]                          │
+│ ├─ Location: [Millennium Park]                          │
+│ ├─ Sponsorship Levels:                                  │
+│ │  ├─ Presenting Sponsor                                │
+│ │  │  ├─ Standard: [$10,000]                            │
+│ │  │  └─ Hub: [$7,000] (-30%)                          │
+│ │  ├─ Gold Sponsor                                      │
+│ │  │  ├─ Standard: [$5,000]                             │
+│ │  │  └─ Hub: [$3,500] (-30%)                          │
+│ │  └─ [+ Add Level]                                     │
+│ └─ [Save] [Cancel] [Delete Event]                      │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Packages Category Edit Interface
+
+```
+📦 CROSS-CHANNEL PACKAGES ▼
+
+┌─────────────────────────────────────────────────────────┐
+│ Multi-Channel Packages                 [+ Add Package]  │
+├─────────────────────────────────────────────────────────┤
+│ Package: Digital Bundle                                 │
+│ ├─ Description: [Complete digital presence]            │
+│ ├─ Included Channels:                                   │
+│ │  ├─ [✓] Website - Leaderboard                        │
+│ │  ├─ [✓] Email - Top Banner (4 sends)                 │
+│ │  └─ [✓] Social - 2 Facebook posts                    │
+│ ├─ Standard Pricing:                                    │
+│ │  ├─ Monthly: [$2,500]                                 │
+│ │  ├─ Quarterly: [$7,000]                               │
+│ │  └─ Annual: [$24,000]                                 │
+│ ├─ Hub Pricing (Chicago):                               │
+│ │  ├─ Monthly: [$1,625] (-35%)                          │
+│ │  ├─ Quarterly: [$4,550] (-35%)                        │
+│ │  └─ Annual: [$15,600] (-35%)                          │
+│ └─ [Save] [Cancel] [Delete Package]                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Product Editing Modal
+
+When clicking "Add Product" or "Edit" on a product:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Edit Product: [Product Name]                   [X] │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│ Basic Information                                   │
+│ ├─ Product Name: [____________]                     │
+│ ├─ Description: [____________]                      │
+│ └─ Format/Type: [Display ▼]                        │
+│                                                     │
+│ Specifications                                      │
+│ ├─ Dimensions: [______ x ______]                    │
+│ ├─ Color: [Full color ▼]                           │
+│ ├─ Position: [Above fold ▼]                        │
+│ └─ File Requirements:                               │
+│    ├─ Types: [JPG] [PNG] [GIF]                     │
+│    ├─ Max Size: [_____] KB                          │
+│    └─ Animation: [✓] Allowed                        │
+│                                                     │
+│ Standard Pricing                                    │
+│ ├─ Rate Type: [CPM ▼] [Flat ▼] [Per Send ▼]       │
+│ ├─ Base Rate: [$_____]                              │
+│ └─ Frequency Rates:                                 │
+│    ├─ 1x: [$_____]                                  │
+│    ├─ 4x: [$_____]                                  │
+│    ├─ 13x: [$_____]                                 │
+│    └─ 26x: [$_____]                                 │
+│                                                     │
+│ Program Pricing (Internal)                          │
+│ ├─ [✓] Chicago Hub                                  │
+│ │  ├─ Discount: [35]%                               │
+│ │  └─ Calculated rates shown automatically          │
+│ └─ [✓] National Hub                                 │
+│    └─ Same as Chicago Hub                           │
+│                                                     │
+│ Additional Details                                  │
+│ ├─ Lead Time: [5] business days                     │
+│ ├─ Min Commitment: [None ▼]                         │
+│ └─ Notes: [____________]                            │
+│                                                     │
+│           [Cancel]  [Save Product]                  │
+└─────────────────────────────────────────────────────┘
+```
+
+## Add New Category Modal
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Add Inventory Category                         [X] │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│ Select Category Type:                               │
+│                                                     │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
+│ │ 🌐 Digital  │ │ 📰 Print    │ │ 🎙️ Streaming│   │
+│ └─────────────┘ └─────────────┘ └─────────────┘   │
+│                                                     │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
+│ │ 📻 Broadcast│ │ 📱 Social   │ │ 🎪 Events   │   │
+│ └─────────────┘ └─────────────┘ └─────────────┘   │
+│                                                     │
+│ ┌─────────────┐                                    │
+│ │ 📦 Packages │                                    │
+│ └─────────────┘                                    │
+│                                                     │
+│           [Cancel]  [Add Category]                  │
+└─────────────────────────────────────────────────────┘
+```
+
+## State Management
+
+### Edit State
+```typescript
+interface InventoryEditState {
+  isDirty: boolean;
+  expandedCategories: string[];
+  editingProduct: string | null;
+  validationErrors: Record<string, string[]>;
+}
+```
+
+### Category State
+```typescript
+type InventoryCategory = 
+  | 'digital' 
+  | 'print' 
+  | 'streaming' 
+  | 'broadcast' 
+  | 'social' 
+  | 'experiential' 
+  | 'packages';
+
+interface CategoryState {
+  [key: string]: {
+    enabled: boolean;
+    expanded: boolean;
+    data: any;
+  };
+}
+```
+
+## Unsaved Changes Warning
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Unsaved Changes                                [X] │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│ You have unsaved changes to the inventory.          │
+│                                                     │
+│ What would you like to do?                          │
+│                                                     │
+│           [Discard]  [Keep Editing]                 │
+└─────────────────────────────────────────────────────┘
+```
+
+## Validation Rules
+
+### Required Fields
+- Product name
+- At least one rate (standard or hub)
+- Rate type (CPM, flat, per send)
+
+### Rate Validation
+- Hub rates must be ≤ standard rates
+- Frequency rates should decrease (1x ≥ 4x ≥ 13x)
+- Percentages must be 0-100
+- Discount percentages calculated automatically
+
+### Display Rules
+- Show hub rates only in internal view
+- Display discount percentage automatically
+- Highlight missing required fields in red
+- Show warning icon for validation errors
+
+## Save Behavior
+
+When clicking "Save Changes":
+1. Validate all products across all categories
+2. Show validation errors if any exist
+3. Calculate all hub discount percentages
+4. Update Master JSON with changes
+5. Update Storefront JSON (excluding hub data)
+6. Preserve expanded/collapsed state
+7. Show success toast notification
+8. Mark isDirty as false
+
+### Success Toast
+```
+┌─────────────────────────────────────────────────────┐
+│ ✓ Inventory saved successfully                      │
+└─────────────────────────────────────────────────────┘
+```
+
+### Error Toast
+```
+┌─────────────────────────────────────────────────────┐
+│ ✗ Please fix validation errors before saving        │
+└─────────────────────────────────────────────────────┘
+```
+
+## TypeScript Type Definitions
+
+```typescript
+// Category types
+type InventoryCategory = 
+  | 'digital' 
+  | 'print' 
+  | 'streaming' 
+  | 'broadcast' 
+  | 'social' 
+  | 'experiential' 
+  | 'packages';
+
+// Product rate structure
+interface ProductRate {
+  rate1x?: number;
+  rate4x?: number;
+  rate6x?: number;
+  rate12x?: number;
+  rate13x?: number;
+  rate26x?: number;
+  rate52x?: number;
+  cpm?: number;
+  flatRate?: number;
+  perSend?: number;
+}
+
+// Program pricing
+interface ProgramPricing {
+  programId: string;
+  programName: string;
+  rates: ProductRate;
+  discountPercentage: number;
+}
+
+// Product specifications
+interface ProductSpecs {
+  dimensions?: string;
+  fileTypes?: string[];
+  maxFileSize?: string;
+  animationAllowed?: boolean;
+  color?: string;
+  position?: string;
+}
+
+// Complete product interface
+interface InventoryProduct {
+  productId: string;
+  name: string;
+  description?: string;
+  format?: string;
+  specifications?: ProductSpecs;
+  standardPricing: ProductRate;
+  programPricing?: ProgramPricing[];
+  leadTime?: string;
+  minimumCommitment?: string;
+  notes?: string;
+}
+
+// Category data structures
+interface DigitalInventory {
+  website: {
+    products: InventoryProduct[];
+    generalTerms: Record<string, any>;
+  };
+  email: {
+    newsletters: Array<{
+      name: string;
+      subscribers: number;
+      frequency: string;
+      products: InventoryProduct[];
+    }>;
+    generalTerms: Record<string, any>;
+  };
+}
+
+interface PrintInventory {
+  publications: Array<{
+    name: string;
+    circulation: number;
+    frequency: string;
+    products: InventoryProduct[];
+  }>;
+  generalTerms: Record<string, any>;
+}
+
+// Helper functions
+export const getCategoryName = (category: InventoryCategory): string => {
+  const names: Record<InventoryCategory, string> = {
+    digital: 'Digital',
+    print: 'Print',
+    streaming: 'Streaming',
+    broadcast: 'Broadcast',
+    social: 'Social Media',
+    experiential: 'Experiential',
+    packages: 'Packages'
+  };
+  return names[category];
+};
+
+export const getCategoryIcon = (category: InventoryCategory): string => {
+  const icons: Record<InventoryCategory, string> = {
+    digital: '🌐',
+    print: '📰',
+    streaming: '🎙️',
+    broadcast: '📻',
+    social: '📱',
+    experiential: '🎪',
+    packages: '📦'
+  };
+  return icons[category];
+};
+
+export const getCategoryDescription = (category: InventoryCategory): string => {
+  const descriptions: Record<InventoryCategory, string> = {
+    digital: 'Website display advertising and email newsletters',
+    print: 'Print publications with multiple ad sizes and rates',
+    streaming: 'Podcast advertising and video/OTT placements',
+    broadcast: 'Radio spots and television advertising',
+    social: 'Facebook, Instagram, Twitter, and other platforms',
+    experiential: 'Live events and sponsorship opportunities',
+    packages: 'Combined offerings across multiple channels'
+  };
+  return descriptions[category];
+};
+
+export const initializeEmptyCategory = (category: InventoryCategory): any => {
+  switch (category) {
+    case 'digital':
+      return {
+        website: { products: [], generalTerms: {} },
+        email: { newsletters: [], generalTerms: {} }
+      };
+    case 'print':
+      return { publications: [], generalTerms: {} };
+    case 'streaming':
+      return {
+        podcast: { shows: [], generalTerms: {} },
+        video: { channels: [], generalTerms: {} }
+      };
+    case 'broadcast':
+      return {
+        radio: { stations: [], generalTerms: {} },
+        tv: { stations: [], generalTerms: {} }
+      };
+    case 'social':
+      return { platforms: [], generalTerms: '' };
+    case 'experiential':
+      return { events: [], generalTerms: '' };
+    case 'packages':
+      return { packages: [] };
+  }
+};
+
+// Validation helpers
+export const validateProduct = (product: InventoryProduct): string[] => {
+  const errors: string[] = [];
+  
+  if (!product.name) {
+    errors.push('Product name is required');
+  }
+  
+  if (!product.standardPricing || Object.keys(product.standardPricing).length === 0) {
+    errors.push('At least one standard rate is required');
+  }
+  
+  // Validate hub rates don't exceed standard rates
+  if (product.programPricing) {
+    product.programPricing.forEach(program => {
+      Object.keys(program.rates).forEach(key => {
+        const rateKey = key as keyof ProductRate;
+        const hubRate = program.rates[rateKey];
+        const standardRate = product.standardPricing[rateKey];
+        
+        if (hubRate && standardRate && hubRate > standardRate) {
+          errors.push(`${program.programName} rate for ${key} cannot exceed standard rate`);
+        }
+      });
+    });
+  }
+  
+  return errors;
+};
+
+// Calculate discount percentage
+export const calculateDiscount = (standardRate: number, programRate: number): number => {
+  if (!standardRate || !programRate) return 0;
+  return Math.round(((standardRate - programRate) / standardRate) * 100);
+};
+```
+
+## User Experience Notes
+
+### Efficiency Features
+- **Keyboard shortcuts**: Enter to save, Escape to cancel
+- **Auto-save draft**: Save to localStorage every 30 seconds
+- **Bulk operations**: Select multiple products to delete/edit
+- **Copy products**: Duplicate existing products to save time
+- **Templates**: Save common product configurations
+
+### Accessibility
+- ARIA labels on all interactive elements
+- Keyboard navigation for all modals and forms
+- Screen reader announcements for save/error states
+- Focus management when opening/closing modals
+- Color contrast compliance (WCAG AA)
+
+### Performance
+- Lazy load category data when expanded
+- Debounce validation checks (300ms)
+- Optimize re-renders with React.memo
+- Virtual scrolling for long product lists
+
+---
+
+**Version**: 1.0  
+**Last Updated**: October 15, 2025  
+**Status**: Ready for Implementation

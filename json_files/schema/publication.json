@@ -661,16 +661,36 @@
                       "type": "object",
                       "properties": {
                         "oneTime": {
-                          "type": "number"
+                          "type": "number",
+                          "description": "1x insertion rate"
                         },
                         "fourTimes": {
-                          "type": "number"
+                          "type": "number",
+                          "description": "4x insertion rate"
+                        },
+                        "sixTimes": {
+                          "type": "number",
+                          "description": "6x insertion rate"
                         },
                         "twelveTimes": {
-                          "type": "number"
+                          "type": "number",
+                          "description": "12x insertion rate"
+                        },
+                        "thirteenTimes": {
+                          "type": "number",
+                          "description": "13x insertion rate"
+                        },
+                        "twentySixTimes": {
+                          "type": "number",
+                          "description": "26x insertion rate"
+                        },
+                        "fiftyTwoTimes": {
+                          "type": "number",
+                          "description": "52x insertion rate"
                         },
                         "openRate": {
-                          "type": "number"
+                          "type": "number",
+                          "description": "Open rate for single insertion"
                         }
                       }
                     },
@@ -711,7 +731,19 @@
                               "fourTimes": {
                                 "type": "number"
                               },
+                              "sixTimes": {
+                                "type": "number"
+                              },
                               "twelveTimes": {
+                                "type": "number"
+                              },
+                              "thirteenTimes": {
+                                "type": "number"
+                              },
+                              "twentySixTimes": {
+                                "type": "number"
+                              },
+                              "fiftyTwoTimes": {
                                 "type": "number"
                               },
                               "openRate": {
@@ -1240,6 +1272,137 @@
                           "minimumCommitment": {
                             "type": "string",
                             "description": "Minimum booking commitment for this hub"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "television": {
+          "type": "array",
+          "description": "TV stations and cable channels",
+          "items": {
+            "type": "object",
+            "properties": {
+              "stationId": {
+                "type": "string"
+              },
+              "callSign": {
+                "type": "string",
+                "description": "Station call sign (e.g., WBBM-TV)"
+              },
+              "channel": {
+                "type": "string",
+                "description": "Channel number or network name"
+              },
+              "network": {
+                "type": "string",
+                "enum": ["abc", "nbc", "cbs", "fox", "pbs", "cw", "independent", "cable", "other"]
+              },
+              "coverageArea": {
+                "type": "string",
+                "description": "Geographic coverage area"
+              },
+              "viewers": {
+                "type": "integer",
+                "description": "Average weekly viewers"
+              },
+              "advertisingOpportunities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "adFormat": {
+                      "type": "string",
+                      "enum": ["30_second_spot", "60_second_spot", "15_second_spot", "sponsored_segment", "product_placement", "billboard"]
+                    },
+                    "daypart": {
+                      "type": "string",
+                      "enum": ["prime_time", "daytime", "early_morning", "late_night", "weekend", "sports"]
+                    },
+                    "pricing": {
+                      "type": "object",
+                      "properties": {
+                        "perSpot": {
+                          "type": "number"
+                        },
+                        "weekly": {
+                          "type": "number"
+                        },
+                        "monthly": {
+                          "type": "number"
+                        },
+                        "pricingModel": {
+                          "type": "string",
+                          "enum": ["per_spot", "weekly", "monthly", "contact"]
+                        }
+                      }
+                    },
+                    "specifications": {
+                      "type": "object",
+                      "properties": {
+                        "format": {
+                          "type": "string",
+                          "enum": ["mpeg2", "h264", "prores", "live_script"]
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "enum": ["1080p", "720p", "4k"]
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "description": "Ad duration in seconds"
+                        }
+                      }
+                    },
+                    "available": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "hubPricing": {
+                      "type": "array",
+                      "description": "Pricing variations for different marketing hubs",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hubId": {
+                            "type": "string"
+                          },
+                          "hubName": {
+                            "type": "string"
+                          },
+                          "pricing": {
+                            "type": "object",
+                            "properties": {
+                              "perSpot": {
+                                "type": "number"
+                              },
+                              "weekly": {
+                                "type": "number"
+                              },
+                              "monthly": {
+                                "type": "number"
+                              }
+                            }
+                          },
+                          "discount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "default": true
+                          },
+                          "minimumCommitment": {
+                            "type": "string"
                           }
                         }
                       }

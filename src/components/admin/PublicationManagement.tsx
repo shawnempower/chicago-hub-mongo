@@ -273,9 +273,6 @@ const PublicationManagement: React.FC = () => {
                       <strong>Market:</strong> {publication.primaryServiceArea || 'N/A'}
                     </div>
                     <div>
-                      <strong>Audience:</strong> {publication.audienceDemographics?.totalAudience?.toLocaleString() || 'N/A'}
-                    </div>
-                    <div>
                       <strong>Monthly Visitors:</strong> {publication.distributionChannels?.website?.metrics?.monthlyVisitors?.toLocaleString() || 'N/A'}
                     </div>
                     <div>
@@ -526,7 +523,6 @@ const PublicationDetails: React.FC<{ publication: PublicationDisplay }> = ({ pub
       <div>
         <h4 className="font-semibold mb-2">Metrics</h4>
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <div><strong>Total Audience:</strong> {publication.audienceDemographics?.totalAudience?.toLocaleString() || 'N/A'}</div>
           <div><strong>Monthly Visitors:</strong> {publication.distributionChannels?.website?.metrics?.monthlyVisitors?.toLocaleString() || 'N/A'}</div>
           <div><strong>Print Circulation:</strong> {publication.distributionChannels?.print?.circulation?.toLocaleString() || 'N/A'}</div>
           <div><strong>Newsletter Subscribers:</strong> {publication.distributionChannels?.newsletters?.[0]?.subscribers?.toLocaleString() || 'N/A'}</div>

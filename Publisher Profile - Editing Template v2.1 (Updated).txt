@@ -1,0 +1,156 @@
+# Edit Publisher Profile
+**Publisher ID**: [publisher_id] | **Last Updated**: [Date]
+
+[Save Changes] [Cancel]
+
+---
+
+## ESSENTIAL INFORMATION
+
+**Publication**: [text_input] (required)
+**Type**: [dropdown: Daily/Weekly/Bi-weekly/Monthly/Quarterly/Online-only/Other] (required)
+**Market**: [text_input] (required) - City, State format
+**Founded**: [number_input] (optional) - Year (YYYY)
+**Website**: [url_input] (required) - Must include https://
+
+**Primary Contact Name**: [text_input] (optional)
+**Primary Email**: [email_input] (required)
+**Primary Phone**: [phone_input] (optional) - Format: (555) 555-5555
+
+**Sales Contact Name**: [text_input] (optional)
+**Sales Email**: [email_input] (optional)
+**Sales Phone**: [phone_input] (optional)
+
+---
+
+## BUSINESS INFORMATION
+
+**Legal Entity**: [text_input] (optional) - Full legal business name
+**Parent Company**: [text_input] (optional)
+**Tax ID/EIN**: [text_input] (optional) - Format: XX-XXXXXXX
+**Business Address**: [textarea] (optional) - Full address for contracts/invoicing
+
+**Sister Publications**: [repeatable_section]
+[+ Add Sister Publication]
+- **Name**: [text_input] - **Market**: [text_input]
+[Remove]
+
+**Ownership Type**: [dropdown: Independent/Chain/Nonprofit/Public Company/Private Company/Family-owned/Other] (optional)
+**Years in Operation**: [number_input] (optional)
+
+**Accounting Contact Name**: [text_input] (optional)
+**Accounting Email**: [email_input] (optional)
+**Accounting Phone**: [phone_input] (optional)
+
+---
+
+## PROGRAM ENROLLMENT
+
+[+ Add Program]
+
+### Program 1
+**Program Name**: [dropdown: Chicago Media Hub/National Hub/...] (required)
+*[Dropdown populated from available hubs in system]*
+**Status**: [dropdown: Active/Pending/Inactive/Suspended] (required)
+**Program Notes**: [textarea] (optional)
+[Remove Program]
+
+---
+
+## GEOGRAPHIC MARKETS
+
+**Primary Coverage**: [text_input] (required) - Neighborhood, city, region, or metro
+**Secondary Coverage**: [text_input] (optional) - Comma-separated if multiple
+**Full Description**: [textarea] (optional) - Complete geographic scope
+
+---
+
+## KEY METRICS
+
+**[Only complete sections for channels your publication offers]**
+
+### Digital
+**Monthly Visitors**: [number_input] (optional)
+**Monthly Pageviews**: [number_input] (optional)
+**Email Subscribers**: [number_input] (optional)
+
+### Print
+**Circulation**: [number_input] (optional)
+**Frequency**: [text_input] (optional) - e.g., Weekly, Bi-weekly
+**Distribution**: [text_input] (optional) - Area/method
+
+### Podcast
+**Average Downloads per Episode**: [number_input] (optional)
+**Total Subscribers**: [number_input] (optional)
+**Frequency**: [text_input] (optional) - e.g., Weekly, Daily
+
+### Radio
+**Weekly Listeners**: [number_input] (optional)
+**Coverage Area**: [text_input] (optional)
+**Format**: [text_input] (optional) - e.g., News/Talk, Music, Sports
+
+### Streaming Video
+**Subscribers**: [number_input] (optional)
+**Average Views per Video**: [number_input] (optional)
+**Platform**: [text_input] (optional) - e.g., YouTube, Vimeo
+
+### Social Media
+**Combined Following**: [number_input] (optional)
+**Primary Platforms**: [text_input] (optional) - List with counts
+
+### Events
+[+ Add Event]
+**Event Name**: [text_input] - **Attendance**: [number_input] - **Frequency**: [text_input]
+[Remove]
+
+---
+
+## AUDIENCE SNAPSHOT
+
+**Age**: [text_input] (optional) - Primary range or distribution
+**Income**: [text_input] (optional) - Primary range or median
+**Education**: [text_input] (optional) - Primary level
+**Geography**: [text_input] (optional) - Primary markets
+
+---
+
+## POSITIONING & UNIQUE VALUE
+
+**Market Position**: [textarea] (optional) - How you position yourself
+e.g., "Leading alternative weekly," "Community-focused news leader"
+
+**What Makes You Unique**: [repeatable_section]
+[+ Add Differentiator]
+- [text_input]
+[Remove]
+
+**Best For**: [textarea] (optional) - Types of advertisers who succeed with you
+e.g., "Local restaurants, entertainment venues, lifestyle brands targeting young professionals"
+
+---
+
+## CHANNELS OFFERED
+
+Select all channels you offer advertising on:
+☐ Website Advertising
+☐ Email/Newsletter
+☐ Print Advertising
+☐ Social Media
+☐ Podcast Advertising
+☐ Streaming Video
+☐ Radio
+☐ TV/Broadcast
+☐ Events/Sponsorships
+☐ Other: [text_input]
+
+---
+
+## NOTES
+
+[textarea] (optional) - Any important context, special considerations, or internal notes
+
+---
+
+[Save Changes] [Cancel]
+
+*Auto-saved: [timestamp]*

@@ -1,0 +1,130 @@
+# Add Inventory Category Modal
+
+## Trigger
+- "+ Add Inventory Type" button after last tab
+- Or, if no categories exist, prominent button in empty state
+
+## Modal Design
+
+┌─────────────────────────────────────────────────────────────┐
+│  Add Inventory Category                                  [×] │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  What type of advertising inventory do you want to add?     │
+│                                                              │
+│  ○ Digital (Website + Email)                                │
+│    Website display advertising and email newsletters        │
+│                                                              │
+│  ○ Print (Newspapers, Magazines)                            │
+│    Print publications with multiple ad sizes and rates      │
+│                                                              │
+│  ○ Streaming (Podcast, Video)                               │
+│    Podcast advertising and video/OTT placements            │
+│                                                              │
+│  ○ Broadcast (Radio, TV/Cable)                              │
+│    Radio spots and television advertising                   │
+│                                                              │
+│  ○ Social Media                                              │
+│    Facebook, Instagram, Twitter, and other platforms        │
+│                                                              │
+│  ○ Experiential (Events, Sponsorships)                      │
+│    Live events and sponsorship opportunities                │
+│                                                              │
+│  ○ Packages (Cross-channel bundles)                         │
+│    Combined offerings across multiple channels              │
+│                                                              │
+│                         [Cancel]  [Add Category]             │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+
+## Behavior
+
+### On Category Selection
+1. Radio button becomes selected
+2. "Add Category" button becomes enabled
+3. Click "Add Category" to proceed
+
+### After Adding
+1. Modal closes
+2. New tab appears in correct position
+3. Tab opens automatically in EDIT mode
+4. Empty state shows with guidance
+5. Shows relevant "Add [Sub-section]" buttons
+
+### Empty States by Category
+
+**Digital**:
+```
+Get started by adding your website or email newsletter
+
+[+ Add Website Advertising]  [+ Add Email Newsletter]
+```
+
+**Print**:
+```
+Add your first print publication
+
+[+ Add Print Publication]
+```
+
+**Streaming**:
+```
+Choose which streaming inventory to add
+
+[+ Add Podcast]  [+ Add Video Channel]
+```
+
+**Broadcast**:
+```
+Choose which broadcast inventory to add
+
+[+ Add Radio Station]  [+ Add TV Station]
+```
+
+**Social**:
+```
+Add your first social media platform
+
+[+ Add Social Platform]
+```
+
+**Experiential**:
+```
+Add your first event
+
+[+ Add Event]
+```
+
+**Packages**:
+```
+Create your first multi-channel package
+
+[+ Add Package]
+```
+
+## Validation
+
+- Only allow adding each category once
+- If category already exists, show message: "This category already exists"
+- Gray out already-added categories in modal
+
+## Removal
+
+Each category edit header includes:
+[Save Changes] [Cancel] [🗑️ Remove Category]
+
+### Confirmation Dialog
+
+┌─────────────────────────────────────────────┐
+│  Remove [Category] Category?             [×] │
+├─────────────────────────────────────────────┤
+│                                              │
+│  This will permanently delete:               │
+│  • [Count] sub-sections                      │
+│  • [Count] advertising products              │
+│                                              │
+│  This action cannot be undone.               │
+│                                              │
+│              [Cancel]  [Remove Category]     │
+│                                              │
+└─────────────────────────────────────────────┘

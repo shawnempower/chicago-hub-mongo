@@ -1,0 +1,137 @@
+# [Publication Name]
+**Generated**: [Date] | **Status**: Internal Reference | **ID**: [publisher_id]
+
+[Edit Profile Button]
+
+---
+
+## ESSENTIAL INFORMATION
+
+**Publication**: [Full Name]
+**Type**: [Daily/Weekly/Online/etc.]
+**Market**: [City, State]
+**Founded**: [Year]
+**Website**: [URL]
+
+**Primary Contact**: [Name] | [Email] | [Phone]
+**Sales Contact**: [Name] | [Email] | [Phone]
+
+---
+
+## BUSINESS INFORMATION
+
+**Legal Entity**: [Full legal name]
+**Parent Company**: [If applicable]
+**Tax ID/EIN**: [Number]
+**Business Address**: [Full address]
+
+**Sister Publications**: 
+- [Publication Name] - [Market]
+- [Publication Name] - [Market]
+
+**Ownership Type**: [Independent/Chain/Nonprofit/etc.]
+**Years in Operation**: [Number]
+
+**Accounting Contact**: [Name] | [Email] | [Phone]
+
+---
+
+## PROGRAM ENROLLMENT
+
+| Program | Status |
+|---------|--------|
+| Chicago Media Hub | Active |
+| National Hub | Active |
+
+**Program Notes**: [Any special terms or conditions]
+
+---
+
+## GEOGRAPHIC MARKETS
+
+**Primary Coverage**: [Specific area - can be neighborhood, city, region, or metro]
+**Secondary Coverage**: [If applicable]
+**Full Description**: [Complete geographic scope]
+
+---
+
+## KEY METRICS
+
+### Digital
+- **Monthly Visitors**: [Number]
+- **Monthly Pageviews**: [Number]
+- **Email Subscribers**: [Number]
+
+### Print
+- **Circulation**: [Number]
+- **Frequency**: [Schedule]
+- **Distribution**: [Area/method]
+
+### Podcast
+- **Average Downloads**: [Number]/episode
+- **Total Subscribers**: [Number]
+- **Frequency**: [Schedule]
+
+### Radio
+- **Weekly Listeners**: [Number]
+- **Coverage Area**: [Geography]
+- **Format**: [Format type]
+
+### Streaming Video
+- **Subscribers**: [Number]
+- **Average Views**: [Number]/video
+- **Platform**: [YouTube/Other]
+
+### Social
+- **Combined Following**: [Number]
+- **Primary Platforms**: [List with counts]
+
+### Events
+- **[Event Name]**: [Number] attendees, [Frequency]
+- **[Event Name 2]**: [Number] attendees, [Frequency]
+
+---
+
+## AUDIENCE SNAPSHOT
+
+**Age**: [Primary range or distribution]
+**Income**: [Primary range or median]
+**Education**: [Primary level]
+**Geography**: [Primary markets]
+
+---
+
+## POSITIONING & UNIQUE VALUE
+
+**Market Position**: [How they position themselves]
+
+**What Makes Them Unique**:
+- [Key differentiator 1]
+- [Key differentiator 2]
+- [Key differentiator 3]
+
+**Best For**: [Types of advertisers who succeed]
+
+---
+
+## CHANNELS OFFERED
+
+- ✓ Website Advertising
+- ✓ Email/Newsletter
+- ✓ Print Advertising
+- ✓ Social Media
+- ✓ Podcast Advertising
+- ✓ Streaming Video
+- ✓ Radio
+- ✓ Events/Sponsorships
+
+---
+
+## NOTES
+
+[Any important context, special considerations, or internal notes about this publisher]
+
+---
+
+*Last Updated: [Date]*
+*Document ID: [ID]*

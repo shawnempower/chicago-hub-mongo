@@ -51,7 +51,13 @@ const storefrontImageService = new StorefrontImageService(s3Service);
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+  origin: [
+    'http://localhost:8080',
+    'http://localhost:8081', 
+    'http://localhost:8082',
+    'http://localhost:8083',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
   credentials: true
 }));
 app.use(morgan('combined'));
