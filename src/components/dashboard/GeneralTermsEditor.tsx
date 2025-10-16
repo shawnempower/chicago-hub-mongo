@@ -3,7 +3,6 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, Save, X, FileText } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -62,7 +61,6 @@ export const GeneralTermsEditor: React.FC<GeneralTermsEditorProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h4 className="font-semibold text-sm">General Terms</h4>
-                  <Badge variant="outline" className="text-xs">Not in Schema</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
                   Add standard terms and conditions for {channelName} advertising
@@ -93,7 +91,6 @@ export const GeneralTermsEditor: React.FC<GeneralTermsEditorProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="font-semibold">General Terms</h4>
-                <Badge variant="outline" className="text-xs">Not in Schema</Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Standard terms and conditions for {channelName} advertising

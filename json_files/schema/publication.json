@@ -75,6 +75,28 @@
           "type": "string",
           "description": "Operating hours"
         },
+        "primaryContact": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "preferredContact": {
+              "type": "string",
+              "enum": ["email", "phone", "text", "linkedin"]
+            }
+          }
+        },
         "salesContact": {
           "type": "object",
           "properties": {
@@ -309,6 +331,38 @@
                   }
                 }
               }
+            },
+            "generalTerms": {
+              "type": "object",
+              "description": "General terms and conditions that apply to all website advertising products",
+              "properties": {
+                "leadTime": {
+                  "type": "string",
+                  "description": "Minimum lead time required for booking"
+                },
+                "materialDeadline": {
+                  "type": "string",
+                  "description": "Deadline for submitting ad materials"
+                },
+                "paymentTerms": {
+                  "type": "string",
+                  "description": "Payment terms (e.g., Net 30, Net 15)"
+                },
+                "cancellationPolicy": {
+                  "type": "string",
+                  "description": "Cancellation policy and notice requirements"
+                },
+                "agencyCommission": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "description": "Agency commission percentage"
+                },
+                "additionalTerms": {
+                  "type": "string",
+                  "description": "Any additional terms specific to website advertising"
+                }
+              }
             }
           }
         },
@@ -473,6 +527,36 @@
                     }
                   }
                 }
+              },
+              "generalTerms": {
+                "type": "object",
+                "description": "General terms and conditions that apply to all social media advertising products",
+                "properties": {
+                  "leadTime": {
+                    "type": "string",
+                    "description": "Minimum lead time required for booking"
+                  },
+                  "materialDeadline": {
+                    "type": "string",
+                    "description": "Deadline for submitting ad materials"
+                  },
+                  "paymentTerms": {
+                    "type": "string",
+                    "description": "Payment terms (e.g., Net 30, Net 15)"
+                  },
+                  "cancellationPolicy": {
+                    "type": "string",
+                    "description": "Cancellation policy and notice requirements"
+                  },
+                  "contentApproval": {
+                    "type": "string",
+                    "description": "Content approval requirements and process"
+                  },
+                  "additionalTerms": {
+                    "type": "string",
+                    "description": "Any additional terms specific to social media advertising"
+                  }
+                }
               }
             },
             "required": ["platform", "handle"]
@@ -590,6 +674,36 @@
                         }
                       }
                     }
+                  }
+                }
+              },
+              "generalTerms": {
+                "type": "object",
+                "description": "General terms and conditions that apply to all newsletter advertising products",
+                "properties": {
+                  "leadTime": {
+                    "type": "string",
+                    "description": "Minimum lead time required for booking"
+                  },
+                  "materialDeadline": {
+                    "type": "string",
+                    "description": "Deadline for submitting ad materials"
+                  },
+                  "paymentTerms": {
+                    "type": "string",
+                    "description": "Payment terms (e.g., Net 30, Net 15)"
+                  },
+                  "cancellationPolicy": {
+                    "type": "string",
+                    "description": "Cancellation policy and notice requirements"
+                  },
+                  "contentApproval": {
+                    "type": "string",
+                    "description": "Content approval requirements and process"
+                  },
+                  "additionalTerms": {
+                    "type": "string",
+                    "description": "Any additional terms specific to newsletter advertising"
                   }
                 }
               }
@@ -771,6 +885,42 @@
                     }
                   }
                 }
+              },
+              "generalTerms": {
+                "type": "object",
+                "description": "General terms and conditions that apply to all print advertising products",
+                "properties": {
+                  "spaceDeadline": {
+                    "type": "string",
+                    "description": "Deadline for reserving ad space"
+                  },
+                  "materialDeadline": {
+                    "type": "string",
+                    "description": "Deadline for submitting ad materials"
+                  },
+                  "paymentTerms": {
+                    "type": "string",
+                    "description": "Payment terms (e.g., Net 30, Net 15)"
+                  },
+                  "cancellationPolicy": {
+                    "type": "string",
+                    "description": "Cancellation policy and notice requirements"
+                  },
+                  "agencyCommission": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Agency commission percentage"
+                  },
+                  "colorCharges": {
+                    "type": "string",
+                    "description": "Additional charges for color advertising"
+                  },
+                  "additionalTerms": {
+                    "type": "string",
+                    "description": "Any additional terms specific to print advertising"
+                  }
+                }
               }
             }
           }
@@ -861,6 +1011,32 @@
                         }
                       }
                     }
+                  }
+                }
+              },
+              "generalTerms": {
+                "type": "object",
+                "description": "General terms and conditions that apply to all event advertising products",
+                "properties": {
+                  "bookingDeadline": {
+                    "type": "string",
+                    "description": "Deadline for booking sponsorship"
+                  },
+                  "paymentTerms": {
+                    "type": "string",
+                    "description": "Payment terms (e.g., Net 30, 50% deposit)"
+                  },
+                  "cancellationPolicy": {
+                    "type": "string",
+                    "description": "Cancellation policy and refund terms"
+                  },
+                  "deliverables": {
+                    "type": "string",
+                    "description": "Standard deliverables included with sponsorship"
+                  },
+                  "additionalTerms": {
+                    "type": "string",
+                    "description": "Any additional terms specific to event sponsorships"
                   }
                 }
               }
@@ -1002,6 +1178,36 @@
                     }
                   }
                 }
+              },
+              "generalTerms": {
+                "type": "object",
+                "description": "General terms and conditions that apply to all podcast advertising products",
+                "properties": {
+                  "bookingDeadline": {
+                    "type": "string",
+                    "description": "Deadline for booking podcast ads"
+                  },
+                  "materialDeadline": {
+                    "type": "string",
+                    "description": "Deadline for submitting ad materials or scripts"
+                  },
+                  "paymentTerms": {
+                    "type": "string",
+                    "description": "Payment terms (e.g., Net 30, Net 15)"
+                  },
+                  "cancellationPolicy": {
+                    "type": "string",
+                    "description": "Cancellation policy and notice requirements"
+                  },
+                  "productionServices": {
+                    "type": "string",
+                    "description": "Available production services and costs"
+                  },
+                  "additionalTerms": {
+                    "type": "string",
+                    "description": "Any additional terms specific to podcast advertising"
+                  }
+                }
               }
             }
           }
@@ -1136,6 +1342,36 @@
                         }
                       }
                     }
+                  }
+                }
+              },
+              "generalTerms": {
+                "type": "object",
+                "description": "General terms and conditions that apply to all radio advertising products",
+                "properties": {
+                  "bookingDeadline": {
+                    "type": "string",
+                    "description": "Deadline for booking radio spots"
+                  },
+                  "materialDeadline": {
+                    "type": "string",
+                    "description": "Deadline for submitting ad materials or scripts"
+                  },
+                  "paymentTerms": {
+                    "type": "string",
+                    "description": "Payment terms (e.g., Net 30, Net 15)"
+                  },
+                  "cancellationPolicy": {
+                    "type": "string",
+                    "description": "Cancellation policy and notice requirements"
+                  },
+                  "productionServices": {
+                    "type": "string",
+                    "description": "Available production services and costs"
+                  },
+                  "additionalTerms": {
+                    "type": "string",
+                    "description": "Any additional terms specific to radio advertising"
                   }
                 }
               }
@@ -1278,6 +1514,36 @@
                     }
                   }
                 }
+              },
+              "generalTerms": {
+                "type": "object",
+                "description": "General terms and conditions that apply to all streaming video advertising products",
+                "properties": {
+                  "bookingDeadline": {
+                    "type": "string",
+                    "description": "Deadline for booking video advertising"
+                  },
+                  "materialDeadline": {
+                    "type": "string",
+                    "description": "Deadline for submitting video materials"
+                  },
+                  "paymentTerms": {
+                    "type": "string",
+                    "description": "Payment terms (e.g., Net 30, Net 15)"
+                  },
+                  "cancellationPolicy": {
+                    "type": "string",
+                    "description": "Cancellation policy and notice requirements"
+                  },
+                  "contentApproval": {
+                    "type": "string",
+                    "description": "Content approval process and requirements"
+                  },
+                  "additionalTerms": {
+                    "type": "string",
+                    "description": "Any additional terms specific to streaming video advertising"
+                  }
+                }
               }
             }
           }
@@ -1407,6 +1673,40 @@
                         }
                       }
                     }
+                  }
+                }
+              },
+              "generalTerms": {
+                "type": "object",
+                "description": "General terms and conditions that apply to all television advertising products",
+                "properties": {
+                  "bookingDeadline": {
+                    "type": "string",
+                    "description": "Deadline for booking television spots"
+                  },
+                  "materialDeadline": {
+                    "type": "string",
+                    "description": "Deadline for submitting video materials"
+                  },
+                  "paymentTerms": {
+                    "type": "string",
+                    "description": "Payment terms (e.g., Net 30, Net 15)"
+                  },
+                  "cancellationPolicy": {
+                    "type": "string",
+                    "description": "Cancellation policy and notice requirements"
+                  },
+                  "productionServices": {
+                    "type": "string",
+                    "description": "Available production services and costs"
+                  },
+                  "makeGoodPolicy": {
+                    "type": "string",
+                    "description": "Make-good policy for missed or preempted spots"
+                  },
+                  "additionalTerms": {
+                    "type": "string",
+                    "description": "Any additional terms specific to television advertising"
                   }
                 }
               }
@@ -1614,6 +1914,15 @@
     "businessInfo": {
       "type": "object",
       "properties": {
+        "legalEntity": {
+          "type": "string",
+          "description": "Legal business entity name"
+        },
+        "taxId": {
+          "type": "string",
+          "description": "Tax ID/EIN (Employer Identification Number)",
+          "pattern": "^[0-9]{2}-[0-9]{7}$"
+        },
         "ownershipType": {
           "type": "string",
           "enum": ["independent", "chain", "nonprofit", "public", "private", "family-owned"]
