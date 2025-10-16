@@ -31,6 +31,7 @@ export interface ContactPerson {
 export interface ContactInfo {
   mainPhone?: string;
   businessHours?: string;
+  primaryContact?: ContactPerson;
   salesContact?: ContactPerson;
   editorialContact?: ContactPerson;
   generalManager?: ContactPerson;
@@ -303,6 +304,8 @@ export interface EditorialInfo {
 
 // Business Information
 export interface BusinessInfo {
+  legalEntity?: string;
+  taxId?: string;
   ownershipType?: OwnershipType;
   parentCompany?: string;
   yearsInOperation?: number;

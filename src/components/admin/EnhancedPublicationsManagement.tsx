@@ -72,6 +72,8 @@ interface EnhancedPublicationFormData {
   signatureFeatures: string;
   
   // Business Info
+  legalEntity: string;
+  taxId: string;
   ownershipType: string;
   parentCompany: string;
   yearsInOperation: number;
@@ -202,6 +204,8 @@ export const EnhancedPublicationsManagement = () => {
     signatureFeatures: '',
     
     // Business Info
+    legalEntity: '',
+    taxId: '',
     ownershipType: '',
     parentCompany: '',
     yearsInOperation: 0,
@@ -297,6 +301,8 @@ export const EnhancedPublicationsManagement = () => {
       contentPillars: '',
       specialSections: '',
       signatureFeatures: '',
+      legalEntity: '',
+      taxId: '',
       ownershipType: '',
       parentCompany: '',
       yearsInOperation: 0,
@@ -350,6 +356,12 @@ export const EnhancedPublicationsManagement = () => {
         contactInfo: {
           mainPhone: formData.mainPhone,
           businessHours: formData.businessHours,
+          primaryContact: {
+            name: formData.salesContactName, // Map sales contact to primary for backwards compatibility
+            email: formData.salesContactEmail,
+            phone: formData.salesContactPhone,
+            preferredContact: 'email'
+          },
           salesContact: {
             name: formData.salesContactName,
             email: formData.salesContactEmail,
@@ -398,6 +410,8 @@ export const EnhancedPublicationsManagement = () => {
           signatureFeatures: formData.signatureFeatures ? formData.signatureFeatures.split(',').map(s => s.trim()) : []
         },
         businessInfo: {
+          legalEntity: formData.legalEntity,
+          taxId: formData.taxId,
           ownershipType: formData.ownershipType as any,
           parentCompany: formData.parentCompany,
           yearsInOperation: formData.yearsInOperation,
@@ -563,6 +577,8 @@ export const EnhancedPublicationsManagement = () => {
         contentPillars: fullPublication.editorialInfo?.contentPillars?.join(', ') || '',
         specialSections: fullPublication.editorialInfo?.specialSections?.join(', ') || '',
         signatureFeatures: fullPublication.editorialInfo?.signatureFeatures?.join(', ') || '',
+        legalEntity: fullPublication.businessInfo?.legalEntity || '',
+        taxId: fullPublication.businessInfo?.taxId || '',
         ownershipType: fullPublication.businessInfo?.ownershipType || '',
         parentCompany: fullPublication.businessInfo?.parentCompany || '',
         yearsInOperation: fullPublication.businessInfo?.yearsInOperation || 0,
@@ -1248,6 +1264,26 @@ export const EnhancedPublicationsManagement = () => {
               {/* Business Info Tab */}
               <TabsContent value="business" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="legalEntity">Legal Entity</Label>
+                    <Input
+                      id="legalEntity"
+                      value={formData.legalEntity}
+                      onChange={(e) => setFormData({ ...formData, legalEntity: e.target.value })}
+                      placeholder="e.g. ABC Media LLC"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="taxId">Tax ID / EIN</Label>
+                    <Input
+                      id="taxId"
+                      value={formData.taxId}
+                      onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
+                      placeholder="XX-XXXXXXX"
+                      pattern="[0-9]{2}-[0-9]{7}"
+                      title="Format: XX-XXXXXXX (e.g. 12-3456789)"
+                    />
+                  </div>
                   <div>
                     <Label htmlFor="ownershipType">Ownership Type</Label>
                     <Select value={formData.ownershipType} onValueChange={(value) => setFormData({ ...formData, ownershipType: value })}>

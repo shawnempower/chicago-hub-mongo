@@ -74,6 +74,8 @@ interface PublicationFormData {
   signatureFeatures: string[];
   
   // Business Info
+  legalEntity: string;
+  taxId: string;
   ownershipType: string;
   parentCompany: string;
   yearsInOperation: number;
@@ -289,6 +291,8 @@ export const PublicationsManagement = () => {
     signatureFeatures: [],
     
     // Business Info
+    legalEntity: '',
+    taxId: '',
     ownershipType: '',
     parentCompany: '',
     yearsInOperation: 0,
@@ -398,6 +402,12 @@ export const PublicationsManagement = () => {
         contactInfo: {
           mainPhone: formData.mainPhone || undefined,
           businessHours: formData.businessHours || undefined,
+          primaryContact: formData.salesContactName ? {
+            name: formData.salesContactName,
+            title: formData.salesContactTitle || undefined,
+            email: formData.salesContactEmail || undefined,
+            phone: formData.salesContactPhone || undefined,
+          } : undefined,
           salesContact: formData.salesContactName ? {
             name: formData.salesContactName,
             title: formData.salesContactTitle || undefined,

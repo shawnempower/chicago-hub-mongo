@@ -31,6 +31,12 @@ export interface PublicationDisplay {
   primaryServiceArea?: string;
   contactInfo?: {
     mainPhone?: string;
+    primaryContact?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      preferredContact?: string;
+    };
     salesContact?: {
       name?: string;
       email?: string;
@@ -65,6 +71,8 @@ export interface PublicationDisplay {
     targetMarkets?: string[];
   };
   businessInfo?: {
+    legalEntity?: string;
+    taxId?: string;
     ownershipType?: string;
     numberOfEmployees?: number;
     yearsInOperation?: number;

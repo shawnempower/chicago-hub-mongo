@@ -149,7 +149,6 @@ export const PublicationProfile: React.FC = () => {
       </div>
         </div>
 
-        <SchemaFieldLegend />
 
         {/* ESSENTIAL INFORMATION */}
         <Card>
@@ -196,37 +195,128 @@ export const PublicationProfile: React.FC = () => {
 
             <div className="border-t pt-4">
               <h4 className="font-medium mb-3">Primary Contact</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SchemaField mappingStatus="partial" schemaPath="contactInfo.salesContact.name" warningMessage="Using Sales Contact field" showSchemaPath={showSchemaDebug}>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.name" showSchemaPath={showSchemaDebug}>
                   <Label>Name</Label>
-                  <Input value={getFieldValue('contactInfo.salesContact.name')} onChange={(e) => updateField('contactInfo.salesContact.name', e.target.value)} />
+                  <Input value={getFieldValue('contactInfo.primaryContact.name')} onChange={(e) => updateField('contactInfo.primaryContact.name', e.target.value)} />
                 </SchemaField>
-                <SchemaField mappingStatus="partial" schemaPath="contactInfo.salesContact.email" warningMessage="Using Sales Contact field" showSchemaPath={showSchemaDebug}>
+                <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.title" showSchemaPath={showSchemaDebug}>
+                  <Label>Title</Label>
+                  <Input value={getFieldValue('contactInfo.primaryContact.title')} onChange={(e) => updateField('contactInfo.primaryContact.title', e.target.value)} />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.email" showSchemaPath={showSchemaDebug}>
                   <Label>Email <span className="text-red-500">*</span></Label>
-                  <Input type="email" value={getFieldValue('contactInfo.salesContact.email')} onChange={(e) => updateField('contactInfo.salesContact.email', e.target.value)} />
+                  <Input type="email" value={getFieldValue('contactInfo.primaryContact.email')} onChange={(e) => updateField('contactInfo.primaryContact.email', e.target.value)} />
                 </SchemaField>
-                <SchemaField mappingStatus="partial" schemaPath="contactInfo.salesContact.phone" warningMessage="Using Sales Contact field" showSchemaPath={showSchemaDebug}>
+                <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.phone" showSchemaPath={showSchemaDebug}>
                   <Label>Phone</Label>
-                  <Input type="tel" value={getFieldValue('contactInfo.salesContact.phone')} onChange={(e) => updateField('contactInfo.salesContact.phone', e.target.value)} placeholder="(555) 555-5555" />
+                  <Input type="tel" value={getFieldValue('contactInfo.primaryContact.phone')} onChange={(e) => updateField('contactInfo.primaryContact.phone', e.target.value)} placeholder="(555) 555-5555" />
                 </SchemaField>
               </div>
-                </div>
+              <div className="mt-3">
+                <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.preferredContact" showSchemaPath={showSchemaDebug}>
+                  <Label>Preferred Contact Method</Label>
+                  <Select value={getFieldValue('contactInfo.primaryContact.preferredContact')} onValueChange={(val) => updateField('contactInfo.primaryContact.preferredContact', val)}>
+                    <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="phone">Phone</SelectItem>
+                      <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="linkedin">LinkedIn</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </SchemaField>
+              </div>
+            </div>
 
             <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">Sales Contact</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SchemaField mappingStatus="partial" schemaPath="contactInfo.advertisingDirector.name" warningMessage="Using Advertising Director field" showSchemaPath={showSchemaDebug}>
-                  <Label>Name</Label>
-                  <Input value={getFieldValue('contactInfo.advertisingDirector.name')} onChange={(e) => updateField('contactInfo.advertisingDirector.name', e.target.value)} />
-                </SchemaField>
-                <SchemaField mappingStatus="partial" schemaPath="contactInfo.advertisingDirector.email" warningMessage="Using Advertising Director field" showSchemaPath={showSchemaDebug}>
-                  <Label>Email</Label>
-                  <Input type="email" value={getFieldValue('contactInfo.advertisingDirector.email')} onChange={(e) => updateField('contactInfo.advertisingDirector.email', e.target.value)} />
-                </SchemaField>
-                <SchemaField mappingStatus="partial" schemaPath="contactInfo.advertisingDirector.phone" warningMessage="Using Advertising Director field" showSchemaPath={showSchemaDebug}>
-                  <Label>Phone</Label>
-                  <Input type="tel" value={getFieldValue('contactInfo.advertisingDirector.phone')} onChange={(e) => updateField('contactInfo.advertisingDirector.phone', e.target.value)} />
-                </SchemaField>
+              <h4 className="font-medium mb-3">Additional Contacts</h4>
+              <div className="space-y-6">
+                
+                {/* Sales Contact */}
+                <div>
+                  <h5 className="text-sm font-medium mb-2 text-muted-foreground">Sales Contact</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.salesContact.name" showSchemaPath={showSchemaDebug}>
+                      <Label>Name</Label>
+                      <Input value={getFieldValue('contactInfo.salesContact.name')} onChange={(e) => updateField('contactInfo.salesContact.name', e.target.value)} />
+                    </SchemaField>
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.salesContact.title" showSchemaPath={showSchemaDebug}>
+                      <Label>Title</Label>
+                      <Input value={getFieldValue('contactInfo.salesContact.title')} onChange={(e) => updateField('contactInfo.salesContact.title', e.target.value)} />
+                    </SchemaField>
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.salesContact.email" showSchemaPath={showSchemaDebug}>
+                      <Label>Email</Label>
+                      <Input type="email" value={getFieldValue('contactInfo.salesContact.email')} onChange={(e) => updateField('contactInfo.salesContact.email', e.target.value)} />
+                    </SchemaField>
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.salesContact.phone" showSchemaPath={showSchemaDebug}>
+                      <Label>Phone</Label>
+                      <Input type="tel" value={getFieldValue('contactInfo.salesContact.phone')} onChange={(e) => updateField('contactInfo.salesContact.phone', e.target.value)} />
+                    </SchemaField>
+                  </div>
+                </div>
+
+                {/* Editorial Contact */}
+                <div>
+                  <h5 className="text-sm font-medium mb-2 text-muted-foreground">Editorial Contact</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.editorialContact.name" showSchemaPath={showSchemaDebug}>
+                      <Label>Name</Label>
+                      <Input value={getFieldValue('contactInfo.editorialContact.name')} onChange={(e) => updateField('contactInfo.editorialContact.name', e.target.value)} />
+                    </SchemaField>
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.editorialContact.title" showSchemaPath={showSchemaDebug}>
+                      <Label>Title</Label>
+                      <Input value={getFieldValue('contactInfo.editorialContact.title')} onChange={(e) => updateField('contactInfo.editorialContact.title', e.target.value)} />
+                    </SchemaField>
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.editorialContact.email" showSchemaPath={showSchemaDebug}>
+                      <Label>Email</Label>
+                      <Input type="email" value={getFieldValue('contactInfo.editorialContact.email')} onChange={(e) => updateField('contactInfo.editorialContact.email', e.target.value)} />
+                    </SchemaField>
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.editorialContact.phone" showSchemaPath={showSchemaDebug}>
+                      <Label>Phone</Label>
+                      <Input type="tel" value={getFieldValue('contactInfo.editorialContact.phone')} onChange={(e) => updateField('contactInfo.editorialContact.phone', e.target.value)} />
+                    </SchemaField>
+                  </div>
+                </div>
+
+                {/* General Manager */}
+                <div>
+                  <h5 className="text-sm font-medium mb-2 text-muted-foreground">General Manager</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.generalManager.name" showSchemaPath={showSchemaDebug}>
+                      <Label>Name</Label>
+                      <Input value={getFieldValue('contactInfo.generalManager.name')} onChange={(e) => updateField('contactInfo.generalManager.name', e.target.value)} />
+                    </SchemaField>
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.generalManager.email" showSchemaPath={showSchemaDebug}>
+                      <Label>Email</Label>
+                      <Input type="email" value={getFieldValue('contactInfo.generalManager.email')} onChange={(e) => updateField('contactInfo.generalManager.email', e.target.value)} />
+                    </SchemaField>
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.generalManager.phone" showSchemaPath={showSchemaDebug}>
+                      <Label>Phone</Label>
+                      <Input type="tel" value={getFieldValue('contactInfo.generalManager.phone')} onChange={(e) => updateField('contactInfo.generalManager.phone', e.target.value)} />
+                    </SchemaField>
+                  </div>
+                </div>
+
+                {/* Advertising Director */}
+                <div>
+                  <h5 className="text-sm font-medium mb-2 text-muted-foreground">Advertising Director</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.advertisingDirector.name" showSchemaPath={showSchemaDebug}>
+                      <Label>Name</Label>
+                      <Input value={getFieldValue('contactInfo.advertisingDirector.name')} onChange={(e) => updateField('contactInfo.advertisingDirector.name', e.target.value)} />
+                    </SchemaField>
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.advertisingDirector.email" showSchemaPath={showSchemaDebug}>
+                      <Label>Email</Label>
+                      <Input type="email" value={getFieldValue('contactInfo.advertisingDirector.email')} onChange={(e) => updateField('contactInfo.advertisingDirector.email', e.target.value)} />
+                    </SchemaField>
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.advertisingDirector.phone" showSchemaPath={showSchemaDebug}>
+                      <Label>Phone</Label>
+                      <Input type="tel" value={getFieldValue('contactInfo.advertisingDirector.phone')} onChange={(e) => updateField('contactInfo.advertisingDirector.phone', e.target.value)} />
+                    </SchemaField>
+                  </div>
+                </div>
+
               </div>
             </div>
           </CardContent>
@@ -239,9 +329,20 @@ export const PublicationProfile: React.FC = () => {
           </div>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SchemaField mappingStatus="none" schemaPath="businessInfo.legalEntity" warningMessage="Schema field does not exist" showSchemaPath={showSchemaDebug}>
+              <SchemaField mappingStatus="full" schemaPath="businessInfo.legalEntity" showSchemaPath={showSchemaDebug}>
                 <Label>Legal Entity</Label>
-                <Input value="Not in schema" disabled className="bg-gray-100 cursor-not-allowed text-gray-500" />
+                <Input value={getFieldValue('businessInfo.legalEntity')} onChange={(e) => updateField('businessInfo.legalEntity', e.target.value)} placeholder="e.g. ABC Media LLC" />
+              </SchemaField>
+
+              <SchemaField mappingStatus="full" schemaPath="businessInfo.taxId" showSchemaPath={showSchemaDebug}>
+                <Label>Tax ID / EIN</Label>
+                <Input 
+                  value={getFieldValue('businessInfo.taxId')} 
+                  onChange={(e) => updateField('businessInfo.taxId', e.target.value)} 
+                  placeholder="XX-XXXXXXX"
+                  pattern="[0-9]{2}-[0-9]{7}"
+                  title="Format: XX-XXXXXXX (e.g. 12-3456789)"
+                />
               </SchemaField>
 
               <SchemaField mappingStatus="full" schemaPath="businessInfo.parentCompany" showSchemaPath={showSchemaDebug}>
@@ -249,15 +350,7 @@ export const PublicationProfile: React.FC = () => {
                 <Input value={getFieldValue('businessInfo.parentCompany')} onChange={(e) => updateField('businessInfo.parentCompany', e.target.value)} />
               </SchemaField>
 
-              <SchemaField mappingStatus="none" schemaPath="businessInfo.taxId" warningMessage="Schema field does not exist" showSchemaPath={showSchemaDebug}>
-                <Label>Tax ID/EIN</Label>
-                <Input value="Not in schema" disabled className="bg-gray-100 cursor-not-allowed text-gray-500" placeholder="XX-XXXXXXX" />
-              </SchemaField>
 
-              <SchemaField mappingStatus="partial" schemaPath="basicInfo.headquarters" warningMessage="Using headquarters field for business address" showSchemaPath={showSchemaDebug}>
-                <Label>Business Address</Label>
-                <Textarea value={getFieldValue('basicInfo.headquarters')} onChange={(e) => updateField('basicInfo.headquarters', e.target.value)} placeholder="Full address for contracts/invoicing" rows={2} />
-              </SchemaField>
 
               <SchemaField mappingStatus="full" schemaPath="businessInfo.ownershipType" showSchemaPath={showSchemaDebug}>
                 <Label>Ownership Type</Label>
@@ -293,103 +386,305 @@ export const PublicationProfile: React.FC = () => {
               <Input value={getFieldValue('basicInfo.primaryServiceArea')} onChange={(e) => updateField('basicInfo.primaryServiceArea', e.target.value)} placeholder="Neighborhood, city, region, or metro" />
             </SchemaField>
 
-            <SchemaField mappingStatus="partial" schemaPath="basicInfo.secondaryMarkets" warningMessage="Array converted to comma-separated list" showSchemaPath={showSchemaDebug}>
+            <SchemaField mappingStatus="full" schemaPath="basicInfo.secondaryMarkets" showSchemaPath={showSchemaDebug}>
               <Label>Secondary Coverage</Label>
               <Input value={transformers.arrayToString(getFieldValue('basicInfo.secondaryMarkets'))} onChange={(e) => updateField('basicInfo.secondaryMarkets', transformers.stringToArray(e.target.value))} placeholder="Comma-separated if multiple" />
             </SchemaField>
           </CardContent>
         </Card>
 
-        {/* KEY METRICS */}
+
+        {/* AUDIENCE DEMOGRAPHICS */}
         <Card>
           <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-            <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Key Metrics</h2>
-            <p className="text-sm text-muted-foreground mt-1">Only complete sections for channels your publication offers</p>
+            <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Audience Demographics</h2>
           </div>
           <CardContent className="space-y-6">
-            {/* Digital */}
-              <div>
-              <h3 className="font-semibold mb-3 border-b pb-2">Digital</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SchemaField mappingStatus="full" schemaPath="distributionChannels.website.metrics.monthlyVisitors" showSchemaPath={showSchemaDebug}>
-                  <Label>Monthly Visitors</Label>
-                  <Input type="number" value={getFieldValue('distributionChannels.website.metrics.monthlyVisitors')} onChange={(e) => updateField('distributionChannels.website.metrics.monthlyVisitors', parseInt(e.target.value) || 0)} />
-                </SchemaField>
+            
+            {/* Total Audience */}
+            <div>
+              <SchemaField mappingStatus="full" schemaPath="audienceDemographics.totalAudience" showSchemaPath={showSchemaDebug}>
+                <Label>Total Estimated Audience Reach</Label>
+                <Input 
+                  type="number" 
+                  value={getFieldValue('audienceDemographics.totalAudience')} 
+                  onChange={(e) => updateField('audienceDemographics.totalAudience', parseInt(e.target.value) || 0)} 
+                  placeholder="Total audience reach across all channels"
+                />
+              </SchemaField>
+            </div>
 
-                <SchemaField mappingStatus="full" schemaPath="distributionChannels.website.metrics.monthlyPageViews" showSchemaPath={showSchemaDebug}>
-                  <Label>Monthly Pageviews</Label>
-                  <Input type="number" value={getFieldValue('distributionChannels.website.metrics.monthlyPageViews')} onChange={(e) => updateField('distributionChannels.website.metrics.monthlyPageViews', parseInt(e.target.value) || 0)} />
+            {/* Age Groups */}
+            <div>
+              <h3 className="font-medium mb-3">Age Groups (percentages)</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.18-24" showSchemaPath={showSchemaDebug}>
+                  <Label>18-24</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.ageGroups.18-24')} 
+                    onChange={(e) => updateField('audienceDemographics.ageGroups.18-24', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
                 </SchemaField>
-
-                <SchemaField mappingStatus="partial" schemaPath="distributionChannels.newsletters[0].subscribers" warningMessage="First newsletter only" showSchemaPath={showSchemaDebug}>
-                  <Label>Email Subscribers</Label>
-                  <Input type="number" value={getFieldValue('distributionChannels.newsletters.0.subscribers')} onChange={(e) => updateField('distributionChannels.newsletters.0.subscribers', parseInt(e.target.value) || 0)} />
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.25-34" showSchemaPath={showSchemaDebug}>
+                  <Label>25-34</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.ageGroups.25-34')} 
+                    onChange={(e) => updateField('audienceDemographics.ageGroups.25-34', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.35-44" showSchemaPath={showSchemaDebug}>
+                  <Label>35-44</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.ageGroups.35-44')} 
+                    onChange={(e) => updateField('audienceDemographics.ageGroups.35-44', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.45-54" showSchemaPath={showSchemaDebug}>
+                  <Label>45-54</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.ageGroups.45-54')} 
+                    onChange={(e) => updateField('audienceDemographics.ageGroups.45-54', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.55-64" showSchemaPath={showSchemaDebug}>
+                  <Label>55-64</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.ageGroups.55-64')} 
+                    onChange={(e) => updateField('audienceDemographics.ageGroups.55-64', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.65+" showSchemaPath={showSchemaDebug}>
+                  <Label>65+</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.ageGroups.65+')} 
+                    onChange={(e) => updateField('audienceDemographics.ageGroups.65+', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
                 </SchemaField>
               </div>
             </div>
 
-            {/* Social Media Summary */}
-              <div>
-              <h3 className="font-semibold mb-3 border-b pb-2">Social Media</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SchemaField mappingStatus="partial" schemaPath="distributionChannels.socialMedia" warningMessage="Calculated from all platforms" showSchemaPath={showSchemaDebug}>
-                  <Label>Combined Following</Label>
-                  <Input type="number" value={transformers.calculateSocialFollowing(formData.distributionChannels?.socialMedia)} disabled className="bg-gray-50" />
-                  <p className="text-xs text-muted-foreground mt-1">Auto-calculated</p>
+            {/* Gender */}
+            <div>
+              <h3 className="font-medium mb-3">Gender (percentages)</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.gender.male" showSchemaPath={showSchemaDebug}>
+                  <Label>Male</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.gender.male')} 
+                    onChange={(e) => updateField('audienceDemographics.gender.male', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
                 </SchemaField>
-
-                <SchemaField mappingStatus="partial" schemaPath="distributionChannels.socialMedia" warningMessage="Formatted from platforms" showSchemaPath={showSchemaDebug}>
-                  <Label>Primary Platforms</Label>
-                  <Textarea value={transformers.formatSocialPlatforms(formData.distributionChannels?.socialMedia)} disabled rows={2} className="bg-gray-50" />
-                  <p className="text-xs text-muted-foreground mt-1">Auto-generated</p>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.gender.female" showSchemaPath={showSchemaDebug}>
+                  <Label>Female</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.gender.female')} 
+                    onChange={(e) => updateField('audienceDemographics.gender.female', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
                 </SchemaField>
-                </div>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.gender.other" showSchemaPath={showSchemaDebug}>
+                  <Label>Other</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.gender.other')} 
+                    onChange={(e) => updateField('audienceDemographics.gender.other', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
               </div>
-          </CardContent>
-        </Card>
+            </div>
 
-        {/* AUDIENCE SNAPSHOT */}
-        <Card>
-          <div className="py-3 px-6 border-b mb-6 flex items-center justify-between" style={{ backgroundColor: '#E6E4DC' }}>
-            <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Audience Snapshot</h2>
-            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400">
-              Partial Mapping
-            </Badge>
-          </div>
-          <CardContent className="space-y-4">
+            {/* Household Income */}
+            <div>
+              <h3 className="font-medium mb-3">Household Income (percentages)</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.under35k" showSchemaPath={showSchemaDebug}>
+                  <Label>Under $35K</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.householdIncome.under35k')} 
+                    onChange={(e) => updateField('audienceDemographics.householdIncome.under35k', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.35k-50k" showSchemaPath={showSchemaDebug}>
+                  <Label>$35K-$50K</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.householdIncome.35k-50k')} 
+                    onChange={(e) => updateField('audienceDemographics.householdIncome.35k-50k', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.50k-75k" showSchemaPath={showSchemaDebug}>
+                  <Label>$50K-$75K</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.householdIncome.50k-75k')} 
+                    onChange={(e) => updateField('audienceDemographics.householdIncome.50k-75k', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.75k-100k" showSchemaPath={showSchemaDebug}>
+                  <Label>$75K-$100K</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.householdIncome.75k-100k')} 
+                    onChange={(e) => updateField('audienceDemographics.householdIncome.75k-100k', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.100k-150k" showSchemaPath={showSchemaDebug}>
+                  <Label>$100K-$150K</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.householdIncome.100k-150k')} 
+                    onChange={(e) => updateField('audienceDemographics.householdIncome.100k-150k', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.over150k" showSchemaPath={showSchemaDebug}>
+                  <Label>Over $150K</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.householdIncome.over150k')} 
+                    onChange={(e) => updateField('audienceDemographics.householdIncome.over150k', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+              </div>
+            </div>
+
+            {/* Education */}
+            <div>
+              <h3 className="font-medium mb-3">Education Level (percentages)</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.education.highSchool" showSchemaPath={showSchemaDebug}>
+                  <Label>High School</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.education.highSchool')} 
+                    onChange={(e) => updateField('audienceDemographics.education.highSchool', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.education.someCollege" showSchemaPath={showSchemaDebug}>
+                  <Label>Some College</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.education.someCollege')} 
+                    onChange={(e) => updateField('audienceDemographics.education.someCollege', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.education.bachelors" showSchemaPath={showSchemaDebug}>
+                  <Label>Bachelor's</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.education.bachelors')} 
+                    onChange={(e) => updateField('audienceDemographics.education.bachelors', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.education.graduate" showSchemaPath={showSchemaDebug}>
+                  <Label>Graduate</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    value={getFieldValue('audienceDemographics.education.graduate')} 
+                    onChange={(e) => updateField('audienceDemographics.education.graduate', parseFloat(e.target.value) || 0)} 
+                    placeholder="%" 
+                  />
+                </SchemaField>
+              </div>
+            </div>
+
+            {/* Location and Interests */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Age</Label>
-                <Input value={transformers.ageGroupsToText(getFieldValue('audienceDemographics.ageGroups'))} readOnly className="bg-gray-50" />
-                <p className="text-xs text-muted-foreground">View only - edit in demographics section</p>
-                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 text-xs">
-                  Partial Mapping: Read-only summary
-                </Badge>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Income</Label>
-                <Input value={transformers.incomeToText(getFieldValue('audienceDemographics.householdIncome'))} readOnly className="bg-gray-50" />
-                <p className="text-xs text-muted-foreground">View only - edit in demographics section</p>
-                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 text-xs">
-                  Partial Mapping: Read-only summary
-                </Badge>
-                    </div>
-
-              <div className="space-y-2">
-                <Label>Education</Label>
-                <Input value={transformers.educationToText(getFieldValue('audienceDemographics.education'))} readOnly className="bg-gray-50" />
-                <p className="text-xs text-muted-foreground">View only - edit in demographics section</p>
-                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 text-xs">
-                  Partial Mapping: Read-only summary
-                </Badge>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Geography</Label>
-                <Input value={getFieldValue('audienceDemographics.location')} onChange={(e) => updateField('audienceDemographics.location', e.target.value)} placeholder="Primary markets" />
-              </div>
+              <SchemaField mappingStatus="full" schemaPath="audienceDemographics.location" showSchemaPath={showSchemaDebug}>
+                <Label>Primary Geographic Audience</Label>
+                <Input 
+                  value={getFieldValue('audienceDemographics.location')} 
+                  onChange={(e) => updateField('audienceDemographics.location', e.target.value)} 
+                  placeholder="e.g. Chicago metropolitan area" 
+                />
+              </SchemaField>
+              
+              <SchemaField mappingStatus="full" schemaPath="audienceDemographics.interests" showSchemaPath={showSchemaDebug}>
+                <Label>Primary Audience Interests</Label>
+                <Input 
+                  value={transformers.arrayToString(getFieldValue('audienceDemographics.interests'))} 
+                  onChange={(e) => updateField('audienceDemographics.interests', transformers.stringToArray(e.target.value))} 
+                  placeholder="e.g. Local news, Politics, Sports" 
+                />
+              </SchemaField>
             </div>
+
+            {/* Target Markets */}
+            <div>
+              <SchemaField mappingStatus="full" schemaPath="audienceDemographics.targetMarkets" showSchemaPath={showSchemaDebug}>
+                <Label>Key Target Market Segments</Label>
+                <Textarea 
+                  value={transformers.arrayToString(getFieldValue('audienceDemographics.targetMarkets'))} 
+                  onChange={(e) => updateField('audienceDemographics.targetMarkets', transformers.stringToArray(e.target.value))} 
+                  placeholder="e.g. Small business owners, Local government officials, Community leaders"
+                  rows={2}
+                />
+              </SchemaField>
+            </div>
+
           </CardContent>
         </Card>
 
@@ -399,7 +694,7 @@ export const PublicationProfile: React.FC = () => {
             <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Positioning & Unique Value</h2>
           </div>
           <CardContent className="space-y-4">
-            <SchemaField mappingStatus="partial" schemaPath="competitiveInfo.uniqueValueProposition" warningMessage="Used for Market Position" showSchemaPath={showSchemaDebug}>
+            <SchemaField mappingStatus="full" schemaPath="competitiveInfo.uniqueValueProposition" showSchemaPath={showSchemaDebug}>
               <Label>Market Position</Label>
               <Textarea value={getFieldValue('competitiveInfo.uniqueValueProposition')} onChange={(e) => updateField('competitiveInfo.uniqueValueProposition', e.target.value)} placeholder="How you position yourself" rows={3} />
             </SchemaField>
@@ -430,64 +725,6 @@ export const PublicationProfile: React.FC = () => {
             </CardContent>
           </Card>
 
-        {/* CHANNELS OFFERED */}
-        <Card>
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-            <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Channels Offered</h2>
-          </div>
-            <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">Select all channels you offer advertising on</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {[
-                { label: 'Website Advertising', path: 'distributionChannels.website' },
-                { label: 'Email/Newsletter', path: 'distributionChannels.newsletters' },
-                { label: 'Print Advertising', path: 'distributionChannels.print' },
-                { label: 'Social Media', path: 'distributionChannels.socialMedia' },
-                { label: 'Podcast Advertising', path: 'distributionChannels.podcasts' },
-                { label: 'Streaming Video', path: 'distributionChannels.streamingVideo' },
-                { label: 'Radio', path: 'distributionChannels.radioStations' },
-                { label: 'Television', path: 'distributionChannels.television' },
-                { label: 'Events/Sponsorships', path: 'distributionChannels.events' }
-              ].map(channel => {
-                const hasChannel = getFieldValue(channel.path);
-                const isActive = Array.isArray(hasChannel) ? hasChannel.length > 0 : !!hasChannel;
-                
-                return (
-                  <button
-                    key={channel.label}
-                    type="button"
-                    onClick={() => {
-                      // Note: This won't save since there's no schema field for "channels offered"
-                      // It only shows what channels have data
-                      toast({
-                        title: "Info",
-                        description: "Channel selection is based on your inventory. Add inventory items to enable channels.",
-                        variant: "default"
-                      });
-                    }}
-                    className={`p-3 rounded-lg border-2 text-sm text-left transition-colors ${
-                      isActive 
-                        ? 'bg-green-50 border-green-300 text-green-800 hover:bg-green-100' 
-                        : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                        isActive ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                      }`}>
-                        {isActive && <span className="text-white text-xs">✓</span>}
-                      </div>
-                      <span>{channel.label}</span>
-                    </div>
-                  </button>
-                );
-              })}
-                  </div>
-            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 text-xs mt-4">
-              Partial Mapping: Auto-detected from inventory
-                        </Badge>
-          </CardContent>
-        </Card>
 
         {/* NOTES */}
         <Card>
@@ -574,10 +811,26 @@ export const PublicationProfile: React.FC = () => {
           <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-muted-foreground mb-2">Primary Contact</p>
-              <p>{get('contactInfo.salesContact.name') || 'Not specified'} | {get('contactInfo.salesContact.email') || 'Not specified'} | {get('contactInfo.salesContact.phone') || 'Not specified'}</p>
+              <p>{get('contactInfo.primaryContact.name') || 'Not specified'} | {get('contactInfo.primaryContact.email') || 'Not specified'} | {get('contactInfo.primaryContact.phone') || 'Not specified'}</p>
+              {get('contactInfo.primaryContact.title') && <p className="text-sm text-muted-foreground">{get('contactInfo.primaryContact.title')}</p>}
+              {get('contactInfo.primaryContact.preferredContact') && <p className="text-sm text-muted-foreground">Prefers: {get('contactInfo.primaryContact.preferredContact')}</p>}
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground mb-2">Sales Contact</p>
+              <p>{get('contactInfo.salesContact.name') || 'Not specified'} | {get('contactInfo.salesContact.email') || 'Not specified'} | {get('contactInfo.salesContact.phone') || 'Not specified'}</p>
+              {get('contactInfo.salesContact.title') && <p className="text-sm text-muted-foreground">{get('contactInfo.salesContact.title')}</p>}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2">Editorial Contact</p>
+              <p>{get('contactInfo.editorialContact.name') || 'Not specified'} | {get('contactInfo.editorialContact.email') || 'Not specified'} | {get('contactInfo.editorialContact.phone') || 'Not specified'}</p>
+              {get('contactInfo.editorialContact.title') && <p className="text-sm text-muted-foreground">{get('contactInfo.editorialContact.title')}</p>}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2">General Manager</p>
+              <p>{get('contactInfo.generalManager.name') || 'Not specified'} | {get('contactInfo.generalManager.email') || 'Not specified'} | {get('contactInfo.generalManager.phone') || 'Not specified'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2">Advertising Director</p>
               <p>{get('contactInfo.advertisingDirector.name') || 'Not specified'} | {get('contactInfo.advertisingDirector.email') || 'Not specified'} | {get('contactInfo.advertisingDirector.phone') || 'Not specified'}</p>
                     </div>
                   </div>
@@ -591,6 +844,14 @@ export const PublicationProfile: React.FC = () => {
         </div>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Legal Entity</p>
+              <p className="mt-1">{get('businessInfo.legalEntity') || 'Not specified'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Tax ID / EIN</p>
+              <p className="mt-1">{get('businessInfo.taxId') || 'Not specified'}</p>
+            </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Parent Company</p>
               <p className="mt-1">{get('businessInfo.parentCompany') || 'Not specified'}</p>

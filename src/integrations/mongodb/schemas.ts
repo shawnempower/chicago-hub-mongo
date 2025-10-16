@@ -264,6 +264,13 @@ export interface Publication {
   contactInfo?: {
     mainPhone?: string;
     businessHours?: string;
+    primaryContact?: {
+      name?: string;
+      title?: string;
+      email?: string;
+      phone?: string;
+      preferredContact?: 'email' | 'phone' | 'text' | 'linkedin';
+    };
     salesContact?: {
       name?: string;
       title?: string;
@@ -548,6 +555,8 @@ export interface Publication {
   };
   
   businessInfo?: {
+    legalEntity?: string;
+    taxId?: string;
     ownershipType?: 'independent' | 'chain' | 'nonprofit' | 'public' | 'private' | 'family-owned';
     parentCompany?: string;
     yearsInOperation?: number;
