@@ -1478,50 +1478,69 @@ export const DashboardInventoryManager = () => {
                 Add Ad Slot
               </Button>
             </div>
-            <div className="space-y-4">
-              {currentPublication.distributionChannels?.website?.advertisingOpportunities?.map((opportunity, index) => (
-                <Card key={index} className="p-4">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold">{opportunity.name}</h4>
-                      <Badge variant="secondary">{opportunity.adFormat?.charAt(0).toUpperCase() + opportunity.adFormat?.slice(1)}</Badge>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {currentPublication.distributionChannels?.website?.advertisingOpportunities?.map((opportunity: any, index: number) => (
+                <div key={index} className="relative">
+                  <div className="border border-gray-200 rounded-lg shadow-sm p-4 bg-white">
+                    {/* Title and Badges */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-base font-semibold text-gray-900">{opportunity.name}</h4>
+                        {opportunity.adFormat && (
+                          <Badge variant="outline" className="text-xs font-normal">
+                            {opportunity.adFormat}
+                          </Badge>
+                        )}
+                        {opportunity.hubPricing && opportunity.hubPricing.length > 0 && (
+                          <Badge 
+                            variant="secondary" 
+                            className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-2 py-0.5"
+                          >
+                            +{opportunity.hubPricing.length} CUSTOM
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => openEditDialog(opportunity, 'website', index)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => removeWebsiteOpportunity(index)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(opportunity, 'website', index)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeWebsiteOpportunity(index)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+
+                    {/* 2x2 Grid layout */}
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Location</p>
+                        <p className="text-sm text-gray-900">{opportunity.location || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Size</p>
+                        <p className="text-sm text-gray-900">{opportunity.specifications?.size || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Impressions</p>
+                        <p className="text-sm text-gray-900">{opportunity.monthlyImpressions?.toLocaleString() || 'N/A'}/month</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Price</p>
+                        <p className="text-sm text-gray-900">${opportunity.pricing?.flatRate || opportunity.pricing?.cpm || 'N/A'}</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Location</span>
-                      <span className="ml-2 font-medium">{opportunity.location}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Size</span>
-                      <span className="ml-2 font-medium">{opportunity.specifications?.size}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Impressions</span>
-                      <span className="ml-2 font-medium">{opportunity.monthlyImpressions?.toLocaleString()}/month</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Price</span>
-                      <span className="ml-2 font-medium">${opportunity.pricing?.flatRate}/month</span>
-                    </div>
-                  </div>
-                </Card>
+                </div>
               ))}
               
               {(!currentPublication.distributionChannels?.website?.advertisingOpportunities || 
@@ -1608,9 +1627,9 @@ export const DashboardInventoryManager = () => {
                     </div>
                     
                     {/* Advertising Opportunities */}
-                    <div className="mt-4">
+                    <div className="mt-4 pt-4 border-t">
                       <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                        <h5 className="font-sans font-medium text-sm">Advertising Opportunities</h5>
                         <Button 
                           variant="outline" 
                           size="sm"
@@ -1622,32 +1641,62 @@ export const DashboardInventoryManager = () => {
                       </div>
                       
                       {podcast.advertisingOpportunities && podcast.advertisingOpportunities.length > 0 ? (
-                        <div className="space-y-2">
-                          {podcast.advertisingOpportunities.map((ad, adIndex) => (
-                            <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                              <div className="flex-1">
-                                <span className="font-medium">{ad.name}</span>
-                                <span className="text-muted-foreground ml-2">
-                                  {ad.position} • {ad.duration} • {ad.pricing ? `$${ad.pricing.perEpisode || ad.pricing.flatRate || 'Custom'}` : 'Custom'}
-                                </span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {podcast.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                            <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
+                                  {ad.adFormat && (
+                                    <Badge variant="outline" className="text-xs font-normal">
+                                      {ad.adFormat}
+                                    </Badge>
+                                  )}
+                                  {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                    <Badge 
+                                      variant="secondary" 
+                                      className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
+                                    >
+                                      +{ad.hubPricing.length} CUSTOM
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex gap-1 flex-shrink-0">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => openEditDialog(ad, 'podcast-ad', index, adIndex)}
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => removePodcastOpportunity(index, adIndex)}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex gap-1">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => openEditDialog(ad, 'podcast-ad', index, adIndex)}
-                                >
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                                  onClick={() => removePodcastOpportunity(index, adIndex)}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
+                                  <p className="text-xs text-gray-900">{ad.duration ? `${ad.duration}s` : 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Flat Rate</p>
+                                  <p className="text-xs text-gray-900">${ad.pricing?.flatRate || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">CPM</p>
+                                  <p className="text-xs text-gray-900">${ad.pricing?.cpm || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Available</p>
+                                  <p className="text-xs text-gray-900">{ad.available ? 'Yes' : 'No'}</p>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -1748,9 +1797,9 @@ export const DashboardInventoryManager = () => {
                     </div>
                     
                     {/* Advertising Opportunities */}
-                    <div className="mt-4">
+                    <div className="mt-4 pt-4 border-t">
                       <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                        <h5 className="font-sans font-medium text-sm">Advertising Opportunities</h5>
                         <Button 
                           variant="outline" 
                           size="sm"
@@ -1762,16 +1811,27 @@ export const DashboardInventoryManager = () => {
                       </div>
                       
                       {station.advertisingOpportunities && station.advertisingOpportunities.length > 0 ? (
-                        <div className="space-y-2">
-                          {station.advertisingOpportunities.map((ad, adIndex) => (
-                            <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                              <div className="flex-1">
-                                <span className="font-medium">{ad.name}</span>
-                                <span className="text-muted-foreground ml-2">
-                                  {ad.timeSlot} • {ad.duration} • {ad.pricing ? `$${ad.pricing.per30Second || ad.pricing.flatRate || 'Custom'}` : 'Custom'}
-                                </span>
-                              </div>
-                              <div className="flex gap-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {station.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                            <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
+                                  {ad.adFormat && (
+                                    <Badge variant="outline" className="text-xs font-normal">
+                                      {ad.adFormat}
+                                    </Badge>
+                                  )}
+                                  {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                    <Badge 
+                                      variant="secondary" 
+                                      className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
+                                    >
+                                      +{ad.hubPricing.length} CUSTOM
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex gap-1 flex-shrink-0">
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
@@ -1783,11 +1843,30 @@ export const DashboardInventoryManager = () => {
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                   onClick={() => removeRadioOpportunity(index, adIndex)}
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </Button>
+                              </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Time Slot</p>
+                                  <p className="text-xs text-gray-900">{ad.timeSlot?.replace(/_/g, ' ') || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
+                                  <p className="text-xs text-gray-900">{ad.specifications?.duration ? `${ad.specifications.duration}s` : 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Price</p>
+                                  <p className="text-xs text-gray-900">${ad.pricing?.perSpot || ad.pricing?.weekly || ad.pricing?.monthly || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Model</p>
+                                  <p className="text-xs text-gray-900">{ad.pricing?.pricingModel || 'N/A'}</p>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -1888,9 +1967,9 @@ export const DashboardInventoryManager = () => {
                     </div>
                     
                     {/* Advertising Opportunities */}
-                    <div className="mt-4">
+                    <div className="mt-4 pt-4 border-t">
                       <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                        <h5 className="font-sans font-medium text-sm">Advertising Opportunities</h5>
                         <Button 
                           variant="outline" 
                           size="sm"
@@ -1902,16 +1981,27 @@ export const DashboardInventoryManager = () => {
                       </div>
                       
                       {channel.advertisingOpportunities && channel.advertisingOpportunities.length > 0 ? (
-                        <div className="space-y-2">
-                          {channel.advertisingOpportunities.map((ad, adIndex) => (
-                            <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                              <div className="flex-1">
-                                <span className="font-medium">{ad.name}</span>
-                                <span className="text-muted-foreground ml-2">
-                                  {ad.position} • {ad.duration} • {ad.pricing ? `$${ad.pricing.perThousandViews || ad.pricing.flatRate || 'Custom'}` : 'Custom'}
-                                </span>
-                              </div>
-                              <div className="flex gap-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {channel.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                            <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
+                                  {ad.adFormat && (
+                                    <Badge variant="outline" className="text-xs font-normal">
+                                      {ad.adFormat}
+                                    </Badge>
+                                  )}
+                                  {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                    <Badge 
+                                      variant="secondary" 
+                                      className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
+                                    >
+                                      +{ad.hubPricing.length} CUSTOM
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex gap-1 flex-shrink-0">
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
@@ -1923,11 +2013,30 @@ export const DashboardInventoryManager = () => {
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                   onClick={() => removeStreamingOpportunity(index, adIndex)}
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </Button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
+                                  <p className="text-xs text-gray-900">{ad.duration ? `${ad.duration}s` : 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Resolution</p>
+                                  <p className="text-xs text-gray-900">{ad.specifications?.resolution || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Flat Rate</p>
+                                  <p className="text-xs text-gray-900">${ad.pricing?.flatRate || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-0.5">CPM</p>
+                                  <p className="text-xs text-gray-900">${ad.pricing?.cpm || 'N/A'}</p>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -1940,7 +2049,7 @@ export const DashboardInventoryManager = () => {
                   </Card>
                 ))}
                 
-            {(!currentPublication.distributionChannels?.streamingVideo || 
+            {(!currentPublication.distributionChannels?.streamingVideo ||
               currentPublication.distributionChannels.streamingVideo.length === 0) && (
               <div className="text-center py-8 text-muted-foreground">
                 <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -2039,9 +2148,9 @@ export const DashboardInventoryManager = () => {
                       </div>
 
                       {/* Advertising Opportunities */}
-                      <div className="mt-4">
+                      <div className="mt-4 pt-4 border-t">
                         <div className="flex items-center justify-between mb-2">
-                          <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                          <h5 className="font-sans font-medium text-sm">Advertising Opportunities</h5>
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -2053,16 +2162,27 @@ export const DashboardInventoryManager = () => {
                         </div>
                         
                         {publication.advertisingOpportunities && publication.advertisingOpportunities.length > 0 ? (
-                          <div className="space-y-2">
-                            {publication.advertisingOpportunities.map((ad, adIndex) => (
-                              <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                                <div className="flex-1">
-                                  <span className="font-medium">{ad.name}</span>
-                                  <span className="text-muted-foreground ml-2">
-                                    {ad.adType} • {ad.size} • {ad.pricing ? `$${ad.pricing.flatRate || ad.pricing.perIssue || 'Custom'}` : 'Custom'}
-                                  </span>
-                                </div>
-                                <div className="flex gap-1">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {publication.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                              <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
+                                    {ad.adFormat && (
+                                      <Badge variant="outline" className="text-xs font-normal">
+                                        {ad.adFormat}
+                                      </Badge>
+                                    )}
+                                    {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                      <Badge 
+                                        variant="secondary" 
+                                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
+                                      >
+                                        +{ad.hubPricing.length} CUSTOM
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-1 flex-shrink-0">
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
@@ -2074,11 +2194,30 @@ export const DashboardInventoryManager = () => {
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
-                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                     onClick={() => removePrintOpportunity(index, adIndex)}
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
+                                </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Dimensions</p>
+                                    <p className="text-xs text-gray-900">{ad.dimensions || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Color</p>
+                                    <p className="text-xs text-gray-900">{ad.color || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Price (1x)</p>
+                                    <p className="text-xs text-gray-900">${ad.pricing?.oneTime || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Price (4x)</p>
+                                    <p className="text-xs text-gray-900">${ad.pricing?.fourTimes || 'N/A'}</p>
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -2191,19 +2330,30 @@ export const DashboardInventoryManager = () => {
                 </div>
 
                 {/* Advertising Opportunities */}
-                <div className="mt-4">
-                  <h5 className="font-medium text-sm mb-2">Advertising Opportunities</h5>
+                <div className="mt-4 pt-4 border-t">
+                  <h5 className="font-sans font-medium text-sm mb-2">Advertising Opportunities</h5>
                   {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 ? (
-                    <div className="space-y-2">
-                      {newsletter.advertisingOpportunities.map((ad, adIndex) => (
-                        <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                          <div className="flex-1">
-                            <span className="font-medium">{ad.name}</span>
-                            <span className="text-muted-foreground ml-2">
-                              {ad.position} • {ad.dimensions} • {ad.pricing ? `$${ad.pricing.perSend || ad.pricing.flatRate || 'Custom'}` : 'Custom'}
-                            </span>
-                          </div>
-                          <div className="flex gap-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {newsletter.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                        <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
+                              {ad.position && (
+                                <Badge variant="outline" className="text-xs font-normal">
+                                  {ad.position}
+                                </Badge>
+                              )}
+                              {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
+                                >
+                                  +{ad.hubPricing.length} CUSTOM
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0">
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -2215,11 +2365,30 @@ export const DashboardInventoryManager = () => {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                               onClick={() => removeNewsletterOpportunity(index, adIndex)}
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
+                          </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Dimensions</p>
+                              <p className="text-xs text-gray-900">{ad.dimensions || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Per Send</p>
+                              <p className="text-xs text-gray-900">${ad.pricing?.perSend || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Monthly</p>
+                              <p className="text-xs text-gray-900">${ad.pricing?.monthly || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Available</p>
+                              <p className="text-xs text-gray-900">{ad.available ? 'Yes' : 'No'}</p>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -2325,9 +2494,9 @@ export const DashboardInventoryManager = () => {
                 )}
 
                 {/* Advertising Opportunities */}
-                <div className="mt-4">
+                <div className="mt-4 pt-4 border-t">
                   <div className="flex items-center justify-between mb-2">
-                    <h5 className="font-medium text-sm">Advertising Opportunities</h5>
+                    <h5 className="font-sans font-medium text-sm">Advertising Opportunities</h5>
                     <Button 
                       variant="outline" 
                       size="sm"
@@ -2339,16 +2508,27 @@ export const DashboardInventoryManager = () => {
                   </div>
                   
                   {profile.advertisingOpportunities && profile.advertisingOpportunities.length > 0 ? (
-                    <div className="space-y-2">
-                      {profile.advertisingOpportunities.map((ad, adIndex) => (
-                        <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                          <div className="flex-1">
-                            <span className="font-medium">{ad.name}</span>
-                            <span className="text-muted-foreground ml-2">
-                              {ad.adType} • {ad.duration} • {ad.pricing ? `$${ad.pricing.perPost || ad.pricing.flatRate || 'Custom'}` : 'Custom'}
-                            </span>
-                          </div>
-                          <div className="flex gap-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {profile.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                        <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
+                              {ad.adFormat && (
+                                <Badge variant="outline" className="text-xs font-normal">
+                                  {ad.adFormat}
+                                </Badge>
+                              )}
+                              {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
+                                >
+                                  +{ad.hubPricing.length} CUSTOM
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0">
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -2360,11 +2540,30 @@ export const DashboardInventoryManager = () => {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                               onClick={() => removeSocialMediaOpportunity(index, adIndex)}
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
+                          </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Post Type</p>
+                              <p className="text-xs text-gray-900">{ad.postType || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Image Size</p>
+                              <p className="text-xs text-gray-900">{ad.specifications?.imageSize || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Per Post</p>
+                              <p className="text-xs text-gray-900">${ad.pricing?.perPost || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Available</p>
+                              <p className="text-xs text-gray-900">{ad.available ? 'Yes' : 'No'}</p>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -2466,9 +2665,9 @@ export const DashboardInventoryManager = () => {
                   </div>
                 </div>
 
-                <div className="mt-3 pt-3 border-t">
+                <div className="mt-4 pt-4 border-t">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Ad Products</span>
+                    <span className="font-sans text-sm font-medium">Ad Products</span>
                     <Button 
                       variant="outline" 
                       size="sm"
@@ -2480,16 +2679,27 @@ export const DashboardInventoryManager = () => {
                   </div>
                   
                   {station.advertisingOpportunities && station.advertisingOpportunities.length > 0 ? (
-                    <div className="space-y-2">
-                      {station.advertisingOpportunities.map((ad, adIndex) => (
-                        <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                          <div className="flex-1">
-                            <span className="font-medium">{ad.name}</span>
-                            <span className="text-muted-foreground ml-2">
-                              {ad.adFormat} • {ad.daypart} • ${ad.pricing?.perSpot || 'Custom'}
-                            </span>
-                          </div>
-                          <div className="flex gap-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {station.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                        <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
+                              {ad.adFormat && (
+                                <Badge variant="outline" className="text-xs font-normal">
+                                  {ad.adFormat}
+                                </Badge>
+                              )}
+                              {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
+                                >
+                                  +{ad.hubPricing.length} CUSTOM
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0">
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -2501,11 +2711,30 @@ export const DashboardInventoryManager = () => {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                               onClick={() => removeTelevisionOpportunity(index, adIndex)}
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
+                          </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Daypart</p>
+                              <p className="text-xs text-gray-900">{ad.daypart || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
+                              <p className="text-xs text-gray-900">{ad.specifications?.duration ? `${ad.specifications.duration}s` : 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Per Spot</p>
+                              <p className="text-xs text-gray-900">${ad.pricing?.perSpot || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">Available</p>
+                              <p className="text-xs text-gray-900">{ad.available ? 'Yes' : 'No'}</p>
+                            </div>
                           </div>
                         </div>
                       ))}

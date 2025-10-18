@@ -4,19 +4,40 @@ import { useAuth } from "@/contexts/CustomAuthContext";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { User, ChevronDown } from "lucide-react";
-import mediahubLogo from "@/assets/mediahub-logo.svg";
+import empowerLogo from "@/assets/empower-logo.svg";
+import { PublicationSelector } from "@/components/PublicationSelector";
+import { usePublication } from "@/contexts/PublicationContext";
+import { getPublicationBrandColor } from "@/config/publicationBrandColors";
+import { useState, useEffect } from "react";
 
 interface HeaderProps {
   onAssistantClick: () => void;
   onSurveyClick: () => void;
+  showDashboardNav?: boolean;
 }
 
-export function Header({ onAssistantClick, onSurveyClick }: HeaderProps) {
+export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = false }: HeaderProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminAuth();
+  const { selectedPublication } = usePublication();
+  const [, forceRender] = useState(0);
   
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
+  
+  // Get brand color for assistant button from storefront configuration
+  const assistantButtonColor = selectedPublication 
+    ? getPublicationBrandColor(selectedPublication.publicationId)
+    : '#0066cc';
+  
+  // Force re-render when publication changes to pick up newly loaded colors
+  useEffect(() => {
+    if (selectedPublication?.publicationId) {
+      // Small delay to allow color to be fetched
+      const timer = setTimeout(() => forceRender(prev => prev + 1), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedPublication?.publicationId]);
   
   return (
     <header className="sticky top-0 z-40 backdrop-blur-[20px] border-b border-border" style={{ backgroundColor: 'hsl(42 30% 95% / 0.3)' }}>
@@ -24,61 +45,72 @@ export function Header({ onAssistantClick, onSurveyClick }: HeaderProps) {
         <div className="flex items-center space-x-8">
           <Link to="/" className="hover:opacity-80 transition-opacity">
             <img 
-              src={mediahubLogo} 
+              src={empowerLogo} 
               alt="Chicago Media Hub" 
               className="h-8 w-auto"
             />
           </Link>
-          <nav className="hidden md:flex items-center space-x-6 text-sm">
-            {user && (
+          
+          {showDashboardNav ? (
+            /* Compact Publication Selector for Dashboard */
+            <div className="hidden md:block">
+              <PublicationSelector compact={true} />
+            </div>
+          ) : (
+            /* Regular navigation for landing page */
+            <nav className="hidden md:flex items-center space-x-6 text-sm">
+              {user && (
+                <Link 
+                  to="/dashboard" 
+                  className={`transition-colors ${
+                    location.pathname === '/dashboard' 
+                      ? 'text-primary font-medium' 
+                      : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  Dashboard
+                </Link>
+              )}
               <Link 
-                to="/dashboard" 
+                to="/partners" 
                 className={`transition-colors ${
-                  location.pathname === '/dashboard' 
+                  location.pathname === '/partners' 
                     ? 'text-primary font-medium' 
                     : 'text-muted-foreground hover:text-primary'
                 }`}
               >
-                Dashboard
+                Media Partners
               </Link>
-            )}
-            <Link 
-              to="/partners" 
-              className={`transition-colors ${
-                location.pathname === '/partners' 
-                  ? 'text-primary font-medium' 
-                  : 'text-muted-foreground hover:text-primary'
-              }`}
-            >
-              Media Partners
-            </Link>
-            <Link 
-              to="/packages" 
-              className={`transition-colors ${
-                location.pathname === '/packages' 
-                  ? 'text-primary font-medium' 
-                  : 'text-muted-foreground hover:text-primary'
-              }`}
-            >
-              Ad Packages
-            </Link>
-          </nav>
+              <Link 
+                to="/packages" 
+                className={`transition-colors ${
+                  location.pathname === '/packages' 
+                    ? 'text-primary font-medium' 
+                    : 'text-muted-foreground hover:text-primary'
+                }`}
+              >
+                Ad Packages
+              </Link>
+            </nav>
+          )}
         </div>
         
         <div className="flex items-center space-x-4">
+          {!showDashboardNav && (
+            <Button 
+              variant="outline" 
+              onClick={onSurveyClick}
+              className="hidden sm:inline-flex"
+            >
+              Apply to Network
+            </Button>
+          )}
           <Button 
-            variant="outline" 
-            onClick={onSurveyClick}
-            className="hidden sm:inline-flex"
-          >
-            Apply to Network
-          </Button>
-          <Button 
-            variant="assistant" 
             onClick={onAssistantClick}
-            className="relative"
+            className="relative text-white font-medium shadow-md transition-all duration-200 hover:opacity-90"
+            style={{ backgroundColor: assistantButtonColor }}
           >
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full animate-pulse"></div>
+            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: assistantButtonColor, filter: 'brightness(1.2)' }}></div>
             Assistant
           </Button>
           

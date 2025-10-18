@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePublication } from '@/contexts/PublicationContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Building2, ChevronDown } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Building2, Search } from 'lucide-react';
+import { getPublicationBrandColor, prefetchBrandColors } from '@/config/publicationBrandColors';
 
 // Color system for tags with light backgrounds and darker text
 const getTagColors = (value: string): { bg: string; text: string } => {
@@ -32,37 +34,153 @@ const capitalizeWords = (text: string): string => {
     .join(' ');
 };
 
-export const PublicationSelector: React.FC = () => {
+interface PublicationSelectorProps {
+  compact?: boolean;
+}
+
+export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compact = false }) => {
   const { selectedPublication, setSelectedPublication, availablePublications, loading, error } = usePublication();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [, forceRender] = useState(0);
+
+  // Prefetch brand colors for all publications when they load
+  useEffect(() => {
+    if (availablePublications.length > 0) {
+      const publicationIds = availablePublications.map(p => p.publicationId);
+      prefetchBrandColors(publicationIds).then(() => {
+        // Force a re-render after colors are loaded
+        forceRender(prev => prev + 1);
+      });
+    }
+  }, [availablePublications]);
+
+  // Filter publications based on search term
+  const filteredPublications = availablePublications.filter((publication) => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      publication.basicInfo.publicationName?.toLowerCase().includes(searchLower) ||
+      publication.basicInfo.publicationType?.toLowerCase().includes(searchLower) ||
+      publication.basicInfo.geographicCoverage?.toLowerCase().includes(searchLower)
+    );
+  });
 
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg animate-pulse">
-        <Building2 className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Loading publications...</span>
+      <div className={`flex items-center gap-2 px-3 py-2 bg-muted rounded-lg animate-pulse ${compact ? 'text-xs' : ''}`}>
+        <Building2 className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} text-muted-foreground`} />
+        <span className={`${compact ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Loading...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive rounded-lg">
-        <Building2 className="h-4 w-4" />
-        <span className="text-sm">Error: {error}</span>
+      <div className={`flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive rounded-lg ${compact ? 'text-xs' : ''}`}>
+        <Building2 className={compact ? 'h-3 w-3' : 'h-4 w-4'} />
+        <span className={compact ? 'text-xs' : 'text-sm'}>Error: {error}</span>
       </div>
     );
   }
 
   if (availablePublications.length === 0) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
-        <Building2 className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">No publications available</span>
+      <div className={`flex items-center gap-2 px-3 py-2 bg-muted rounded-lg ${compact ? 'text-xs' : ''}`}>
+        <Building2 className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} text-muted-foreground`} />
+        <span className={`${compact ? 'text-xs' : 'text-sm'} text-muted-foreground`}>No publications</span>
       </div>
     );
   }
 
+  if (compact) {
+    // Compact version for navbar - merged design
+    return (
+      <div className="flex items-center border border-border rounded-lg overflow-hidden h-9">
+        {/* Label Section */}
+        <div className="px-3 h-full flex items-center whitespace-nowrap text-xs font-medium" style={{ backgroundColor: '#EDEAE1', color: '#6C685D' }}>
+          Active Publication
+        </div>
+        
+        {/* Divider */}
+        <div className="w-px h-full bg-border" />
+        
+        {/* Dropdown Section */}
+        <Select 
+          value={selectedPublication?._id || selectedPublication?.publicationId.toString() || ""} 
+          onValueChange={(value) => {
+            const publication = availablePublications.find(
+              p => p._id === value || p.publicationId.toString() === value
+            );
+            setSelectedPublication(publication || null);
+          }}
+          onOpenChange={(open) => {
+            if (!open) setSearchTerm('');
+          }}
+        >
+          <SelectTrigger className="w-auto min-w-[160px] h-full text-xs bg-white border-0 rounded-none shadow-none focus:ring-0">
+            <div className="flex items-center gap-1.5">
+              <div 
+                className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-semibold"
+                style={{ 
+                  backgroundColor: selectedPublication ? 
+                    getPublicationBrandColor(selectedPublication.publicationId) : 
+                    '#0066cc' 
+                }}
+              >
+                {selectedPublication?.basicInfo.publicationName?.charAt(0) || '?'}
+              </div>
+              <SelectValue placeholder="Select">
+                {selectedPublication?.basicInfo.publicationName || 'Select'}
+              </SelectValue>
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <div className="p-2 border-b sticky top-0 bg-white">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search publications..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-7 h-7 text-xs bg-white"
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+            {filteredPublications.length > 0 ? (
+              filteredPublications.map((publication) => (
+                <SelectItem 
+                  key={publication._id || publication.publicationId} 
+                  value={publication._id || publication.publicationId.toString()}
+                >
+                  <div className="flex items-center gap-2 py-1">
+                    <div 
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold"
+                      style={{ 
+                        backgroundColor: getPublicationBrandColor(publication.publicationId)
+                      }}
+                    >
+                      {publication.basicInfo.publicationName.charAt(0)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{publication.basicInfo.publicationName}</div>
+                    </div>
+                  </div>
+                </SelectItem>
+              ))
+            ) : (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                No publications found
+              </div>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+
+  // Regular version for dashboard
   return (
     <div className="flex items-center gap-2">
       <span className="text-[1.09375rem] font-medium text-muted-foreground whitespace-nowrap font-serif">
@@ -76,10 +194,20 @@ export const PublicationSelector: React.FC = () => {
           );
           setSelectedPublication(publication || null);
         }}
+        onOpenChange={(open) => {
+          if (!open) setSearchTerm('');
+        }}
       >
         <SelectTrigger className="w-auto min-w-[200px] bg-background border-border">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-semibold">
+            <div 
+              className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold"
+              style={{ 
+                backgroundColor: selectedPublication ? 
+                  getPublicationBrandColor(selectedPublication.publicationId) : 
+                  '#0066cc' 
+              }}
+            >
               {selectedPublication?.basicInfo.publicationName?.charAt(0) || '?'}
             </div>
             <SelectValue placeholder="Select publication">
@@ -88,39 +216,62 @@ export const PublicationSelector: React.FC = () => {
           </div>
         </SelectTrigger>
         <SelectContent>
-          {availablePublications.map((publication) => (
-            <SelectItem 
-              key={publication._id || publication.publicationId} 
-              value={publication._id || publication.publicationId.toString()}
-            >
-              <div className="flex items-center gap-3 py-1">
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-semibold">
-                  {publication.basicInfo.publicationName.charAt(0)}
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium">{publication.basicInfo.publicationName}</div>
-                  <div className="text-xs flex items-center gap-2">
-                    {publication.basicInfo.publicationType && (
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs border-0 ${getTagColors(publication.basicInfo.publicationType).bg} ${getTagColors(publication.basicInfo.publicationType).text}`}
-                      >
-                        {capitalizeWords(publication.basicInfo.publicationType)}
-                      </Badge>
-                    )}
-                    {publication.basicInfo.geographicCoverage && (
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs border-0 ${getTagColors(publication.basicInfo.geographicCoverage).bg} ${getTagColors(publication.basicInfo.geographicCoverage).text}`}
-                      >
-                        {capitalizeWords(publication.basicInfo.geographicCoverage)}
-                      </Badge>
-                    )}
+          <div className="p-2 border-b sticky top-0 bg-white">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search publications..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 h-8 text-sm bg-white"
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
+          {filteredPublications.length > 0 ? (
+            filteredPublications.map((publication) => (
+              <SelectItem 
+                key={publication._id || publication.publicationId} 
+                value={publication._id || publication.publicationId.toString()}
+              >
+                <div className="flex items-center gap-3 py-1">
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold"
+                    style={{ 
+                      backgroundColor: getPublicationBrandColor(publication.publicationId)
+                    }}
+                  >
+                    {publication.basicInfo.publicationName.charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium">{publication.basicInfo.publicationName}</div>
+                    <div className="text-xs flex items-center gap-2">
+                      {publication.basicInfo.publicationType && (
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs border-0 ${getTagColors(publication.basicInfo.publicationType).bg} ${getTagColors(publication.basicInfo.publicationType).text}`}
+                        >
+                          {capitalizeWords(publication.basicInfo.publicationType)}
+                        </Badge>
+                      )}
+                      {publication.basicInfo.geographicCoverage && (
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs border-0 ${getTagColors(publication.basicInfo.geographicCoverage).bg} ${getTagColors(publication.basicInfo.geographicCoverage).text}`}
+                        >
+                          {capitalizeWords(publication.basicInfo.geographicCoverage)}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </SelectItem>
-          ))}
+              </SelectItem>
+            ))
+          ) : (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              No publications found
+            </div>
+          )}
         </SelectContent>
       </Select>
     </div>

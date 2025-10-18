@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePublication } from '@/contexts/PublicationContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { getStorefrontConfiguration, updateStorefrontConfiguration, createStorefrontConfiguration } from '@/api/storefront';
+import { StorefrontConfiguration, createDefaultStorefrontConfig } from '@/types/storefront';
+import { clearBrandColorCache } from '@/config/publicationBrandColors';
 import { 
   Settings, 
   Save,
@@ -25,10 +29,12 @@ import {
 
 export const PublicationSettings: React.FC = () => {
   const { selectedPublication } = usePublication();
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [storefrontConfig, setStorefrontConfig] = useState<StorefrontConfiguration | null>(null);
   
-  // Mock settings state - in real implementation, this would come from API
-  const [settings, setSettings] = useState({
+  // Get default settings function
+  const getDefaultSettings = () => ({
     visibility: {
       isPublic: true,
       showInDirectory: true,
@@ -54,6 +60,45 @@ export const PublicationSettings: React.FC = () => {
     }
   });
 
+  const [settings, setSettings] = useState(getDefaultSettings());
+
+  // Load storefront configuration for brand colors and reset settings when publication changes
+  useEffect(() => {
+    // Reset settings to defaults when publication changes
+    setSettings(getDefaultSettings());
+    setStorefrontConfig(null);
+    
+    const fetchStorefront = async () => {
+      if (selectedPublication?.publicationId) {
+        const pubIdString = String(selectedPublication.publicationId);
+        console.log('🔍 Fetching storefront for publication:', pubIdString);
+        try {
+          const config = await getStorefrontConfiguration(pubIdString);
+          console.log('📦 Fetched config:', config);
+          if (config) {
+            setStorefrontConfig(config);
+            // Update settings with actual colors from storefront
+            setSettings(prev => ({
+              ...prev,
+              branding: {
+                ...prev.branding,
+                primaryColor: config.theme?.colors?.gradStart || config.theme?.colors?.lightPrimary || '#0066cc',
+                accentColor: config.theme?.colors?.gradEnd || config.theme?.colors?.darkPrimary || '#ff6b35',
+              }
+            }));
+            console.log('✅ Config loaded and state updated');
+          } else {
+            console.log('⚠️ No config found for publication');
+          }
+        } catch (error) {
+          console.error('❌ Error fetching storefront configuration:', error);
+          // Even if fetch fails, we stay with default settings
+        }
+      }
+    };
+    fetchStorefront();
+  }, [selectedPublication?.publicationId]);
+
   if (!selectedPublication) {
     return (
       <div className="text-center py-8">
@@ -63,13 +108,98 @@ export const PublicationSettings: React.FC = () => {
   }
 
   const handleSave = async () => {
+    if (!selectedPublication?.publicationId) {
+      console.error('❌ No publication selected');
+      return;
+    }
+    
+    const pubIdString = String(selectedPublication.publicationId);
+    
+    console.log('💾 Starting save...', {
+      publicationId: pubIdString,
+      primaryColor: settings.branding.primaryColor,
+      hasStorefrontConfig: !!storefrontConfig
+    });
+    
     setSaving(true);
     try {
-      // API call to save settings would go here
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Mock delay
-      console.log('Settings saved:', settings);
+      let configToUpdate = storefrontConfig;
+      
+      // If we don't have the config in state, try to fetch it first
+      if (!configToUpdate) {
+        console.log('📥 Fetching existing storefront config...');
+        try {
+          configToUpdate = await getStorefrontConfiguration(pubIdString);
+          if (configToUpdate) {
+            console.log('✅ Found existing config');
+            setStorefrontConfig(configToUpdate);
+          }
+        } catch (fetchError) {
+          console.log('ℹ️ No existing config found, will create new one');
+        }
+      }
+      
+      // Update or create the configuration
+      if (configToUpdate) {
+        console.log('📝 Updating existing storefront config...');
+        const updatedConfig = await updateStorefrontConfiguration(pubIdString, {
+          theme: {
+            ...configToUpdate.theme,
+            colors: {
+              ...configToUpdate.theme.colors,
+              gradStart: settings.branding.primaryColor,
+              lightPrimary: settings.branding.primaryColor,
+            }
+          }
+        });
+        console.log('✅ Updated config:', updatedConfig);
+        
+        if (updatedConfig) {
+          setStorefrontConfig(updatedConfig);
+        }
+      } else {
+        console.log('📝 Creating new storefront config...');
+        const defaultConfig = createDefaultStorefrontConfig(selectedPublication.publicationId);
+        
+        const createdConfig = await createStorefrontConfiguration({
+          ...defaultConfig,
+          publicationId: pubIdString,
+          theme: {
+            ...defaultConfig.theme,
+            colors: {
+              ...defaultConfig.theme.colors,
+              gradStart: settings.branding.primaryColor,
+              lightPrimary: settings.branding.primaryColor,
+            }
+          }
+        });
+        console.log('✅ Created config:', createdConfig);
+        setStorefrontConfig(createdConfig);
+      }
+      
+      // Clear the brand color cache for this publication to force a refresh
+      clearBrandColorCache(pubIdString);
+      
+      toast({
+        title: "Success",
+        description: "Brand colors saved successfully. Refreshing..."
+      });
+      
+      // Force a page reload after a short delay to sync all components
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
-      console.error('Error saving settings:', error);
+      console.error('❌ Error saving settings:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save brand colors.",
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }

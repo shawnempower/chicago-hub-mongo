@@ -114,7 +114,7 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
           <div className="flex gap-3 items-end">
             {/* Hub/Context selector - inactive for default */}
             <div className="w-64 flex-shrink-0">
-              <Label className="text-xs mb-1 block">Hub</Label>
+              <Label className="text-xs mb-1 block">Program</Label>
               <Select value="default" disabled>
                 <SelectTrigger className="bg-muted">
                   <SelectValue>Default Price</SelectValue>
@@ -205,7 +205,7 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                 <div className="flex gap-3 items-end">
                   {/* Hub selector - active for hub pricing */}
                   <div className="w-64 flex-shrink-0">
-                    <Label className="text-xs mb-2 block">Hub</Label>
+                    <Label className="text-xs mb-2 block">Program</Label>
                     <Select
                       value={hubPrice.hubId}
                       onValueChange={(value) => updateHubSelection(index, value)}
@@ -313,7 +313,7 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
             className="w-full"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Hub Pricing
+            Add Program Pricing
           </Button>
         )}
       </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { usePublication } from '@/contexts/PublicationContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AdOpportunityCard } from './AdOpportunityCard';
 import { 
   Globe, 
   Mail, 
@@ -296,36 +297,24 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
 
                   {publication.distributionChannels.website.advertisingOpportunities && publication.distributionChannels.website.advertisingOpportunities.length > 0 && (
                     <div>
-                      <p className="font-medium mb-2">Website Advertising Opportunities</p>
-                      <div className="space-y-3">
-                        {publication.distributionChannels.website.advertisingOpportunities.map((ad, index) => (
-                          <div key={index} className="bg-white p-3 rounded border print:border-gray-300">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-                              <div>
-                                <p className="font-medium">{ad.name}</p>
-                                <p>Format: {ad.adFormat}</p>
-                                <p>Location: {ad.location}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Pricing</p>
-                                {ad.pricing?.cpm && <p>CPM: ${ad.pricing.cpm}</p>}
-                                {ad.pricing?.flatRate && <p>Flat Rate: ${ad.pricing.flatRate}</p>}
-                                <p>Model: {ad.pricing?.pricingModel}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium">Specifications</p>
-                                {ad.specifications?.size && <p>Size: {ad.specifications.size}</p>}
-                                {ad.specifications?.format && <p>Format: {ad.specifications.format}</p>}
-                                {ad.specifications?.fileSize && <p>File Size: {ad.specifications.fileSize}</p>}
-                              </div>
-                              <div>
-                                <p className="font-medium">Performance</p>
-                                {ad.monthlyImpressions && <p>Monthly Impressions: {formatNumber(ad.monthlyImpressions)}</p>}
-                                <p>Available: {ad.available ? 'Yes' : 'No'}</p>
-                                {ad.pricing?.minimumCommitment && <p>Min Commitment: {ad.pricing.minimumCommitment}</p>}
-                              </div>
-                            </div>
-                          </div>
+                      <p className="font-medium mb-3">Website Advertising Opportunities</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {publication.distributionChannels.website.advertisingOpportunities.map((ad: any, index: number) => (
+                          <AdOpportunityCard
+                            key={index}
+                            title={ad.name || 'Unnamed Ad'}
+                            hubPricingCount={ad.hubPricing?.length || 0}
+                            fields={[
+                              { label: 'Format', value: ad.adFormat },
+                              { label: 'Location', value: ad.location },
+                              { label: 'Size', value: ad.specifications?.size },
+                              { label: 'Impressions', value: ad.monthlyImpressions ? `${formatNumber(ad.monthlyImpressions)}/mo` : undefined },
+                              { label: 'Price (CPM)', value: ad.pricing?.cpm ? `$${ad.pricing.cpm}` : undefined },
+                              { label: 'Price (Flat)', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
+                              { label: 'Model', value: ad.pricing?.pricingModel },
+                              { label: 'Available', value: ad.available ? 'Yes' : 'No' },
+                            ]}
+                          />
                         ))}
                       </div>
                     </div>
@@ -354,27 +343,20 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       
                       {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 && (
                         <div>
-                          <p className="font-medium mb-2">Newsletter Advertising Opportunities</p>
-                          <div className="space-y-2">
-                            {newsletter.advertisingOpportunities.map((ad, adIndex) => (
-                              <div key={adIndex} className="bg-white p-3 rounded border print:border-gray-300">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                                  <div>
-                                    <p className="font-medium">{ad.name}</p>
-                                    <p>Position: {ad.position}</p>
-                                    {ad.dimensions && <p>Dimensions: {ad.dimensions}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Pricing</p>
-                                    {ad.pricing?.perSend && <p>Per Send: ${ad.pricing.perSend}</p>}
-                                    {ad.pricing?.monthly && <p>Monthly: ${ad.pricing.monthly}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Details</p>
-                                    <p>Available: Newsletter advertising available</p>
-                                  </div>
-                                </div>
-                              </div>
+                          <p className="font-medium mb-3">Newsletter Advertising Opportunities</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {newsletter.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                              <AdOpportunityCard
+                                key={adIndex}
+                                title={ad.name || 'Unnamed Ad'}
+                                hubPricingCount={ad.hubPricing?.length || 0}
+                                fields={[
+                                  { label: 'Position', value: ad.position },
+                                  { label: 'Dimensions', value: ad.dimensions },
+                                  { label: 'Price (Per Send)', value: ad.pricing?.perSend ? `$${ad.pricing.perSend}` : undefined },
+                                  { label: 'Price (Monthly)', value: ad.pricing?.monthly ? `$${ad.pricing.monthly}` : undefined },
+                                ]}
+                              />
                             ))}
                           </div>
                         </div>
@@ -404,35 +386,24 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       
                       {print.advertisingOpportunities && print.advertisingOpportunities.length > 0 && (
                         <div>
-                          <p className="font-medium mb-2">Print Advertising Opportunities</p>
-                          <div className="space-y-2">
-                            {print.advertisingOpportunities.map((ad, adIndex) => (
-                              <div key={adIndex} className="bg-white p-3 rounded border print:border-gray-300">
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-                                  <div>
-                                    <p className="font-medium">{ad.name}</p>
-                                    <p>Format: {ad.adFormat}</p>
-                                    {ad.dimensions && <p>Size: {ad.dimensions}</p>}
-                                    {ad.color && <p>Color: {ad.color}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Pricing</p>
-                                    {ad.pricing?.oneTime && <p>One Time: ${ad.pricing.oneTime}</p>}
-                                    {ad.pricing?.fourTimes && <p>4x Rate: ${ad.pricing.fourTimes}</p>}
-                                    {ad.pricing?.twelveTimes && <p>12x Rate: ${ad.pricing.twelveTimes}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Specifications</p>
-                                    {ad.specifications?.format && <p>Format: {ad.specifications.format}</p>}
-                                    {ad.specifications?.resolution && <p>Resolution: {ad.specifications.resolution}</p>}
-                                    {ad.specifications?.bleed !== undefined && <p>Bleed: {ad.specifications.bleed ? 'Required' : 'Not required'}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Details</p>
-                                    {ad.location && <p>Location: {ad.location}</p>}
-                                  </div>
-                                </div>
-                              </div>
+                          <p className="font-medium mb-3">Print Advertising Opportunities</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {print.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                              <AdOpportunityCard
+                                key={adIndex}
+                                title={ad.name || 'Unnamed Ad'}
+                                hubPricingCount={ad.hubPricing?.length || 0}
+                                fields={[
+                                  { label: 'Format', value: ad.adFormat },
+                                  { label: 'Dimensions', value: ad.dimensions },
+                                  { label: 'Color', value: ad.color },
+                                  { label: 'Location', value: ad.location },
+                                  { label: 'One Time', value: ad.pricing?.oneTime ? `$${ad.pricing.oneTime}` : undefined },
+                                  { label: '4x Rate', value: ad.pricing?.fourTimes ? `$${ad.pricing.fourTimes}` : undefined },
+                                  { label: '12x Rate', value: ad.pricing?.twelveTimes ? `$${ad.pricing.twelveTimes}` : undefined },
+                                  { label: 'File Format', value: ad.specifications?.format },
+                                ]}
+                              />
                             ))}
                           </div>
                         </div>
@@ -463,30 +434,24 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       
                       {social.advertisingOpportunities && social.advertisingOpportunities.length > 0 && (
                         <div>
-                          <p className="font-medium mb-2">Social Media Advertising Opportunities</p>
-                          <div className="space-y-2">
-                            {social.advertisingOpportunities.map((ad, adIndex) => (
-                              <div key={adIndex} className="bg-white p-3 rounded border print:border-gray-300">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                                  <div>
-                                    <p className="font-medium">{ad.name}</p>
-                                    <p>Format: {ad.adFormat}</p>
-                                    {ad.postType && <p>Post Type: {ad.postType}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Pricing</p>
-                                    {ad.pricing?.perPost && <p>Per Post: ${ad.pricing.perPost}</p>}
-                                    {ad.pricing?.perStory && <p>Per Story: ${ad.pricing.perStory}</p>}
-                                    {ad.pricing?.monthly && <p>Monthly: ${ad.pricing.monthly}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Specifications</p>
-                                    {ad.specifications?.imageSize && <p>Image Size: {ad.specifications.imageSize}</p>}
-                                    {ad.specifications?.videoLength && <p>Video Length: {ad.specifications.videoLength}</p>}
-                                    <p>Available: {ad.available ? 'Yes' : 'No'}</p>
-                                  </div>
-                                </div>
-                              </div>
+                          <p className="font-medium mb-3">Social Media Advertising Opportunities</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {social.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                              <AdOpportunityCard
+                                key={adIndex}
+                                title={ad.name || 'Unnamed Ad'}
+                                hubPricingCount={ad.hubPricing?.length || 0}
+                                fields={[
+                                  { label: 'Format', value: ad.adFormat },
+                                  { label: 'Post Type', value: ad.postType },
+                                  { label: 'Image Size', value: ad.specifications?.imageSize },
+                                  { label: 'Video Length', value: ad.specifications?.videoLength },
+                                  { label: 'Per Post', value: ad.pricing?.perPost ? `$${ad.pricing.perPost}` : undefined },
+                                  { label: 'Per Story', value: ad.pricing?.perStory ? `$${ad.pricing.perStory}` : undefined },
+                                  { label: 'Monthly', value: ad.pricing?.monthly ? `$${ad.pricing.monthly}` : undefined },
+                                  { label: 'Available', value: ad.available ? 'Yes' : 'No' },
+                                ]}
+                              />
                             ))}
                           </div>
                         </div>
@@ -518,31 +483,19 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       
                       {event.advertisingOpportunities && event.advertisingOpportunities.length > 0 && (
                         <div>
-                          <p className="font-medium mb-2">Event Advertising Opportunities</p>
-                          <div className="space-y-2">
-                            {event.advertisingOpportunities.map((ad, adIndex) => (
-                              <div key={adIndex} className="bg-white p-3 rounded border print:border-gray-300">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                                  <div>
-                                    <p className="font-medium">Sponsorship Level</p>
-                                    <p className="capitalize">{ad.level}</p>
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Pricing</p>
-                                    {ad.pricing && <p>${ad.pricing}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Benefits</p>
-                                    {ad.benefits && ad.benefits.length > 0 && (
-                                      <ul className="text-xs list-disc list-inside">
-                                        {ad.benefits.slice(0, 3).map((benefit, i) => (
-                                          <li key={i}>{benefit}</li>
-                                        ))}
-                                      </ul>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
+                          <p className="font-medium mb-3">Event Advertising Opportunities</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {event.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                              <AdOpportunityCard
+                                key={adIndex}
+                                title={ad.level ? `${ad.level.charAt(0).toUpperCase() + ad.level.slice(1)} Sponsor` : 'Sponsorship'}
+                                hubPricingCount={ad.hubPricing?.length || 0}
+                                fields={[
+                                  { label: 'Level', value: ad.level },
+                                  { label: 'Pricing', value: ad.pricing ? `$${ad.pricing}` : undefined },
+                                  { label: 'Benefits', value: ad.benefits && ad.benefits.length > 0 ? ad.benefits.slice(0, 2).join(', ') : undefined },
+                                ]}
+                              />
                             ))}
                           </div>
                         </div>
@@ -575,32 +528,24 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       
                       {podcast.advertisingOpportunities && podcast.advertisingOpportunities.length > 0 && (
                         <div>
-                          <p className="font-medium mb-2">Podcast Advertising Opportunities</p>
-                          <div className="space-y-2">
-                            {podcast.advertisingOpportunities.map((ad, adIndex) => (
-                              <div key={adIndex} className="bg-white p-3 rounded border print:border-gray-300">
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-                                  <div>
-                                    <p className="font-medium">{ad.name}</p>
-                                    <p>Format: {ad.adFormat}</p>
-                                    {ad.duration && <p>Duration: {ad.duration}s</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Pricing</p>
-                                    {ad.pricing?.flatRate && <p>Flat Rate: ${ad.pricing.flatRate}</p>}
-                                    {ad.pricing?.cpm && <p>CPM: ${ad.pricing.cpm}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Specifications</p>
-                                    {ad.specifications?.format && <p>Format: {ad.specifications.format}</p>}
-                                    {ad.specifications?.bitrate && <p>Bit Rate: {ad.specifications.bitrate}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Details</p>
-                                    <p>Available: {ad.available ? 'Yes' : 'No'}</p>
-                                  </div>
-                                </div>
-                              </div>
+                          <p className="font-medium mb-3">Podcast Advertising Opportunities</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {podcast.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                              <AdOpportunityCard
+                                key={adIndex}
+                                title={ad.name || 'Unnamed Ad'}
+                                hubPricingCount={ad.hubPricing?.length || 0}
+                                fields={[
+                                  { label: 'Format', value: ad.adFormat },
+                                  { label: 'Duration', value: ad.duration ? `${ad.duration}s` : undefined },
+                                  { label: 'File Format', value: ad.specifications?.format },
+                                  { label: 'Bitrate', value: ad.specifications?.bitrate },
+                                  { label: 'Flat Rate', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
+                                  { label: 'CPM', value: ad.pricing?.cpm ? `$${ad.pricing.cpm}` : undefined },
+                                  { label: 'Model', value: ad.pricing?.pricingModel },
+                                  { label: 'Available', value: ad.available ? 'Yes' : 'No' },
+                                ]}
+                              />
                             ))}
                           </div>
                         </div>
@@ -631,33 +576,24 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       
                       {radio.advertisingOpportunities && radio.advertisingOpportunities.length > 0 && (
                         <div>
-                          <p className="font-medium mb-2">Radio Advertising Opportunities</p>
-                          <div className="space-y-2">
-                            {radio.advertisingOpportunities.map((ad, adIndex) => (
-                              <div key={adIndex} className="bg-white p-3 rounded border print:border-gray-300">
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-                                  <div>
-                                    <p className="font-medium">{ad.name}</p>
-                                    <p>Format: {ad.adFormat}</p>
-                                    {ad.timeSlot && <p>Time Slot: {ad.timeSlot.replace(/_/g, ' ')}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Pricing</p>
-                                    {ad.pricing?.perSpot && <p>Per Spot: ${ad.pricing.perSpot}</p>}
-                                    {ad.pricing?.weekly && <p>Per Week: ${ad.pricing.weekly}</p>}
-                                    {ad.pricing?.monthly && <p>Per Month: ${ad.pricing.monthly}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Specifications</p>
-                                    {ad.specifications?.format && <p>Format: {ad.specifications.format}</p>}
-                                    {ad.specifications?.duration && <p>Duration: {ad.specifications.duration}s</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Details</p>
-                                    <p>Available: {ad.available ? 'Yes' : 'No'}</p>
-                                  </div>
-                                </div>
-                              </div>
+                          <p className="font-medium mb-3">Radio Advertising Opportunities</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {radio.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                              <AdOpportunityCard
+                                key={adIndex}
+                                title={ad.name || 'Unnamed Ad'}
+                                hubPricingCount={ad.hubPricing?.length || 0}
+                                fields={[
+                                  { label: 'Format', value: ad.adFormat },
+                                  { label: 'Time Slot', value: ad.timeSlot ? ad.timeSlot.replace(/_/g, ' ') : undefined },
+                                  { label: 'Duration', value: ad.specifications?.duration ? `${ad.specifications.duration}s` : undefined },
+                                  { label: 'File Format', value: ad.specifications?.format },
+                                  { label: 'Per Spot', value: ad.pricing?.perSpot ? `$${ad.pricing.perSpot}` : undefined },
+                                  { label: 'Weekly', value: ad.pricing?.weekly ? `$${ad.pricing.weekly}` : undefined },
+                                  { label: 'Monthly', value: ad.pricing?.monthly ? `$${ad.pricing.monthly}` : undefined },
+                                  { label: 'Available', value: ad.available ? 'Yes' : 'No' },
+                                ]}
+                              />
                             ))}
                           </div>
                         </div>
@@ -688,32 +624,24 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       
                       {streaming.advertisingOpportunities && streaming.advertisingOpportunities.length > 0 && (
                         <div>
-                          <p className="font-medium mb-2">Streaming Advertising Opportunities</p>
-                          <div className="space-y-2">
-                            {streaming.advertisingOpportunities.map((ad, adIndex) => (
-                              <div key={adIndex} className="bg-white p-3 rounded border print:border-gray-300">
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-                                  <div>
-                                    <p className="font-medium">{ad.name}</p>
-                                    <p>Format: {ad.adFormat}</p>
-                                    {ad.duration && <p>Duration: {ad.duration}s</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Pricing</p>
-                                    {ad.pricing?.flatRate && <p>Flat Rate: ${ad.pricing.flatRate}</p>}
-                                    {ad.pricing?.cpm && <p>CPM: ${ad.pricing.cpm}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Specifications</p>
-                                    {ad.specifications?.format && <p>Format: {ad.specifications.format}</p>}
-                                    {ad.specifications?.resolution && <p>Resolution: {ad.specifications.resolution}</p>}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Details</p>
-                                    <p>Available: {ad.available ? 'Yes' : 'No'}</p>
-                                  </div>
-                                </div>
-                              </div>
+                          <p className="font-medium mb-3">Streaming Advertising Opportunities</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {streaming.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                              <AdOpportunityCard
+                                key={adIndex}
+                                title={ad.name || 'Unnamed Ad'}
+                                hubPricingCount={ad.hubPricing?.length || 0}
+                                fields={[
+                                  { label: 'Format', value: ad.adFormat },
+                                  { label: 'Duration', value: ad.duration ? `${ad.duration}s` : undefined },
+                                  { label: 'File Format', value: ad.specifications?.format },
+                                  { label: 'Resolution', value: ad.specifications?.resolution },
+                                  { label: 'Flat Rate', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
+                                  { label: 'CPM', value: ad.pricing?.cpm ? `$${ad.pricing.cpm}` : undefined },
+                                  { label: 'Model', value: ad.pricing?.pricingModel },
+                                  { label: 'Available', value: ad.available ? 'Yes' : 'No' },
+                                ]}
+                              />
                             ))}
                           </div>
                         </div>

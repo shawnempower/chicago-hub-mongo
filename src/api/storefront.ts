@@ -18,19 +18,33 @@ const getAuthHeaders = (): HeadersInit => {
 // Get storefront configuration by publication ID
 export const getStorefrontConfiguration = async (publicationId: string): Promise<StorefrontConfiguration | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}`);
+    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}`, {
+      headers: getAuthHeaders(),
+    });
     
     if (!response.ok) {
       if (response.status === 404) {
+        console.log(`ℹ️ No storefront configuration found for publication ${publicationId}`);
         return null;
       }
-      throw new Error('Failed to fetch storefront configuration');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Failed to fetch storefront configuration:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData
+      });
+      throw new Error(errorData.error || 'Failed to fetch storefront configuration');
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error fetching storefront configuration:', error);
-    throw new Error('Failed to fetch storefront configuration');
+    // If it's a TypeError (network error), return null instead of throwing
+    if (error instanceof TypeError) {
+      console.error('Network error fetching storefront configuration:', error);
+      return null;
+    }
+    // Re-throw other errors
+    throw error;
   }
 };
 
@@ -205,7 +219,9 @@ export const duplicateStorefrontConfiguration = async (sourcePublicationId: stri
 // Preview storefront configuration (get rendered HTML/data for preview)
 export const previewStorefrontConfiguration = async (publicationId: string): Promise<{ html: string; config: StorefrontConfiguration }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}/preview`);
+    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}/preview`, {
+      headers: getAuthHeaders(),
+    });
     
     if (!response.ok) {
       if (response.status === 404) {
@@ -246,7 +262,9 @@ export const validateStorefrontConfiguration = async (config: StorefrontConfigur
 // Get storefront configuration templates
 export const getStorefrontTemplates = async (): Promise<Array<{ id: string; name: string; description: string; config: StorefrontConfigurationInsert }>> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/templates`);
+    const response = await fetch(`${API_BASE_URL}/storefront/templates`, {
+      headers: getAuthHeaders(),
+    });
     
     if (!response.ok) {
       throw new Error('Failed to fetch storefront templates');

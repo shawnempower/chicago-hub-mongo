@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { AssistantModal } from "@/components/AssistantModal";
 import SurveyForm from "@/components/SurveyForm";
 
@@ -13,10 +12,8 @@ import { PublicationStorefront } from "@/components/dashboard/PublicationStorefr
 import { PublicationFullSummary } from "@/components/dashboard/PublicationFullSummary";
 import { useAuth } from "@/contexts/CustomAuthContext";
 import { Navigate, useSearchParams, useNavigate, Link } from "react-router-dom";
-import { PublicationProvider, usePublication } from "@/contexts/PublicationContext";
-import { PublicationSelector } from "@/components/PublicationSelector";
+import { usePublication } from "@/contexts/PublicationContext";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
   User, 
@@ -24,13 +21,11 @@ import {
   BookOpen, 
   Settings, 
   Store, 
-  FileText,
-  Eye,
-  Printer
+  FileText
 } from "lucide-react";
 
-// Internal Dashboard Component (wrapped by PublicationProvider)
-function DashboardContent() {
+// Main Dashboard Component
+export default function Dashboard() {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isSurveyOpen, setIsSurveyOpen] = useState(false);
   const { user, loading: authLoading } = useAuth();
@@ -106,32 +101,13 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onAssistantClick={handleAssistantClick} onSurveyClick={() => setIsSurveyOpen(true)} />
+      <Header 
+        onAssistantClick={handleAssistantClick} 
+        onSurveyClick={() => setIsSurveyOpen(true)} 
+        showDashboardNav={true}
+      />
       
       <main className="container mx-auto px-6 py-8">
-        {/* Publication Selector with Action Buttons */}
-        <div className="mb-8 p-4 bg-card border border-border rounded-lg">
-          <div className="flex items-center justify-between">
-            <PublicationSelector />
-            {selectedPublication && currentTab === 'dashboard' && (
-              <div className="flex gap-2 ml-4">
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/dashboard?tab=profile">
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Profile
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/dashboard?tab=summary">
-                    <Printer className="w-4 h-4 mr-2" />
-                    Full Summary
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Publication-Specific Dashboard */}
         {selectedPublication ? (
           <div className="flex gap-6">
@@ -150,7 +126,7 @@ function DashboardContent() {
                         className={cn(
                           "w-full flex items-center gap-3 px-4 py-3 text-sm rounded-md transition-colors",
                           isActive
-                            ? "bg-[#DDDBD2] font-semibold"
+                            ? "bg-[#EDEAE1] font-semibold"
                             : "hover:bg-[#E2E0D8]"
                         )}
                       >
@@ -174,13 +150,11 @@ function DashboardContent() {
           <div className="text-center py-12">
             <h2 className="text-2xl font-semibold mb-4">Select a Publication</h2>
             <p className="text-muted-foreground">
-              Choose a publication from the dropdown above to view its dashboard and manage its content.
+              Choose a publication from the dropdown in the navbar to view its dashboard and manage its content.
             </p>
           </div>
         )}
       </main>
-
-      <Footer />
 
       <AssistantModal 
         isOpen={isAssistantOpen}
@@ -189,14 +163,5 @@ function DashboardContent() {
       
       <SurveyForm open={isSurveyOpen} onOpenChange={setIsSurveyOpen} />
     </div>
-  );
-}
-
-// Main Dashboard Component with PublicationProvider
-export default function Dashboard() {
-  return (
-    <PublicationProvider>
-      <DashboardContent />
-    </PublicationProvider>
   );
 }

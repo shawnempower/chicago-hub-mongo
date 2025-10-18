@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { updatePublication } from '@/api/publications';
+import { getPublicationBrandColor } from '@/config/publicationBrandColors';
 import { 
   Edit3,
   Save,
@@ -152,8 +153,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* ESSENTIAL INFORMATION */}
         <Card>
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-            <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Essential Information</h2>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Essential Information</h2>
           </div>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -324,8 +325,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* BUSINESS INFORMATION */}
         <Card>
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-            <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Business Information</h2>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Business Information</h2>
           </div>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -377,8 +378,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* GEOGRAPHIC MARKETS */}
         <Card>
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-            <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Geographic Markets</h2>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Geographic Markets</h2>
           </div>
           <CardContent className="space-y-4">
             <SchemaField mappingStatus="full" schemaPath="basicInfo.primaryServiceArea" showSchemaPath={showSchemaDebug}>
@@ -396,8 +397,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* AUDIENCE DEMOGRAPHICS */}
         <Card>
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-            <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Audience Demographics</h2>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Audience Demographics</h2>
           </div>
           <CardContent className="space-y-6">
             
@@ -690,8 +691,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* POSITIONING & UNIQUE VALUE */}
         <Card>
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-            <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Positioning & Unique Value</h2>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Positioning & Unique Value</h2>
           </div>
           <CardContent className="space-y-4">
             <SchemaField mappingStatus="full" schemaPath="competitiveInfo.uniqueValueProposition" showSchemaPath={showSchemaDebug}>
@@ -728,8 +729,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* NOTES */}
         <Card>
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-            <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Notes</h2>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Notes</h2>
           </div>
           <CardContent>
             <SchemaField mappingStatus="full" schemaPath="internalNotes.operationalNotes" showSchemaPath={showSchemaDebug}>
@@ -753,28 +754,54 @@ export const PublicationProfile: React.FC = () => {
     );
   }
 
+  // Get primary brand color
+  const primaryColor = selectedPublication 
+    ? getPublicationBrandColor(selectedPublication.publicationId)
+    : '#0066cc';
+
   // ============ VIEW MODE ============
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between pb-4 border-b">
-        <div>
-          <h1 className="text-3xl font-bold">{selectedPublication.basicInfo?.publicationName || 'Unnamed Publication'}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            <strong>Generated:</strong> {new Date(selectedPublication.metadata?.lastUpdated || '').toLocaleDateString()} | 
-            <strong className="ml-2">Status:</strong> Internal Reference | 
-            <strong className="ml-2">ID:</strong> {selectedPublication.publicationId}
-          </p>
+      {/* Header with primary color background at 10% opacity */}
+      <div 
+        className="rounded-xl p-6 border shadow-sm"
+        style={{
+          backgroundColor: `${primaryColor}1A`, // 1A = 10% opacity in hex
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold mb-2">
+              {selectedPublication.basicInfo?.publicationName || 'Unnamed Publication'}
+            </h1>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span>
+                <strong className="font-semibold">Generated</strong> {new Date(selectedPublication.metadata?.lastUpdated || '').toLocaleDateString()}
+              </span>
+              <span className="text-border">|</span>
+              <span>
+                <strong className="font-semibold">Status</strong> Internal Reference
+              </span>
+              <span className="text-border">|</span>
+              <span>
+                <strong className="font-semibold">ID</strong> {selectedPublication.publicationId}
+              </span>
+            </div>
+          </div>
+          <Button 
+            onClick={() => setIsEditing(true)}
+            className="ml-4"
+          >
+            <Edit3 className="w-4 h-4 mr-2" />
+            Edit Profile
+          </Button>
         </div>
-        <Button onClick={() => setIsEditing(true)}>
-          <Edit3 className="w-4 h-4 mr-2" />
-          Edit Profile
-        </Button>
-              </div>
+      </div>
 
       {/* ESSENTIAL INFORMATION */}
       <Card>
-        <div className="py-3 px-6 mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Essential Information</h2>
+        <div className="py-3 px-6 mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Essential Information</h2>
         </div>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -840,7 +867,7 @@ export const PublicationProfile: React.FC = () => {
       {/* BUSINESS INFORMATION */}
       <Card>
         <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Business Information</h2>
+          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Business Information</h2>
         </div>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -871,7 +898,7 @@ export const PublicationProfile: React.FC = () => {
       {/* GEOGRAPHIC MARKETS */}
       <Card>
         <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Geographic Markets</h2>
+          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Geographic Markets</h2>
         </div>
         <CardContent className="space-y-3">
           <div>
@@ -888,7 +915,7 @@ export const PublicationProfile: React.FC = () => {
       {/* KEY METRICS */}
       <Card>
         <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Key Metrics</h2>
+          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Key Metrics</h2>
         </div>
         <CardContent className="space-y-4">
           {/* Digital */}
@@ -991,7 +1018,7 @@ export const PublicationProfile: React.FC = () => {
       {/* AUDIENCE SNAPSHOT */}
       <Card>
         <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Audience Snapshot</h2>
+          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Audience Snapshot</h2>
         </div>
         <CardContent className="space-y-3">
           <div>
@@ -1016,7 +1043,7 @@ export const PublicationProfile: React.FC = () => {
       {/* POSITIONING & UNIQUE VALUE */}
       <Card>
         <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Positioning & Unique Value</h2>
+          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Positioning & Unique Value</h2>
         </div>
         <CardContent className="space-y-4">
           <div>
@@ -1041,7 +1068,7 @@ export const PublicationProfile: React.FC = () => {
       {/* CHANNELS OFFERED */}
       <Card>
         <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Channels Offered</h2>
+          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Channels Offered</h2>
         </div>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -1072,7 +1099,7 @@ export const PublicationProfile: React.FC = () => {
       {/* NOTES */}
       <Card>
         <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-lg font-semibold" style={{ fontSize: '18px', color: '#787367' }}>Notes</h2>
+          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Notes</h2>
         </div>
         <CardContent>
           <p className="whitespace-pre-wrap">{get('internalNotes.operationalNotes') || 'No notes available'}</p>
