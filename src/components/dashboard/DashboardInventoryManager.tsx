@@ -50,6 +50,184 @@ export const DashboardInventoryManager = () => {
   const [editingType, setEditingType] = useState<'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'podcast' | 'radio' | 'streaming' | 'television' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'television-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'television-ad' | 'social-media-ad' | 'print-ad' | null>(null);
   const [editingIndex, setEditingIndex] = useState<number>(-1);
   const [editingSubIndex, setEditingSubIndex] = useState<number>(-1); // for newsletter ads within newsletters
+  const [editingParentIndex, setEditingParentIndex] = useState<number>(-1); // for event parent index
+  const [editingItemIndex, setEditingItemIndex] = useState<number>(-1); // for event sponsorship index
+
+  // Helper function to format pricing model labels
+  const formatPricingModel = (model: string) => {
+    if (!model) return 'N/A';
+    
+    switch(model) {
+      // Website models
+      case 'flat_rate': return 'Flat Rate';
+      case 'flat': return '/month';
+      case 'per_week': return '/week';
+      case 'per_day': return '/day';
+      case 'cpm': return '/1000 impressions';
+      case 'cpc': return '/click';
+      
+      // Newsletter models
+      case 'per_send': return '/send';
+      
+      // Print models
+      case 'per_ad': return '/ad';
+      
+      // Podcast models
+      case 'cpd': return '/1000 downloads';  // Cost per thousand downloads
+      case 'per_episode': return '/episode';
+      
+      // Radio models
+      case 'per_spot': return '/spot';
+      
+      // Social media models
+      case 'per_post': return '/post';
+      case 'per_story': return '/story';
+      case 'monthly': return '/month';
+      
+      // Streaming models
+      case 'cpv': return '/1000 views';  // Cost per thousand views
+      case 'per_video': return '/video';
+      
+      // General
+      case 'contact': return 'Contact for pricing';
+      
+      // If we get something unexpected, return it as-is
+      default: return model;
+    }
+  };
+
+  // Helper component to render pricing display
+  const renderPricingDisplay = (pricing: any) => {
+    // Helper to get price value and field name from pricing object
+    const getPriceInfo = (pricingObj: any) => {
+      if (!pricingObj) return { value: null, field: null };
+      // Try all possible price field names
+      const priceFields = ['flatRate', 'perPost', 'perStory', 'monthly', 'perSpot', 'per30Second', 'per60Second', 'perSend', 'cpm', 'cpc', 'weekly'];
+      for (const field of priceFields) {
+        if (pricingObj[field] !== undefined && pricingObj[field] !== null) {
+          return { value: pricingObj[field], field };
+        }
+      }
+      return { value: null, field: null };
+    };
+
+    // Infer pricing model from field name if pricingModel is missing
+    const inferPricingModel = (pricingObj: any, priceField: string | null) => {
+      // If pricingModel is explicitly set, use it
+      if (pricingObj?.pricingModel) {
+        return pricingObj.pricingModel;
+      }
+      // Otherwise, infer from the price field name
+      if (!priceField) return null;
+      
+      const fieldToModel: Record<string, string> = {
+        'flatRate': 'flat',
+        'perPost': 'per_post',
+        'perStory': 'per_story',
+        'monthly': 'monthly',
+        'perSpot': 'per_spot',
+        'per30Second': 'per_spot',  // Radio ads
+        'per60Second': 'per_spot',  // Radio ads
+        'perSend': 'per_send',
+        'cpm': 'cpm',
+        'cpc': 'cpc',
+        'weekly': 'per_week'
+      };
+      
+      return fieldToModel[priceField] || null;
+    };
+
+    // Check if pricing is an array (multiple tiers)
+    if (Array.isArray(pricing)) {
+      return (
+        <div className="space-y-1">
+          {pricing.map((priceTier: any, idx: number) => {
+            const { value: priceValue, field: priceField } = getPriceInfo(priceTier.pricing);
+            const pricingModel = inferPricingModel(priceTier.pricing, priceField);
+            
+            return (
+              <div key={idx} className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1">
+                <span className="font-medium text-gray-900">
+                  {pricingModel === 'contact' 
+                    ? 'Contact' 
+                    : priceValue 
+                      ? `$${priceValue}`
+                      : 'N/A'}
+                </span>
+                <span className="text-gray-600">
+                  {formatPricingModel(pricingModel)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      );
+    } else {
+      // Single pricing tier
+      const pricingObj = pricing || {};
+      
+      // NEW CLEAN SCHEMA: If pricingModel is explicitly set, use flatRate + pricingModel
+      if (pricingObj.pricingModel) {
+        const priceValue = pricingObj.flatRate || pricingObj.cpm || 0;
+        return (
+          <div className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1">
+            <span className="font-medium text-gray-900">
+              {pricingObj.pricingModel === 'contact' 
+                ? 'Contact' 
+                : priceValue 
+                  ? `$${priceValue}`
+                  : 'N/A'}
+            </span>
+            <span className="text-gray-600">
+              {formatPricingModel(pricingObj.pricingModel)}
+            </span>
+          </div>
+        );
+      }
+      
+      // LEGACY FORMAT: Handle case where there are multiple price fields without pricingModel
+      const priceFields = ['flatRate', 'perPost', 'perStory', 'monthly', 'perSpot', 'perSend', 'cpm', 'cpc', 'weekly'];
+      const availablePrices = priceFields
+        .map(field => ({ field, value: pricingObj[field] }))
+        .filter(item => item.value !== undefined && item.value !== null && item.value !== 0); // Filter out 0 values
+      
+      if (availablePrices.length > 1) {
+        // Multiple prices without explicit tiers - show each one (LEGACY DATA)
+        return (
+          <div className="space-y-1">
+            {availablePrices.map((item, idx) => {
+              const pricingModel = inferPricingModel(pricingObj, item.field);
+              return (
+                <div key={idx} className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1">
+                  <span className="font-medium text-gray-900">${item.value}</span>
+                  <span className="text-gray-600">{formatPricingModel(pricingModel)}</span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      } else if (availablePrices.length === 1) {
+        // Single price (LEGACY DATA)
+        const item = availablePrices[0];
+        const pricingModel = inferPricingModel(pricingObj, item.field);
+        
+        return (
+          <div className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1">
+            <span className="font-medium text-gray-900">${item.value}</span>
+            <span className="text-gray-600">{formatPricingModel(pricingModel)}</span>
+          </div>
+        );
+      } else {
+        // No price found
+        return (
+          <div className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1">
+            <span className="font-medium text-gray-900">N/A</span>
+            <span className="text-gray-600">N/A</span>
+          </div>
+        );
+      }
+    }
+  };
 
   // Load full publication data when selected publication changes
   useEffect(() => {
@@ -307,6 +485,8 @@ export const DashboardInventoryManager = () => {
     setEditingType(null);
     setEditingIndex(-1);
     setEditingSubIndex(-1);
+    setEditingParentIndex(-1);
+    setEditingItemIndex(-1);
   };
 
   const saveEditedItem = async () => {
@@ -424,6 +604,29 @@ export const DashboardInventoryManager = () => {
           }
           break;
 
+        case 'social-media-ad':
+          if (updatedPublication.distributionChannels?.socialMedia && 
+              editingSubIndex >= 0 &&
+              updatedPublication.distributionChannels.socialMedia[editingIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.socialMedia[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+          }
+          break;
+
+        case 'event':
+          if (updatedPublication.distributionChannels?.events && 
+              editingParentIndex >= 0 &&
+              editingItemIndex >= 0 &&
+              updatedPublication.distributionChannels.events[editingParentIndex]?.advertisingOpportunities) {
+            updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities[editingItemIndex] = editingItem;
+          }
+          break;
+
+        case 'event-container':
+          if (updatedPublication.distributionChannels?.events && editingItemIndex >= 0) {
+            updatedPublication.distributionChannels.events[editingItemIndex] = editingItem;
+          }
+          break;
+
         // Container types - these update entire channel objects
         case 'website-container':
           updatedPublication.distributionChannels.website = editingItem;
@@ -510,6 +713,15 @@ export const DashboardInventoryManager = () => {
             break;
           case 'streaming-ad':
             savedItem = result.distributionChannels?.streamingVideo?.[editingIndex]?.advertisingOpportunities?.[editingSubIndex];
+            break;
+          case 'social-media-ad':
+            savedItem = result.distributionChannels?.socialMedia?.[editingIndex]?.advertisingOpportunities?.[editingSubIndex];
+            break;
+          case 'event':
+            savedItem = result.distributionChannels?.events?.[editingParentIndex]?.advertisingOpportunities?.[editingItemIndex];
+            break;
+          case 'event-container':
+            savedItem = result.distributionChannels?.events?.[editingItemIndex];
             break;
           case 'website-container':
             savedItem = result.distributionChannels?.website;
@@ -647,7 +859,6 @@ export const DashboardInventoryManager = () => {
         minimumCommitment: '1 week'
       },
       specifications: {
-        size: '300x250',
         format: 'JPG, PNG, GIF',
         animationAllowed: true,
         thirdPartyTags: true
@@ -693,7 +904,8 @@ export const DashboardInventoryManager = () => {
       position: 'inline',
       dimensions: '300x250',
       pricing: {
-        perSend: 50
+        flatRate: 50,
+        pricingModel: 'per_send'
       }
     };
 
@@ -768,10 +980,10 @@ export const DashboardInventoryManager = () => {
     
     const newOpportunity = {
       name: 'New Print Ad',
-      adType: 'display',
-      size: 'full-page',
+      adFormat: 'full page',
       pricing: {
-        flatRate: 500
+        flatRate: 500,
+        pricingModel: 'per_ad'
       }
     };
 
@@ -848,6 +1060,147 @@ export const DashboardInventoryManager = () => {
     }
   };
 
+  const addEvent = async () => {
+    if (!currentPublication) return;
+    
+    const newEvent = {
+      name: 'New Event',
+      type: 'Community Event',
+      frequency: 'monthly',
+      averageAttendance: 0,
+      targetAudience: 'General audience',
+      location: 'TBD',
+      advertisingOpportunities: []
+    };
+
+    const updatedEvents = [
+      ...(currentPublication.distributionChannels?.events || []),
+      newEvent
+    ];
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          events: updatedEvents
+        }
+      });
+      toast({
+        title: "Success",
+        description: "Event added successfully"
+      });
+    } catch (error) {
+      console.error('Error adding event:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add event",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const removeEvent = async (eventIndex: number) => {
+    if (!currentPublication?.distributionChannels?.events) return;
+    
+    const updatedEvents = currentPublication.distributionChannels.events.filter((_, index) => index !== eventIndex);
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          events: updatedEvents
+        }
+      });
+      toast({
+        title: "Success",
+        description: "Event removed successfully"
+      });
+    } catch (error) {
+      console.error('Error removing event:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove event",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addEventOpportunity = async (eventIndex: number) => {
+    if (!currentPublication?.distributionChannels?.events?.[eventIndex]) return;
+    
+    const newOpportunity = {
+      level: 'sponsor',
+      benefits: ['Logo placement', 'Event listing'],
+      pricing: {
+        flatRate: 500,
+        pricingModel: 'flat' as const
+      }
+    };
+
+    const updatedEvents = [...(currentPublication.distributionChannels.events || [])];
+    const updatedOpportunities = [
+      ...(updatedEvents[eventIndex].advertisingOpportunities || []),
+      newOpportunity
+    ];
+    
+    updatedEvents[eventIndex] = {
+      ...updatedEvents[eventIndex],
+      advertisingOpportunities: updatedOpportunities
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          events: updatedEvents
+        }
+      });
+      toast({
+        title: "Success",
+        description: "Sponsorship opportunity added successfully"
+      });
+    } catch (error) {
+      console.error('Error adding event opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add sponsorship opportunity",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const removeEventOpportunity = async (eventIndex: number, oppIndex: number) => {
+    if (!currentPublication?.distributionChannels?.events) return;
+    
+    const updatedEvents = [...currentPublication.distributionChannels.events];
+    if (!updatedEvents[eventIndex]?.advertisingOpportunities?.[oppIndex]) return;
+    
+    updatedEvents[eventIndex] = {
+      ...updatedEvents[eventIndex],
+      advertisingOpportunities: updatedEvents[eventIndex].advertisingOpportunities!.filter((_, index) => index !== oppIndex)
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          events: updatedEvents
+        }
+      });
+      toast({
+        title: "Success",
+        description: "Sponsorship opportunity removed successfully"
+      });
+    } catch (error) {
+      console.error('Error removing event opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove sponsorship opportunity",
+        variant: "destructive"
+      });
+    }
+  };
+
   const addSocialMediaOpportunity = async (socialIndex: number) => {
     if (!currentPublication?.distributionChannels?.socialMedia?.[socialIndex]) return;
     
@@ -856,7 +1209,8 @@ export const DashboardInventoryManager = () => {
       adType: 'sponsored-post',
       duration: '24h',
       pricing: {
-        perPost: 100
+        flatRate: 100,
+        pricingModel: 'per_post'
       }
     };
 
@@ -1159,7 +1513,8 @@ export const DashboardInventoryManager = () => {
       position: 'pre-roll',
       duration: '30 seconds',
       pricing: {
-        perEpisode: 100
+        flatRate: 100,
+        pricingModel: 'per_ad'
       }
     };
 
@@ -1233,7 +1588,8 @@ export const DashboardInventoryManager = () => {
       timeSlot: 'drive-time',
       duration: '30 seconds',
       pricing: {
-        per30Second: 150
+        flatRate: 150,
+        pricingModel: 'per_spot'
       }
     };
 
@@ -1307,7 +1663,8 @@ export const DashboardInventoryManager = () => {
       position: 'pre-roll',
       duration: '15 seconds',
       pricing: {
-        perThousandViews: 25
+        flatRate: 25,
+        pricingModel: 'cpv'
       }
     };
 
@@ -1497,10 +1854,11 @@ export const DashboardInventoryManager = () => {
     <div className="space-y-6">
       {/* Inventory Tabs */}
       <Tabs key={currentPublication._id} value={activeTab} onValueChange={handleTabChange} className="shadow-sm rounded-lg">
-        <TabsList className="grid w-full grid-cols-8 gap-0">
+        <TabsList className="grid w-full grid-cols-9 gap-0">
           <TabsTrigger value="website">Website</TabsTrigger>
           <TabsTrigger value="newsletters">Newsletters</TabsTrigger>
           <TabsTrigger value="print">Print</TabsTrigger>
+          <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="podcasts">Podcasts</TabsTrigger>
           <TabsTrigger value="radio">Radio</TabsTrigger>
           <TabsTrigger value="streaming">Streaming</TabsTrigger>
@@ -1627,27 +1985,28 @@ export const DashboardInventoryManager = () => {
                       </div>
                     </div>
 
-                    {/* 2x2 Grid layout */}
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 mb-1">Location</p>
-                        <p className="text-sm text-gray-900">{opportunity.location || 'N/A'}</p>
+                    {/* Card content layout */}
+                    <div className="space-y-3">
+                      {/* Location and Size row */}
+                      <div className="grid grid-cols-2 gap-x-6">
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 mb-1">Location</p>
+                          <p className="text-sm text-gray-900">{opportunity.location || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 mb-1">Size{opportunity.sizes?.length > 1 ? 's' : ''}</p>
+                          <p className="text-sm text-gray-900">
+                            {opportunity.sizes && opportunity.sizes.length > 0 
+                              ? opportunity.sizes.filter((s: string) => s).join(', ') 
+                              : 'N/A'}
+                          </p>
+                        </div>
                       </div>
+
+                      {/* Pricing section */}
                       <div>
-                        <p className="text-xs font-medium text-gray-500 mb-1">Size{opportunity.sizes?.length > 1 ? 's' : ''}</p>
-                        <p className="text-sm text-gray-900">
-                          {opportunity.sizes && opportunity.sizes.length > 0 
-                            ? opportunity.sizes.filter((s: string) => s).join(', ') 
-                            : opportunity.specifications?.size || 'N/A'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 mb-1">Impressions</p>
-                        <p className="text-sm text-gray-900">{opportunity.monthlyImpressions?.toLocaleString() || 'N/A'}/month</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 mb-1">Price</p>
-                        <p className="text-sm text-gray-900">${opportunity.pricing?.flatRate || opportunity.pricing?.cpm || 'N/A'}</p>
+                        <p className="text-xs font-medium text-gray-500 mb-2">Pricing</p>
+                        {renderPricingDisplay(opportunity.pricing)}
                       </div>
                     </div>
                   </div>
@@ -1791,22 +2150,14 @@ export const DashboardInventoryManager = () => {
                                   </Button>
                                 </div>
                               </div>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                              <div className="space-y-2">
                                 <div>
                                   <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
                                   <p className="text-xs text-gray-900">{ad.duration ? `${ad.duration}s` : 'N/A'}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Flat Rate</p>
-                                  <p className="text-xs text-gray-900">${ad.pricing?.flatRate || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">CPM</p>
-                                  <p className="text-xs text-gray-900">${ad.pricing?.cpm || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Available</p>
-                                  <p className="text-xs text-gray-900">{ad.available ? 'Yes' : 'No'}</p>
+                                  <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                                  {renderPricingDisplay(ad.pricing)}
                                 </div>
                               </div>
                             </div>
@@ -1961,22 +2312,20 @@ export const DashboardInventoryManager = () => {
                                 </Button>
                               </div>
                               </div>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Time Slot</p>
-                                  <p className="text-xs text-gray-900">{ad.timeSlot?.replace(/_/g, ' ') || 'N/A'}</p>
+                              <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-x-4">
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Time Slot</p>
+                                    <p className="text-xs text-gray-900">{ad.timeSlot?.replace(/_/g, ' ') || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
+                                    <p className="text-xs text-gray-900">{ad.duration || ad.specifications?.duration || 'N/A'}</p>
+                                  </div>
                                 </div>
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
-                                  <p className="text-xs text-gray-900">{ad.specifications?.duration ? `${ad.specifications.duration}s` : 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Price</p>
-                                  <p className="text-xs text-gray-900">${ad.pricing?.perSpot || ad.pricing?.weekly || ad.pricing?.monthly || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Model</p>
-                                  <p className="text-xs text-gray-900">{ad.pricing?.pricingModel || 'N/A'}</p>
+                                  <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                                  {renderPricingDisplay(ad.pricing)}
                                 </div>
                               </div>
                             </div>
@@ -2131,22 +2480,20 @@ export const DashboardInventoryManager = () => {
                                 </Button>
                                 </div>
                               </div>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
-                                  <p className="text-xs text-gray-900">{ad.duration ? `${ad.duration}s` : 'N/A'}</p>
+                              <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-x-4">
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
+                                    <p className="text-xs text-gray-900">{ad.duration ? `${ad.duration}s` : 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Resolution</p>
+                                    <p className="text-xs text-gray-900">{ad.specifications?.resolution || 'N/A'}</p>
+                                  </div>
                                 </div>
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Resolution</p>
-                                  <p className="text-xs text-gray-900">{ad.specifications?.resolution || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">Flat Rate</p>
-                                  <p className="text-xs text-gray-900">${ad.pricing?.flatRate || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-0.5">CPM</p>
-                                  <p className="text-xs text-gray-900">${ad.pricing?.cpm || 'N/A'}</p>
+                                  <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                                  {renderPricingDisplay(ad.pricing)}
                                 </div>
                               </div>
                             </div>
@@ -2312,22 +2659,20 @@ export const DashboardInventoryManager = () => {
                                   </Button>
                                 </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                  <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Dimensions</p>
-                                    <p className="text-xs text-gray-900">{ad.dimensions || 'N/A'}</p>
+                                <div className="space-y-2">
+                                  <div className="grid grid-cols-2 gap-x-4">
+                                    <div>
+                                      <p className="text-xs font-medium text-gray-500 mb-0.5">Dimensions</p>
+                                      <p className="text-xs text-gray-900">{ad.dimensions || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-medium text-gray-500 mb-0.5">Color</p>
+                                      <p className="text-xs text-gray-900">{ad.color || 'N/A'}</p>
+                                    </div>
                                   </div>
                                   <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Color</p>
-                                    <p className="text-xs text-gray-900">{ad.color || 'N/A'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Price (1x)</p>
-                                    <p className="text-xs text-gray-900">${ad.pricing?.oneTime || 'N/A'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Price (4x)</p>
-                                    <p className="text-xs text-gray-900">${ad.pricing?.fourTimes || 'N/A'}</p>
+                                    <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                                    {renderPricingDisplay(ad.pricing)}
                                   </div>
                                 </div>
                               </div>
@@ -2366,6 +2711,174 @@ export const DashboardInventoryManager = () => {
               channelName="Print"
             />
           </div>
+        </TabsContent>
+
+        {/* Events */}
+        <TabsContent value="events" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+              <Calendar className="w-5 h-5" />
+              Event Sponsorships
+            </h3>
+            <Button
+              onClick={addEvent}
+              size="sm"
+              className="gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Event
+            </Button>
+          </div>
+
+          {currentPublication.distributionChannels?.events && currentPublication.distributionChannels.events.length > 0 ? (
+            currentPublication.distributionChannels.events.map((event, eventIndex) => (
+              <Card key={eventIndex} className="p-6">
+                <div className="space-y-4">
+                  {/* Event Header */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-base mb-1">{event.name || `Event ${eventIndex + 1}`}</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mt-2">
+                        <div>
+                          <span className="font-medium">Type:</span> {event.type || 'N/A'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Frequency:</span> {event.frequency || 'N/A'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Avg Attendance:</span> {event.averageAttendance?.toLocaleString() || 'N/A'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Location:</span> {event.location || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingType('event-container');
+                          setEditingItemIndex(eventIndex);
+                          setEditingItem({ ...event });
+                          setEditingDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => removeEvent(eventIndex)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Sponsorship Opportunities */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-sm font-medium text-gray-700">Sponsorship Levels</h5>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addEventOpportunity(eventIndex)}
+                        className="gap-2"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add Sponsorship
+                      </Button>
+                    </div>
+                    {event.advertisingOpportunities && event.advertisingOpportunities.length > 0 ? (
+                      event.advertisingOpportunities.map((opportunity, oppIndex) => (
+                        <div key={oppIndex} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-2">
+                            <h6 className="font-medium capitalize">{opportunity.level || 'Sponsorship'}</h6>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingType('event');
+                                  setEditingParentIndex(eventIndex);
+                                  setEditingItemIndex(oppIndex);
+                                  setEditingItem({ ...opportunity });
+                                  setEditingDialogOpen(true);
+                                }}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => removeEventOpportunity(eventIndex, oppIndex)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          {/* Benefits */}
+                          {opportunity.benefits && opportunity.benefits.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs font-medium text-gray-500 mb-1">Benefits</p>
+                              <ul className="text-xs text-gray-700 space-y-0.5">
+                                {opportunity.benefits.map((benefit, idx) => (
+                                  <li key={idx}>• {benefit}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Pricing */}
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-gray-500 mb-1">Sponsorship Fee</p>
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                // Handle different pricing formats
+                                if (typeof opportunity.pricing === 'number') {
+                                  // Legacy: direct number
+                                  return <p className="text-sm font-semibold text-gray-900">${opportunity.pricing.toLocaleString()}</p>;
+                                } else if (opportunity.pricing?.flatRate && opportunity.pricing?.pricingModel) {
+                                  // New clean schema
+                                  return (
+                                    <>
+                                      <span className="text-sm font-semibold text-gray-900">
+                                        {opportunity.pricing.pricingModel === 'contact' ? 'Contact' : `$${opportunity.pricing.flatRate.toLocaleString()}`}
+                                      </span>
+                                      <span className="text-xs text-gray-600">
+                                        {opportunity.pricing.pricingModel === 'contact' ? 'for pricing' : ''}
+                                      </span>
+                                    </>
+                                  );
+                                } else if (opportunity.pricing?.sponsorshipFee) {
+                                  // Legacy: sponsorshipFee field
+                                  return <p className="text-sm font-semibold text-gray-900">${opportunity.pricing.sponsorshipFee.toLocaleString()}</p>;
+                                } else {
+                                  return <p className="text-sm font-semibold text-gray-900">Contact for pricing</p>;
+                                }
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No sponsorship opportunities defined</p>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))
+          ) : (
+            <Card className="p-8 text-center text-muted-foreground">
+              <Calendar className="w-12 h-12 mx-auto mb-3 opacity-20" />
+              <p>No events added yet</p>
+              <p className="text-sm mt-1">Click "Add Event" to create an event sponsorship opportunity</p>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Other tabs can be implemented similarly... */}
@@ -2483,22 +2996,14 @@ export const DashboardInventoryManager = () => {
                             </Button>
                           </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          <div className="space-y-2">
                             <div>
                               <p className="text-xs font-medium text-gray-500 mb-0.5">Dimensions</p>
                               <p className="text-xs text-gray-900">{ad.dimensions || 'N/A'}</p>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Per Send</p>
-                              <p className="text-xs text-gray-900">${ad.pricing?.perSend || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Monthly</p>
-                              <p className="text-xs text-gray-900">${ad.pricing?.monthly || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Available</p>
-                              <p className="text-xs text-gray-900">{ad.available ? 'Yes' : 'No'}</p>
+                              <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                              {renderPricingDisplay(ad.pricing)}
                             </div>
                           </div>
                         </div>
@@ -2658,22 +3163,20 @@ export const DashboardInventoryManager = () => {
                             </Button>
                           </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Post Type</p>
-                              <p className="text-xs text-gray-900">{ad.postType || 'N/A'}</p>
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-x-4">
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 mb-0.5">Post Type</p>
+                                <p className="text-xs text-gray-900">{ad.postType || ad.adFormat || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
+                                <p className="text-xs text-gray-900">{ad.duration || 'N/A'}</p>
+                              </div>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Image Size</p>
-                              <p className="text-xs text-gray-900">{ad.specifications?.imageSize || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Per Post</p>
-                              <p className="text-xs text-gray-900">${ad.pricing?.perPost || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Available</p>
-                              <p className="text-xs text-gray-900">{ad.available ? 'Yes' : 'No'}</p>
+                              <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                              {renderPricingDisplay(ad.pricing)}
                             </div>
                           </div>
                         </div>
@@ -2829,22 +3332,20 @@ export const DashboardInventoryManager = () => {
                             </Button>
                           </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Daypart</p>
-                              <p className="text-xs text-gray-900">{ad.daypart || 'N/A'}</p>
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-x-4">
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 mb-0.5">Daypart</p>
+                                <p className="text-xs text-gray-900">{ad.daypart || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
+                                <p className="text-xs text-gray-900">{ad.specifications?.duration ? `${ad.specifications.duration}s` : 'N/A'}</p>
+                              </div>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
-                              <p className="text-xs text-gray-900">{ad.specifications?.duration ? `${ad.specifications.duration}s` : 'N/A'}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Per Spot</p>
-                              <p className="text-xs text-gray-900">${ad.pricing?.perSpot || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Available</p>
-                              <p className="text-xs text-gray-900">{ad.available ? 'Yes' : 'No'}</p>
+                              <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                              {renderPricingDisplay(ad.pricing)}
                             </div>
                           </div>
                         </div>
@@ -2898,6 +3399,8 @@ export const DashboardInventoryManager = () => {
                    editingType === 'radio-ad' ? 'Radio' :
                    editingType === 'streaming-ad' ? 'Streaming Video' :
                    editingType === 'social-media-ad' ? 'Social Media' :
+                   editingType === 'event' ? 'Event Sponsorship' :
+                   editingType === 'event-container' ? 'Event Properties' :
                    editingType === 'newsletter-container' ? 'Newsletter Properties' :
                    editingType === 'print-container' ? 'Print Properties' :
                    editingType === 'podcast-container' ? 'Podcast Properties' :
@@ -3022,12 +3525,13 @@ export const DashboardInventoryManager = () => {
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
                     pricingFields={[
-                      { key: 'flatRate', label: 'Flat Rate', placeholder: '100' },
-                      { key: 'cpm', label: 'CPM', placeholder: '5' }
+                      { key: 'flatRate', label: 'Price', placeholder: '100' }
                     ]}
                     pricingModels={[
+                      { value: 'flat_rate', label: 'Flat Rate' },
                       { value: 'flat', label: '/month' },
                       { value: 'per_week', label: '/week' },
+                      { value: 'per_day', label: '/day' },
                       { value: 'cpm', label: '/1000 impressions' },
                       { value: 'cpc', label: '/click' },
                       { value: 'contact', label: 'Contact for pricing' }
@@ -3097,6 +3601,7 @@ export const DashboardInventoryManager = () => {
                         patternMessage: 'Enter a frequency like "Weekly", "Monthly", "Daily", "Bi-weekly", or "One time"'
                       }
                     ]}
+                    allowMultipleDefaultPricing={true}
                     onDefaultPricingChange={(pricing) => 
                       setEditingItem({ ...editingItem, pricing })
                     }
@@ -3305,8 +3810,10 @@ export const DashboardInventoryManager = () => {
                       { key: 'flatRate', label: 'Price', placeholder: '100' }
                     ]}
                     pricingModels={[
-                      { value: 'per_ad', label: '/ad instance' },
-                      { value: 'cpm', label: '/1000 downloads' },
+                      { value: 'cpd', label: '/1000 downloads' },
+                      { value: 'cpm', label: '/1000 impressions' },
+                      { value: 'per_episode', label: '/episode' },
+                      { value: 'flat', label: '/month' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
                     conditionalFields={[
@@ -3314,7 +3821,7 @@ export const DashboardInventoryManager = () => {
                         key: 'frequency',
                         label: 'Frequency',
                         type: 'text',
-                        showWhen: ['per_ad'],
+                        showWhen: ['cpd', 'cpm', 'per_episode'],
                         placeholder: 'e.g., 10x, 20x, One time',
                         pattern: '^(?:\\d+x|One time|one time)$',
                         patternMessage: 'Enter a frequency like "10x", "20x", or "One time"'
@@ -3436,12 +3943,12 @@ export const DashboardInventoryManager = () => {
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
                     pricingFields={[
-                      { key: 'cpm', label: 'CPM', placeholder: '15' },
-                      { key: 'flatRate', label: 'Flat Rate', placeholder: '100' }
+                      { key: 'flatRate', label: 'Price', placeholder: '100' }
                     ]}
                     pricingModels={[
-                      { value: 'cpm', label: '/1000 views' },
-                      { value: 'flat', label: '/video' },
+                      { value: 'cpv', label: '/1000 views' },
+                      { value: 'per_video', label: '/video' },
+                      { value: 'flat', label: '/month' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
                     onDefaultPricingChange={(pricing) => 
@@ -3492,9 +3999,7 @@ export const DashboardInventoryManager = () => {
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
                     pricingFields={[
-                      { key: 'perPost', label: 'Per Post', placeholder: '100' },
-                      { key: 'perStory', label: 'Per Story', placeholder: '75' },
-                      { key: 'monthly', label: 'Monthly', placeholder: '500' }
+                      { key: 'flatRate', label: 'Price', placeholder: '100' }
                     ]}
                     pricingModels={[
                       { value: 'per_post', label: '/post' },
@@ -3565,6 +4070,121 @@ export const DashboardInventoryManager = () => {
                         placeholder="Weekly, Monthly"
                       />
                     </div>
+                  </div>
+                </>
+              )}
+
+              {/* Event Sponsorship Fields */}
+              {editingType === 'event' && (
+                <>
+                  <div>
+                    <Label htmlFor="level">Sponsorship Level</Label>
+                    <Input
+                      id="level"
+                      value={editingItem.level || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, level: e.target.value })}
+                      placeholder="e.g., Title, Presenting, Supporting"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="benefits">Benefits (comma-separated)</Label>
+                    <Textarea
+                      id="benefits"
+                      value={editingItem.benefits?.join(', ') || ''}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        benefits: e.target.value.split(',').map(b => b.trim()).filter(Boolean)
+                      })}
+                      placeholder="Logo placement, Speaking opportunity, VIP access"
+                      rows={3}
+                    />
+                  </div>
+
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'flatRate', label: 'Sponsorship Fee', placeholder: '2500' }
+                    ]}
+                    pricingModels={[
+                      { value: 'flat', label: 'Flat rate' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
+                </>
+              )}
+
+              {/* Event Container Fields */}
+              {editingType === 'event-container' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="eventName">Event Name</Label>
+                      <Input
+                        id="eventName"
+                        value={editingItem.name || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        placeholder="Annual Gala"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="eventType">Event Type</Label>
+                      <Input
+                        id="eventType"
+                        value={editingItem.type || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, type: e.target.value })}
+                        placeholder="Community Event, Gala, Conference"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="frequency">Frequency</Label>
+                      <Input
+                        id="frequency"
+                        value={editingItem.frequency || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, frequency: e.target.value })}
+                        placeholder="Annual, Monthly"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="averageAttendance">Avg Attendance</Label>
+                      <Input
+                        id="averageAttendance"
+                        type="number"
+                        value={editingItem.averageAttendance || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, averageAttendance: parseInt(e.target.value) || 0 })}
+                        placeholder="500"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="location">Location</Label>
+                      <Input
+                        id="location"
+                        value={editingItem.location || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, location: e.target.value })}
+                        placeholder="Downtown Chicago"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="targetAudience">Target Audience</Label>
+                    <Textarea
+                      id="targetAudience"
+                      value={editingItem.targetAudience || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, targetAudience: e.target.value })}
+                      placeholder="Community leaders, business owners, residents"
+                      rows={2}
+                    />
                   </div>
                 </>
               )}
@@ -4048,7 +4668,7 @@ export const DashboardInventoryManager = () => {
               )}
 
               {/* Generic fallback for other types */}
-              {!['website', 'newsletter', 'print-ad', 'podcast-ad', 'radio-ad', 'streaming-ad', 'social-media-ad', 'newsletter-container', 'print-container', 'podcast-container', 'radio-container', 'streaming-container', 'social-media-container'].includes(editingType) && (
+              {!['website', 'newsletter', 'print-ad', 'podcast-ad', 'radio-ad', 'streaming-ad', 'social-media-ad', 'newsletter-container', 'print-container', 'podcast-container', 'radio-container', 'streaming-container', 'social-media-container', 'website-container'].includes(editingType) && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Name</Label>

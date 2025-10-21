@@ -3603,10 +3603,10 @@ export const PublicationInventoryManager = () => {
                   defaultPricing={editingItem.pricing || {}}
                   hubPricing={editingItem.hubPricing || []}
                   pricingFields={[
-                    { key: 'flatRate', label: 'Flat Rate', placeholder: '100' },
-                    { key: 'cpm', label: 'CPM', placeholder: '5' }
+                    { key: 'flatRate', label: 'Price', placeholder: '100' }
                   ]}
                   pricingModels={[
+                    { value: 'flat_rate', label: 'Flat Rate' },
                     { value: 'flat', label: '/month' },
                     { value: 'per_week', label: '/week' },
                     { value: 'cpm', label: '/1000 impressions' },
@@ -3754,8 +3754,7 @@ export const PublicationInventoryManager = () => {
                   defaultPricing={editingItem.pricing || {}}
                   hubPricing={editingItem.hubPricing || []}
                   pricingFields={[
-                    { key: 'cpm', label: 'CPM', placeholder: '15' },
-                    { key: 'flatRate', label: 'Flat Rate', placeholder: '100' }
+                    { key: 'flatRate', label: 'Price', placeholder: '100' }
                   ]}
                   pricingModels={[
                     { value: 'cpm', label: '/1000 views' },
@@ -3776,9 +3775,7 @@ export const PublicationInventoryManager = () => {
                   defaultPricing={editingItem.pricing || {}}
                   hubPricing={editingItem.hubPricing || []}
                   pricingFields={[
-                    { key: 'perPost', label: 'Per Post', placeholder: '100' },
-                    { key: 'perStory', label: 'Per Story', placeholder: '75' },
-                    { key: 'monthly', label: 'Monthly', placeholder: '500' }
+                    { key: 'flatRate', label: 'Price', placeholder: '100' }
                   ]}
                   pricingModels={[
                     { value: 'per_post', label: '/post' },

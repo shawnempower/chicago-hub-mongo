@@ -247,11 +247,11 @@
                       },
                       "flatRate": {
                         "type": "number",
-                        "description": "Flat monthly/weekly rate"
+                        "description": "Price amount (meaning depends on pricingModel)"
                       },
                       "pricingModel": {
                         "type": "string",
-                        "enum": ["cpm", "flat", "cpc", "cpa", "contact"]
+                        "enum": ["flat_rate", "flat", "per_week", "per_day", "cpm", "cpc", "cpa", "contact"]
                       },
                       "minimumCommitment": {
                         "type": "string",
@@ -319,11 +319,11 @@
                             },
                             "flatRate": {
                               "type": "number",
-                              "description": "Flat monthly/weekly rate"
+                              "description": "Price amount (meaning depends on pricingModel)"
                             },
                             "pricingModel": {
                               "type": "string",
-                              "enum": ["cpm", "flat", "cpc", "cpa", "contact"]
+                              "enum": ["flat_rate", "flat", "per_week", "per_day", "cpm", "cpc", "cpa", "contact"]
                             }
                           }
                         },
@@ -452,17 +452,9 @@
                     "pricing": {
                       "type": "object",
                       "properties": {
-                        "perPost": {
+                        "flatRate": {
                           "type": "number",
-                          "description": "Cost per sponsored post"
-                        },
-                        "perStory": {
-                          "type": "number",
-                          "description": "Cost per story placement"
-                        },
-                        "monthly": {
-                          "type": "number",
-                          "description": "Monthly package rate"
+                          "description": "Price amount (meaning depends on pricingModel)"
                         },
                         "pricingModel": {
                           "type": "string",
@@ -508,14 +500,9 @@
                           "pricing": {
                             "type": "object",
                             "properties": {
-                              "perPost": {
-                                "type": "number"
-                              },
-                              "perStory": {
-                                "type": "number"
-                              },
-                              "monthly": {
-                                "type": "number"
+                              "flatRate": {
+                                "type": "number",
+                                "description": "Price amount (meaning depends on pricingModel)"
                               },
                               "pricingModel": {
                                 "type": "string",
@@ -1022,8 +1009,14 @@
                     "pricing": {
                       "type": "object",
                       "properties": {
-                        "sponsorshipFee": {
-                          "type": "number"
+                        "flatRate": {
+                          "type": "number",
+                          "description": "Sponsorship fee amount"
+                        },
+                        "pricingModel": {
+                          "type": "string",
+                          "enum": ["flat", "contact"],
+                          "description": "Pricing model type (flat for one-time fee, contact for custom quotes)"
                         }
                       }
                     },
@@ -1044,8 +1037,13 @@
                           "pricing": {
                             "type": "object",
                             "properties": {
-                              "sponsorshipFee": {
-                                "type": "number"
+                              "flatRate": {
+                                "type": "number",
+                                "description": "Sponsorship fee amount"
+                              },
+                              "pricingModel": {
+                                "type": "string",
+                                "enum": ["flat", "contact"]
                               }
                             }
                           },
@@ -1162,7 +1160,7 @@
                             },
                             "pricingModel": {
                               "type": "string",
-                              "enum": ["per_ad", "cpm", "contact"],
+                              "enum": ["per_ad", "per_episode", "cpd", "cpm", "flat", "contact"],
                               "description": "Pricing model type"
                             },
                             "frequency": {
@@ -1185,7 +1183,7 @@
                                   },
                                   "pricingModel": {
                                     "type": "string",
-                                    "enum": ["per_ad", "cpm", "contact"]
+                                    "enum": ["per_ad", "per_episode", "cpd", "cpm", "flat", "contact"]
                                   },
                                   "frequency": {
                                     "type": "string"
@@ -1236,7 +1234,7 @@
                                 },
                                 "pricingModel": {
                                   "type": "string",
-                                  "enum": ["per_ad", "cpm", "contact"]
+                                  "enum": ["per_ad", "per_episode", "cpd", "cpm", "flat", "contact"]
                                 },
                                 "frequency": {
                                   "type": "string",
@@ -1542,17 +1540,13 @@
                     "pricing": {
                       "type": "object",
                       "properties": {
-                        "cpm": {
-                          "type": "number",
-                          "description": "Cost per thousand views"
-                        },
                         "flatRate": {
                           "type": "number",
-                          "description": "Flat rate per video/stream"
+                          "description": "Price amount (meaning depends on pricingModel)"
                         },
                         "pricingModel": {
                           "type": "string",
-                          "enum": ["cpm", "flat", "contact"]
+                          "enum": ["cpv", "per_video", "cpm", "flat", "contact"]
                         }
                       }
                     },
@@ -1594,17 +1588,13 @@
                           "pricing": {
                             "type": "object",
                             "properties": {
-                              "cpm": {
-                                "type": "number",
-                                "description": "Cost per thousand views"
-                              },
                               "flatRate": {
                                 "type": "number",
-                                "description": "Flat rate per video/stream"
+                                "description": "Price amount (meaning depends on pricingModel)"
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["cpm", "flat", "contact"]
+                                "enum": ["cpv", "per_video", "cpm", "flat", "contact"]
                               }
                             }
                           },
@@ -1710,14 +1700,9 @@
                     "pricing": {
                       "type": "object",
                       "properties": {
-                        "perSpot": {
-                          "type": "number"
-                        },
-                        "weekly": {
-                          "type": "number"
-                        },
-                        "monthly": {
-                          "type": "number"
+                        "flatRate": {
+                          "type": "number",
+                          "description": "Price amount (meaning depends on pricingModel)"
                         },
                         "pricingModel": {
                           "type": "string",
@@ -1761,14 +1746,13 @@
                           "pricing": {
                             "type": "object",
                             "properties": {
-                              "perSpot": {
-                                "type": "number"
+                              "flatRate": {
+                                "type": "number",
+                                "description": "Price amount (meaning depends on pricingModel)"
                               },
-                              "weekly": {
-                                "type": "number"
-                              },
-                              "monthly": {
-                                "type": "number"
+                              "pricingModel": {
+                                "type": "string",
+                                "enum": ["per_spot", "weekly", "monthly", "contact"]
                               }
                             }
                           },

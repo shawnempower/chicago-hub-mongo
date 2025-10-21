@@ -167,7 +167,6 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                 minimumCommitment: '1 month'
               },
               specifications: {
-                size: '300x250',
                 format: 'JPG, PNG, GIF',
                 fileSize: '150KB max',
                 animationAllowed: true,
@@ -294,8 +293,8 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                 position: 'header' as const,
                 dimensions: '600x100',
                 pricing: {
-                  perSend: 200,
-                  monthly: 800
+                  flatRate: 200,
+                  pricingModel: 'per_send'
                 }
               }
             ]
@@ -556,7 +555,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
               {
                 name: 'New Social Ad',
                 adFormat: 'sponsored_post',
-                pricing: { perPost: 100 }
+                pricing: { flatRate: 100, pricingModel: 'per_post' }
               }
             ]
           } : social
@@ -667,7 +666,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                 name: 'New Podcast Ad',
                 adFormat: 'pre-roll',
                 duration: 30,
-                pricing: { cpm: 25 }
+                pricing: { flatRate: 25, pricingModel: 'cpd' }
               }
             ]
           } : podcast
@@ -726,7 +725,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                 name: 'New Radio Ad',
                 adFormat: '30-second spot',
                 timeSlot: 'drive time',
-                pricing: { perSpot: 150 }
+                pricing: { flatRate: 150, pricingModel: 'per_spot' }
               }
             ]
           } : radio
@@ -785,7 +784,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                 name: 'New Streaming Ad',
                 adFormat: 'pre-roll',
                 duration: 15,
-                pricing: { cpm: 20 }
+                pricing: { flatRate: 20, pricingModel: 'cpm' }
               }
             ]
           } : streaming
@@ -1239,7 +1238,10 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="flat">Flat Rate</SelectItem>
+                        <SelectItem value="flat_rate">Flat Rate</SelectItem>
+                        <SelectItem value="flat">/month</SelectItem>
+                        <SelectItem value="per_week">/week</SelectItem>
+                        <SelectItem value="per_day">/day</SelectItem>
                         <SelectItem value="cpm">CPM</SelectItem>
                         <SelectItem value="cpc">CPC</SelectItem>
                         <SelectItem value="contact">Contact for Pricing</SelectItem>
@@ -1428,22 +1430,28 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </div>
                         
                         <div>
-                          <Label>Price per Send ($)</Label>
-                          <Input
-                            type="number"
-                            value={ad.pricing?.perSend || ''}
-                            onChange={(e) => updateNewsletterAdPricing(newsletterIndex, adIndex, 'perSend', parseFloat(e.target.value))}
-                            placeholder="200"
-                          />
+                          <Label>Pricing Model</Label>
+                          <Select 
+                            value={ad.pricing?.pricingModel || 'per_send'} 
+                            onValueChange={(value) => updateNewsletterAdPricing(newsletterIndex, adIndex, 'pricingModel', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="per_send">/send</SelectItem>
+                              <SelectItem value="contact">Contact for pricing</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         
                         <div>
-                          <Label>Monthly Price ($)</Label>
+                          <Label>Price ($)</Label>
                           <Input
                             type="number"
-                            value={ad.pricing?.monthly || ''}
-                            onChange={(e) => updateNewsletterAdPricing(newsletterIndex, adIndex, 'monthly', parseFloat(e.target.value))}
-                            placeholder="800"
+                            value={ad.pricing?.flatRate || ''}
+                            onChange={(e) => updateNewsletterAdPricing(newsletterIndex, adIndex, 'flatRate', parseFloat(e.target.value))}
+                            placeholder="200"
                           />
                         </div>
                       </div>
@@ -1919,11 +1927,29 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </div>
                         
                         <div>
-                          <Label>Price per Post ($)</Label>
+                          <Label>Pricing Model</Label>
+                          <Select 
+                            value={ad.pricing?.pricingModel || 'per_post'} 
+                            onValueChange={(value) => updateSocialMediaAdPricing(profileIndex, adIndex, 'pricingModel', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="per_post">/post</SelectItem>
+                              <SelectItem value="per_story">/story</SelectItem>
+                              <SelectItem value="monthly">/month</SelectItem>
+                              <SelectItem value="contact">Contact for pricing</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Label>Price ($)</Label>
                           <Input
                             type="number"
-                            value={ad.pricing?.perPost || ''}
-                            onChange={(e) => updateSocialMediaAdPricing(profileIndex, adIndex, 'perPost', parseFloat(e.target.value))}
+                            value={ad.pricing?.flatRate || ''}
+                            onChange={(e) => updateSocialMediaAdPricing(profileIndex, adIndex, 'flatRate', parseFloat(e.target.value))}
                             placeholder="100"
                           />
                         </div>
@@ -2493,10 +2519,23 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </div>
                         
                         <div>
-                          <Label>Price per Spot ($)</Label>
+                          <Label>Pricing Model</Label>
+                          <Select value={ad.pricing?.pricingModel || 'per_spot'}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="per_spot">/spot</SelectItem>
+                              <SelectItem value="contact">Contact for pricing</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Label>Price ($)</Label>
                           <Input
                             type="number"
-                            value={ad.pricing?.perSpot || ''}
+                            value={ad.pricing?.flatRate || ''}
                             placeholder="150"
                           />
                         </div>
@@ -2687,10 +2726,24 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </div>
                         
                         <div>
-                          <Label>CPM ($)</Label>
+                          <Label>Pricing Model</Label>
+                          <Select value={ad.pricing?.pricingModel || 'cpm'}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cpm">/1000 views</SelectItem>
+                              <SelectItem value="flat">/video</SelectItem>
+                              <SelectItem value="contact">Contact for pricing</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Label>Price ($)</Label>
                           <Input
                             type="number"
-                            value={ad.pricing?.cpm || ''}
+                            value={ad.pricing?.flatRate || ''}
                             placeholder="20"
                           />
                         </div>

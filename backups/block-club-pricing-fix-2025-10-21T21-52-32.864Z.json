@@ -1,0 +1,237 @@
+{
+  "_id": "68db3df49f10c5187ff811b9",
+  "publicationId": 1039,
+  "basicInfo": {
+    "publicationName": "Block Club Chicago",
+    "websiteUrl": "blockclubchicago.org",
+    "founded": null,
+    "publicationType": "other",
+    "contentType": "mixed",
+    "headquarters": null,
+    "geographicCoverage": "local",
+    "primaryServiceArea": null,
+    "numberOfPublications": 1
+  },
+  "contactInfo": null,
+  "audienceDemographics": {
+    "targetMarkets": [
+      "Engaged neighborhood residents"
+    ]
+  },
+  "editorialInfo": {
+    "contentFocus": [
+      "Digital - Hyperlocal"
+    ],
+    "contentPillars": [
+      "Hyperlocal expertise",
+      "High engagement",
+      "Neighborhood newsletters"
+    ],
+    "editorialTeam": null
+  },
+  "technicalCapabilities": null,
+  "competitiveInfo": {
+    "uniqueValueProposition": "Nonprofit neighborhood news with 100K+ newsletter subscribers and hyperlocal coverage.",
+    "keyDifferentiators": [
+      "Hyperlocal expertise",
+      "High engagement",
+      "Neighborhood newsletters",
+      "Breaking news"
+    ],
+    "competitiveAdvantages": [
+      "Hyperlocal expertise",
+      "High engagement",
+      "Neighborhood newsletters",
+      "Breaking news"
+    ]
+  },
+  "awards": null,
+  "bookingPolicies": null,
+  "metadata": {
+    "extractedFrom": [
+      "manual_entry"
+    ],
+    "confidence": 0.8,
+    "lastAnalyzed": "2025-09-30T02:18:28.496Z",
+    "lastUpdated": "2025-10-18T03:14:21.170Z",
+    "createdAt": "2025-09-30T02:18:28.496Z",
+    "verificationStatus": "needs_verification",
+    "dataCompleteness": 40
+  },
+  "internalNotes": null,
+  "distributionChannels": {
+    "website": {
+      "advertisingOpportunities": [
+        {
+          "name": "New Website Ad",
+          "adFormat": "300x250 banner",
+          "location": "Homepage",
+          "pricing": {
+            "flatRate": 100,
+            "pricingModel": "flat",
+            "minimumCommitment": "1 week"
+          },
+          "specifications": {
+            "format": "JPG, PNG, GIF",
+            "animationAllowed": true,
+            "thirdPartyTags": true
+          },
+          "monthlyImpressions": 1000,
+          "available": true,
+          "sizes": [
+            "300x250"
+          ]
+        }
+      ]
+    },
+    "newsletters": [
+      {
+        "name": "New Newsletter",
+        "subject": "Newsletter subject",
+        "subscribers": 0,
+        "frequency": "weekly",
+        "openRate": 0,
+        "advertisingOpportunities": [
+          {
+            "name": "New Newsletter Ad",
+            "position": "inline",
+            "dimensions": "300x250",
+            "pricing": {
+              "flatRate": 50,
+              "pricingModel": "per_send"
+            }
+          }
+        ]
+      }
+    ],
+    "print": [
+      {
+        "name": "New Publication",
+        "frequency": "weekly",
+        "circulation": 5000,
+        "advertisingOpportunities": [
+          {
+            "name": "New Print Ad",
+            "adType": "display",
+            "size": "full-page",
+            "pricing": {
+              "flatRate": 500,
+              "pricingModel": "flat"
+            }
+          }
+        ]
+      }
+    ],
+    "events": null,
+    "podcasts": [
+      {
+        "podcastId": "podcast_1760757181355",
+        "name": "New Podcast",
+        "description": "Podcast description",
+        "frequency": "weekly",
+        "averageDownloads": 0,
+        "averageListeners": 0,
+        "episodeCount": 0,
+        "platforms": [
+          "spotify"
+        ],
+        "advertisingOpportunities": [
+          {
+            "name": "New Podcast Ad",
+            "position": "pre-roll",
+            "duration": "30 seconds",
+            "pricing": {
+              "flatRate": 100,
+              "pricingModel": "per_episode"
+            }
+          }
+        ]
+      }
+    ],
+    "radioStations": [
+      {
+        "stationId": "radio_1760757254784",
+        "callSign": "WXYZ",
+        "frequency": "101.5 FM",
+        "format": "news_talk",
+        "coverageArea": "Metropolitan Area",
+        "listeners": 0,
+        "advertisingOpportunities": []
+      }
+    ],
+    "streamingVideo": [
+      {
+        "channelId": "stream_1760757257567",
+        "name": "New Channel",
+        "platform": "youtube",
+        "subscribers": 0,
+        "averageViews": 0,
+        "contentType": "mixed",
+        "streamingSchedule": "Daily",
+        "advertisingOpportunities": []
+      }
+    ],
+    "television": [
+      {
+        "stationId": "tv-1760757259082",
+        "callSign": "NEW-TV",
+        "channel": "",
+        "network": "independent",
+        "coverageArea": "",
+        "viewers": 0,
+        "advertisingOpportunities": []
+      }
+    ],
+    "socialMedia": [
+      {
+        "platform": "facebook",
+        "handle": "newhandle",
+        "verified": false,
+        "metrics": {
+          "followers": 0,
+          "posts": 0
+        },
+        "lastUpdated": "2025-10-18",
+        "advertisingOpportunities": []
+      }
+    ]
+  },
+  "crossChannelPackages": [
+    {
+      "name": "Newsletter sponsorships",
+      "packageName": "Newsletter sponsorships",
+      "includedChannels": [
+        "website",
+        "print"
+      ],
+      "pricing": "Contact for pricing",
+      "details": "Newsletter sponsorships advertising package",
+      "duration": "1 month",
+      "savings": 0
+    },
+    {
+      "name": "Neighborhood targeting",
+      "packageName": "Neighborhood targeting",
+      "includedChannels": [
+        "website",
+        "print"
+      ],
+      "pricing": "Contact for pricing",
+      "details": "Neighborhood targeting advertising package",
+      "duration": "1 month",
+      "savings": 0
+    },
+    {
+      "name": "Digital display",
+      "packageName": "Digital display",
+      "includedChannels": [
+        "website",
+        "print"
+      ],
+      "pricing": "Contact for pricing",
+      "details": "Digital display advertising package",
+      "duration": "1 month",
+      "savings": 0
+    }
+  ]
+}
