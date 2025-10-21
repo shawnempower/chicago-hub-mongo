@@ -9,14 +9,22 @@ Added comprehensive support for hub-specific pricing across all advertising inve
 **File:** `src/components/dashboard/HubPricingEditor.tsx`
 
 A reusable pricing component that provides:
-- **Default Pricing Row**: Non-deletable, with "Default Price" label (inactive dropdown)
+- **Default Pricing Rows**: Configurable based on ad type
+  - Single default pricing (most ad types): Non-deletable
+  - Multiple default pricing (print, podcast & radio ads): Can add/remove additional pricing tiers
+  - Controlled by `allowMultipleDefaultPricing` prop
 - **Hub-Specific Pricing Rows**: Deletable rows with active hub selection dropdown
+  - **Allows duplicate hubs**: Same hub can have multiple pricing rows
+  - Enables complex pricing strategies per hub
 - **Pricing Features**:
   - Amount input with non-deletable $ prefix
-  - Pricing model dropdown (e.g., /month, /quarter, /week, /post)
+  - Pricing model dropdown (e.g., /ad instance, /10 ad instances, /1000 downloads)
+  - **Conditional fields**: Additional fields that appear based on selected pricing model
+    - Supports both select dropdowns and text inputs with pattern validation
+    - Example: For print ads, selecting "/ad" shows a "Frequency" text input (accepts "4x", "12x", "One time", etc.)
   - Support for multiple pricing fields per ad type
-  - Visual distinction (blue background for hub-specific rows)
-  - Add/remove hub pricing capability
+  - Visual distinction (beige background for default, white background for hub-specific rows)
+  - Add/remove pricing capability with red delete buttons
 
 **Available Hubs** (configurable):
 - Chicago Hub
@@ -32,10 +40,10 @@ A reusable pricing component that provides:
 
 Updated ad slot editing for:
 - ✅ **Website Ads**: Flat Rate, CPM pricing with pricing models (flat, cpm, cpc, contact)
-- ✅ **Newsletter Ads**: Per Send, Monthly Rate with pricing models (per_send, monthly, contact)
-- ✅ **Print Ads**: One Time, 4 Times, 12 Times, Open Rate with pricing models (one_time, package, contact)
-- ✅ **Podcast Ads**: Per Episode, CPM with pricing models (flat, cpm, contact)
-- ✅ **Radio Ads**: Per Spot, Weekly, Monthly with pricing models (per_spot, weekly, monthly, contact)
+- ✅ **Newsletter Ads**: Price with pricing model (/send, contact) and conditional Frequency text input (e.g., "Weekly", "Monthly", "Daily", "Bi-weekly", "One time") that appears when /send is selected
+- ✅ **Print Ads**: Price with pricing model (/ad, contact) and conditional Frequency text input (e.g., "4x", "12x", "One time") that appears when /ad is selected. **Supports multiple default pricing tiers** - users can add multiple pricing options with "Add Default Pricing" button
+- ✅ **Podcast Ads**: Price with pricing models (/ad instance, /1000 downloads, contact) and conditional Frequency text input (e.g., "10x", "20x", "One time") that appears when /ad instance is selected. **Supports multiple default pricing tiers** - users can add multiple pricing options with "Add Default Pricing" button
+- ✅ **Radio Ads**: Price with pricing model (/spot, contact) and conditional Frequency text input (e.g., "Weekly", "Monthly", "Daily", "One time") that appears when /spot is selected. **Supports multiple default pricing tiers** - users can add multiple pricing options with "Add Default Pricing" button
 - ✅ **Streaming Ads**: CPM, Flat Rate with pricing models (cpm, flat, contact)
 - ✅ **Social Media Ads**: Per Post, Per Story, Monthly with pricing models (per_post, per_story, monthly, contact)
 

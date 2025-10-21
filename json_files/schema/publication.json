@@ -223,7 +223,16 @@
                   },
                   "adFormat": {
                     "type": "string",
-                    "enum": ["300x250 banner", "728x90 banner", "320x50 banner", "300x600 banner", "970x250 banner", "takeover ad", "native", "video", "sponsored content", "custom"]
+                    "enum": ["banner", "video", "native", "takeover", "sponsored_content", "custom"],
+                    "description": "Primary ad format type"
+                  },
+                  "sizes": {
+                    "type": "array",
+                    "description": "Array of supported ad sizes",
+                    "items": {
+                      "type": "string",
+                      "examples": ["300x250", "728x90", "320x50", "300x600", "970x250", "160x600", "custom"]
+                    }
                   },
                   "location": {
                     "type": "string",
@@ -254,22 +263,29 @@
                     "type": "object",
                     "properties": {
                       "size": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Deprecated: Use sizes array instead. Kept for backward compatibility."
                       },
                       "format": {
-                        "type": "string"
+                        "type": "string",
+                        "enum": ["JPG", "PNG", "GIF", "HTML5", "MP4", "WebM", "VAST", "custom"],
+                        "description": "Accepted file formats"
                       },
                       "fileSize": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Maximum file size (e.g., '150KB', '5MB')"
                       },
                       "resolution": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Required resolution (e.g., '1920x1080')"
                       },
                       "animationAllowed": {
-                        "type": "boolean"
+                        "type": "boolean",
+                        "description": "Whether animated ads are permitted"
                       },
                       "thirdPartyTags": {
-                        "type": "boolean"
+                        "type": "boolean",
+                        "description": "Whether third-party ad tags are accepted"
                       }
                     }
                   },
@@ -621,15 +637,51 @@
                       "type": "string"
                     },
                     "pricing": {
-                      "type": "object",
-                      "properties": {
-                        "perSend": {
-                          "type": "number"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "description": "Single pricing tier (backward compatible)",
+                          "properties": {
+                            "flatRate": {
+                              "type": "number",
+                              "description": "Price per send"
+                            },
+                            "pricingModel": {
+                              "type": "string",
+                              "enum": ["per_send", "contact"],
+                              "description": "Pricing model type"
+                            },
+                            "frequency": {
+                              "type": "string",
+                              "description": "Send frequency (e.g., Weekly, Monthly, Daily, Bi-weekly, One time)"
+                            }
+                          }
                         },
-                        "monthly": {
-                          "type": "number"
+                        {
+                          "type": "array",
+                          "description": "Multiple pricing tiers",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "pricing": {
+                                "type": "object",
+                                "properties": {
+                                  "flatRate": {
+                                    "type": "number"
+                                  },
+                                  "pricingModel": {
+                                    "type": "string",
+                                    "enum": ["per_send", "contact"]
+                                  },
+                                  "frequency": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          }
                         }
-                      }
+                      ]
                     },
                     "hubPricing": {
                       "type": "array",
@@ -648,11 +700,17 @@
                           "pricing": {
                             "type": "object",
                             "properties": {
-                              "perSend": {
-                                "type": "number"
+                              "flatRate": {
+                                "type": "number",
+                                "description": "Price per send"
                               },
-                              "monthly": {
-                                "type": "number"
+                              "pricingModel": {
+                                "type": "string",
+                                "enum": ["per_send", "contact"]
+                              },
+                              "frequency": {
+                                "type": "string",
+                                "description": "Send frequency"
                               }
                             }
                           },
@@ -772,41 +830,51 @@
                       "description": "Preferred page placement"
                     },
                     "pricing": {
-                      "type": "object",
-                      "properties": {
-                        "oneTime": {
-                          "type": "number",
-                          "description": "1x insertion rate"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "description": "Single pricing tier (backward compatible)",
+                          "properties": {
+                            "flatRate": {
+                              "type": "number",
+                              "description": "Price per ad"
+                            },
+                            "pricingModel": {
+                              "type": "string",
+                              "enum": ["per_ad", "contact"],
+                              "description": "Pricing model type"
+                            },
+                            "frequency": {
+                              "type": "string",
+                              "description": "Ad frequency (e.g., 4x, 12x, One time)"
+                            }
+                          }
                         },
-                        "fourTimes": {
-                          "type": "number",
-                          "description": "4x insertion rate"
-                        },
-                        "sixTimes": {
-                          "type": "number",
-                          "description": "6x insertion rate"
-                        },
-                        "twelveTimes": {
-                          "type": "number",
-                          "description": "12x insertion rate"
-                        },
-                        "thirteenTimes": {
-                          "type": "number",
-                          "description": "13x insertion rate"
-                        },
-                        "twentySixTimes": {
-                          "type": "number",
-                          "description": "26x insertion rate"
-                        },
-                        "fiftyTwoTimes": {
-                          "type": "number",
-                          "description": "52x insertion rate"
-                        },
-                        "openRate": {
-                          "type": "number",
-                          "description": "Open rate for single insertion"
+                        {
+                          "type": "array",
+                          "description": "Multiple pricing tiers (supports different frequencies)",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "pricing": {
+                                "type": "object",
+                                "properties": {
+                                  "flatRate": {
+                                    "type": "number"
+                                  },
+                                  "pricingModel": {
+                                    "type": "string",
+                                    "enum": ["per_ad", "contact"]
+                                  },
+                                  "frequency": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          }
                         }
-                      }
+                      ]
                     },
                     "specifications": {
                       "type": "object",
@@ -839,29 +907,17 @@
                           "pricing": {
                             "type": "object",
                             "properties": {
-                              "oneTime": {
-                                "type": "number"
+                              "flatRate": {
+                                "type": "number",
+                                "description": "Price per ad"
                               },
-                              "fourTimes": {
-                                "type": "number"
+                              "pricingModel": {
+                                "type": "string",
+                                "enum": ["per_ad", "contact"]
                               },
-                              "sixTimes": {
-                                "type": "number"
-                              },
-                              "twelveTimes": {
-                                "type": "number"
-                              },
-                              "thirteenTimes": {
-                                "type": "number"
-                              },
-                              "twentySixTimes": {
-                                "type": "number"
-                              },
-                              "fiftyTwoTimes": {
-                                "type": "number"
-                              },
-                              "openRate": {
-                                "type": "number"
+                              "frequency": {
+                                "type": "string",
+                                "description": "Ad frequency"
                               }
                             }
                           },
@@ -1095,21 +1151,51 @@
                       "description": "Ad duration in seconds"
                     },
                     "pricing": {
-                      "type": "object",
-                      "properties": {
-                        "cpm": {
-                          "type": "number",
-                          "description": "Cost per thousand downloads"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "description": "Single pricing tier (backward compatible)",
+                          "properties": {
+                            "flatRate": {
+                              "type": "number",
+                              "description": "Price per ad instance or per 1000 downloads"
+                            },
+                            "pricingModel": {
+                              "type": "string",
+                              "enum": ["per_ad", "cpm", "contact"],
+                              "description": "Pricing model type"
+                            },
+                            "frequency": {
+                              "type": "string",
+                              "description": "Ad frequency (e.g., 10x, 20x, One time)"
+                            }
+                          }
                         },
-                        "flatRate": {
-                          "type": "number",
-                          "description": "Flat rate per episode"
-                        },
-                        "pricingModel": {
-                          "type": "string",
-                          "enum": ["cpm", "flat", "contact"]
+                        {
+                          "type": "array",
+                          "description": "Multiple pricing tiers (supports different frequencies or models)",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "pricing": {
+                                "type": "object",
+                                "properties": {
+                                  "flatRate": {
+                                    "type": "number"
+                                  },
+                                  "pricingModel": {
+                                    "type": "string",
+                                    "enum": ["per_ad", "cpm", "contact"]
+                                  },
+                                  "frequency": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          }
                         }
-                      }
+                      ]
                     },
                     "specifications": {
                       "type": "object",
@@ -1141,23 +1227,23 @@
                             "type": "string",
                             "description": "Display name for the marketing hub"
                           },
-                          "pricing": {
-                            "type": "object",
-                            "properties": {
-                              "cpm": {
-                                "type": "number",
-                                "description": "Cost per thousand downloads"
-                              },
-                              "flatRate": {
-                                "type": "number",
-                                "description": "Flat rate per episode"
-                              },
-                              "pricingModel": {
-                                "type": "string",
-                                "enum": ["cpm", "flat", "contact"]
+                            "pricing": {
+                              "type": "object",
+                              "properties": {
+                                "flatRate": {
+                                  "type": "number",
+                                  "description": "Price per ad instance or per 1000 downloads"
+                                },
+                                "pricingModel": {
+                                  "type": "string",
+                                  "enum": ["per_ad", "cpm", "contact"]
+                                },
+                                "frequency": {
+                                  "type": "string",
+                                  "description": "Ad frequency"
+                                }
                               }
-                            }
-                          },
+                            },
                           "discount": {
                             "type": "number",
                             "minimum": 0,
@@ -1255,22 +1341,51 @@
                       "enum": ["drive_time_morning", "drive_time_evening", "midday", "weekend", "overnight"]
                     },
                     "pricing": {
-                      "type": "object",
-                      "properties": {
-                        "perSpot": {
-                          "type": "number"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "description": "Single pricing tier (backward compatible)",
+                          "properties": {
+                            "flatRate": {
+                              "type": "number",
+                              "description": "Price per spot"
+                            },
+                            "pricingModel": {
+                              "type": "string",
+                              "enum": ["per_spot", "contact"],
+                              "description": "Pricing model type"
+                            },
+                            "frequency": {
+                              "type": "string",
+                              "description": "Spot frequency (e.g., Weekly, Monthly, Daily, One time)"
+                            }
+                          }
                         },
-                        "weekly": {
-                          "type": "number"
-                        },
-                        "monthly": {
-                          "type": "number"
-                        },
-                        "pricingModel": {
-                          "type": "string",
-                          "enum": ["per_spot", "weekly", "monthly", "contact"]
+                        {
+                          "type": "array",
+                          "description": "Multiple pricing tiers (supports different frequencies)",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "pricing": {
+                                "type": "object",
+                                "properties": {
+                                  "flatRate": {
+                                    "type": "number"
+                                  },
+                                  "pricingModel": {
+                                    "type": "string",
+                                    "enum": ["per_spot", "contact"]
+                                  },
+                                  "frequency": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          }
                         }
-                      }
+                      ]
                     },
                     "specifications": {
                       "type": "object",
@@ -1309,18 +1424,17 @@
                           "pricing": {
                             "type": "object",
                             "properties": {
-                              "perSpot": {
-                                "type": "number"
-                              },
-                              "weekly": {
-                                "type": "number"
-                              },
-                              "monthly": {
-                                "type": "number"
+                              "flatRate": {
+                                "type": "number",
+                                "description": "Price per spot"
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["per_spot", "weekly", "monthly", "contact"]
+                                "enum": ["per_spot", "contact"]
+                              },
+                              "frequency": {
+                                "type": "string",
+                                "description": "Spot frequency"
                               }
                             }
                           },

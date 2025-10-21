@@ -441,11 +441,11 @@ export const PublicationsManagement = () => {
     }
   };
 
-  const handleDelete = async (publication: PublicationFrontend) => {
-    if (!confirm(`Are you sure you want to delete ${publication.basicInfo.publicationName}?`)) return;
+  const handleDelete = async (publication: any) => {
+    if (!confirm(`Are you sure you want to delete ${publication.name}?`)) return;
 
     try {
-      await deletePublication(publication._id!);
+      await deletePublication(publication.id);
       toast.success('Publication deleted successfully');
       refetch();
     } catch (error) {

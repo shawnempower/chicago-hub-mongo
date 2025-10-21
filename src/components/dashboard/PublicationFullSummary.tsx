@@ -307,7 +307,12 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                             fields={[
                               { label: 'Format', value: ad.adFormat },
                               { label: 'Location', value: ad.location },
-                              { label: 'Size', value: ad.specifications?.size },
+                              { 
+                                label: ad.sizes?.length > 1 ? 'Sizes' : 'Size', 
+                                value: ad.sizes && ad.sizes.length > 0 
+                                  ? ad.sizes.filter((s: string) => s).join(', ') 
+                                  : ad.specifications?.size 
+                              },
                               { label: 'Impressions', value: ad.monthlyImpressions ? `${formatNumber(ad.monthlyImpressions)}/mo` : undefined },
                               { label: 'Price (CPM)', value: ad.pricing?.cpm ? `$${ad.pricing.cpm}` : undefined },
                               { label: 'Price (Flat)', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
@@ -400,6 +405,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                   { label: 'Location', value: ad.location },
                                   { label: 'One Time', value: ad.pricing?.oneTime ? `$${ad.pricing.oneTime}` : undefined },
                                   { label: '4x Rate', value: ad.pricing?.fourTimes ? `$${ad.pricing.fourTimes}` : undefined },
+                                  { label: '6x Rate', value: ad.pricing?.sixTimes ? `$${ad.pricing.sixTimes}` : undefined },
                                   { label: '12x Rate', value: ad.pricing?.twelveTimes ? `$${ad.pricing.twelveTimes}` : undefined },
                                   { label: 'File Format', value: ad.specifications?.format },
                                 ]}
@@ -540,8 +546,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                   { label: 'Duration', value: ad.duration ? `${ad.duration}s` : undefined },
                                   { label: 'File Format', value: ad.specifications?.format },
                                   { label: 'Bitrate', value: ad.specifications?.bitrate },
-                                  { label: 'Flat Rate', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
-                                  { label: 'CPM', value: ad.pricing?.cpm ? `$${ad.pricing.cpm}` : undefined },
+                                  { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
                                   { label: 'Model', value: ad.pricing?.pricingModel },
                                   { label: 'Available', value: ad.available ? 'Yes' : 'No' },
                                 ]}

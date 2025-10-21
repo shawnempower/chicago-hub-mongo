@@ -22,18 +22,37 @@ export interface HubPrice {
   minimumCommitment?: string;
 }
 
+export interface DefaultPrice {
+  pricing: {
+    [key: string]: number | string;
+  };
+}
+
 interface PricingField {
   key: string;
   label: string;
   placeholder: string;
 }
 
+interface ConditionalField {
+  key: string;
+  label: string;
+  showWhen: string[]; // Array of pricing model values that trigger this field
+  type: 'select' | 'text'; // Field type
+  options?: { value: string; label: string }[]; // For select type
+  placeholder?: string; // For text type
+  pattern?: string; // Regex pattern for text validation
+  patternMessage?: string; // Error message for invalid pattern
+}
+
 interface HubPricingEditorProps {
-  defaultPricing: { [key: string]: number | string };
+  defaultPricing: { [key: string]: number | string } | DefaultPrice[];
   hubPricing: HubPrice[];
   pricingFields: PricingField[];
   pricingModels?: { value: string; label: string }[];
-  onDefaultPricingChange: (pricing: { [key: string]: number | string }) => void;
+  conditionalFields?: ConditionalField[];
+  allowMultipleDefaultPricing?: boolean; // New prop to enable multiple default pricing rows
+  onDefaultPricingChange: (pricing: { [key: string]: number | string } | DefaultPrice[]) => void;
   onHubPricingChange: (hubPricing: HubPrice[]) => void;
 }
 
@@ -51,19 +70,58 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
   hubPricing,
   pricingFields,
   pricingModels,
+  conditionalFields,
+  allowMultipleDefaultPricing = false,
   onDefaultPricingChange,
   onHubPricingChange,
 }) => {
-  const addHubPricing = () => {
-    // Find first available hub that's not already used
-    const usedHubIds = hubPricing.map(hp => hp.hubId);
-    const availableHub = AVAILABLE_HUBS.find(hub => !usedHubIds.includes(hub.id));
+  // Convert legacy single object format to array format
+  const defaultPricingArray: DefaultPrice[] = Array.isArray(defaultPricing) 
+    ? defaultPricing 
+    : [{ pricing: defaultPricing }];
+
+  const addDefaultPricing = () => {
+    const newDefaultPrice: DefaultPrice = {
+      pricing: {},
+    };
+    const updated = [...defaultPricingArray, newDefaultPrice];
+    // Multiple pricing tiers, return as array
+    onDefaultPricingChange(updated);
+  };
+
+  const removeDefaultPricing = (index: number) => {
+    if (defaultPricingArray.length <= 1) return; // Keep at least one default pricing
+    const updated = [...defaultPricingArray];
+    updated.splice(index, 1);
     
-    if (!availableHub) return; // All hubs already added
+    // If down to one pricing tier, return as object for backward compatibility
+    if (updated.length === 1) {
+      onDefaultPricingChange(updated[0].pricing);
+    } else {
+      onDefaultPricingChange(updated);
+    }
+  };
+
+  const updateDefaultPricing = (index: number, pricing: { [key: string]: number | string }) => {
+    const updated = [...defaultPricingArray];
+    updated[index] = { pricing };
+    
+    // If there's only one pricing tier, return as object for backward compatibility
+    // Otherwise return as array for multiple tiers
+    if (updated.length === 1) {
+      onDefaultPricingChange(updated[0].pricing);
+    } else {
+      onDefaultPricingChange(updated);
+    }
+  };
+
+  const addHubPricing = () => {
+    // Default to first hub (now allows duplicates)
+    const defaultHub = AVAILABLE_HUBS[0];
 
     const newHubPrice: HubPrice = {
-      hubId: availableHub.id,
-      hubName: availableHub.name,
+      hubId: defaultHub.id,
+      hubName: defaultHub.name,
       pricing: {},
       available: true,
     };
@@ -93,14 +151,6 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
     });
   };
 
-  const getAvailableHubsForRow = (currentIndex: number) => {
-    const usedHubIds = hubPricing
-      .map((hp, idx) => idx !== currentIndex ? hp.hubId : null)
-      .filter(Boolean);
-    
-    return AVAILABLE_HUBS.filter(hub => !usedHubIds.includes(hub.id));
-  };
-
   return (
     <div className="space-y-4">
       {/* Separator */}
@@ -109,96 +159,177 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
       <div className="space-y-4">
         <Label className="text-base font-semibold">Price</Label>
 
-        {/* Default Pricing Row */}
-        <div className="p-3 rounded-lg w-fit" style={{ backgroundColor: '#ECEAE4' }}>
-          <div className="flex gap-3 items-end">
-            {/* Hub/Context selector - inactive for default */}
-            <div className="w-64 flex-shrink-0">
-              <Label className="text-xs mb-1 block">Program</Label>
-              <Select value="default" disabled>
-                <SelectTrigger className="bg-muted">
-                  <SelectValue>Default Price</SelectValue>
-                </SelectTrigger>
-              </Select>
-            </div>
-
-            {/* All pricing fields horizontally */}
-            {pricingFields.map((field, index) => (
-              <div 
-                key={field.key} 
-                className={
-                  field.key === 'flatRate' ? 'w-36 flex-shrink-0' : 
-                  field.key === 'cpm' ? 'w-24 flex-shrink-0' : 
-                  'w-32 flex-shrink-0'
-                }
-              >
-                <Label className="text-xs mb-1 block">{field.label}</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                    $
-                  </span>
-                  <Input
-                    type="number"
-                    className="pl-7"
-                    value={defaultPricing[field.key] || ''}
-                    onChange={(e) =>
-                      onDefaultPricingChange({
-                        ...defaultPricing,
-                        [field.key]: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    placeholder={field.placeholder || '0'}
-                  />
-                </div>
-              </div>
-            ))}
-
-            {/* Pricing Model */}
-            {pricingModels && (
-              <div className="w-52 flex-shrink-0">
-                <Label className="text-xs mb-1 block">Pricing Model</Label>
-                <Select
-                  value={defaultPricing.pricingModel as string || pricingModels[0]?.value}
-                  onValueChange={(value) =>
-                    onDefaultPricingChange({
-                      ...defaultPricing,
-                      pricingModel: value,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
+        {/* Default Pricing Rows */}
+        {defaultPricingArray.map((defaultPrice, defaultIndex) => (
+          <div key={`default-${defaultIndex}`} className="p-3 rounded-lg w-fit" style={{ backgroundColor: '#ECEAE4' }}>
+            <div className="flex gap-3 items-end">
+              {/* Hub/Context selector - inactive for default */}
+              <div className="w-64 flex-shrink-0">
+                <Label className="text-xs mb-1 block">Program</Label>
+                <Select value="default" disabled>
+                  <SelectTrigger className="bg-muted">
+                    <SelectValue>Default Price</SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
-                    {pricingModels.map((model) => (
-                      <SelectItem key={model.value} value={model.value}>
-                        {model.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
                 </Select>
               </div>
-            )}
 
-            {/* Disabled delete button for alignment */}
-            <div className="flex items-end">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-10 w-10 p-0 bg-gray-100 text-gray-400 rounded-md cursor-not-allowed"
-                disabled
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              {/* All pricing fields horizontally */}
+              {pricingFields.map((field, index) => (
+                <div 
+                  key={field.key} 
+                  className={
+                    field.key === 'flatRate' ? 'w-36 flex-shrink-0' : 
+                    field.key === 'cpm' ? 'w-24 flex-shrink-0' : 
+                    'w-32 flex-shrink-0'
+                  }
+                >
+                  <Label className="text-xs mb-1 block">{field.label}</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                      $
+                    </span>
+                    <Input
+                      type="number"
+                      className="pl-7"
+                      value={defaultPrice.pricing[field.key] || ''}
+                      onChange={(e) =>
+                        updateDefaultPricing(defaultIndex, {
+                          ...defaultPrice.pricing,
+                          [field.key]: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      placeholder={field.placeholder || '0'}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Pricing Model */}
+              {pricingModels && (
+                <div className="w-52 flex-shrink-0">
+                  <Label className="text-xs mb-1 block">Pricing Model</Label>
+                  <Select
+                    value={defaultPrice.pricing.pricingModel as string || pricingModels[0]?.value}
+                    onValueChange={(value) =>
+                      updateDefaultPricing(defaultIndex, {
+                        ...defaultPrice.pricing,
+                        pricingModel: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pricingModels.map((model) => (
+                        <SelectItem key={model.value} value={model.value}>
+                          {model.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Conditional Fields - show based on pricing model */}
+              {conditionalFields?.map((condField) => {
+                const currentModel = defaultPrice.pricing.pricingModel as string || pricingModels?.[0]?.value;
+                const shouldShow = condField.showWhen.includes(currentModel);
+                
+                if (!shouldShow) return null;
+                
+                if (condField.type === 'text') {
+                  return (
+                    <div key={condField.key} className="w-52 flex-shrink-0">
+                      <Label className="text-xs mb-1 block">{condField.label}</Label>
+                      <Input
+                        type="text"
+                        value={defaultPrice.pricing[condField.key] as string || ''}
+                        onChange={(e) =>
+                          updateDefaultPricing(defaultIndex, {
+                            ...defaultPrice.pricing,
+                            [condField.key]: e.target.value,
+                          })
+                        }
+                        placeholder={condField.placeholder || ''}
+                        pattern={condField.pattern}
+                        title={condField.patternMessage}
+                      />
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div key={condField.key} className="w-52 flex-shrink-0">
+                    <Label className="text-xs mb-1 block">{condField.label}</Label>
+                    <Select
+                      value={defaultPrice.pricing[condField.key] as string || condField.options?.[0]?.value}
+                      onValueChange={(value) =>
+                        updateDefaultPricing(defaultIndex, {
+                          ...defaultPrice.pricing,
+                          [condField.key]: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {condField.options?.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+
+              {/* Delete button - disabled for first row if multiple allowed, always disabled if only one allowed */}
+              <div className="flex items-end">
+                {allowMultipleDefaultPricing && defaultIndex > 0 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 w-10 p-0 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 rounded-md"
+                    onClick={() => removeDefaultPricing(defaultIndex)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 w-10 p-0 bg-gray-100 text-gray-400 rounded-md cursor-not-allowed"
+                    disabled
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        ))}
+
+        {/* Add Default Pricing Button - Only show if multiple default pricing is enabled */}
+        {allowMultipleDefaultPricing && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addDefaultPricing}
+            className="w-full"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Default Pricing
+          </Button>
+        )}
 
         {/* Hub-Specific Pricing Rows */}
         {hubPricing.map((hubPrice, index) => {
-          const availableHubs = getAvailableHubsForRow(index);
-          
           return (
             <div key={index} className="space-y-2">
               <div className="p-3 bg-white rounded-lg shadow-sm w-fit">
@@ -214,7 +345,7 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableHubs.map((hub) => (
+                        {AVAILABLE_HUBS.map((hub) => (
                           <SelectItem key={hub.id} value={hub.id}>
                             {hub.name}
                           </SelectItem>
@@ -285,6 +416,65 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                     </div>
                   )}
 
+                  {/* Conditional Fields - show based on pricing model */}
+                  {conditionalFields?.map((condField) => {
+                    const currentModel = hubPrice.pricing.pricingModel as string || pricingModels?.[0]?.value;
+                    const shouldShow = condField.showWhen.includes(currentModel);
+                    
+                    if (!shouldShow) return null;
+                    
+                    if (condField.type === 'text') {
+                      return (
+                        <div key={condField.key} className="w-52 flex-shrink-0">
+                          <Label className="text-xs mb-2 block">{condField.label}</Label>
+                          <Input
+                            type="text"
+                            value={hubPrice.pricing[condField.key] as string || ''}
+                            onChange={(e) =>
+                              updateHubPricing(index, {
+                                pricing: {
+                                  ...hubPrice.pricing,
+                                  [condField.key]: e.target.value,
+                                },
+                              })
+                            }
+                            placeholder={condField.placeholder || ''}
+                            pattern={condField.pattern}
+                            title={condField.patternMessage}
+                          />
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div key={condField.key} className="w-52 flex-shrink-0">
+                        <Label className="text-xs mb-2 block">{condField.label}</Label>
+                        <Select
+                          value={hubPrice.pricing[condField.key] as string || condField.options?.[0]?.value}
+                          onValueChange={(value) =>
+                            updateHubPricing(index, {
+                              pricing: {
+                                ...hubPrice.pricing,
+                                [condField.key]: value,
+                              },
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {condField.options?.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+
                   {/* Delete button - icon only with light red background */}
                   <div className="flex items-end">
                     <Button
@@ -304,18 +494,16 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
         })}
 
         {/* Add Hub Pricing Button */}
-        {hubPricing.length < AVAILABLE_HUBS.length && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addHubPricing}
-            className="w-full"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Program Pricing
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addHubPricing}
+          className="w-full"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Program Pricing
+        </Button>
       </div>
     </div>
   );

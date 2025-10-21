@@ -255,7 +255,10 @@ export const PublicationInventoryManager = () => {
       }
 
       await handleUpdatePublication(updatedPublication);
-      closeEditDialog();
+      
+      // Update editingItem with the saved data so the form stays in sync
+      // Don't close the dialog - keep it open so user can continue editing
+      setEditingItem(JSON.parse(JSON.stringify(editingItem)));
       
       const successMessage = editingType?.includes('-container') 
         ? `${editingType.replace('-container', '').charAt(0).toUpperCase() + editingType.replace('-container', '').slice(1)} properties updated successfully`
@@ -3499,11 +3502,22 @@ export const PublicationInventoryManager = () => {
                 {editingType === 'website' && (
                   <div>
                     <Label htmlFor="adFormat">Ad Format</Label>
-                    <Input
-                      id="adFormat"
-                      value={editingItem.adFormat || ''}
-                      onChange={(e) => setEditingItem({ ...editingItem, adFormat: e.target.value })}
-                    />
+                    <Select
+                      value={editingItem.adFormat || 'banner'}
+                      onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select format" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="banner">Banner</SelectItem>
+                        <SelectItem value="video">Video</SelectItem>
+                        <SelectItem value="native">Native</SelectItem>
+                        <SelectItem value="takeover">Takeover</SelectItem>
+                        <SelectItem value="sponsored_content">Sponsored Content</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
                 {editingType === 'print' && (
@@ -3517,6 +3531,54 @@ export const PublicationInventoryManager = () => {
                   </div>
                 )}
               </div>
+
+              {/* Ad Sizes - Multiple inputs (Website only) */}
+              {editingType === 'website' && (
+                <div className="space-y-2">
+                  <Label>Ad Sizes</Label>
+                  {((editingItem.sizes || []).length > 0 ? editingItem.sizes : ['']).map((size: string, index: number) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        value={size}
+                        onChange={(e) => {
+                          const newSizes = [...(editingItem.sizes || [''])];
+                          newSizes[index] = e.target.value;
+                          setEditingItem({ ...editingItem, sizes: newSizes });
+                        }}
+                        placeholder="e.g., 300x250, 728x90, 970x250"
+                        className="flex-1"
+                      />
+                      {index > 0 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newSizes = editingItem.sizes?.filter((_: any, i: number) => i !== index) || [];
+                            setEditingItem({ ...editingItem, sizes: newSizes.length > 0 ? newSizes : undefined });
+                          }}
+                          className="px-3"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newSizes = [...(editingItem.sizes || ['']), ''];
+                      setEditingItem({ ...editingItem, sizes: newSizes });
+                    }}
+                    className="w-full"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Size
+                  </Button>
+                </div>
+              )}
 
               {/* Location/Position */}
               {(editingType === 'website' || editingType === 'newsletter') && (
@@ -3546,6 +3608,7 @@ export const PublicationInventoryManager = () => {
                   ]}
                   pricingModels={[
                     { value: 'flat', label: '/month' },
+                    { value: 'per_week', label: '/week' },
                     { value: 'cpm', label: '/1000 impressions' },
                     { value: 'cpc', label: '/click' },
                     { value: 'contact', label: 'Contact for pricing' }
@@ -3564,13 +3627,22 @@ export const PublicationInventoryManager = () => {
                   defaultPricing={editingItem.pricing || {}}
                   hubPricing={editingItem.hubPricing || []}
                   pricingFields={[
-                    { key: 'perSend', label: 'Per Send', placeholder: '50' },
-                    { key: 'monthly', label: 'Monthly Rate', placeholder: '200' }
+                    { key: 'flatRate', label: 'Price', placeholder: '50' }
                   ]}
                   pricingModels={[
                     { value: 'per_send', label: '/send' },
-                    { value: 'monthly', label: '/month' },
                     { value: 'contact', label: 'Contact for pricing' }
+                  ]}
+                  conditionalFields={[
+                    {
+                      key: 'frequency',
+                      label: 'Frequency',
+                      type: 'text',
+                      showWhen: ['per_send'],
+                      placeholder: 'e.g., Weekly, Monthly, One time',
+                      pattern: '^(?:One time|one time|Weekly|weekly|Monthly|monthly|Daily|daily|Bi-weekly|bi-weekly)$',
+                      patternMessage: 'Enter a frequency like "Weekly", "Monthly", "Daily", "Bi-weekly", or "One time"'
+                    }
                   ]}
                   onDefaultPricingChange={(pricing) => 
                     setEditingItem({ ...editingItem, pricing })
@@ -3586,15 +3658,22 @@ export const PublicationInventoryManager = () => {
                   defaultPricing={editingItem.pricing || {}}
                   hubPricing={editingItem.hubPricing || []}
                   pricingFields={[
-                    { key: 'oneTime', label: 'One Time', placeholder: '500' },
-                    { key: 'fourTimes', label: '4 Times', placeholder: '450' },
-                    { key: 'twelveTimes', label: '12 Times', placeholder: '400' },
-                    { key: 'openRate', label: 'Open Rate', placeholder: '550' }
+                    { key: 'flatRate', label: 'Price', placeholder: '500' }
                   ]}
                   pricingModels={[
-                    { value: 'one_time', label: '/issue' },
-                    { value: 'package', label: '/package' },
+                    { value: 'per_ad', label: '/ad' },
                     { value: 'contact', label: 'Contact for pricing' }
+                  ]}
+                  conditionalFields={[
+                    {
+                      key: 'frequency',
+                      label: 'Frequency',
+                      type: 'text',
+                      showWhen: ['per_ad'],
+                      placeholder: 'e.g., 4x, 12x, One time',
+                      pattern: '^(?:\\d+x|One time|one time)$',
+                      patternMessage: 'Enter a frequency like "4x", "12x", or "One time"'
+                    }
                   ]}
                   onDefaultPricingChange={(pricing) => 
                     setEditingItem({ ...editingItem, pricing })
@@ -3610,14 +3689,25 @@ export const PublicationInventoryManager = () => {
                   defaultPricing={editingItem.pricing || {}}
                   hubPricing={editingItem.hubPricing || []}
                   pricingFields={[
-                    { key: 'flatRate', label: 'Per Episode', placeholder: '100' },
-                    { key: 'cpm', label: 'CPM', placeholder: '25' }
+                    { key: 'flatRate', label: 'Price', placeholder: '100' }
                   ]}
                   pricingModels={[
-                    { value: 'flat', label: '/episode' },
+                    { value: 'per_ad', label: '/ad instance' },
                     { value: 'cpm', label: '/1000 downloads' },
                     { value: 'contact', label: 'Contact for pricing' }
                   ]}
+                  conditionalFields={[
+                    {
+                      key: 'frequency',
+                      label: 'Frequency',
+                      type: 'text',
+                      showWhen: ['per_ad'],
+                      placeholder: 'e.g., 10x, 20x, One time',
+                      pattern: '^(?:\\d+x|One time|one time)$',
+                      patternMessage: 'Enter a frequency like "10x", "20x", or "One time"'
+                    }
+                  ]}
+                  allowMultipleDefaultPricing={true}
                   onDefaultPricingChange={(pricing) => 
                     setEditingItem({ ...editingItem, pricing })
                   }
@@ -3632,16 +3722,24 @@ export const PublicationInventoryManager = () => {
                   defaultPricing={editingItem.pricing || {}}
                   hubPricing={editingItem.hubPricing || []}
                   pricingFields={[
-                    { key: 'perSpot', label: 'Per Spot', placeholder: '150' },
-                    { key: 'weekly', label: 'Weekly', placeholder: '500' },
-                    { key: 'monthly', label: 'Monthly', placeholder: '1800' }
+                    { key: 'flatRate', label: 'Price', placeholder: '150' }
                   ]}
                   pricingModels={[
                     { value: 'per_spot', label: '/spot' },
-                    { value: 'weekly', label: '/week' },
-                    { value: 'monthly', label: '/month' },
                     { value: 'contact', label: 'Contact for pricing' }
                   ]}
+                  conditionalFields={[
+                    {
+                      key: 'frequency',
+                      label: 'Frequency',
+                      type: 'text',
+                      showWhen: ['per_spot'],
+                      placeholder: 'e.g., Weekly, Monthly, One time',
+                      pattern: '^(?:One time|one time|Weekly|weekly|Monthly|monthly|Daily|daily)$',
+                      patternMessage: 'Enter a frequency like "Weekly", "Monthly", "Daily", or "One time"'
+                    }
+                  ]}
+                  allowMultipleDefaultPricing={true}
                   onDefaultPricingChange={(pricing) => 
                     setEditingItem({ ...editingItem, pricing })
                   }
@@ -3702,16 +3800,24 @@ export const PublicationInventoryManager = () => {
                   defaultPricing={editingItem.pricing || {}}
                   hubPricing={editingItem.hubPricing || []}
                   pricingFields={[
-                    { key: 'oneTime', label: 'One Time', placeholder: '500' },
-                    { key: 'fourTimes', label: '4 Times', placeholder: '450' },
-                    { key: 'twelveTimes', label: '12 Times', placeholder: '400' },
-                    { key: 'openRate', label: 'Open Rate', placeholder: '550' }
+                    { key: 'flatRate', label: 'Price', placeholder: '500' }
                   ]}
                   pricingModels={[
-                    { value: 'one_time', label: '/issue' },
-                    { value: 'package', label: '/package' },
+                    { value: 'per_ad', label: '/ad' },
                     { value: 'contact', label: 'Contact for pricing' }
                   ]}
+                  conditionalFields={[
+                    {
+                      key: 'frequency',
+                      label: 'Frequency',
+                      type: 'text',
+                      showWhen: ['per_ad'],
+                      placeholder: 'e.g., 4x, 12x, One time',
+                      pattern: '^(?:\\d+x|One time|one time)$',
+                      patternMessage: 'Enter a frequency like "4x", "12x", or "One time"'
+                    }
+                  ]}
+                  allowMultipleDefaultPricing={true}
                   onDefaultPricingChange={(pricing) => 
                     setEditingItem({ ...editingItem, pricing })
                   }

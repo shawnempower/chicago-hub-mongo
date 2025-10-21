@@ -285,7 +285,18 @@ export const DashboardInventoryManager = () => {
 
   // Edit dialog handlers
   const openEditDialog = (item: any, type: 'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast' | 'radio' | 'streaming' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'social-media-ad' | 'print-ad', index: number, subIndex: number = -1) => {
-    setEditingItem({ ...item });
+    // Use deep copy to preserve nested objects and arrays like advertisingOpportunities
+    const itemCopy = JSON.parse(JSON.stringify(item));
+    console.log('📝 Opening edit dialog:', {
+      type,
+      index,
+      subIndex,
+      originalItem: item,
+      itemCopy: itemCopy,
+      hasAdvertisingOpportunities: itemCopy.advertisingOpportunities?.length > 0,
+      advertisingOpportunitiesCount: itemCopy.advertisingOpportunities?.length || 0
+    });
+    setEditingItem(itemCopy);
     setEditingType(type);
     setEditingIndex(index);
     setEditingSubIndex(subIndex);
@@ -320,6 +331,9 @@ export const DashboardInventoryManager = () => {
       editingType,
       editingIndex,
       editingSubIndex,
+      editingItem: editingItem,
+      hasAdvertisingOpportunities: editingItem.advertisingOpportunities?.length > 0,
+      advertisingOpportunitiesCount: editingItem.advertisingOpportunities?.length || 0,
       hasHubPricing: editingItem.hubPricing?.length > 0,
       hubPricingCount: editingItem.hubPricing?.length || 0
     });
@@ -358,16 +372,35 @@ export const DashboardInventoryManager = () => {
           }
           break;
 
-        case 'print':
-          if (updatedPublication.distributionChannels?.print && 
-              Array.isArray(updatedPublication.distributionChannels.print) && 
-              editingSubIndex >= 0 &&
-              updatedPublication.distributionChannels.print[editingIndex]?.advertisingOpportunities) {
-            updatedPublication.distributionChannels.print[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+        case 'print-ad':
+          console.log('💾 Saving print-ad:', {
+            editingIndex,
+            editingSubIndex,
+            editingItem,
+            hasPrint: !!updatedPublication.distributionChannels?.print,
+            isArray: Array.isArray(updatedPublication.distributionChannels?.print),
+            printType: typeof updatedPublication.distributionChannels?.print
+          });
+          
+          if (updatedPublication.distributionChannels?.print && editingSubIndex >= 0) {
+            // Handle both array format (new) and single object format (legacy)
+            if (Array.isArray(updatedPublication.distributionChannels.print)) {
+              // Array format - multiple print publications
+              if (updatedPublication.distributionChannels.print[editingIndex]?.advertisingOpportunities) {
+                updatedPublication.distributionChannels.print[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+                console.log('✅ Print ad saved successfully (array format)');
+              }
+            } else if (typeof updatedPublication.distributionChannels.print === 'object') {
+              // Single object format - one print publication
+              if (editingIndex === 0 && updatedPublication.distributionChannels.print.advertisingOpportunities) {
+                updatedPublication.distributionChannels.print.advertisingOpportunities[editingSubIndex] = editingItem;
+                console.log('✅ Print ad saved successfully (object format)');
+              }
+            }
           }
           break;
 
-        case 'podcast':
+        case 'podcast-ad':
           if (updatedPublication.distributionChannels?.podcasts && 
               editingSubIndex >= 0 &&
               updatedPublication.distributionChannels.podcasts[editingIndex]?.advertisingOpportunities) {
@@ -375,7 +408,7 @@ export const DashboardInventoryManager = () => {
           }
           break;
 
-        case 'radio':
+        case 'radio-ad':
           if (updatedPublication.distributionChannels?.radioStations && 
               editingSubIndex >= 0 &&
               updatedPublication.distributionChannels.radioStations[editingIndex]?.advertisingOpportunities) {
@@ -383,7 +416,7 @@ export const DashboardInventoryManager = () => {
           }
           break;
 
-        case 'streaming':
+        case 'streaming-ad':
           if (updatedPublication.distributionChannels?.streamingVideo && 
               editingSubIndex >= 0 &&
               updatedPublication.distributionChannels.streamingVideo[editingIndex]?.advertisingOpportunities) {
@@ -403,10 +436,24 @@ export const DashboardInventoryManager = () => {
           break;
 
         case 'print-container':
-          if (updatedPublication.distributionChannels?.print && 
-              Array.isArray(updatedPublication.distributionChannels.print) && 
-              editingIndex >= 0) {
-            updatedPublication.distributionChannels.print[editingIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.print) {
+            // Handle both array format (new) and single object format (legacy)
+            if (Array.isArray(updatedPublication.distributionChannels.print)) {
+              if (editingIndex >= 0) {
+                console.log('📋 Updating print container at index', editingIndex, ':', {
+                  before: updatedPublication.distributionChannels.print[editingIndex],
+                  after: editingItem
+                });
+                updatedPublication.distributionChannels.print[editingIndex] = editingItem;
+              }
+            } else {
+              // Legacy single object format - update directly
+              console.log('📋 Updating print container (single object format):', {
+                before: updatedPublication.distributionChannels.print,
+                after: editingItem
+              });
+              updatedPublication.distributionChannels.print = editingItem;
+            }
           }
           break;
 
@@ -434,8 +481,68 @@ export const DashboardInventoryManager = () => {
       }
 
       // Send the complete updated publication to the API
-      await handleUpdatePublication(updatedPublication);
-      closeEditDialog();
+      const result = await handleUpdatePublication(updatedPublication);
+      
+      // Update editingItem with the saved data from the response
+      // This ensures the form shows the latest saved values
+      if (result) {
+        let savedItem = null;
+        
+        switch (editingType) {
+          case 'website':
+            savedItem = result.distributionChannels?.website?.advertisingOpportunities?.[editingIndex];
+            break;
+          case 'newsletter':
+            savedItem = result.distributionChannels?.newsletters?.[editingIndex]?.advertisingOpportunities?.[editingSubIndex];
+            break;
+          case 'print-ad':
+            if (Array.isArray(result.distributionChannels?.print)) {
+              savedItem = result.distributionChannels.print[editingIndex]?.advertisingOpportunities?.[editingSubIndex];
+            } else if (editingIndex === 0) {
+              savedItem = result.distributionChannels?.print?.advertisingOpportunities?.[editingSubIndex];
+            }
+            break;
+          case 'podcast-ad':
+            savedItem = result.distributionChannels?.podcasts?.[editingIndex]?.advertisingOpportunities?.[editingSubIndex];
+            break;
+          case 'radio-ad':
+            savedItem = result.distributionChannels?.radioStations?.[editingIndex]?.advertisingOpportunities?.[editingSubIndex];
+            break;
+          case 'streaming-ad':
+            savedItem = result.distributionChannels?.streamingVideo?.[editingIndex]?.advertisingOpportunities?.[editingSubIndex];
+            break;
+          case 'website-container':
+            savedItem = result.distributionChannels?.website;
+            break;
+          case 'newsletter-container':
+            savedItem = result.distributionChannels?.newsletters?.[editingIndex];
+            break;
+          case 'print-container':
+            if (Array.isArray(result.distributionChannels?.print)) {
+              savedItem = result.distributionChannels.print[editingIndex];
+            } else if (editingIndex === 0) {
+              savedItem = result.distributionChannels?.print;
+            }
+            break;
+          case 'podcast-container':
+            savedItem = result.distributionChannels?.podcasts?.[editingIndex];
+            break;
+          case 'radio-container':
+            savedItem = result.distributionChannels?.radioStations?.[editingIndex];
+            break;
+          case 'streaming-container':
+            savedItem = result.distributionChannels?.streamingVideo?.[editingIndex];
+            break;
+        }
+        
+        if (savedItem) {
+          setEditingItem(JSON.parse(JSON.stringify(savedItem)));
+        }
+      }
+      
+      // Show success message (toast already shown in handleUpdatePublication, so we can skip this)
+      // Keep the dialog open - don't call closeEditDialog()
+      // This allows the user to continue editing without having to reopen the modal
     } catch (error) {
       console.error('Error saving edited item:', error);
       toast({
@@ -1527,8 +1634,12 @@ export const DashboardInventoryManager = () => {
                         <p className="text-sm text-gray-900">{opportunity.location || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-gray-500 mb-1">Size</p>
-                        <p className="text-sm text-gray-900">{opportunity.specifications?.size || 'N/A'}</p>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Size{opportunity.sizes?.length > 1 ? 's' : ''}</p>
+                        <p className="text-sm text-gray-900">
+                          {opportunity.sizes && opportunity.sizes.length > 0 
+                            ? opportunity.sizes.filter((s: string) => s).join(', ') 
+                            : opportunity.specifications?.size || 'N/A'}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs font-medium text-gray-500 mb-1">Impressions</p>
@@ -2830,31 +2941,70 @@ export const DashboardInventoryManager = () => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="adFormat">Ad Format</Label>
-                      <Input
-                        id="adFormat"
-                        value={editingItem.adFormat || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, adFormat: e.target.value })}
-                        placeholder="Banner, Rectangle, Leaderboard"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="size">Size</Label>
-                      <Input
-                        id="size"
-                        value={editingItem.specifications?.size || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          specifications: { 
-                            ...editingItem.specifications, 
-                            size: e.target.value 
-                          } 
-                        })}
-                        placeholder="728x90, 300x250"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="adFormat">Ad Format</Label>
+                    <Select
+                      value={editingItem.adFormat || 'banner'}
+                      onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select format" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="banner">Banner</SelectItem>
+                        <SelectItem value="video">Video</SelectItem>
+                        <SelectItem value="native">Native</SelectItem>
+                        <SelectItem value="takeover">Takeover</SelectItem>
+                        <SelectItem value="sponsored_content">Sponsored Content</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Ad Sizes - Multiple inputs */}
+                  <div className="space-y-2">
+                    <Label>Ad Sizes</Label>
+                    {((editingItem.sizes || []).length > 0 ? editingItem.sizes : ['']).map((size: string, index: number) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          value={size}
+                          onChange={(e) => {
+                            const newSizes = [...(editingItem.sizes || [''])];
+                            newSizes[index] = e.target.value;
+                            setEditingItem({ ...editingItem, sizes: newSizes });
+                          }}
+                          placeholder="e.g., 300x250, 728x90, 970x250"
+                          className="flex-1"
+                        />
+                        {index > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const newSizes = editingItem.sizes?.filter((_: any, i: number) => i !== index) || [];
+                              setEditingItem({ ...editingItem, sizes: newSizes.length > 0 ? newSizes : undefined });
+                            }}
+                            className="px-3"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newSizes = [...(editingItem.sizes || ['']), ''];
+                        setEditingItem({ ...editingItem, sizes: newSizes });
+                      }}
+                      className="w-full"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Size
+                    </Button>
                   </div>
                   
                   <div>
@@ -2877,6 +3027,7 @@ export const DashboardInventoryManager = () => {
                     ]}
                     pricingModels={[
                       { value: 'flat', label: '/month' },
+                      { value: 'per_week', label: '/week' },
                       { value: 'cpm', label: '/1000 impressions' },
                       { value: 'cpc', label: '/click' },
                       { value: 'contact', label: 'Contact for pricing' }
@@ -2929,13 +3080,22 @@ export const DashboardInventoryManager = () => {
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
                     pricingFields={[
-                      { key: 'perSend', label: 'Per Send', placeholder: '50' },
-                      { key: 'monthly', label: 'Monthly Rate', placeholder: '200' }
+                      { key: 'flatRate', label: 'Price', placeholder: '50' }
                     ]}
                     pricingModels={[
                       { value: 'per_send', label: '/send' },
-                      { value: 'monthly', label: '/month' },
                       { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    conditionalFields={[
+                      {
+                        key: 'frequency',
+                        label: 'Frequency',
+                        type: 'text',
+                        showWhen: ['per_send'],
+                        placeholder: 'e.g., Weekly, Monthly, One time',
+                        pattern: '^(?:One time|one time|Weekly|weekly|Monthly|monthly|Daily|daily|Bi-weekly|bi-weekly)$',
+                        patternMessage: 'Enter a frequency like "Weekly", "Monthly", "Daily", "Bi-weekly", or "One time"'
+                      }
                     ]}
                     onDefaultPricingChange={(pricing) => 
                       setEditingItem({ ...editingItem, pricing })
@@ -3024,16 +3184,24 @@ export const DashboardInventoryManager = () => {
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
                     pricingFields={[
-                      { key: 'oneTime', label: 'One Time', placeholder: '500' },
-                      { key: 'fourTimes', label: '4 Times', placeholder: '450' },
-                      { key: 'twelveTimes', label: '12 Times', placeholder: '400' },
-                      { key: 'openRate', label: 'Open Rate', placeholder: '550' }
+                      { key: 'flatRate', label: 'Price', placeholder: '500' }
                     ]}
                     pricingModels={[
-                      { value: 'one_time', label: '/issue' },
-                      { value: 'package', label: '/package' },
+                      { value: 'per_ad', label: '/ad' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
+                    conditionalFields={[
+                      {
+                        key: 'frequency',
+                        label: 'Frequency',
+                        type: 'text',
+                        showWhen: ['per_ad'],
+                        placeholder: 'e.g., 4x, 12x, One time',
+                        pattern: '^(?:\\d+x|One time|one time)$',
+                        patternMessage: 'Enter a frequency like "4x", "12x", or "One time"'
+                      }
+                    ]}
+                    allowMultipleDefaultPricing={true}
                     onDefaultPricingChange={(pricing) => 
                       setEditingItem({ ...editingItem, pricing })
                     }
@@ -3134,14 +3302,25 @@ export const DashboardInventoryManager = () => {
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
                     pricingFields={[
-                      { key: 'flatRate', label: 'Per Episode', placeholder: '100' },
-                      { key: 'cpm', label: 'CPM', placeholder: '25' }
+                      { key: 'flatRate', label: 'Price', placeholder: '100' }
                     ]}
                     pricingModels={[
-                      { value: 'flat', label: '/episode' },
+                      { value: 'per_ad', label: '/ad instance' },
                       { value: 'cpm', label: '/1000 downloads' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
+                    conditionalFields={[
+                      {
+                        key: 'frequency',
+                        label: 'Frequency',
+                        type: 'text',
+                        showWhen: ['per_ad'],
+                        placeholder: 'e.g., 10x, 20x, One time',
+                        pattern: '^(?:\\d+x|One time|one time)$',
+                        patternMessage: 'Enter a frequency like "10x", "20x", or "One time"'
+                      }
+                    ]}
+                    allowMultipleDefaultPricing={true}
                     onDefaultPricingChange={(pricing) => 
                       setEditingItem({ ...editingItem, pricing })
                     }
@@ -3190,16 +3369,24 @@ export const DashboardInventoryManager = () => {
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
                     pricingFields={[
-                      { key: 'perSpot', label: 'Per Spot', placeholder: '150' },
-                      { key: 'weekly', label: 'Weekly', placeholder: '500' },
-                      { key: 'monthly', label: 'Monthly', placeholder: '1800' }
+                      { key: 'flatRate', label: 'Price', placeholder: '150' }
                     ]}
                     pricingModels={[
                       { value: 'per_spot', label: '/spot' },
-                      { value: 'weekly', label: '/week' },
-                      { value: 'monthly', label: '/month' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
+                    conditionalFields={[
+                      {
+                        key: 'frequency',
+                        label: 'Frequency',
+                        type: 'text',
+                        showWhen: ['per_spot'],
+                        placeholder: 'e.g., Weekly, Monthly, One time',
+                        pattern: '^(?:One time|one time|Weekly|weekly|Monthly|monthly|Daily|daily)$',
+                        patternMessage: 'Enter a frequency like "Weekly", "Monthly", "Daily", or "One time"'
+                      }
+                    ]}
+                    allowMultipleDefaultPricing={true}
                     onDefaultPricingChange={(pricing) => 
                       setEditingItem({ ...editingItem, pricing })
                     }
@@ -3410,7 +3597,16 @@ export const DashboardInventoryManager = () => {
                         id="circulation"
                         type="number"
                         value={editingItem.circulation || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, circulation: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => {
+                          const newValue = parseInt(e.target.value) || 0;
+                          console.log('📊 Circulation changed:', {
+                            oldValue: editingItem.circulation,
+                            newValue: newValue,
+                            inputValue: e.target.value,
+                            currentEditingItem: editingItem
+                          });
+                          setEditingItem({ ...editingItem, circulation: newValue });
+                        }}
                         placeholder="50000"
                       />
                     </div>

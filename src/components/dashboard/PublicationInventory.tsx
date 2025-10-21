@@ -113,6 +113,7 @@ export const PublicationInventory: React.FC = () => {
             size: ad.dimensions || 'Standard',
             price: ad.pricing?.oneTime ? `$${ad.pricing.oneTime}/issue` : 
                    ad.pricing?.twelveTimes ? `$${ad.pricing.twelveTimes}/issue (12x rate)` : 
+                   ad.pricing?.sixTimes ? `$${ad.pricing.sixTimes}/issue (6x rate)` : 
                    ad.pricing?.fourTimes ? `$${ad.pricing.fourTimes}/issue (4x rate)` : 'Contact for pricing',
             availability: 'Available', // Default since print ads don't have availability flag
             impressions: printPub.circulation ? 

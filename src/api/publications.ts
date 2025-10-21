@@ -127,9 +127,16 @@ export const deletePublication = async (id: string): Promise<boolean> => {
   try {
     const response = await fetch(`${API_BASE_URL}/publications/${id}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication required');
+      }
+      if (response.status === 403) {
+        throw new Error('Admin access required');
+      }
       if (response.status === 404) {
         return false;
       }
@@ -140,7 +147,7 @@ export const deletePublication = async (id: string): Promise<boolean> => {
     return result.success;
   } catch (error) {
     console.error('Error deleting publication:', error);
-    throw new Error('Failed to delete publication');
+    throw new Error(error instanceof Error ? error.message : 'Failed to delete publication');
   }
 };
 

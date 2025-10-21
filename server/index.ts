@@ -65,10 +65,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Configure multer for file uploads (memory storage)
+// Note: Adjust fileSize limit based on your needs and server memory constraints
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 50 * 1024 * 1024, // 50MB limit (increased for videos and large documents)
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
@@ -2327,6 +2328,35 @@ app.post('/api/admin/assistant-instructions/:id/activate', authenticateToken, as
 // Error handling middleware
 app.use((error: any, req: any, res: any, next: any) => {
   console.error('Unhandled error:', error);
+  
+  // Handle Multer errors
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ 
+        error: 'File too large',
+        message: 'File size exceeds the maximum limit of 50MB',
+        maxSize: '50MB'
+      });
+    }
+    if (error.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ 
+        error: 'Too many files',
+        message: 'Maximum number of files exceeded'
+      });
+    }
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ 
+        error: 'Unexpected field',
+        message: 'An unexpected file field was provided'
+      });
+    }
+    return res.status(400).json({ 
+      error: 'File upload error',
+      message: error.message 
+    });
+  }
+  
+  // Handle other errors
   res.status(500).json({ error: 'Internal server error' });
 });
 

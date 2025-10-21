@@ -1583,7 +1583,7 @@ export const EnhancedPublicationsManagement = () => {
       {/* Publications List */}
       <div className="grid gap-4">
         {filteredPublications.map((publication) => (
-          <Card key={publication._id} className="hover:shadow-md transition-shadow">
+          <Card key={publication.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <div className="flex justify-between items-start">
                 <div className="flex-1">

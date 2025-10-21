@@ -150,11 +150,18 @@ Each category expands to show:
 │ ├─ Duration: [45 minutes]                               │
 │ ├─ Products:                                            │
 │ │  ├─ Pre-roll (30 sec)                                 │
-│ │  │  ├─ Standard: [$200/episode]                       │
-│ │  │  └─ Hub: [$140/episode] (-30%)                    │
+│ │  │  ├─ Price: [$200]                                  │
+│ │  │  ├─ Model: [/ad instance ▼]                        │
+│ │  │  │   • /ad instance                                │
+│ │  │  │   • /10 ad instances                            │
+│ │  │  │   • /20 ad instances                            │
+│ │  │  │   • /30 ad instances                            │
+│ │  │  │   • /1000 downloads                             │
+│ │  │  └─ Hub: [$140] [/ad instance ▼] (-30%)           │
 │ │  ├─ Mid-roll (60 sec)                                 │
-│ │  │  ├─ Standard: [$350/episode]                       │
-│ │  │  └─ Hub: [$245/episode] (-30%)                    │
+│ │  │  ├─ Price: [$25]                                   │
+│ │  │  ├─ Model: [/1000 downloads ▼]                     │
+│ │  │  └─ Hub: [$18] [/1000 downloads ▼] (-28%)         │
 │ │  └─ [+ Add Product]                                   │
 │ └─ [Save] [Cancel] [Delete Show]                       │
 └─────────────────────────────────────────────────────────┘

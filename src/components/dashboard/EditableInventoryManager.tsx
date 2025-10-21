@@ -1663,8 +1663,8 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
                           <Label>Location</Label>
                           <Input
                             value={ad.location || ''}
@@ -1690,6 +1690,16 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                             value={ad.pricing?.fourTimes || ''}
                             onChange={(e) => updatePrintAdPricing(printIndex, adIndex, 'fourTimes', parseFloat(e.target.value))}
                             placeholder="1000"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label>6x Rate ($)</Label>
+                          <Input
+                            type="number"
+                            value={ad.pricing?.sixTimes || ''}
+                            onChange={(e) => updatePrintAdPricing(printIndex, adIndex, 'sixTimes', parseFloat(e.target.value))}
+                            placeholder="900"
                           />
                         </div>
                         
@@ -2250,6 +2260,14 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                     <div key={adIndex} className="p-4 bg-muted/30 rounded-lg space-y-4">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium">Podcast Ad #{adIndex + 1}</h4>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => removePodcastAd(podcastIndex, adIndex)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -2257,13 +2275,17 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <Label>Ad Name</Label>
                           <Input
                             value={ad.name || ''}
+                            onChange={(e) => updatePodcastAd(podcastIndex, adIndex, 'name', e.target.value)}
                             placeholder="Pre-roll Ad"
                           />
                         </div>
                         
                         <div>
                           <Label>Ad Format</Label>
-                          <Select value={ad.adFormat || ''}>
+                          <Select 
+                            value={ad.adFormat || ''}
+                            onValueChange={(value) => updatePodcastAd(podcastIndex, adIndex, 'adFormat', value)}
+                          >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
@@ -2281,16 +2303,18 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <Input
                             type="number"
                             value={ad.duration || ''}
+                            onChange={(e) => updatePodcastAd(podcastIndex, adIndex, 'duration', parseInt(e.target.value))}
                             placeholder="30"
                           />
                         </div>
                         
                         <div>
-                          <Label>CPM ($)</Label>
+                          <Label>Price ($)</Label>
                           <Input
                             type="number"
-                            value={ad.pricing?.cpm || ''}
-                            placeholder="25"
+                            value={ad.pricing?.flatRate || ''}
+                            onChange={(e) => updatePodcastAdPricing(podcastIndex, adIndex, 'flatRate', parseFloat(e.target.value))}
+                            placeholder="100"
                           />
                         </div>
                       </div>

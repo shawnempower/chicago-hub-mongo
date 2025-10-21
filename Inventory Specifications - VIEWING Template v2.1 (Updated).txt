@@ -100,11 +100,12 @@
 ### Podcast: [Name]
 **Downloads**: [Number]/episode | **Frequency**: [Schedule]
 
-| Product | Standard Rate | Hub Rate | Rate Type |
-|---------|---------------|----------|-----------|
-| Pre-roll (15s) | $25 | — | CPM |
-| Mid-roll (60s) | $50 | — | CPM |
-| Sponsored Episode | $2,000 | CH: $1,400<br>NH: $1,400 | Flat/episode |
+| Product | Price | Model | Hub Rate | Hub Model |
+|---------|-------|-------|----------|-----------|
+| Pre-roll (15s) | $200 | /ad instance | — | — |
+| Mid-roll (60s) | $350 | /10 ad instances | CH: $245<br>NH: $245 | /ad instance |
+| Sponsored Segment | $2,000 | /30 ad instances | — | — |
+| Host-read (60s) | $25 | /1000 downloads | CH: $18 | /1000 downloads |
 
 **Specs**: Host-read or produced audio, 7 days lead time  
 **Terms**: Net 30
