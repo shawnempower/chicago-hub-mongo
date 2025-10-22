@@ -655,7 +655,9 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                 ad.pricing.forEach((tier: any, idx: number) => {
                                   const tierPrice = tier.pricing?.flatRate;
                                   const tierModel = tier.pricing?.pricingModel;
-                                  const tierLabel = tier.size || tier.frequency || tier.name || `Tier ${idx + 1}`;
+                                  // Get frequency from pricing.frequency or tier level, then fallback to size/name
+                                  const frequency = tier.pricing?.frequency || tier.frequency;
+                                  const tierLabel = frequency || tier.size || tier.name || `Tier ${idx + 1}`;
                                   
                                   if (tierPrice !== undefined && tierPrice !== null) {
                                     fields.push({

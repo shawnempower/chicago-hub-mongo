@@ -161,8 +161,11 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
           
           // Handle array of pricing tiers
           if (Array.isArray(ad.pricing)) {
-            ad.pricing.forEach((tier: any) => {
-              const tierLabel = tier.size || tier.frequency || tier.name || 'Standard';
+            ad.pricing.forEach((tier: any, idx: number) => {
+              // For frequency-based pricing, get from pricing.frequency or tier level
+              const frequency = tier.pricing?.frequency || tier.frequency;
+              let tierLabel = frequency || tier.name || tier.size || `Tier ${idx + 1}`;
+              
               pricing.push({
                 label: tierLabel,
                 standardPrice: tier.pricing?.flatRate,
@@ -178,8 +181,19 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
           }
 
           ad.hubPricing?.forEach((hub: any) => {
+            // Debug log for Chicago Reader hub pricing
+            if (print.name === 'Chicago Reader') {
+              console.log('Chicago Reader hub pricing:', hub);
+            }
+            
+            // Hub pricing may also have frequency inside pricing object
+            const hubFrequency = hub.pricing?.frequency;
+            const hubLabel = hubFrequency 
+              ? `${hub.hubName || hub.hubId} (${hubFrequency})`
+              : hub.hubName || hub.hubId;
+            
             pricing.push({
-              label: hub.hubName || hub.hubId,
+              label: hubLabel,
               hubPrice: hub.pricing?.flatRate,
               pricingModel: hub.pricing?.pricingModel,
               discount: hub.discount,
@@ -776,12 +790,19 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
                     {/* Pricing Tiers */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-3 pt-3 border-t">
                       {item.pricing.map((tier, tierIndex) => {
-                        // Skip if filtering by hub and this isn't the selected hub or standard
-                        if (selectedHub !== 'all' && tier.label !== selectedHub && tier.label !== 'Standard') {
+                        // Determine if this is standard pricing or hub pricing
+                        const isStandard = tier.standardPrice !== undefined && tier.hubPrice === undefined;
+                        const isHub = tier.hubPrice !== undefined;
+                        
+                        // Skip if filtering by hub and this is standard pricing (not hub related)
+                        if (selectedHub !== 'all' && !isHub && !tier.label.includes(selectedHub)) {
+                          return null;
+                        }
+                        // Skip if filtering by hub and this hub pricing doesn't match
+                        if (selectedHub !== 'all' && isHub && !tier.label.includes(selectedHub)) {
                           return null;
                         }
 
-                        const isStandard = tier.label === 'Standard';
                         const price = tier.hubPrice || tier.standardPrice;
 
                         return (
