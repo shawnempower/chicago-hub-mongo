@@ -18,7 +18,9 @@ import {
   Download,
   TrendingUp,
   Package,
-  DollarSign
+  DollarSign,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 interface PricingTier {
@@ -48,6 +50,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
   const { selectedPublication } = usePublication();
   const [selectedHub, setSelectedHub] = useState<string>('all');
   const [selectedChannel, setSelectedChannel] = useState<string>('all');
+  const [expandedChannels, setExpandedChannels] = useState<Set<string>>(new Set(['Website', 'Print', 'Newsletter', 'Social Media', 'Events', 'Podcasts', 'Radio', 'Streaming']));
 
   if (!selectedPublication) {
     return (
@@ -497,6 +500,36 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
     return new Intl.NumberFormat('en-US').format(num);
   };
 
+  const toggleChannel = (channel: string) => {
+    const newExpanded = new Set(expandedChannels);
+    if (newExpanded.has(channel)) {
+      newExpanded.delete(channel);
+    } else {
+      newExpanded.add(channel);
+    }
+    setExpandedChannels(newExpanded);
+  };
+
+  const toggleAllChannels = () => {
+    if (expandedChannels.size === availableChannels.length) {
+      setExpandedChannels(new Set());
+    } else {
+      setExpandedChannels(new Set(availableChannels));
+    }
+  };
+
+  // Group items by channel
+  const groupedItems = useMemo(() => {
+    const grouped: Record<string, InventoryItem[]> = {};
+    filteredItems.forEach(item => {
+      if (!grouped[item.channel]) {
+        grouped[item.channel] = [];
+      }
+      grouped[item.channel].push(item);
+    });
+    return grouped;
+  }, [filteredItems]);
+
   const handleExport = () => {
     // Create CSV data
     const headers = ['Channel', 'Item Name', 'Format', 'Reach', 'Pricing Tier', 'Price', 'Model', 'Discount', 'Available', 'Min Commitment'];
@@ -655,12 +688,23 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       {/* Inventory Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Inventory Details</CardTitle>
-          <CardDescription>
-            {selectedHub === 'all' 
-              ? 'Showing all inventory across all hubs' 
-              : `Showing inventory for ${selectedHub}`}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Inventory Details</CardTitle>
+              <CardDescription>
+                {selectedHub === 'all' 
+                  ? 'Showing all inventory across all hubs' 
+                  : `Showing inventory for ${selectedHub}`}
+              </CardDescription>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={toggleAllChannels}
+            >
+              {expandedChannels.size === availableChannels.length ? 'Collapse All' : 'Expand All'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {filteredItems.length === 0 ? (
@@ -668,8 +712,44 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
               No inventory found matching the selected filters
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredItems.map((item, index) => {
+            <div className="space-y-6">
+              {Object.entries(groupedItems).sort(([a], [b]) => a.localeCompare(b)).map(([channel, items]) => {
+                const Icon = items[0]?.channelIcon || Package;
+                const isExpanded = expandedChannels.has(channel);
+                const channelRevenue = items.reduce((sum, item) => {
+                  const firstPrice = item.pricing.find(p => p.hubPrice || p.standardPrice);
+                  return sum + (firstPrice?.hubPrice || firstPrice?.standardPrice || 0);
+                }, 0);
+
+                return (
+                  <div key={channel} className="border rounded-lg overflow-hidden">
+                    {/* Channel Header */}
+                    <button
+                      onClick={() => toggleChannel(channel)}
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        {isExpanded ? (
+                          <ChevronDown className="h-5 w-5 text-gray-600" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-gray-600" />
+                        )}
+                        <Icon className="h-5 w-5 text-blue-600" />
+                        <div className="text-left">
+                          <h3 className="font-semibold text-lg">{channel}</h3>
+                          <p className="text-sm text-muted-foreground">{items.length} items</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-lg text-green-600">{formatCurrency(channelRevenue)}</p>
+                        <p className="text-xs text-muted-foreground">Total value</p>
+                      </div>
+                    </button>
+
+                    {/* Channel Items */}
+                    {isExpanded && (
+                      <div className="p-4 space-y-4 bg-white">
+                        {items.map((item, index) => {
                 const Icon = item.channelIcon;
                 return (
                   <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
@@ -741,6 +821,11 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
                         );
                       })}
                     </div>
+                  </div>
+                );
+              })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
