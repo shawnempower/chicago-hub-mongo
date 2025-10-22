@@ -1,7 +1,7 @@
 import React from 'react';
 import { usePublication } from '@/contexts/PublicationContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdOpportunityCard } from './AdOpportunityCard';
 import { 
   Globe, 
@@ -28,7 +28,8 @@ import {
   Star,
   Shield,
   Clock,
-  FileText
+  FileText,
+  Package
 } from 'lucide-react';
 
 interface PublicationFullSummaryProps {
@@ -104,6 +105,316 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
             {publication.basicInfo.geographicCoverage && ` • ${publication.basicInfo.geographicCoverage.charAt(0).toUpperCase() + publication.basicInfo.geographicCoverage.slice(1)}`}
           </p>
         </div>
+
+        {/* Executive Summary - Inventory & Revenue Potential */}
+        <Card className="print:shadow-none print:border-gray-300 bg-gradient-to-br from-blue-50 to-purple-50">
+          <CardHeader className="print:pb-2">
+            <CardTitle className="flex items-center gap-2 print:text-lg text-2xl">
+              <PieChart className="h-6 w-6 print:h-5 print:w-5 text-blue-600" />
+              Revenue & Inventory Executive Summary
+            </CardTitle>
+            <CardDescription>Your advertising inventory at a glance</CardDescription>
+          </CardHeader>
+          <CardContent className="print:pt-0">
+            {(() => {
+              // Calculate comprehensive inventory stats
+              let totalOpportunities = 0;
+              let totalReach = 0;
+              let estimatedMonthlyRevenuePotential = 0;
+              const inventoryByChannel: Record<string, { count: number; reach: number; avgPrice: number; totalPrice: number }> = {};
+
+              // Helper to add inventory
+              const addInventory = (channel: string, count: number, reach: number, avgPrice: number) => {
+                if (!inventoryByChannel[channel]) {
+                  inventoryByChannel[channel] = { count: 0, reach: 0, avgPrice: 0, totalPrice: 0 };
+                }
+                inventoryByChannel[channel].count += count;
+                inventoryByChannel[channel].reach += reach;
+                inventoryByChannel[channel].totalPrice += avgPrice * count;
+                inventoryByChannel[channel].avgPrice = inventoryByChannel[channel].totalPrice / inventoryByChannel[channel].count;
+              };
+
+              // Website
+              if (publication.distributionChannels.website?.advertisingOpportunities) {
+                const websiteAds = publication.distributionChannels.website.advertisingOpportunities;
+                const reach = publication.distributionChannels.website.metrics?.monthlyVisitors || 0;
+                totalReach += reach;
+                
+                websiteAds.forEach(ad => {
+                  totalOpportunities++;
+                  const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
+                  addInventory('Website', 1, reach, price);
+                  estimatedMonthlyRevenuePotential += price;
+                });
+              }
+
+              // Newsletters
+              publication.distributionChannels.newsletters?.forEach(newsletter => {
+                const reach = newsletter.subscribers || 0;
+                totalReach += reach;
+                
+                if (newsletter.advertisingOpportunities) {
+                  newsletter.advertisingOpportunities.forEach(ad => {
+                    totalOpportunities++;
+                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
+                    addInventory('Newsletter', 1, reach, price);
+                    estimatedMonthlyRevenuePotential += price;
+                  });
+                }
+              });
+
+              // Print
+              if (Array.isArray(publication.distributionChannels.print)) {
+                publication.distributionChannels.print.forEach(print => {
+                  const reach = print.circulation || 0;
+                  totalReach += reach;
+                  
+                  if (print.advertisingOpportunities) {
+                    print.advertisingOpportunities.forEach(ad => {
+                      totalOpportunities++;
+                      // Print pricing can be an array of tiers - use the first tier's price
+                      let price = 0;
+                      if (Array.isArray(ad.pricing) && ad.pricing.length > 0) {
+                        price = ad.pricing[0]?.pricing?.flatRate || 0;
+                      } else if (ad.pricing && typeof ad.pricing === 'object') {
+                        price = ad.pricing.flatRate || 0;
+                      }
+                      // Override with hubPricing if available
+                      if (ad.hubPricing?.[0]?.pricing?.flatRate) {
+                        price = ad.hubPricing[0].pricing.flatRate;
+                      }
+                      addInventory('Print', 1, reach, price);
+                      estimatedMonthlyRevenuePotential += price;
+                    });
+                  }
+                });
+              }
+
+              // Social Media
+              publication.distributionChannels.socialMedia?.forEach(social => {
+                const reach = social.metrics?.followers || 0;
+                totalReach += reach;
+                
+                if (social.advertisingOpportunities) {
+                  social.advertisingOpportunities.forEach(ad => {
+                    totalOpportunities++;
+                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
+                    addInventory('Social Media', 1, reach, price);
+                    estimatedMonthlyRevenuePotential += price;
+                  });
+                }
+              });
+
+              // Events
+              publication.distributionChannels.events?.forEach(event => {
+                const reach = event.averageAttendance || 0;
+                totalReach += reach;
+                
+                if (event.advertisingOpportunities) {
+                  event.advertisingOpportunities.forEach(ad => {
+                    totalOpportunities++;
+                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || (typeof ad.pricing === 'number' ? ad.pricing : 0) || 0;
+                    addInventory('Events', 1, reach, price);
+                    estimatedMonthlyRevenuePotential += price;
+                  });
+                }
+              });
+
+              // Podcasts
+              publication.distributionChannels.podcasts?.forEach(podcast => {
+                const reach = podcast.averageListeners || 0;
+                totalReach += reach;
+                
+                if (podcast.advertisingOpportunities) {
+                  podcast.advertisingOpportunities.forEach(ad => {
+                    totalOpportunities++;
+                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
+                    addInventory('Podcasts', 1, reach, price);
+                    estimatedMonthlyRevenuePotential += price;
+                  });
+                }
+              });
+
+              // Radio
+              publication.distributionChannels.radioStations?.forEach(radio => {
+                const reach = radio.listeners || 0;
+                totalReach += reach;
+                
+                if (radio.advertisingOpportunities) {
+                  radio.advertisingOpportunities.forEach(ad => {
+                    totalOpportunities++;
+                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
+                    addInventory('Radio', 1, reach, price);
+                    estimatedMonthlyRevenuePotential += price;
+                  });
+                }
+              });
+
+              // Streaming
+              publication.distributionChannels.streamingVideo?.forEach(streaming => {
+                const reach = streaming.subscribers || 0;
+                totalReach += reach;
+                
+                if (streaming.advertisingOpportunities) {
+                  streaming.advertisingOpportunities.forEach(ad => {
+                    totalOpportunities++;
+                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
+                    addInventory('Streaming', 1, reach, price);
+                    estimatedMonthlyRevenuePotential += price;
+                  });
+                }
+              });
+
+              // Cross-channel packages
+              const packageCount = publication.crossChannelPackages?.length || 0;
+
+              return (
+                <div className="space-y-6">
+                  {/* No Inventory Warning */}
+                  {totalOpportunities === 0 && (
+                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <Shield className="h-5 w-5 text-yellow-400" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-yellow-700">
+                            <strong>No advertising inventory found.</strong> Add your advertising opportunities in the Inventory tab to see revenue projections here.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Key Metrics Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:gap-2">
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-600">
+                      <p className="text-xs font-medium text-gray-500 uppercase">Total Inventory</p>
+                      <p className="text-3xl font-bold text-blue-600 print:text-2xl">{totalOpportunities}</p>
+                      <p className="text-xs text-gray-600 mt-1">Ad Opportunities</p>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-600">
+                      <p className="text-xs font-medium text-gray-500 uppercase">Total Reach</p>
+                      <p className="text-3xl font-bold text-green-600 print:text-2xl">{formatNumber(totalReach)}</p>
+                      <p className="text-xs text-gray-600 mt-1">Combined Audience</p>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-600">
+                      <p className="text-xs font-medium text-gray-500 uppercase">Revenue Potential</p>
+                      <p className="text-3xl font-bold text-purple-600 print:text-2xl">{formatCurrency(estimatedMonthlyRevenuePotential)}</p>
+                      <p className="text-xs text-gray-600 mt-1">If 100% sold</p>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-orange-600">
+                      <p className="text-xs font-medium text-gray-500 uppercase">Packages</p>
+                      <p className="text-3xl font-bold text-orange-600 print:text-2xl">{packageCount}</p>
+                      <p className="text-xs text-gray-600 mt-1">Cross-Channel Bundles</p>
+                    </div>
+                  </div>
+
+                  {/* Inventory by Channel */}
+                  {Object.keys(inventoryByChannel).length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                        <Package className="h-5 w-5" />
+                        Inventory Breakdown by Channel
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 print:gap-2">
+                        {Object.entries(inventoryByChannel)
+                          .sort((a, b) => b[1].count - a[1].count)
+                          .map(([channel, data]) => (
+                            <div key={channel} className="bg-white p-3 rounded-lg border">
+                              <div className="flex items-center justify-between mb-2">
+                                <h5 className="font-medium text-gray-900">{channel}</h5>
+                                <span className="text-xs font-semibold bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                  {data.count} {data.count === 1 ? 'opportunity' : 'opportunities'}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                  <p className="text-xs text-gray-500">Reach</p>
+                                  <p className="font-medium">{formatNumber(data.reach)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-500">Avg. Price</p>
+                                  <p className="font-medium">{formatCurrency(data.avgPrice)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Revenue Scenarios */}
+                  {estimatedMonthlyRevenuePotential > 0 && (
+                    <div className="bg-white p-4 rounded-lg border">
+                      <h4 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5" />
+                        Monthly Revenue Scenarios
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-center">
+                        <div className="p-3 bg-red-50 rounded-lg">
+                          <p className="text-xs font-medium text-gray-600 uppercase">Conservative (30%)</p>
+                          <p className="text-2xl font-bold text-red-600">{formatCurrency(estimatedMonthlyRevenuePotential * 0.3)}</p>
+                        </div>
+                        <div className="p-3 bg-yellow-50 rounded-lg">
+                          <p className="text-xs font-medium text-gray-600 uppercase">Moderate (50%)</p>
+                          <p className="text-2xl font-bold text-yellow-600">{formatCurrency(estimatedMonthlyRevenuePotential * 0.5)}</p>
+                        </div>
+                        <div className="p-3 bg-green-50 rounded-lg">
+                          <p className="text-xs font-medium text-gray-600 uppercase">Optimistic (75%)</p>
+                          <p className="text-2xl font-bold text-green-600">{formatCurrency(estimatedMonthlyRevenuePotential * 0.75)}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-3 text-center italic">
+                        Based on current inventory pricing. Actual results will vary based on demand, seasonality, and market conditions.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Quick Stats */}
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-semibold mb-2">Hub Summary</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-gray-600">Active Channels</p>
+                        <p className="text-lg font-bold">{Object.keys(inventoryByChannel).length}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">Avg Price/Opportunity</p>
+                        <p className="text-lg font-bold">
+                          {formatCurrency(totalOpportunities > 0 ? estimatedMonthlyRevenuePotential / totalOpportunities : 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">Price Range</p>
+                        <p className="text-lg font-bold">
+                          {(() => {
+                            const prices = Object.values(inventoryByChannel).map(d => d.avgPrice).filter(p => p > 0);
+                            if (prices.length === 0) return 'N/A';
+                            const min = Math.min(...prices);
+                            const max = Math.max(...prices);
+                            return `$${Math.round(min)}-$${Math.round(max)}`;
+                          })()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">Most Inventory</p>
+                        <p className="text-lg font-bold">
+                          {Object.entries(inventoryByChannel).length > 0
+                            ? Object.entries(inventoryByChannel).sort((a, b) => b[1].count - a[1].count)[0][0]
+                            : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
 
         {/* Contact Information */}
         <Card className="print:shadow-none print:border-gray-300">
@@ -187,69 +498,6 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
           </CardContent>
         </Card>
 
-        {/* Business Information */}
-        <Card className="print:shadow-none print:border-gray-300">
-          <CardHeader className="print:pb-2">
-            <CardTitle className="flex items-center gap-2 print:text-lg">
-              <DollarSign className="h-5 w-5 print:h-4 print:w-4" />
-              Business Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="print:pt-0">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:gap-2">
-              <div>
-                <p className="font-medium">Avg Monthly Revenue</p>
-                <p className="text-2xl font-bold text-green-600 print:text-lg">
-                  {formatCurrency(publication.businessInfo.averageMonthlyRevenue)}
-                </p>
-              </div>
-              <div>
-                <p className="font-medium">Employees</p>
-                <p className="text-2xl font-bold print:text-lg">
-                  {publication.businessInfo.numberOfEmployees || 'Not specified'}
-                </p>
-              </div>
-              <div>
-                <p className="font-medium">Founded</p>
-                <p className="text-2xl font-bold print:text-lg">
-                  {publication.basicInfo.founded || 'Not specified'}
-                </p>
-              </div>
-            </div>
-            
-            {publication.businessInfo.revenueBreakdown && (
-              <div className="mt-4 print:mt-2">
-                <p className="font-medium mb-2">Revenue Breakdown</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm print:text-xs">
-                  {publication.businessInfo.revenueBreakdown.digital && (
-                    <div>Digital: {formatCurrency(publication.businessInfo.revenueBreakdown.digital)}</div>
-                  )}
-                  {publication.businessInfo.revenueBreakdown.print && (
-                    <div>Print: {formatCurrency(publication.businessInfo.revenueBreakdown.print)}</div>
-                  )}
-                  {publication.businessInfo.revenueBreakdown.events && (
-                    <div>Events: {formatCurrency(publication.businessInfo.revenueBreakdown.events)}</div>
-                  )}
-                  {publication.businessInfo.revenueBreakdown.podcasts && (
-                    <div>Podcasts: {formatCurrency(publication.businessInfo.revenueBreakdown.podcasts)}</div>
-                  )}
-                  {publication.businessInfo.revenueBreakdown.radio && (
-                    <div>Radio: {formatCurrency(publication.businessInfo.revenueBreakdown.radio)}</div>
-                  )}
-                  {publication.businessInfo.revenueBreakdown.streaming && (
-                    <div>Streaming: {formatCurrency(publication.businessInfo.revenueBreakdown.streaming)}</div>
-                  )}
-                  {publication.businessInfo.revenueBreakdown.social && (
-                    <div>Social: {formatCurrency(publication.businessInfo.revenueBreakdown.social)}</div>
-                  )}
-                  {publication.businessInfo.revenueBreakdown.other && (
-                    <div>Other: {formatCurrency(publication.businessInfo.revenueBreakdown.other)}</div>
-                  )}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Distribution Channels - Complete Details */}
         <Card className="print:shadow-none print:border-gray-300">
@@ -314,8 +562,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                   : ad.specifications?.size 
                               },
                               { label: 'Impressions', value: ad.monthlyImpressions ? `${formatNumber(ad.monthlyImpressions)}/mo` : undefined },
-                              { label: 'Price (CPM)', value: ad.pricing?.cpm ? `$${ad.pricing.cpm}` : undefined },
-                              { label: 'Price (Flat)', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
+                              { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
                               { label: 'Model', value: ad.pricing?.pricingModel },
                               { label: 'Available', value: ad.available ? 'Yes' : 'No' },
                             ]}
@@ -358,8 +605,8 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                 fields={[
                                   { label: 'Position', value: ad.position },
                                   { label: 'Dimensions', value: ad.dimensions },
-                                  { label: 'Price (Per Send)', value: ad.pricing?.perSend ? `$${ad.pricing.perSend}` : undefined },
-                                  { label: 'Price (Monthly)', value: ad.pricing?.monthly ? `$${ad.pricing.monthly}` : undefined },
+                                  { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
+                                  { label: 'Model', value: ad.pricing?.pricingModel },
                                 ]}
                               />
                             ))}
@@ -393,24 +640,56 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                         <div>
                           <p className="font-medium mb-3">Print Advertising Opportunities</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {print.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                              <AdOpportunityCard
-                                key={adIndex}
-                                title={ad.name || 'Unnamed Ad'}
-                                hubPricingCount={ad.hubPricing?.length || 0}
-                                fields={[
-                                  { label: 'Format', value: ad.adFormat },
-                                  { label: 'Dimensions', value: ad.dimensions },
-                                  { label: 'Color', value: ad.color },
-                                  { label: 'Location', value: ad.location },
-                                  { label: 'One Time', value: ad.pricing?.oneTime ? `$${ad.pricing.oneTime}` : undefined },
-                                  { label: '4x Rate', value: ad.pricing?.fourTimes ? `$${ad.pricing.fourTimes}` : undefined },
-                                  { label: '6x Rate', value: ad.pricing?.sixTimes ? `$${ad.pricing.sixTimes}` : undefined },
-                                  { label: '12x Rate', value: ad.pricing?.twelveTimes ? `$${ad.pricing.twelveTimes}` : undefined },
-                                  { label: 'File Format', value: ad.specifications?.format },
-                                ]}
-                              />
-                            ))}
+                            {print.advertisingOpportunities.map((ad: any, adIndex: number) => {
+                              // Build fields array dynamically
+                              const fields: Array<{ label: string; value: string | undefined }> = [
+                                { label: 'Format', value: ad.adFormat },
+                                { label: 'Dimensions', value: ad.dimensions },
+                                { label: 'Color', value: ad.color },
+                                { label: 'Location', value: ad.location },
+                              ];
+                              
+                              // Handle pricing - can be array of tiers or single object
+                              if (Array.isArray(ad.pricing) && ad.pricing.length > 0) {
+                                // Multiple pricing tiers - add each one
+                                ad.pricing.forEach((tier: any, idx: number) => {
+                                  const tierPrice = tier.pricing?.flatRate;
+                                  const tierModel = tier.pricing?.pricingModel;
+                                  const tierLabel = tier.size || tier.frequency || tier.name || `Tier ${idx + 1}`;
+                                  
+                                  if (tierPrice !== undefined && tierPrice !== null) {
+                                    fields.push({
+                                      label: tierLabel,
+                                      value: `$${tierPrice}${tierModel ? ` (${tierModel})` : ''}`
+                                    });
+                                  }
+                                });
+                              } else if (ad.pricing && typeof ad.pricing === 'object') {
+                                // Single pricing object
+                                const price = ad.pricing.flatRate;
+                                const pricingModel = ad.pricing.pricingModel;
+                                if (price !== undefined && price !== null) {
+                                  fields.push({
+                                    label: 'Price',
+                                    value: `$${price}${pricingModel ? ` (${pricingModel})` : ''}`
+                                  });
+                                }
+                              }
+                              
+                              // Add file format at the end
+                              if (ad.specifications?.format) {
+                                fields.push({ label: 'File Format', value: ad.specifications.format });
+                              }
+                              
+                              return (
+                                <AdOpportunityCard
+                                  key={adIndex}
+                                  title={ad.name || 'Unnamed Ad'}
+                                  hubPricingCount={ad.hubPricing?.length || 0}
+                                  fields={fields}
+                                />
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -452,9 +731,8 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                   { label: 'Post Type', value: ad.postType },
                                   { label: 'Image Size', value: ad.specifications?.imageSize },
                                   { label: 'Video Length', value: ad.specifications?.videoLength },
-                                  { label: 'Per Post', value: ad.pricing?.perPost ? `$${ad.pricing.perPost}` : undefined },
-                                  { label: 'Per Story', value: ad.pricing?.perStory ? `$${ad.pricing.perStory}` : undefined },
-                                  { label: 'Monthly', value: ad.pricing?.monthly ? `$${ad.pricing.monthly}` : undefined },
+                                  { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
+                                  { label: 'Model', value: ad.pricing?.pricingModel },
                                   { label: 'Available', value: ad.available ? 'Yes' : 'No' },
                                 ]}
                               />
@@ -491,18 +769,22 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                         <div>
                           <p className="font-medium mb-3">Event Advertising Opportunities</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {event.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                              <AdOpportunityCard
-                                key={adIndex}
-                                title={ad.level ? `${ad.level.charAt(0).toUpperCase() + ad.level.slice(1)} Sponsor` : 'Sponsorship'}
-                                hubPricingCount={ad.hubPricing?.length || 0}
-                                fields={[
-                                  { label: 'Level', value: ad.level },
-                                  { label: 'Pricing', value: ad.pricing ? `$${ad.pricing}` : undefined },
-                                  { label: 'Benefits', value: ad.benefits && ad.benefits.length > 0 ? ad.benefits.slice(0, 2).join(', ') : undefined },
-                                ]}
-                              />
-                            ))}
+                            {event.advertisingOpportunities.map((ad: any, adIndex: number) => {
+                              const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || (typeof ad.pricing === 'number' ? ad.pricing : 0);
+                              return (
+                                <AdOpportunityCard
+                                  key={adIndex}
+                                  title={ad.level ? `${ad.level.charAt(0).toUpperCase() + ad.level.slice(1)} Sponsor` : 'Sponsorship'}
+                                  hubPricingCount={ad.hubPricing?.length || 0}
+                                  fields={[
+                                    { label: 'Level', value: ad.level },
+                                    { label: 'Price', value: price ? `$${price}` : undefined },
+                                    { label: 'Model', value: ad.pricing?.pricingModel },
+                                    { label: 'Benefits', value: ad.benefits && ad.benefits.length > 0 ? ad.benefits.slice(0, 2).join(', ') : undefined },
+                                  ]}
+                                />
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -593,9 +875,8 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                   { label: 'Time Slot', value: ad.timeSlot ? ad.timeSlot.replace(/_/g, ' ') : undefined },
                                   { label: 'Duration', value: ad.specifications?.duration ? `${ad.specifications.duration}s` : undefined },
                                   { label: 'File Format', value: ad.specifications?.format },
-                                  { label: 'Per Spot', value: ad.pricing?.perSpot ? `$${ad.pricing.perSpot}` : undefined },
-                                  { label: 'Weekly', value: ad.pricing?.weekly ? `$${ad.pricing.weekly}` : undefined },
-                                  { label: 'Monthly', value: ad.pricing?.monthly ? `$${ad.pricing.monthly}` : undefined },
+                                  { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
+                                  { label: 'Model', value: ad.pricing?.pricingModel },
                                   { label: 'Available', value: ad.available ? 'Yes' : 'No' },
                                 ]}
                               />
@@ -641,8 +922,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                   { label: 'Duration', value: ad.duration ? `${ad.duration}s` : undefined },
                                   { label: 'File Format', value: ad.specifications?.format },
                                   { label: 'Resolution', value: ad.specifications?.resolution },
-                                  { label: 'Flat Rate', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
-                                  { label: 'CPM', value: ad.pricing?.cpm ? `$${ad.pricing.cpm}` : undefined },
+                                  { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
                                   { label: 'Model', value: ad.pricing?.pricingModel },
                                   { label: 'Available', value: ad.available ? 'Yes' : 'No' },
                                 ]}
@@ -839,74 +1119,6 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       </div>
                     )}
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Business Details */}
-        {publication.businessInfo && (
-          <Card className="print:shadow-none print:border-gray-300">
-            <CardHeader className="print:pb-2">
-              <CardTitle className="flex items-center gap-2 print:text-lg">
-                <Building2 className="h-5 w-5 print:h-4 print:w-4" />
-                Business Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="print:pt-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:gap-2">
-                {publication.businessInfo.ownershipType && (
-                  <div>
-                    <p className="font-medium">Ownership Type</p>
-                    <p className="text-lg font-semibold print:text-base capitalize">
-                      {publication.businessInfo.ownershipType.replace('-', ' ')}
-                    </p>
-                  </div>
-                )}
-                {publication.businessInfo.parentCompany && (
-                  <div>
-                    <p className="font-medium">Parent Company</p>
-                    <p className="text-lg font-semibold print:text-base">
-                      {publication.businessInfo.parentCompany}
-                    </p>
-                  </div>
-                )}
-                {publication.businessInfo.yearsInOperation && (
-                  <div>
-                    <p className="font-medium">Years in Operation</p>
-                    <p className="text-2xl font-bold text-green-600 print:text-lg">
-                      {publication.businessInfo.yearsInOperation}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-2 mt-4 print:mt-2">
-                {publication.businessInfo.averageMonthlyRevenue && (
-                  <div>
-                    <p className="font-medium">Average Monthly Revenue</p>
-                    <p className="text-xl font-bold text-green-600 print:text-lg">
-                      {formatCurrency(publication.businessInfo.averageMonthlyRevenue)}
-                    </p>
-                  </div>
-                )}
-                {publication.businessInfo.clientRetentionRate && (
-                  <div>
-                    <p className="font-medium">Client Retention Rate</p>
-                    <p className="text-xl font-bold text-blue-600 print:text-lg">
-                      {publication.businessInfo.clientRetentionRate}%
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {publication.businessInfo.topAdvertiserCategories && publication.businessInfo.topAdvertiserCategories.length > 0 && (
-                <div className="mt-4 print:mt-2">
-                  <p className="font-medium mb-2">Top Advertiser Categories</p>
-                  <p className="text-sm text-gray-600">
-                    {publication.businessInfo.topAdvertiserCategories.join(', ')}
-                  </p>
                 </div>
               )}
             </CardContent>

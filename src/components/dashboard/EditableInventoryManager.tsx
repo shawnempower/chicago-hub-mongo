@@ -374,9 +374,9 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                 color: 'color' as const,
                 location: 'Inside Front Cover',
                 pricing: {
-                  oneTime: 1200,
-                  fourTimes: 1000,
-                  twelveTimes: 800
+                  flatRate: 1200,
+                  pricingModel: 'per_ad',
+                  frequency: 'One time'
                 },
                 specifications: {
                   format: 'PDF, AI, EPS',
@@ -1682,42 +1682,37 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </div>
                         
                         <div>
-                          <Label>One-Time Price ($)</Label>
+                          <Label>Price ($)</Label>
                           <Input
                             type="number"
-                            value={ad.pricing?.oneTime || ''}
-                            onChange={(e) => updatePrintAdPricing(printIndex, adIndex, 'oneTime', parseFloat(e.target.value))}
+                            value={ad.pricing?.flatRate || ''}
+                            onChange={(e) => updatePrintAdPricing(printIndex, adIndex, 'flatRate', parseFloat(e.target.value))}
                             placeholder="1200"
                           />
                         </div>
                         
                         <div>
-                          <Label>4x Rate ($)</Label>
-                          <Input
-                            type="number"
-                            value={ad.pricing?.fourTimes || ''}
-                            onChange={(e) => updatePrintAdPricing(printIndex, adIndex, 'fourTimes', parseFloat(e.target.value))}
-                            placeholder="1000"
-                          />
+                          <Label>Pricing Model</Label>
+                          <Select
+                            value={ad.pricing?.pricingModel || 'per_ad'}
+                            onValueChange={(value) => updatePrintAdPricing(printIndex, adIndex, 'pricingModel', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="per_ad">Per Ad</SelectItem>
+                              <SelectItem value="contact">Contact for pricing</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         
                         <div>
-                          <Label>6x Rate ($)</Label>
+                          <Label>Frequency</Label>
                           <Input
-                            type="number"
-                            value={ad.pricing?.sixTimes || ''}
-                            onChange={(e) => updatePrintAdPricing(printIndex, adIndex, 'sixTimes', parseFloat(e.target.value))}
-                            placeholder="900"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>12x Rate ($)</Label>
-                          <Input
-                            type="number"
-                            value={ad.pricing?.twelveTimes || ''}
-                            onChange={(e) => updatePrintAdPricing(printIndex, adIndex, 'twelveTimes', parseFloat(e.target.value))}
-                            placeholder="800"
+                            value={ad.pricing?.frequency || ''}
+                            onChange={(e) => updatePrintAdPricing(printIndex, adIndex, 'frequency', e.target.value)}
+                            placeholder="One time, 4x, 12x, etc."
                           />
                         </div>
                       </div>

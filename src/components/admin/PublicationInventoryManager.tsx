@@ -345,14 +345,13 @@ export const PublicationInventoryManager = () => {
     
     const newOpportunity = {
       name: 'New Print Ad',
-      adFormat: 'display ad',
-      dimensions: '4\" x 6\"',
+      adFormat: 'full page',
+      dimensions: '8.5\" x 11\"',
       color: 'color',
       pricing: {
-        oneTime: 500,
-        fourTimes: 400,
-        twelveTimes: 300,
-        openRate: 500
+        flatRate: 500,
+        pricingModel: 'per_ad',
+        frequency: 'One time'
       }
     };
 
@@ -890,12 +889,20 @@ export const PublicationInventoryManager = () => {
   };
 
   const formatPrice = (pricing: any) => {
-    if (pricing?.flatRate) return `$${pricing.flatRate.toLocaleString()}`;
-    if (pricing?.cpm) return `$${pricing.cpm} CPM`;
-    if (pricing?.perSend) return `$${pricing.perSend} per send`;
-    if (pricing?.perSpot) return `$${pricing.perSpot} per spot`;
-    if (pricing?.perPost) return `$${pricing.perPost} per post`;
-    return 'Contact for pricing';
+    if (!pricing?.flatRate) return 'Contact for pricing';
+    
+    const price = `$${pricing.flatRate.toLocaleString()}`;
+    const model = pricing.pricingModel;
+    
+    if (model === 'cpm') return `${price} CPM`;
+    if (model === 'per_send') return `${price} per send`;
+    if (model === 'per_spot') return `${price} per spot`;
+    if (model === 'per_post') return `${price} per post`;
+    if (model === 'per_week') return `${price} per week`;
+    if (model === 'per_day') return `${price} per day`;
+    if (model === 'per_ad') return `${price} per ad`;
+    
+    return price;
   };
 
   if (!selectedPublicationId) {
@@ -3062,12 +3069,12 @@ export const PublicationInventoryManager = () => {
                       <Input
                         id="cpm"
                         type="number"
-                        value={editingItem.pricing?.cpm || ''}
+                        value={editingItem.pricing?.flatRate || ''}
                         onChange={(e) => setEditingItem({ 
                           ...editingItem, 
                           pricing: { 
                             ...editingItem.pricing, 
-                            cpm: parseFloat(e.target.value) || 0,
+                            flatRate: parseFloat(e.target.value) || 0,
                             pricingModel: 'cpm'
                           } 
                         })}
@@ -3136,12 +3143,12 @@ export const PublicationInventoryManager = () => {
                       <Input
                         id="perSpot"
                         type="number"
-                        value={editingItem.pricing?.perSpot || ''}
+                        value={editingItem.pricing?.flatRate || ''}
                         onChange={(e) => setEditingItem({ 
                           ...editingItem, 
                           pricing: { 
                             ...editingItem.pricing, 
-                            perSpot: parseFloat(e.target.value) || 0,
+                            flatRate: parseFloat(e.target.value) || 0,
                             pricingModel: 'per_spot'
                           } 
                         })}
@@ -3201,12 +3208,12 @@ export const PublicationInventoryManager = () => {
                       <Input
                         id="cpm"
                         type="number"
-                        value={editingItem.pricing?.cpm || ''}
+                        value={editingItem.pricing?.flatRate || ''}
                         onChange={(e) => setEditingItem({ 
                           ...editingItem, 
                           pricing: { 
                             ...editingItem.pricing, 
-                            cpm: parseFloat(e.target.value) || 0,
+                            flatRate: parseFloat(e.target.value) || 0,
                             pricingModel: 'cpm'
                           } 
                         })}
@@ -3306,12 +3313,12 @@ export const PublicationInventoryManager = () => {
                       <Input
                         id="perPost"
                         type="number"
-                        value={editingItem.pricing?.perPost || ''}
+                        value={editingItem.pricing?.flatRate || ''}
                         onChange={(e) => setEditingItem({ 
                           ...editingItem, 
                           pricing: { 
                             ...editingItem.pricing, 
-                            perPost: parseFloat(e.target.value) || 0,
+                            flatRate: parseFloat(e.target.value) || 0,
                             pricingModel: 'per_post'
                           } 
                         })}
@@ -3323,12 +3330,12 @@ export const PublicationInventoryManager = () => {
                       <Input
                         id="cpm"
                         type="number"
-                        value={editingItem.pricing?.cpm || ''}
+                        value={editingItem.pricing?.flatRate || ''}
                         onChange={(e) => setEditingItem({ 
                           ...editingItem, 
                           pricing: { 
                             ...editingItem.pricing, 
-                            cpm: parseFloat(e.target.value) || 0,
+                            flatRate: parseFloat(e.target.value) || 0,
                             pricingModel: 'cpm'
                           } 
                         })}
@@ -3449,40 +3456,26 @@ export const PublicationInventoryManager = () => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="oneTime">One-time Price ($)</Label>
-                      <Input
-                        id="oneTime"
-                        type="number"
-                        value={editingItem.pricing?.oneTime || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            oneTime: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                        placeholder="500"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="fourTimes">4x Price ($)</Label>
-                      <Input
-                        id="fourTimes"
-                        type="number"
-                        value={editingItem.pricing?.fourTimes || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          pricing: { 
-                            ...editingItem.pricing, 
-                            fourTimes: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
-                        placeholder="400"
-                      />
-                    </div>
-                  </div>
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'flatRate', label: 'Price per Ad', placeholder: '500' }
+                    ]}
+                    pricingModels={[
+                      { value: 'per_ad', label: 'Per Ad' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    additionalFields={[
+                      { key: 'frequency', label: 'Frequency', placeholder: 'One time, 4x, 12x, etc.' }
+                    ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
                 </>
               )}
 

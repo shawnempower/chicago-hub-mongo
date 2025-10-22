@@ -61,8 +61,7 @@ export const PublicationInventory: React.FC = () => {
           channel: 'website',
           position: ad.location || 'Website',
           size: ad.specifications?.size || ad.adFormat || 'Standard',
-          price: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}/month` : 
-                 ad.pricing?.cpm ? `$${ad.pricing.cpm} CPM` : 'Contact for pricing',
+          price: ad.pricing?.flatRate ? `$${ad.pricing.flatRate} ${ad.pricing.pricingModel === 'cpm' ? 'CPM' : ''}` : 'Contact for pricing',
           availability: ad.available ? 'Available' : 'Booked',
           impressions: ad.monthlyImpressions ? `${ad.monthlyImpressions.toLocaleString()}/month` : '-'
         });
@@ -78,8 +77,7 @@ export const PublicationInventory: React.FC = () => {
             channel: 'newsletter',
             position: `${newsletter.name || `Newsletter ${newsletterIndex + 1}`} • ${ad.position || 'Standard'}`,
             size: ad.dimensions || 'Standard',
-            price: ad.pricing?.monthly ? `$${ad.pricing.monthly}/month` : 
-                   ad.pricing?.perSend ? `$${ad.pricing.perSend}/send` : 'Contact for pricing',
+            price: ad.pricing?.flatRate ? `$${ad.pricing.flatRate} ${ad.pricing.pricingModel === 'per_send' ? '/send' : ''}` : 'Contact for pricing',
             availability: 'Available', // Default since newsletters don't have availability flag
             impressions: newsletter.subscribers ? `${newsletter.subscribers.toLocaleString()}/send` : '-',
             newsletterName: newsletter.name || `Newsletter ${newsletterIndex + 1}`,
@@ -105,16 +103,27 @@ export const PublicationInventory: React.FC = () => {
       
       printPublications.forEach((printPub, printIndex) => {
         printPub.advertisingOpportunities?.forEach((ad, adIndex) => {
+          // Format price based on pricing structure
+          let priceDisplay = 'Contact for pricing';
+          if (Array.isArray(ad.pricing)) {
+            // Multiple pricing tiers - show the first one
+            const firstTier = ad.pricing[0];
+            if (firstTier?.pricing?.flatRate && firstTier?.frequency) {
+              priceDisplay = `$${firstTier.pricing.flatRate} (${firstTier.frequency})`;
+            }
+          } else if (ad.pricing?.flatRate) {
+            // Single pricing tier
+            const freq = ad.pricing.frequency ? ` (${ad.pricing.frequency})` : '';
+            priceDisplay = `$${ad.pricing.flatRate}${freq}`;
+          }
+
           items.push({
             id: itemId++,
             type: ad.name || 'Print Ad',
             channel: 'print',
             position: `${printPub.name || `Print Publication ${printIndex + 1}`} • ${ad.location || 'Print'} • ${ad.adFormat || 'Standard'}${ad.color ? ` (${ad.color})` : ''}`,
             size: ad.dimensions || 'Standard',
-            price: ad.pricing?.oneTime ? `$${ad.pricing.oneTime}/issue` : 
-                   ad.pricing?.twelveTimes ? `$${ad.pricing.twelveTimes}/issue (12x rate)` : 
-                   ad.pricing?.sixTimes ? `$${ad.pricing.sixTimes}/issue (6x rate)` : 
-                   ad.pricing?.fourTimes ? `$${ad.pricing.fourTimes}/issue (4x rate)` : 'Contact for pricing',
+            price: priceDisplay,
             availability: 'Available', // Default since print ads don't have availability flag
             impressions: printPub.circulation ? 
                         `${printPub.circulation.toLocaleString()}/issue` : '-',
@@ -211,13 +220,19 @@ export const PublicationInventory: React.FC = () => {
   };
 
   const formatPrice = (pricing: any) => {
-    if (pricing?.flatRate) return `$${pricing.flatRate.toLocaleString()}`;
-    if (pricing?.cpm) return `$${pricing.cpm} CPM`;
-    if (pricing?.perSend) return `$${pricing.perSend} per send`;
-    if (pricing?.perSpot) return `$${pricing.perSpot} per spot`;
-    if (pricing?.perPost) return `$${pricing.perPost} per post`;
-    if (pricing?.oneTime) return `$${pricing.oneTime}`;
-    return 'Contact for pricing';
+    if (!pricing?.flatRate) return 'Contact for pricing';
+    
+    const price = `$${pricing.flatRate.toLocaleString()}`;
+    const model = pricing.pricingModel;
+    
+    if (model === 'cpm') return `${price} CPM`;
+    if (model === 'per_send') return `${price} per send`;
+    if (model === 'per_spot') return `${price} per spot`;
+    if (model === 'per_post') return `${price} per post`;
+    if (model === 'per_week') return `${price} per week`;
+    if (model === 'per_day') return `${price} per day`;
+    
+    return price;
   };
 
   const addDistributionChannel = async (channelType: 'podcasts' | 'radio' | 'streaming') => {

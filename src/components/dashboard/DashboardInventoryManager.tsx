@@ -33,7 +33,12 @@ const validateInventoryItem = (item: any, type: string): boolean => {
   }
   
   // Validate advertising opportunities
-  if (!item.name && !item.title) return false;
+  // Event sponsorships use 'level' field instead of 'name' or 'title'
+  if (type === 'event') {
+    if (!item.level) return false;
+  } else {
+    if (!item.name && !item.title) return false;
+  }
   
   return true;
 };
@@ -494,7 +499,9 @@ export const DashboardInventoryManager = () => {
     
     // For container types, we don't need editingIndex since we're editing the container itself
     const isContainerType = editingType?.includes('-container');
-    if (!isContainerType && editingIndex < 0) return;
+    // For events, we use editingParentIndex and editingItemIndex instead of editingIndex
+    const isEventSponsorship = editingType === 'event';
+    if (!isContainerType && !isEventSponsorship && editingIndex < 0) return;
 
     // Clean up hub pricing - remove any invalid entries
     if (editingItem.hubPricing && Array.isArray(editingItem.hubPricing)) {
@@ -520,6 +527,13 @@ export const DashboardInventoryManager = () => {
 
     // Validate the item before saving
     if (!validateInventoryItem(editingItem, editingType)) {
+      console.error('❌ Validation failed:', {
+        editingType,
+        editingItem,
+        hasLevel: editingItem.level,
+        hasName: editingItem.name,
+        hasTitle: editingItem.title
+      });
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields before saving.",
@@ -2761,7 +2775,6 @@ export const DashboardInventoryManager = () => {
                           setEditingType('event-container');
                           setEditingItemIndex(eventIndex);
                           setEditingItem({ ...event });
-                          setEditingDialogOpen(true);
                         }}
                       >
                         <Edit className="w-4 h-4" />
@@ -2805,7 +2818,6 @@ export const DashboardInventoryManager = () => {
                                   setEditingParentIndex(eventIndex);
                                   setEditingItemIndex(oppIndex);
                                   setEditingItem({ ...opportunity });
-                                  setEditingDialogOpen(true);
                                 }}
                               >
                                 <Edit className="w-4 h-4" />

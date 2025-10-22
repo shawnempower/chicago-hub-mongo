@@ -10,6 +10,7 @@ import { PublicationKnowledgeBase } from "@/components/dashboard/PublicationKnow
 import { PublicationSettings } from "@/components/dashboard/PublicationSettings";
 import { PublicationStorefront } from "@/components/dashboard/PublicationStorefront";
 import { PublicationFullSummary } from "@/components/dashboard/PublicationFullSummary";
+import { HubPricingReport } from "@/components/dashboard/HubPricingReport";
 import { useAuth } from "@/contexts/CustomAuthContext";
 import { Navigate, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { usePublication } from "@/contexts/PublicationContext";
@@ -21,7 +22,8 @@ import {
   BookOpen, 
   Settings, 
   Store, 
-  FileText
+  FileText,
+  DollarSign
 } from "lucide-react";
 
 // Main Dashboard Component
@@ -61,6 +63,7 @@ export default function Dashboard() {
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'storefront', label: 'Storefront', icon: Store },
     { id: 'summary', label: 'Summary', icon: FileText },
+    { id: 'hub-pricing', label: 'Hub Pricing', icon: DollarSign },
   ];
 
   const renderContent = () => {
@@ -79,6 +82,8 @@ export default function Dashboard() {
         return <PublicationStorefront />;
       case 'summary':
         return <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />;
+      case 'hub-pricing':
+        return <HubPricingReport onBack={() => handleTabChange('dashboard')} />;
       default:
         return <DashboardOverview />;
     }
