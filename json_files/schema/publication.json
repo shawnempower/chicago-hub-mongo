@@ -308,11 +308,7 @@
                         },
                         "pricing": {
                           "type": "object",
-                          "properties": {
-                            "cpm": {
-                              "type": "number",
-                              "description": "Cost per thousand impressions"
-                            },
+                          "properties": {                          
                             "flatRate": {
                               "type": "number",
                               "description": "Price amount (meaning depends on pricingModel)"
