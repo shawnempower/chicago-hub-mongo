@@ -1702,6 +1702,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="per_ad">Per Ad</SelectItem>
+                              <SelectItem value="per_line">Per Line</SelectItem>
                               <SelectItem value="contact">Contact for pricing</SelectItem>
                             </SelectContent>
                           </Select>

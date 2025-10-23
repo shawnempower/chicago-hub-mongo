@@ -3464,6 +3464,7 @@ export const PublicationInventoryManager = () => {
                     ]}
                     pricingModels={[
                       { value: 'per_ad', label: 'Per Ad' },
+                      { value: 'per_line', label: 'Per Line' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
                     additionalFields={[
@@ -3655,6 +3656,7 @@ export const PublicationInventoryManager = () => {
                   ]}
                   pricingModels={[
                     { value: 'per_ad', label: '/ad' },
+                    { value: 'per_line', label: '/line' },
                     { value: 'contact', label: 'Contact for pricing' }
                   ]}
                   conditionalFields={[
@@ -3662,7 +3664,7 @@ export const PublicationInventoryManager = () => {
                       key: 'frequency',
                       label: 'Frequency',
                       type: 'text',
-                      showWhen: ['per_ad'],
+                      showWhen: ['per_ad', 'per_line'],
                       placeholder: 'e.g., 4x, 12x, One time',
                       pattern: '^(?:\\d+x|One time|one time)$',
                       patternMessage: 'Enter a frequency like "4x", "12x", or "One time"'
@@ -3794,6 +3796,7 @@ export const PublicationInventoryManager = () => {
                   ]}
                   pricingModels={[
                     { value: 'per_ad', label: '/ad' },
+                    { value: 'per_line', label: '/line' },
                     { value: 'contact', label: 'Contact for pricing' }
                   ]}
                   conditionalFields={[
@@ -3801,7 +3804,7 @@ export const PublicationInventoryManager = () => {
                       key: 'frequency',
                       label: 'Frequency',
                       type: 'text',
-                      showWhen: ['per_ad'],
+                      showWhen: ['per_ad', 'per_line'],
                       placeholder: 'e.g., 4x, 12x, One time',
                       pattern: '^(?:\\d+x|One time|one time)$',
                       patternMessage: 'Enter a frequency like "4x", "12x", or "One time"'

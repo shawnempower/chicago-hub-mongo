@@ -52,7 +52,7 @@ export const DashboardInventoryManager = () => {
   
   // Edit dialog states
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [editingType, setEditingType] = useState<'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'podcast' | 'radio' | 'streaming' | 'television' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'television-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'television-ad' | 'social-media-ad' | 'print-ad' | null>(null);
+  const [editingType, setEditingType] = useState<'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'podcast' | 'radio' | 'streaming' | 'television' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'social-media-container' | 'television-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'television-ad' | 'social-media-ad' | 'print-ad' | null>(null);
   const [editingIndex, setEditingIndex] = useState<number>(-1);
   const [editingSubIndex, setEditingSubIndex] = useState<number>(-1); // for newsletter ads within newsletters
   const [editingParentIndex, setEditingParentIndex] = useState<number>(-1); // for event parent index
@@ -76,6 +76,7 @@ export const DashboardInventoryManager = () => {
       
       // Print models
       case 'per_ad': return '/ad';
+      case 'per_line': return '/line';
       
       // Podcast models
       case 'cpd': return '/1000 downloads';  // Cost per thousand downloads
@@ -692,6 +693,12 @@ export const DashboardInventoryManager = () => {
           }
           break;
 
+        case 'social-media-container':
+          if (updatedPublication.distributionChannels?.socialMedia && editingIndex >= 0) {
+            updatedPublication.distributionChannels.socialMedia[editingIndex] = editingItem;
+          }
+          break;
+
         default:
           console.warn('Unknown editing type:', editingType);
           return;
@@ -758,6 +765,9 @@ export const DashboardInventoryManager = () => {
             break;
           case 'streaming-container':
             savedItem = result.distributionChannels?.streamingVideo?.[editingIndex];
+            break;
+          case 'social-media-container':
+            savedItem = result.distributionChannels?.socialMedia?.[editingIndex];
             break;
         }
         
@@ -3705,6 +3715,7 @@ export const DashboardInventoryManager = () => {
                     ]}
                     pricingModels={[
                       { value: 'per_ad', label: '/ad' },
+                      { value: 'per_line', label: '/line' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
                     conditionalFields={[
@@ -3712,7 +3723,7 @@ export const DashboardInventoryManager = () => {
                         key: 'frequency',
                         label: 'Frequency',
                         type: 'text',
-                        showWhen: ['per_ad'],
+                        showWhen: ['per_ad', 'per_line'],
                         placeholder: 'e.g., 4x, 12x, One time',
                         pattern: '^(?:\\d+x|One time|one time)$',
                         patternMessage: 'Enter a frequency like "4x", "12x", or "One time"'

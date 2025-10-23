@@ -820,7 +820,7 @@
                             },
                             "pricingModel": {
                               "type": "string",
-                              "enum": ["per_ad", "contact"],
+                              "enum": ["per_ad", "per_line", "contact"],
                               "description": "Pricing model type"
                             },
                             "frequency": {
@@ -1175,7 +1175,7 @@
                                   },
                                   "pricingModel": {
                                     "type": "string",
-                                    "enum": ["per_ad", "per_episode", "cpd", "cpm", "flat", "contact"]
+                                    "enum": ["per_ad", "per_line", "per_episode", "cpd", "cpm", "flat", "contact"]
                                   },
                                   "frequency": {
                                     "type": "string"

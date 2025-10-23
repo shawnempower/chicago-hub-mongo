@@ -33,7 +33,7 @@ All inventory types now use the same structure:
 
 - **Website**: `flat_rate`, `flat`, `per_week`, `per_day`, `cpm`, `cpc`, `contact`
 - **Newsletter**: `per_send`, `contact`
-- **Print**: `per_ad`, `contact`
+- **Print**: `per_ad`, `per_line`, `contact`
 - **Podcast/Radio**: `per_spot`, `cpm`, `per_ad`, `contact`
 - **Social Media**: `per_post`, `per_story`, `monthly`, `cpm`, `contact`
 - **Streaming**: `cpm`, `flat`, `contact`
