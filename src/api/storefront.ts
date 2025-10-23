@@ -161,7 +161,7 @@ export const deleteStorefrontConfiguration = async (publicationId: string): Prom
   }
 };
 
-// Publish a draft storefront configuration (set is_draft to false)
+// Publish a draft storefront configuration (replaces live with draft)
 export const publishStorefrontConfiguration = async (publicationId: string): Promise<StorefrontConfiguration | null> => {
   try {
     const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}/publish`, {
@@ -185,6 +185,30 @@ export const publishStorefrontConfiguration = async (publicationId: string): Pro
   } catch (error) {
     console.error('Error publishing storefront configuration:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to publish storefront configuration');
+  }
+};
+
+// Create a draft copy from the live version
+export const createDraftStorefrontConfiguration = async (publicationId: string): Promise<StorefrontConfiguration> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}/create-draft`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('auth_token');
+        throw new Error('Authentication required. Please log in again.');
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to create draft configuration');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating draft storefront configuration:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to create draft configuration');
   }
 };
 

@@ -8,7 +8,7 @@
     "meta": {
       "type": "object",
       "description": "Configuration metadata and versioning information",
-      "required": ["configVersion", "publisherId", "isDraft"],
+      "required": ["configVersion", "publisherId", "websiteUrl", "isDraft"],
       "properties": {
         "configVersion": {
           "type": "string",
@@ -32,9 +32,10 @@
         },
         "websiteUrl": {
           "type": "string",
-          "description": "Website url that hosts the storefront",
+          "description": "Website URL that hosts the storefront (required for preview and publishing)",
           "format": "uri",
-          "minLength": 1
+          "minLength": 1,
+          "examples": ["https://chicagoreader.com", "https://blockclubchicago.org"]
         },
         "isDraft": {
           "type": "boolean",

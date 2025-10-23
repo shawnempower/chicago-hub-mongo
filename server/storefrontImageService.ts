@@ -1,5 +1,6 @@
 import { S3Service } from './s3Service';
 import { storefrontConfigurationsService } from '../src/integrations/mongodb/allServices';
+import crypto from 'crypto';
 
 interface StorefrontImageUploadOptions {
   userId: string;
@@ -31,20 +32,28 @@ export class StorefrontImageService {
   async uploadStorefrontImage(options: StorefrontImageUploadOptions): Promise<StorefrontImageResult> {
     try {
       // Generate a specific folder structure for storefront images
-      const folder = `storefront/${options.publicationId}/${options.imageType}`;
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const timestamp = Date.now();
+      const randomString = crypto.randomBytes(8).toString('hex');
       const extension = options.originalName.split('.').pop();
-      const filename = `${options.imageType}-${timestamp}.${extension}`;
+      
+      // Create custom S3 key for organized storefront images
+      // Format: storefront/{publicationId}/{imageType}/{timestamp}_{random}.{ext}
+      const customKey = `storefront/${options.publicationId}/${options.imageType}/${timestamp}_${randomString}.${extension}`;
 
-      // Upload to S3
-      const uploadResult = await this.s3Service.uploadFile({
-        userId: options.userId,
-        folder: 'uploads', // Will be overridden by our custom key
-        originalName: filename,
-        mimeType: options.mimeType,
-        buffer: options.buffer,
-        isPublic: true
-      });
+      // Upload to S3 using the new method with custom key
+      const uploadResult = await this.s3Service.uploadFileWithCustomKey(
+        customKey,
+        options.buffer,
+        options.mimeType,
+        {
+          originalName: options.originalName,
+          userId: options.userId,
+          publicationId: options.publicationId,
+          imageType: options.imageType,
+          uploadedAt: new Date().toISOString(),
+        },
+        true  // isPublic - will use CloudFront URL if configured
+      );
 
       if (!uploadResult.success) {
         return {
@@ -137,7 +146,8 @@ export class StorefrontImageService {
   }
 
   /**
-   * Remove a storefront image
+   * Remove a storefront image (soft delete - only removes from config, keeps in S3)
+   * Images are kept in S3 for potential rollback or draft/publish workflows
    */
   async removeStorefrontImage(
     publicationId: string,
@@ -162,22 +172,18 @@ export class StorefrontImageService {
         };
       }
 
-      // Extract S3 key and delete from S3
-      const s3Key = this.extractS3KeyFromUrl(currentImageUrl);
-      if (s3Key) {
-        try {
-          await this.s3Service.deleteFile(s3Key);
-        } catch (error) {
-          console.warn('Failed to delete image from S3:', error);
-          // Continue with config update even if S3 deletion fails
-        }
-      }
+      // SOFT DELETE: Only remove from configuration, keep file in S3
+      // This allows for:
+      // - Rollback if needed
+      // - Draft versions can reference old images
+      // - Published version still has images until draft is published
+      console.log(`Soft-deleting image from config (keeping in S3): ${currentImageUrl}`);
 
       // Update configuration to remove the image URL
       const updateResult = await this.updateStorefrontImageUrl(
         publicationId,
         imageType,
-        null, // Remove the URL
+        null, // Remove the URL from config
         channelId
       );
 
@@ -191,6 +197,25 @@ export class StorefrontImageService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  /**
+   * Hard delete an image from S3 (use with caution)
+   * Only call this when you're certain the image is no longer referenced anywhere
+   */
+  async permanentlyDeleteImage(s3Key: string): Promise<StorefrontImageResult> {
+    try {
+      await this.s3Service.deleteFile(s3Key);
+      return {
+        success: true
+      };
+    } catch (error) {
+      console.error('Error permanently deleting image:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete image'
       };
     }
   }

@@ -45,8 +45,8 @@ import multer from 'multer';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize storefront image service
-const storefrontImageService = new StorefrontImageService(s3Service);
+// Initialize storefront image service (will be set after S3 service is ready)
+let storefrontImageService: StorefrontImageService | null = null;
 
 // Middleware
 app.use(helmet());
@@ -855,7 +855,20 @@ app.get('/api/publications/files/search', authenticateToken, async (req: any, re
 app.get('/api/storefront/:publicationId', async (req, res) => {
   try {
     const { publicationId } = req.params;
-    const config = await storefrontConfigurationsService.getByPublicationId(publicationId);
+    const { isDraft } = req.query;
+    
+    // If isDraft query param is specified, use it
+    // Otherwise, prefer draft for editing, fall back to live
+    let config;
+    if (isDraft !== undefined) {
+      config = await storefrontConfigurationsService.getByPublicationId(publicationId, isDraft === 'true');
+    } else {
+      // Try draft first (for editing), then fall back to live
+      config = await storefrontConfigurationsService.getByPublicationId(publicationId, true);
+      if (!config) {
+        config = await storefrontConfigurationsService.getByPublicationId(publicationId, false);
+      }
+    }
     
     if (!config) {
       return res.status(404).json({ error: 'Storefront configuration not found' });
@@ -952,6 +965,24 @@ app.delete('/api/storefront/:publicationId', authenticateToken, async (req: any,
     }
 
     const { publicationId } = req.params;
+    const { isDraft } = req.query;
+    
+    // If isDraft is specified, delete only that version
+    if (isDraft !== undefined) {
+      const db = getDatabase();
+      const result = await db.collection('storefront_configurations').deleteOne({
+        publicationId,
+        'meta.isDraft': isDraft === 'true'
+      });
+      
+      if (result.deletedCount === 0) {
+        return res.status(404).json({ error: `Storefront configuration (${isDraft === 'true' ? 'draft' : 'live'}) not found` });
+      }
+      
+      return res.json({ success: true, deletedCount: result.deletedCount });
+    }
+    
+    // Otherwise delete all versions (backward compatibility)
     const success = await storefrontConfigurationsService.delete(publicationId);
     
     if (!success) {
@@ -966,6 +997,7 @@ app.delete('/api/storefront/:publicationId', authenticateToken, async (req: any,
 });
 
 // Publish storefront configuration (admin only)
+// Publish draft to live (replaces live version with draft)
 app.post('/api/storefront/:publicationId/publish', authenticateToken, async (req: any, res) => {
   try {
     // Check if user is admin
@@ -975,16 +1007,35 @@ app.post('/api/storefront/:publicationId/publish', authenticateToken, async (req
     }
 
     const { publicationId } = req.params;
-    const config = await storefrontConfigurationsService.publish(publicationId);
+    const config = await storefrontConfigurationsService.publishDraft(publicationId);
     
     if (!config) {
-      return res.status(404).json({ error: 'Storefront configuration not found' });
+      return res.status(404).json({ error: 'Draft configuration not found' });
     }
     
     res.json(config);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error publishing storefront configuration:', error);
-    res.status(500).json({ error: 'Failed to publish storefront configuration' });
+    res.status(500).json({ error: error.message || 'Failed to publish storefront configuration' });
+  }
+});
+
+// Create draft from live version
+app.post('/api/storefront/:publicationId/create-draft', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { publicationId } = req.params;
+    const config = await storefrontConfigurationsService.createDraft(publicationId);
+    
+    res.json(config);
+  } catch (error: any) {
+    console.error('Error creating draft storefront configuration:', error);
+    res.status(500).json({ error: error.message || 'Failed to create draft configuration' });
   }
 });
 
@@ -1137,6 +1188,16 @@ app.post('/api/storefront/:publicationId/images', authenticateToken, upload.sing
       return res.status(400).json({ error: 'File must be an image' });
     }
 
+    // Initialize storefront image service if not already done
+    const s3ServiceInstance = s3Service();
+    if (!s3ServiceInstance) {
+      return res.status(503).json({ error: 'File storage service unavailable' });
+    }
+    
+    if (!storefrontImageService) {
+      storefrontImageService = new StorefrontImageService(s3ServiceInstance);
+    }
+
     const result = await storefrontImageService.uploadStorefrontImage({
       userId: req.user.id,
       publicationId,
@@ -1193,6 +1254,16 @@ app.put('/api/storefront/:publicationId/images', authenticateToken, upload.singl
       return res.status(400).json({ error: 'File must be an image' });
     }
 
+    // Initialize storefront image service if not already done
+    const s3ServiceInstance = s3Service();
+    if (!s3ServiceInstance) {
+      return res.status(503).json({ error: 'File storage service unavailable' });
+    }
+    
+    if (!storefrontImageService) {
+      storefrontImageService = new StorefrontImageService(s3ServiceInstance);
+    }
+
     const result = await storefrontImageService.replaceStorefrontImage({
       userId: req.user.id,
       publicationId,
@@ -1238,6 +1309,16 @@ app.delete('/api/storefront/:publicationId/images', authenticateToken, async (re
 
     if (imageType === 'channel' && !channelId) {
       return res.status(400).json({ error: 'channelId required for channel images' });
+    }
+
+    // Initialize storefront image service if not already done
+    const s3ServiceInstance = s3Service();
+    if (!s3ServiceInstance) {
+      return res.status(503).json({ error: 'File storage service unavailable' });
+    }
+    
+    if (!storefrontImageService) {
+      storefrontImageService = new StorefrontImageService(s3ServiceInstance);
     }
 
     const result = await storefrontImageService.removeStorefrontImage(

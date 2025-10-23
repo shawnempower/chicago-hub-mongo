@@ -10,6 +10,7 @@ interface S3Config {
   bucket: string;
   endpoint?: string;
   forcePathStyle?: boolean;
+  cloudFrontDomain?: string;  // Optional CloudFront domain for public URLs
 }
 
 interface UploadResult {
@@ -31,9 +32,11 @@ interface FileUploadOptions {
 export class S3Service {
   private s3Client: S3Client;
   private bucket: string;
+  private cloudFrontDomain?: string;
 
   constructor(config: S3Config) {
     this.bucket = config.bucket;
+    this.cloudFrontDomain = config.cloudFrontDomain;
     
     this.s3Client = new S3Client({
       region: config.region,
@@ -62,7 +65,8 @@ export class S3Service {
     try {
       const key = this.generateFileKey(options.userId, options.folder, options.originalName);
       
-      const command = new PutObjectCommand({
+      // First try with ACL if bucket allows it
+      let command = new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
         Body: options.buffer,
@@ -73,16 +77,46 @@ export class S3Service {
           folder: options.folder,
           uploadedAt: new Date().toISOString(),
         },
-        // Set ACL based on public/private requirement
+        // Try to set ACL for public access
         ...(options.isPublic ? { ACL: 'public-read' } : {}),
       });
 
-      await this.s3Client.send(command);
+      try {
+        await this.s3Client.send(command);
+      } catch (aclError: any) {
+        // If ACL fails, retry without ACL (rely on bucket policy)
+        if (aclError.name === 'AccessControlListNotSupported' || aclError.message?.includes('does not allow ACLs')) {
+          console.log('ACL not supported, retrying without ACL...');
+          command = new PutObjectCommand({
+            Bucket: this.bucket,
+            Key: key,
+            Body: options.buffer,
+            ContentType: options.mimeType,
+            Metadata: {
+              originalName: options.originalName,
+              userId: options.userId,
+              folder: options.folder,
+              uploadedAt: new Date().toISOString(),
+            },
+            // No ACL - rely on bucket policy
+          });
+          await this.s3Client.send(command);
+        } else {
+          throw aclError;
+        }
+      }
 
       // Generate URL
-      const url = options.isPublic 
-        ? `https://${this.bucket}.s3.amazonaws.com/${key}`
-        : await this.getSignedUrl(key, 3600); // 1 hour expiry for private files
+      let url: string;
+      if (options.isPublic) {
+        // Use CloudFront if configured, otherwise direct S3
+        url = this.cloudFrontDomain 
+          ? `https://${this.cloudFrontDomain}/${key}`
+          : `https://${this.bucket}.s3.amazonaws.com/${key}`;
+      } else {
+        // Private files use signed URLs
+        url = await this.getSignedUrl(key, 3600); // 1 hour expiry
+      }
 
       return {
         success: true,
@@ -206,6 +240,72 @@ export class S3Service {
     }
   }
 
+  // Upload file with custom S3 key (for storefront images and other special cases)
+  async uploadFileWithCustomKey(
+    key: string,
+    buffer: Buffer,
+    mimeType: string,
+    metadata: Record<string, string>,
+    isPublic: boolean = false
+  ): Promise<UploadResult> {
+    try {
+      // First try with ACL if bucket allows it
+      let command = new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: mimeType,
+        Metadata: metadata,
+        // Try to set ACL for public access
+        ...(isPublic ? { ACL: 'public-read' } : {}),
+      });
+
+      try {
+        await this.s3Client.send(command);
+      } catch (aclError: any) {
+        // If ACL fails, retry without ACL (rely on bucket policy)
+        if (aclError.name === 'AccessControlListNotSupported' || aclError.message?.includes('does not allow ACLs')) {
+          console.log('ACL not supported for custom key, retrying without ACL...');
+          command = new PutObjectCommand({
+            Bucket: this.bucket,
+            Key: key,
+            Body: buffer,
+            ContentType: mimeType,
+            Metadata: metadata,
+            // No ACL - rely on bucket policy
+          });
+          await this.s3Client.send(command);
+        } else {
+          throw aclError;
+        }
+      }
+
+      // Generate URL
+      let url: string;
+      if (isPublic) {
+        // Use CloudFront if configured, otherwise direct S3
+        url = this.cloudFrontDomain 
+          ? `https://${this.cloudFrontDomain}/${key}`
+          : `https://${this.bucket}.s3.amazonaws.com/${key}`;
+      } else {
+        // Private files use signed URLs
+        url = await this.getSignedUrl(key, 3600); // 1 hour expiry
+      }
+
+      return {
+        success: true,
+        key,
+        url,
+      };
+    } catch (error) {
+      console.error('Error uploading file with custom key to S3:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown upload error',
+      };
+    }
+  }
+
   // Generate presigned URL for direct upload (for large files)
   async generatePresignedUploadUrl(
     userId: string,
@@ -254,6 +354,7 @@ export const createS3Service = (): S3Service | null => {
     bucket: process.env.AWS_S3_BUCKET || '',
     endpoint: process.env.AWS_S3_ENDPOINT,
     forcePathStyle: process.env.AWS_S3_FORCE_PATH_STYLE === 'true',
+    cloudFrontDomain: process.env.AWS_CLOUDFRONT_DOMAIN, // e.g., "d123456789.cloudfront.net"
   };
 
   // Check if required config is present

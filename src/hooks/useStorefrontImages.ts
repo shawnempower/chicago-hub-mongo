@@ -32,7 +32,7 @@ export const useStorefrontImages = () => {
       }
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/api/storefront/${options.publicationId}/images`, {
+      const response = await fetch(`${API_BASE_URL}/storefront/${options.publicationId}/images`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -70,7 +70,7 @@ export const useStorefrontImages = () => {
       }
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/api/storefront/${options.publicationId}/images`, {
+      const response = await fetch(`${API_BASE_URL}/storefront/${options.publicationId}/images`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -110,7 +110,7 @@ export const useStorefrontImages = () => {
       }
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/api/storefront/${publicationId}/images?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}/images?${params}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

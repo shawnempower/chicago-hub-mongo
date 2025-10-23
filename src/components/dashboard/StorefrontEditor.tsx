@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { StorefrontImageManager } from './StorefrontImageManager';
 
 // Available component types that can be added
 const AVAILABLE_COMPONENT_TYPES: ComponentType[] = [
@@ -114,13 +115,15 @@ interface StorefrontEditorProps {
   onChange: (config: StorefrontConfiguration) => void;
   onSave: (config: StorefrontConfiguration) => void;
   saving: boolean;
+  publicationId: string;
 }
 
 export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
   config,
   onChange,
   onSave,
-  saving
+  saving,
+  publicationId
 }) => {
   const [activeComponent, setActiveComponent] = useState<ComponentType>('hero');
 
@@ -387,15 +390,14 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
         />
       </div>
       
-      <div>
-        <Label htmlFor="hero-image">Hero Image URL</Label>
-        <Input
-          id="hero-image"
-          value={content.imageUrl}
-          onChange={(e) => updateComponentContent('hero', { ...content, imageUrl: e.target.value })}
-          placeholder="https://example.com/hero-image.jpg"
-        />
-      </div>
+      <StorefrontImageManager
+        publicationId={publicationId}
+        config={config}
+        onChange={onChange}
+        imageType="hero"
+        label="Hero Background Image"
+        description="Upload a high-quality hero image (recommended: 1920x1080px)"
+      />
 
       <div>
         <Label>Statistics</Label>
@@ -572,15 +574,14 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
 
   const renderNavbarEditor = (content: NavbarContent) => (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="navbar-logo">Logo URL</Label>
-        <Input
-          id="navbar-logo"
-          value={content.logoUrl}
-          onChange={(e) => updateComponentContent('navbar', { ...content, logoUrl: e.target.value })}
-          placeholder="https://example.com/logo.png"
-        />
-      </div>
+      <StorefrontImageManager
+        publicationId={publicationId}
+        config={config}
+        onChange={onChange}
+        imageType="logo"
+        label="Logo"
+        description="Upload your publication's logo (recommended: 200x50px, PNG with transparency)"
+      />
       
       <div>
         <Label htmlFor="navbar-cta-text">CTA Button Text</Label>
@@ -733,18 +734,15 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                   />
                 </div>
                 
-                <div>
-                  <Label>Image URL</Label>
-                  <Input
-                    value={channel.imageUrl}
-                    onChange={(e) => {
-                      const newChannels = [...(content.channels || [])];
-                      newChannels[index] = { ...channel, imageUrl: e.target.value };
-                      updateComponentContent('inventory', { ...content, channels: newChannels });
-                    }}
-                    placeholder="https://example.com/image.jpg"
-                  />
-                </div>
+                <StorefrontImageManager
+                  publicationId={publicationId}
+                  config={config}
+                  onChange={onChange}
+                  imageType="channel"
+                  channelId={channel.id}
+                  label="Channel Image"
+                  description="Upload an image for this advertising channel"
+                />
 
                 <div>
                   <Label>Statistics</Label>
@@ -1199,15 +1197,14 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
         />
       </div>
       
-      <div>
-        <Label htmlFor="about-image">Image URL</Label>
-        <Input
-          id="about-image"
-          value={content.imageUrl}
-          onChange={(e) => updateComponentContent('aboutus', { ...content, imageUrl: e.target.value })}
-          placeholder="https://example.com/about-image.jpg"
-        />
-      </div>
+      <StorefrontImageManager
+        publicationId={publicationId}
+        config={config}
+        onChange={onChange}
+        imageType="about"
+        label="About Us Image"
+        description="Upload an image for the about section (recommended: 800x600px)"
+      />
 
       <div>
         <Label>Paragraphs</Label>

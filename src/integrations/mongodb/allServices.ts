@@ -1558,9 +1558,18 @@ export class StorefrontConfigurationsService {
     }
   }
 
-  async getByPublicationId(publicationId: string): Promise<StorefrontConfiguration | null> {
+  async getByPublicationId(publicationId: string, isDraft?: boolean): Promise<StorefrontConfiguration | null> {
     try {
-      return await this.collection.findOne({ publicationId });
+      const query: any = { publicationId };
+      
+      // If isDraft is specified, filter by it; otherwise get the live version by default
+      if (isDraft !== undefined) {
+        query['meta.isDraft'] = isDraft;
+      } else {
+        query['meta.isDraft'] = false; // Default to live version
+      }
+      
+      return await this.collection.findOne(query);
     } catch (error) {
       console.error('Error fetching storefront configuration:', error);
       throw error;
@@ -1578,10 +1587,14 @@ export class StorefrontConfigurationsService {
 
   async create(configData: StorefrontConfigurationInsert): Promise<StorefrontConfiguration> {
     try {
-      // Check if configuration already exists for this publication
-      const existingConfig = await this.collection.findOne({ publicationId: configData.publicationId });
+      // Check if configuration with same isDraft status already exists for this publication
+      const isDraft = configData.meta?.isDraft ?? false;
+      const existingConfig = await this.collection.findOne({ 
+        publicationId: configData.publicationId,
+        'meta.isDraft': isDraft
+      });
       if (existingConfig) {
-        throw new Error(`Storefront configuration already exists for publication ${configData.publicationId}`);
+        throw new Error(`Storefront configuration (${isDraft ? 'draft' : 'live'}) already exists for publication ${configData.publicationId}`);
       }
 
       const now = new Date();
@@ -1610,7 +1623,7 @@ export class StorefrontConfigurationsService {
     }
   }
 
-  async update(publicationId: string, updates: Partial<StorefrontConfigurationInsert>): Promise<StorefrontConfiguration | null> {
+  async update(publicationId: string, updates: Partial<StorefrontConfigurationInsert>, isDraft?: boolean): Promise<StorefrontConfiguration | null> {
     try {
       const updateData: StorefrontConfigurationUpdate = {
         ...updates,
@@ -1625,8 +1638,14 @@ export class StorefrontConfigurationsService {
         };
       }
 
+      // Build query to target specific version (draft or live)
+      const query: any = { publicationId };
+      if (isDraft !== undefined) {
+        query['meta.isDraft'] = isDraft;
+      }
+
       const result = await this.collection.findOneAndUpdate(
-        { publicationId },
+        query,
         { $set: updateData },
         { returnDocument: 'after' }
       );
@@ -1648,6 +1667,92 @@ export class StorefrontConfigurationsService {
     }
   }
 
+  /**
+   * Create a draft copy from the live version
+   */
+  async createDraft(publicationId: string): Promise<StorefrontConfiguration> {
+    try {
+      // Get the live version
+      const liveConfig = await this.getByPublicationId(publicationId, false);
+      if (!liveConfig) {
+        throw new Error(`No live configuration found for publication ${publicationId}`);
+      }
+
+      // Check if draft already exists
+      const existingDraft = await this.getByPublicationId(publicationId, true);
+      if (existingDraft) {
+        throw new Error(`Draft configuration already exists for publication ${publicationId}`);
+      }
+
+      // Create draft copy
+      const draftConfig: StorefrontConfigurationInsert = {
+        ...liveConfig,
+        _id: undefined, // Remove ID to create new document
+        meta: {
+          ...liveConfig.meta,
+          isDraft: true,
+          lastUpdated: new Date().toISOString()
+        },
+        createdAt: undefined, // Will be set in create method
+        updatedAt: undefined
+      };
+
+      return await this.create(draftConfig);
+    } catch (error) {
+      console.error('Error creating draft configuration:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Publish draft version to live (replaces live version)
+   */
+  async publishDraft(publicationId: string): Promise<StorefrontConfiguration> {
+    try {
+      // Get the draft version
+      const draftConfig = await this.getByPublicationId(publicationId, true);
+      if (!draftConfig) {
+        throw new Error(`No draft configuration found for publication ${publicationId}`);
+      }
+
+      // Delete existing live version if it exists
+      await this.collection.deleteOne({ 
+        publicationId,
+        'meta.isDraft': false
+      });
+
+      // Create new live version from draft
+      const liveConfig: StorefrontConfigurationInsert = {
+        ...draftConfig,
+        _id: undefined, // Remove ID to create new document
+        meta: {
+          ...draftConfig.meta,
+          isDraft: false,
+          lastUpdated: new Date().toISOString()
+        },
+        createdAt: undefined, // Will be set in create method
+        updatedAt: undefined
+      };
+
+      const newLiveConfig = await this.create(liveConfig);
+
+      // Delete the draft after publishing
+      await this.collection.deleteOne({ 
+        publicationId,
+        'meta.isDraft': true
+      });
+
+      return newLiveConfig;
+    } catch (error) {
+      console.error('Error publishing draft configuration:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Legacy publish method - kept for backward compatibility
+   * @deprecated Use publishDraft instead
+   */
   async publish(publicationId: string): Promise<StorefrontConfiguration | null> {
     try {
       const result = await this.collection.findOneAndUpdate(

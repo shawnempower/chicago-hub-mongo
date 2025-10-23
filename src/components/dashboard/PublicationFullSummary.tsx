@@ -49,6 +49,17 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
 
   const publication = selectedPublication;
 
+  // Ensure required properties exist with defaults
+  if (!publication.distributionChannels) {
+    publication.distributionChannels = {};
+  }
+  if (!publication.basicInfo) {
+    publication.basicInfo = { publicationName: 'Unknown Publication' };
+  }
+  if (!publication.contactInfo) {
+    publication.contactInfo = {};
+  }
+
   const handlePrint = () => {
     window.print();
   };
@@ -135,7 +146,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               };
 
               // Website
-              if (publication.distributionChannels.website?.advertisingOpportunities) {
+              if (publication.distributionChannels?.website?.advertisingOpportunities) {
                 const websiteAds = publication.distributionChannels.website.advertisingOpportunities;
                 const reach = publication.distributionChannels.website.metrics?.monthlyVisitors || 0;
                 totalReach += reach;
@@ -149,7 +160,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               }
 
               // Newsletters
-              publication.distributionChannels.newsletters?.forEach(newsletter => {
+              publication.distributionChannels?.newsletters?.forEach(newsletter => {
                 const reach = newsletter.subscribers || 0;
                 totalReach += reach;
                 
@@ -164,7 +175,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               });
 
               // Print
-              if (Array.isArray(publication.distributionChannels.print)) {
+              if (Array.isArray(publication.distributionChannels?.print)) {
                 publication.distributionChannels.print.forEach(print => {
                   const reach = print.circulation || 0;
                   totalReach += reach;
@@ -191,7 +202,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               }
 
               // Social Media
-              publication.distributionChannels.socialMedia?.forEach(social => {
+              publication.distributionChannels?.socialMedia?.forEach(social => {
                 const reach = social.metrics?.followers || 0;
                 totalReach += reach;
                 
@@ -206,7 +217,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               });
 
               // Events
-              publication.distributionChannels.events?.forEach(event => {
+              publication.distributionChannels?.events?.forEach(event => {
                 const reach = event.averageAttendance || 0;
                 totalReach += reach;
                 
@@ -221,7 +232,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               });
 
               // Podcasts
-              publication.distributionChannels.podcasts?.forEach(podcast => {
+              publication.distributionChannels?.podcasts?.forEach(podcast => {
                 const reach = podcast.averageListeners || 0;
                 totalReach += reach;
                 
@@ -236,7 +247,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               });
 
               // Radio
-              publication.distributionChannels.radioStations?.forEach(radio => {
+              publication.distributionChannels?.radioStations?.forEach(radio => {
                 const reach = radio.listeners || 0;
                 totalReach += reach;
                 
@@ -251,7 +262,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               });
 
               // Streaming
-              publication.distributionChannels.streamingVideo?.forEach(streaming => {
+              publication.distributionChannels?.streamingVideo?.forEach(streaming => {
                 const reach = streaming.subscribers || 0;
                 totalReach += reach;
                 
@@ -433,7 +444,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     <p className="text-sm text-gray-600">{publication.basicInfo.headquarters}</p>
                   </>
                 )}
-                {publication.contactInfo.businessHours && (
+                {publication.contactInfo?.businessHours && (
                   <>
                     <p className="font-medium mt-2">Business Hours</p>
                     <p className="text-sm text-gray-600">{publication.contactInfo.businessHours}</p>
@@ -443,7 +454,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
               <div>
                 <p className="font-medium">Contact</p>
                 <p className="text-sm text-gray-600">
-                  {publication.contactInfo.mainPhone && (
+                  {publication.contactInfo?.mainPhone && (
                     <>Phone: {publication.contactInfo.mainPhone}<br /></>
                   )}
                   {publication.basicInfo.websiteUrl && (
@@ -454,7 +465,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
             </div>
 
             {/* Key Contacts */}
-            {(publication.contactInfo.salesContact || publication.contactInfo.editorialContact || publication.contactInfo.generalManager || publication.contactInfo.advertisingDirector) && (
+            {(publication.contactInfo?.salesContact || publication.contactInfo?.editorialContact || publication.contactInfo?.generalManager || publication.contactInfo?.advertisingDirector) && (
               <div className="mt-4 print:mt-2">
                 <p className="font-medium mb-2">Key Contacts</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-2 text-sm">
@@ -507,7 +518,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
           <CardContent className="print:pt-0">
             
             {/* Website Details */}
-            {publication.distributionChannels.website && (
+            {publication.distributionChannels?.website && (
               <div className="mb-6 print:mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Globe className="h-5 w-5 text-blue-500" />
@@ -576,7 +587,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
             )}
 
             {/* Newsletter Details */}
-            {publication.distributionChannels.newsletters && publication.distributionChannels.newsletters.length > 0 && (
+            {publication.distributionChannels?.newsletters && publication.distributionChannels.newsletters.length > 0 && (
               <div className="mb-6 print:mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Mail className="h-5 w-5 text-green-500" />
@@ -620,7 +631,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
             )}
 
             {/* Print Details */}
-            {publication.distributionChannels.print && publication.distributionChannels.print.length > 0 && (
+            {publication.distributionChannels?.print && publication.distributionChannels.print.length > 0 && (
               <div className="mb-6 print:mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Newspaper className="h-5 w-5 text-orange-500" />
@@ -702,7 +713,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
             )}
 
             {/* Social Media Details */}
-            {publication.distributionChannels.socialMedia && publication.distributionChannels.socialMedia.length > 0 && (
+            {publication.distributionChannels?.socialMedia && publication.distributionChannels.socialMedia.length > 0 && (
               <div className="mb-6 print:mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Users className="h-5 w-5 text-purple-500" />
@@ -749,7 +760,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
             )}
 
             {/* Events Details */}
-            {publication.distributionChannels.events && publication.distributionChannels.events.length > 0 && (
+            {publication.distributionChannels?.events && publication.distributionChannels.events.length > 0 && (
               <div className="mb-6 print:mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Calendar className="h-5 w-5 text-green-500" />
@@ -797,7 +808,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
             )}
 
             {/* Podcasts Details */}
-            {publication.distributionChannels.podcasts && publication.distributionChannels.podcasts.length > 0 && (
+            {publication.distributionChannels?.podcasts && publication.distributionChannels.podcasts.length > 0 && (
               <div className="mb-6 print:mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Mic className="h-5 w-5 text-red-500" />
@@ -846,7 +857,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
             )}
 
             {/* Radio Details */}
-            {publication.distributionChannels.radioStations && publication.distributionChannels.radioStations.length > 0 && (
+            {publication.distributionChannels?.radioStations && publication.distributionChannels.radioStations.length > 0 && (
               <div className="mb-6 print:mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Radio className="h-5 w-5 text-yellow-500" />
@@ -893,7 +904,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
             )}
 
             {/* Streaming Video Details */}
-            {publication.distributionChannels.streamingVideo && publication.distributionChannels.streamingVideo.length > 0 && (
+            {publication.distributionChannels?.streamingVideo && publication.distributionChannels.streamingVideo.length > 0 && (
               <div className="mb-6 print:mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Video className="h-5 w-5 text-indigo-500" />
@@ -1371,7 +1382,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     const adTypes = new Set<string>();
                     
                     // Website ads
-                    if (publication.distributionChannels.website?.advertisingOpportunities) {
+                    if (publication.distributionChannels?.website?.advertisingOpportunities) {
                       totalAds += publication.distributionChannels.website.advertisingOpportunities.length;
                       publication.distributionChannels.website.advertisingOpportunities.forEach(ad => {
                         if (ad.adFormat) adTypes.add(`Website ${ad.adFormat}`);
@@ -1379,7 +1390,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     }
                     
                     // Newsletter ads
-                    publication.distributionChannels.newsletters?.forEach(newsletter => {
+                    publication.distributionChannels?.newsletters?.forEach(newsletter => {
                       if (newsletter.advertisingOpportunities) {
                         totalAds += newsletter.advertisingOpportunities.length;
                         newsletter.advertisingOpportunities.forEach(ad => {
@@ -1389,7 +1400,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     });
                     
                     // Print ads
-                    if (Array.isArray(publication.distributionChannels.print)) {
+                    if (Array.isArray(publication.distributionChannels?.print)) {
                       publication.distributionChannels.print.forEach(print => {
                         if (print.advertisingOpportunities) {
                           totalAds += print.advertisingOpportunities.length;
@@ -1401,7 +1412,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     }
                     
                     // Social media ads
-                    publication.distributionChannels.socialMedia?.forEach(social => {
+                    publication.distributionChannels?.socialMedia?.forEach(social => {
                       if (social.advertisingOpportunities) {
                         totalAds += social.advertisingOpportunities.length;
                         social.advertisingOpportunities.forEach(ad => {
@@ -1411,7 +1422,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     });
                     
                     // Event ads
-                    publication.distributionChannels.events?.forEach(event => {
+                    publication.distributionChannels?.events?.forEach(event => {
                       if (event.advertisingOpportunities) {
                         totalAds += event.advertisingOpportunities.length;
                         event.advertisingOpportunities.forEach(ad => {
@@ -1421,7 +1432,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     });
                     
                     // Podcast ads
-                    publication.distributionChannels.podcasts?.forEach(podcast => {
+                    publication.distributionChannels?.podcasts?.forEach(podcast => {
                       if (podcast.advertisingOpportunities) {
                         totalAds += podcast.advertisingOpportunities.length;
                         podcast.advertisingOpportunities.forEach(ad => {
@@ -1431,7 +1442,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     });
                     
                     // Radio ads
-                    publication.distributionChannels.radioStations?.forEach(radio => {
+                    publication.distributionChannels?.radioStations?.forEach(radio => {
                       if (radio.advertisingOpportunities) {
                         totalAds += radio.advertisingOpportunities.length;
                         radio.advertisingOpportunities.forEach(ad => {
@@ -1441,7 +1452,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     });
                     
                     // Streaming ads
-                    publication.distributionChannels.streamingVideo?.forEach(streaming => {
+                    publication.distributionChannels?.streamingVideo?.forEach(streaming => {
                       if (streaming.advertisingOpportunities) {
                         totalAds += streaming.advertisingOpportunities.length;
                         streaming.advertisingOpportunities.forEach(ad => {
@@ -1473,44 +1484,44 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     let totalReach = 0;
                     
                     // Website visitors
-                    if (publication.distributionChannels.website?.metrics?.monthlyVisitors) {
+                    if (publication.distributionChannels?.website?.metrics?.monthlyVisitors) {
                       totalReach += publication.distributionChannels.website.metrics.monthlyVisitors;
                     }
                     
                     // Newsletter subscribers
-                    publication.distributionChannels.newsletters?.forEach(newsletter => {
+                    publication.distributionChannels?.newsletters?.forEach(newsletter => {
                       if (newsletter.subscribers) totalReach += newsletter.subscribers;
                     });
                     
                     // Print circulation
-                    if (Array.isArray(publication.distributionChannels.print)) {
+                    if (Array.isArray(publication.distributionChannels?.print)) {
                       publication.distributionChannels.print.forEach(print => {
                         if (print.circulation) totalReach += print.circulation;
                       });
                     }
                     
                     // Social media followers
-                    publication.distributionChannels.socialMedia?.forEach(social => {
+                    publication.distributionChannels?.socialMedia?.forEach(social => {
                       if (social.metrics?.followers) totalReach += social.metrics.followers;
                     });
                     
                     // Event attendance
-                    publication.distributionChannels.events?.forEach(event => {
+                    publication.distributionChannels?.events?.forEach(event => {
                       if (event.averageAttendance) totalReach += event.averageAttendance;
                     });
                     
                     // Podcast listeners
-                    publication.distributionChannels.podcasts?.forEach(podcast => {
+                    publication.distributionChannels?.podcasts?.forEach(podcast => {
                       if (podcast.averageListeners) totalReach += podcast.averageListeners;
                     });
                     
                     // Radio listeners
-                    publication.distributionChannels.radioStations?.forEach(radio => {
+                    publication.distributionChannels?.radioStations?.forEach(radio => {
                       if (radio.listeners) totalReach += radio.listeners;
                     });
                     
                     // Streaming subscribers
-                    publication.distributionChannels.streamingVideo?.forEach(streaming => {
+                    publication.distributionChannels?.streamingVideo?.forEach(streaming => {
                       if (streaming.subscribers) totalReach += streaming.subscribers;
                     });
                     
@@ -1518,16 +1529,16 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       <>
                         <p className="font-medium text-lg">Total Potential Reach: {formatNumber(totalReach)}</p>
                         <div className="mt-2 space-y-1">
-                          {publication.distributionChannels.website?.metrics?.monthlyVisitors && (
+                          {publication.distributionChannels?.website?.metrics?.monthlyVisitors && (
                             <p>• Website: {formatNumber(publication.distributionChannels.website.metrics.monthlyVisitors)} monthly visitors</p>
                           )}
-                          {publication.distributionChannels.newsletters && publication.distributionChannels.newsletters.length > 0 && (
+                          {publication.distributionChannels?.newsletters && publication.distributionChannels.newsletters.length > 0 && (
                             <p>• Newsletter: {formatNumber(publication.distributionChannels.newsletters.reduce((sum, n) => sum + (n.subscribers || 0), 0))} subscribers</p>
                           )}
-                          {publication.distributionChannels.socialMedia && publication.distributionChannels.socialMedia.length > 0 && (
+                          {publication.distributionChannels?.socialMedia && publication.distributionChannels.socialMedia.length > 0 && (
                             <p>• Social Media: {formatNumber(publication.distributionChannels.socialMedia.reduce((sum, s) => sum + (s.metrics?.followers || 0), 0))} followers</p>
                           )}
-                          {publication.distributionChannels.podcasts && publication.distributionChannels.podcasts.length > 0 && (
+                          {publication.distributionChannels?.podcasts && publication.distributionChannels.podcasts.length > 0 && (
                             <p>• Podcasts: {formatNumber(publication.distributionChannels.podcasts.reduce((sum, p) => sum + (p.averageListeners || 0), 0))} listeners</p>
                           )}
                         </div>

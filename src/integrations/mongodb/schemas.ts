@@ -769,7 +769,7 @@ export interface StorefrontConfiguration {
     description?: string;
     lastUpdated?: string;
     publisherId: string;
-    websiteUrl?: string;
+    websiteUrl: string; // Required for preview and publishing
     isDraft: boolean;
   };
   theme: {

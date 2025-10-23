@@ -32,8 +32,9 @@ import {
   Upload
 } from 'lucide-react';
 import { StorefrontConfiguration, validateStorefrontConfig } from '@/types/storefront';
-import { getStorefrontConfiguration, createStorefrontConfiguration, updateStorefrontConfiguration } from '@/api/storefront';
+import { getStorefrontConfiguration, createStorefrontConfiguration, updateStorefrontConfiguration, publishStorefrontConfiguration, createDraftStorefrontConfiguration } from '@/api/storefront';
 import { StorefrontEditor } from './StorefrontEditor';
+import { StorefrontImageManager } from './StorefrontImageManager';
 
 export const PublicationStorefront: React.FC = () => {
   const { selectedPublication } = usePublication();
@@ -41,10 +42,13 @@ export const PublicationStorefront: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('settings'); // Start with settings tab (first tab)
   const [hasChanges, setHasChanges] = useState(false);
   const [importJson, setImportJson] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
+  const [viewingVersion, setViewingVersion] = useState<'draft' | 'live'>('draft'); // Track which version we're viewing
+  const [hasDraft, setHasDraft] = useState(false); // Track if draft exists
+  const [hasLive, setHasLive] = useState(false); // Track if live exists
 
   useEffect(() => {
     if (selectedPublication) {
@@ -53,12 +57,41 @@ export const PublicationStorefront: React.FC = () => {
   }, [selectedPublication]);
 
   const loadStorefrontConfig = async () => {
-    if (!selectedPublication?._id) return;
+    if (!selectedPublication?.publicationId) return;
     
     try {
       setLoading(true);
       setError(null);
-      const config = await getStorefrontConfiguration(selectedPublication._id);
+      
+      // Check for both draft and live versions
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+      const authToken = localStorage.getItem('auth_token');
+      const pubId = selectedPublication.publicationId.toString();
+      
+      // Check for draft
+      const draftResponse = await fetch(`${API_BASE_URL}/storefront/${pubId}?isDraft=true`, {
+        headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+      });
+      const draftExists = draftResponse.ok;
+      setHasDraft(draftExists);
+      
+      // Check for live
+      const liveResponse = await fetch(`${API_BASE_URL}/storefront/${pubId}?isDraft=false`, {
+        headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+      });
+      const liveExists = liveResponse.ok;
+      setHasLive(liveExists);
+      
+      // Load config: prefer draft if it exists, otherwise live
+      let config = null;
+      if (draftExists) {
+        config = await draftResponse.json();
+        setViewingVersion('draft');
+      } else if (liveExists) {
+        config = await liveResponse.json();
+        setViewingVersion('live');
+      }
+      
       setStorefrontConfig(config);
     } catch (err) {
       console.error('Error loading storefront configuration:', err);
@@ -95,7 +128,7 @@ export const PublicationStorefront: React.FC = () => {
       // Add publication ID and ensure proper structure
       const configToImport = {
         ...parsedConfig,
-        publicationId: selectedPublication._id!,
+        publicationId: selectedPublication.publicationId.toString(),
         meta: {
           ...parsedConfig.meta,
           lastUpdated: new Date().toISOString(),
@@ -117,13 +150,13 @@ export const PublicationStorefront: React.FC = () => {
   };
 
   const handleSaveConfig = async (config: StorefrontConfiguration) => {
-    if (!selectedPublication?._id) return;
+    if (!selectedPublication?.publicationId) return;
     
     try {
       setSaving(true);
       setError(null);
       
-      const updatedConfig = await updateStorefrontConfiguration(selectedPublication._id, config);
+      const updatedConfig = await updateStorefrontConfiguration(selectedPublication.publicationId.toString(), config);
       if (updatedConfig) {
         setStorefrontConfig(updatedConfig);
         setHasChanges(false);
@@ -139,6 +172,129 @@ export const PublicationStorefront: React.FC = () => {
   const handleConfigChange = (config: StorefrontConfiguration) => {
     setStorefrontConfig(config);
     setHasChanges(true);
+  };
+
+  const handlePublishDraft = async () => {
+    if (!selectedPublication?.publicationId) return;
+    
+    if (!confirm('Are you sure you want to publish this draft? This will replace the current live version.')) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+      
+      const publishedConfig = await publishStorefrontConfiguration(selectedPublication.publicationId.toString());
+      if (publishedConfig) {
+        setStorefrontConfig(publishedConfig);
+        setViewingVersion('live');
+        setHasDraft(false); // Draft was deleted during publish
+        setHasLive(true); // New live version created
+        setHasChanges(false);
+        alert('Draft published successfully! You are now viewing the live version.');
+      }
+    } catch (err: any) {
+      console.error('Error publishing draft:', err);
+      setError(err.message || 'Failed to publish draft');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateDraft = async () => {
+    if (!selectedPublication?.publicationId) return;
+    
+    // Confirm message changes based on whether draft exists
+    const message = hasDraft 
+      ? 'A draft already exists. Replace it with a fresh copy from the live version? This will discard any unsaved changes in the draft.'
+      : 'Create a draft copy from the live version? You can make changes to the draft without affecting the live storefront.';
+    
+    if (!confirm(message)) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+      
+      const pubIdStr = selectedPublication.publicationId.toString();
+      
+      // If draft exists, delete it first
+      if (hasDraft) {
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+        const authToken = localStorage.getItem('auth_token');
+        
+        // Delete existing draft
+        const deleteResponse = await fetch(`${API_BASE_URL}/storefront/${pubIdStr}?isDraft=true`, {
+          method: 'DELETE',
+          headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+        });
+        
+        if (!deleteResponse.ok) {
+          throw new Error('Failed to delete existing draft');
+        }
+      }
+      
+      // Create new draft from live
+      const draftConfig = await createDraftStorefrontConfiguration(pubIdStr);
+      if (draftConfig) {
+        setStorefrontConfig(draftConfig);
+        setViewingVersion('draft');
+        setHasDraft(true);
+        setHasChanges(false);
+        alert(hasDraft ? 'Draft replaced successfully! You are now editing the new draft version.' : 'Draft created successfully! You are now editing the draft version.');
+      }
+    } catch (err: any) {
+      console.error('Error creating draft:', err);
+      setError(err.message || 'Failed to create draft');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSwitchVersion = async (version: 'draft' | 'live') => {
+    if (!selectedPublication?.publicationId) return;
+    
+    // Check if version exists
+    if (version === 'draft' && !hasDraft) {
+      setError('No draft version exists. Create a draft first.');
+      return;
+    }
+    if (version === 'live' && !hasLive) {
+      setError('No live version exists. Publish a draft first.');
+      return;
+    }
+    
+    if (hasChanges && !confirm('You have unsaved changes. Switching versions will discard them. Continue?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch the specific version
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/storefront/${selectedPublication.publicationId.toString()}?isDraft=${version === 'draft'}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const config = await response.json();
+        setStorefrontConfig(config);
+        setViewingVersion(version);
+        setHasChanges(false);
+      } else if (response.status === 404) {
+        setError(`No ${version} version found`);
+      }
+    } catch (err: any) {
+      console.error(`Error loading ${version} version:`, err);
+      setError(`Failed to load ${version} version`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const showSampleConfig = () => {
@@ -194,15 +350,37 @@ export const PublicationStorefront: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-4">
           <p className="text-muted-foreground font-serif">
             Storefront
           </p>
+          {storefrontConfig && (
+            <div className="flex items-center gap-2 border rounded-lg p-1">
+              <Button
+                variant={viewingVersion === 'draft' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleSwitchVersion('draft')}
+                disabled={loading}
+                className="h-8"
+              >
+                Draft
+              </Button>
+              <Button
+                variant={viewingVersion === 'live' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleSwitchVersion('live')}
+                disabled={loading}
+                className="h-8"
+              >
+                Live
+              </Button>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           {storefrontConfig && (
             <>
-              <Button variant="outline" disabled={!storefrontConfig || storefrontConfig.meta.is_draft}>
+              <Button variant="outline" disabled={!storefrontConfig || storefrontConfig.meta.isDraft}>
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </Button>
@@ -233,10 +411,10 @@ export const PublicationStorefront: React.FC = () => {
 
       {storefrontConfig ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">
-              <Store className="w-4 h-4 mr-2" />
-              Overview
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="settings">
+              <FileText className="w-4 h-4 mr-2" />
+              Settings
             </TabsTrigger>
             <TabsTrigger value="editor">
               <Settings className="w-4 h-4 mr-2" />
@@ -254,102 +432,7 @@ export const PublicationStorefront: React.FC = () => {
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
             </TabsTrigger>
-            <TabsTrigger value="settings">
-              <FileText className="w-4 h-4 mr-2" />
-              Settings
-            </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-sans text-base">
-                    <Store className="h-5 w-5" />
-                    Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Badge variant={storefrontConfig.meta.is_draft ? "secondary" : "default"}>
-                      {storefrontConfig.meta.is_draft ? 'Draft' : 'Published'}
-                    </Badge>
-                    <p className="text-sm text-muted-foreground">
-                      Last updated: {new Date(storefrontConfig.meta.lastUpdated).toLocaleDateString()}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-sans text-base">
-                    <Layout className="h-5 w-5" />
-                    Components
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-2xl font-bold">
-                      {Object.values(storefrontConfig.components).filter(c => c.enabled).length}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      of {Object.keys(storefrontConfig.components).length} enabled
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-sans text-base">
-                    <Palette className="h-5 w-5" />
-                    Theme
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-4 h-4 rounded-full" 
-                        style={{ backgroundColor: storefrontConfig.theme.colors.lightPrimary }}
-                      />
-                      <span className="text-sm">{storefrontConfig.theme.colors.lightPrimary}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {storefrontConfig.theme.typography.primaryFont} font
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-2 flex-wrap">
-                  <Button variant="outline" onClick={() => setActiveTab('editor')}>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Edit Content
-                  </Button>
-                  <Button variant="outline" onClick={() => setActiveTab('theme')}>
-                    <Palette className="w-4 h-4 mr-2" />
-                    Customize Theme
-                  </Button>
-                  <Button variant="outline" disabled>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Duplicate
-                  </Button>
-                  <Button variant="outline" disabled>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="editor">
             <StorefrontEditor
@@ -816,31 +899,14 @@ export const PublicationStorefront: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="og-image">Open Graph Image URL</Label>
-                  <Input
-                    id="og-image"
-                    value={storefrontConfig.seoMetadata?.ogImage || ''}
-                    onChange={(e) => handleConfigChange({
-                      ...storefrontConfig,
-                      seoMetadata: { ...(storefrontConfig.seoMetadata || {}), ogImage: e.target.value }
-                    })}
-                    placeholder="https://example.com/og-image.jpg"
+                  <StorefrontImageManager
+                    publicationId={selectedPublication?._id || ''}
+                    config={storefrontConfig}
+                    onChange={handleConfigChange}
+                    imageType="ogImage"
+                    label="Open Graph Image"
+                    description="Recommended size: 1200x630 pixels"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Recommended size: 1200x630 pixels
-                  </p>
-                  {storefrontConfig.seoMetadata?.ogImage && (
-                    <div className="mt-2">
-                      <img 
-                        src={storefrontConfig.seoMetadata?.ogImage} 
-                        alt="Open Graph preview"
-                        className="max-w-sm h-auto border rounded"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1050,6 +1116,110 @@ export const PublicationStorefront: React.FC = () => {
           <TabsContent value="settings" className="space-y-6">
             <Card>
               <CardHeader>
+                <CardTitle className="font-sans text-base">Storefront Status</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Control the visibility and status of your storefront.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Label>Current Version</Label>
+                          <Badge variant={storefrontConfig.meta.isDraft ? "secondary" : "default"}>
+                            {storefrontConfig.meta.isDraft ? 'Draft' : 'Live'}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {storefrontConfig.meta.isDraft 
+                            ? 'You are editing a draft version' 
+                            : 'You are viewing the live version'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <Label>Version Actions</Label>
+                    
+                    {storefrontConfig.meta.isDraft ? (
+                      <div className="space-y-2">
+                        <Button 
+                          onClick={handlePublishDraft}
+                          className="w-full"
+                          disabled={saving}
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {saving ? 'Publishing...' : 'Publish Draft to Live'}
+                        </Button>
+                        <p className="text-xs text-muted-foreground">
+                          Make this draft version live and visible to the public
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Button 
+                          onClick={handleCreateDraft}
+                          variant="outline"
+                          className="w-full"
+                          disabled={saving}
+                        >
+                          <Copy className="w-4 h-4 mr-2" />
+                          {saving ? 'Creating...' : 'Create Draft from Live'}
+                        </Button>
+                        <p className="text-xs text-muted-foreground">
+                          Create a draft copy to make changes without affecting the live version
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label>Status Information</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Status:</span>
+                          <span className="font-medium">
+                            {storefrontConfig.meta.isDraft ? 'Draft' : 'Live'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Last Updated:</span>
+                          <span>{new Date(storefrontConfig.meta.lastUpdated).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Created:</span>
+                          <span>
+                            {storefrontConfig.createdAt 
+                              ? new Date(storefrontConfig.createdAt).toLocaleDateString()
+                              : 'Unknown'
+                            }
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Components:</span>
+                          <span>
+                            {Object.values(storefrontConfig.components).filter(c => c.enabled).length} enabled
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle className="font-sans text-base">Publication Information</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Basic information about your publication and storefront.
@@ -1070,18 +1240,22 @@ export const PublicationStorefront: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="publisher-id">Publisher ID</Label>
+                  <Label htmlFor="website-url">
+                    Website URL <span className="text-red-500">*</span>
+                  </Label>
                   <Input
-                    id="publisher-id"
-                    value={storefrontConfig.meta.publisher_id}
+                    id="website-url"
+                    type="url"
+                    value={storefrontConfig.meta.websiteUrl || ''}
                     onChange={(e) => handleConfigChange({
                       ...storefrontConfig,
-                      meta: { ...storefrontConfig.meta, publisher_id: e.target.value }
+                      meta: { ...storefrontConfig.meta, websiteUrl: e.target.value }
                     })}
-                    placeholder="unique_publisher_identifier"
+                    placeholder="https://yourwebsite.com"
+                    required
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    A unique identifier for your publication (used in URLs and integrations)
+                    The website URL where this storefront will be hosted (required for preview and publishing)
                   </p>
                 </div>
 
@@ -1104,79 +1278,12 @@ export const PublicationStorefront: React.FC = () => {
                   <Input
                     id="config-version"
                     value={storefrontConfig.meta.configVersion}
-                    onChange={(e) => handleConfigChange({
-                      ...storefrontConfig,
-                      meta: { ...storefrontConfig.meta, configVersion: e.target.value }
-                    })}
-                    placeholder="1.0.0"
+                    disabled
+                    className="bg-muted"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Version number for tracking configuration changes
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">Storefront Status</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Control the visibility and status of your storefront.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="draft-mode">Draft Mode</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Keep your storefront in draft mode while making changes
-                    </p>
-                  </div>
-                  <Switch
-                    id="draft-mode"
-                    checked={storefrontConfig.meta.is_draft}
-                    onCheckedChange={(checked) => handleConfigChange({
-                      ...storefrontConfig,
-                      meta: { ...storefrontConfig.meta, is_draft: checked }
-                    })}
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label>Status Information</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Current Status:</span>
-                        <Badge variant={storefrontConfig.meta.is_draft ? "secondary" : "default"}>
-                          {storefrontConfig.meta.is_draft ? 'Draft' : 'Published'}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Last Updated:</span>
-                        <span>{new Date(storefrontConfig.meta.lastUpdated).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Created:</span>
-                        <span>
-                          {storefrontConfig.createdAt 
-                            ? new Date(storefrontConfig.createdAt).toLocaleDateString()
-                            : 'Unknown'
-                          }
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Components:</span>
-                        <span>
-                          {Object.values(storefrontConfig.components).filter(c => c.enabled).length} enabled
-                        </span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1233,50 +1340,6 @@ export const PublicationStorefront: React.FC = () => {
                     Duplicate Storefront
                   </Button>
                 </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label>Configuration Details</Label>
-                  <div className="bg-muted/50 rounded-lg p-3 text-xs font-mono">
-                    <div>ID: {storefrontConfig._id || 'Not saved'}</div>
-                    <div>Version: {storefrontConfig.meta.configVersion}</div>
-                    <div>Publisher: {storefrontConfig.meta.publisher_id}</div>
-                    <div>Components: {Object.keys(storefrontConfig.components).length}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-red-200">
-              <CardHeader>
-                <CardTitle className="text-red-700 font-sans text-base">Danger Zone</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Irreversible actions that affect your storefront.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-red-900 mb-2">Reset to Default</h4>
-                    <p className="text-xs text-red-700 mb-3">
-                      This will reset your storefront to the default configuration. All customizations will be lost.
-                    </p>
-                    <Button variant="destructive" size="sm" disabled>
-                      Reset Configuration
-                    </Button>
-                  </div>
-
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-red-900 mb-2">Delete Storefront</h4>
-                    <p className="text-xs text-red-700 mb-3">
-                      Permanently delete this storefront configuration. This action cannot be undone.
-                    </p>
-                    <Button variant="destructive" size="sm" disabled>
-                      Delete Storefront
-                    </Button>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1286,10 +1349,25 @@ export const PublicationStorefront: React.FC = () => {
           <CardContent className="py-8">
             <div className="flex flex-col items-center justify-center text-center mb-8">
               <Store className="h-16 w-16 text-muted-foreground/50 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Import Storefront Configuration</h3>
-              <p className="text-muted-foreground mb-6 max-w-md">
-                Paste your storefront configuration JSON below to import and validate it for this publication.
-              </p>
+              {hasDraft && !hasLive ? (
+                <>
+                  <h3 className="text-xl font-semibold mb-2">Draft Ready to Publish</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md">
+                    You have a draft storefront configuration. Publish it to make it live.
+                  </p>
+                  <Button onClick={handlePublishDraft} disabled={saving} size="lg">
+                    <Upload className="w-4 h-4 mr-2" />
+                    {saving ? 'Publishing...' : 'Publish Draft to Live'}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-xl font-semibold mb-2">Import Storefront Configuration</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md">
+                    Paste your storefront configuration JSON below to import and validate it for this publication.
+                  </p>
+                </>
+              )}
             </div>
             
             <div className="space-y-4 max-w-4xl mx-auto">
