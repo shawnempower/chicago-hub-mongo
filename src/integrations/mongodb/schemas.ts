@@ -771,6 +771,8 @@ export interface StorefrontConfiguration {
     publisherId: string;
     websiteUrl: string; // Required for preview and publishing
     isDraft: boolean;
+    faviconUrl?: string;
+    logoUrl?: string;
   };
   theme: {
     colors: {

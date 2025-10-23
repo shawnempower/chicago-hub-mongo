@@ -1285,6 +1285,28 @@ export const PublicationStorefront: React.FC = () => {
                     Version number for tracking configuration changes
                   </p>
                 </div>
+
+                <div>
+                  <StorefrontImageManager
+                    publicationId={selectedPublication?.publicationId.toString() || ''}
+                    config={storefrontConfig}
+                    onChange={handleConfigChange}
+                    imageType="favicon"
+                    label="Favicon"
+                    description="Icon displayed in browser tabs (recommended: 32x32 or 16x16 .ico or .png)"
+                  />
+                </div>
+
+                <div>
+                  <StorefrontImageManager
+                    publicationId={selectedPublication?.publicationId.toString() || ''}
+                    config={storefrontConfig}
+                    onChange={handleConfigChange}
+                    imageType="metaLogo"
+                    label="Primary Logo"
+                    description="Main publication logo (recommended: 200x50px, PNG with transparency). Used as fallback if navbar logo is not set."
+                  />
+                </div>
               </CardContent>
             </Card>
 

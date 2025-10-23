@@ -40,6 +40,16 @@
         "isDraft": {
           "type": "boolean",
           "description": "Whether this configuration is a draft or published version"
+        },
+        "faviconUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the favicon image (.ico or .png format, recommended 32x32 or 16x16)"
+        },
+        "logoUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Primary logo URL for the publication (used in navbar and for branding)"
         }
       }
     },
@@ -169,7 +179,7 @@
                 "logoUrl": {
                   "type": "string",
                   "format": "uri",
-                  "description": "URL of the logo image"
+                  "description": "URL of the navbar-specific logo image (optional, falls back to meta.logoUrl if not set)"
                 },
                 "navItems": {
                   "type": "array",

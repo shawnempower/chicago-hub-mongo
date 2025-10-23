@@ -66,3 +66,22 @@ export function getStorefrontEmbedUrl(config: StorefrontConfiguration, isDraft: 
   return `${previewUrl}&embed=true`;
 }
 
+/**
+ * Get the logo URL for the navbar with fallback to meta logo
+ * @param config - The storefront configuration
+ * @returns The logo URL (navbar-specific or meta fallback)
+ */
+export function getNavbarLogoUrl(config: StorefrontConfiguration): string | undefined {
+  // Use navbar-specific logo if set, otherwise fall back to meta logo
+  return config.components?.navbar?.content?.logoUrl || config.meta?.logoUrl;
+}
+
+/**
+ * Get the primary logo URL from meta
+ * @param config - The storefront configuration
+ * @returns The primary logo URL from meta
+ */
+export function getPrimaryLogoUrl(config: StorefrontConfiguration): string | undefined {
+  return config.meta?.logoUrl;
+}
+

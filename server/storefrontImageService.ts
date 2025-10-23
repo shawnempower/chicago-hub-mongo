@@ -5,7 +5,7 @@ import crypto from 'crypto';
 interface StorefrontImageUploadOptions {
   userId: string;
   publicationId: string;
-  imageType: 'logo' | 'hero' | 'channel' | 'about' | 'ogImage';
+  imageType: 'logo' | 'hero' | 'channel' | 'about' | 'ogImage' | 'favicon' | 'metaLogo';
   channelId?: string; // For inventory channel images
   originalName: string;
   mimeType: string;
@@ -151,7 +151,7 @@ export class StorefrontImageService {
    */
   async removeStorefrontImage(
     publicationId: string,
-    imageType: 'logo' | 'hero' | 'channel' | 'about' | 'ogImage',
+    imageType: 'logo' | 'hero' | 'channel' | 'about' | 'ogImage' | 'favicon' | 'metaLogo',
     channelId?: string
   ): Promise<StorefrontImageResult> {
     try {
@@ -303,6 +303,22 @@ export class StorefrontImageService {
           }
           break;
 
+        case 'favicon':
+          if (imageUrl) {
+            updatedConfig.meta.faviconUrl = imageUrl;
+          } else {
+            delete updatedConfig.meta.faviconUrl;
+          }
+          break;
+
+        case 'metaLogo':
+          if (imageUrl) {
+            updatedConfig.meta.logoUrl = imageUrl;
+          } else {
+            delete updatedConfig.meta.logoUrl;
+          }
+          break;
+
         default:
           return { success: false, error: `Unknown image type: ${imageType}` };
       }
@@ -341,6 +357,10 @@ export class StorefrontImageService {
         return config.components?.about?.content?.imageUrl || null;
       case 'ogImage':
         return config.seoMetadata?.ogImage || null;
+      case 'favicon':
+        return config.meta?.faviconUrl || null;
+      case 'metaLogo':
+        return config.meta?.logoUrl || null;
       default:
         return null;
     }

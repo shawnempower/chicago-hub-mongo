@@ -225,11 +225,23 @@ export class UserProfilesService {
 
   async update(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
     try {
-      const updateData = { 
+      const updateData: any = { 
         ...updates, 
-        updatedAt: new Date(),
-        profileCompletionScore: this.calculateCompletionScore(updates)
+        updatedAt: new Date()
       };
+      
+      // Only recalculate completion score if profile fields are being updated
+      // Don't recalculate for admin-only updates
+      const profileFields = ['firstName', 'lastName', 'phone', 'companyName', 'companyWebsite',
+        'companySizes', 'industry', 'role', 'targetAudience', 'marketingGoals', 'brandVoice'];
+      const hasProfileFieldUpdates = Object.keys(updates).some(key => profileFields.includes(key));
+      
+      if (hasProfileFieldUpdates) {
+        // Get existing profile to merge with updates for accurate score calculation
+        const existing = await this.getByUserId(userId);
+        const merged = existing ? { ...existing, ...updates } : updates;
+        updateData.profileCompletionScore = this.calculateCompletionScore(merged);
+      }
       
       await this.collection.updateOne(
         { userId },

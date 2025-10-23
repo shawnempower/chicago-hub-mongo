@@ -579,8 +579,8 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
         config={config}
         onChange={onChange}
         imageType="logo"
-        label="Logo"
-        description="Upload your publication's logo (recommended: 200x50px, PNG with transparency)"
+        label="Navbar Logo (Optional)"
+        description="Upload a navbar-specific logo. If not set, the Primary Logo from Settings will be used. (Recommended: 200x50px, PNG with transparency)"
       />
       
       <div>

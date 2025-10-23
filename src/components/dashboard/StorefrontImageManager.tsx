@@ -7,7 +7,7 @@ interface StorefrontImageManagerProps {
   publicationId: string;
   config: StorefrontConfiguration;
   onChange: (config: StorefrontConfiguration) => void;
-  imageType: 'logo' | 'hero' | 'channel' | 'about' | 'ogImage';
+  imageType: 'logo' | 'hero' | 'channel' | 'about' | 'ogImage' | 'favicon' | 'metaLogo';
   channelId?: string;
   label?: string;
   description?: string;
@@ -42,6 +42,10 @@ export const StorefrontImageManager: React.FC<StorefrontImageManagerProps> = ({
         return config.components?.about?.content?.imageUrl;
       case 'ogImage':
         return config.seoMetadata?.ogImage;
+      case 'favicon':
+        return config.meta?.faviconUrl;
+      case 'metaLogo':
+        return config.meta?.logoUrl;
       default:
         return undefined;
     }
@@ -109,6 +113,22 @@ export const StorefrontImageManager: React.FC<StorefrontImageManagerProps> = ({
           updatedConfig.seoMetadata.ogImage = url;
         } else {
           delete updatedConfig.seoMetadata.ogImage;
+        }
+        break;
+
+      case 'favicon':
+        if (url) {
+          updatedConfig.meta.faviconUrl = url;
+        } else {
+          delete updatedConfig.meta.faviconUrl;
+        }
+        break;
+
+      case 'metaLogo':
+        if (url) {
+          updatedConfig.meta.logoUrl = url;
+        } else {
+          delete updatedConfig.meta.logoUrl;
         }
         break;
     }
