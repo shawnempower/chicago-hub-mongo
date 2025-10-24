@@ -43,16 +43,15 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
   const [searchTerm, setSearchTerm] = useState('');
   const [, forceRender] = useState(0);
 
-  // Prefetch brand colors for all publications when they load
+  // Only prefetch brand color for the currently selected publication (lazy loading)
+  // Colors for other publications will load on-demand when rendering their avatars
   useEffect(() => {
-    if (availablePublications.length > 0) {
-      const publicationIds = availablePublications.map(p => p.publicationId);
-      prefetchBrandColors(publicationIds).then(() => {
-        // Force a re-render after colors are loaded
+    if (selectedPublication) {
+      prefetchBrandColors([selectedPublication.publicationId]).then(() => {
         forceRender(prev => prev + 1);
       });
     }
-  }, [availablePublications]);
+  }, [selectedPublication?.publicationId]);
 
   // Filter publications based on search term
   const filteredPublications = availablePublications.filter((publication) => {
@@ -149,26 +148,34 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
               </div>
             </div>
             {filteredPublications.length > 0 ? (
-              filteredPublications.map((publication) => (
-                <SelectItem 
-                  key={publication._id || publication.publicationId} 
-                  value={publication._id || publication.publicationId.toString()}
-                >
-                  <div className="flex items-center gap-2 py-1">
-                    <div 
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold"
-                      style={{ 
-                        backgroundColor: getPublicationBrandColor(publication.publicationId)
-                      }}
-                    >
-                      {publication.basicInfo.publicationName.charAt(0)}
+              filteredPublications.map((publication) => {
+                // Only use brand color for selected publication, use default for others to avoid 20+ API calls
+                const isSelected = selectedPublication?.publicationId === publication.publicationId;
+                const avatarColor = isSelected 
+                  ? getPublicationBrandColor(publication.publicationId)
+                  : '#0066cc'; // Default color for non-selected publications
+                
+                return (
+                  <SelectItem 
+                    key={publication._id || publication.publicationId} 
+                    value={publication._id || publication.publicationId.toString()}
+                  >
+                    <div className="flex items-center gap-2 py-1">
+                      <div 
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold"
+                        style={{ 
+                          backgroundColor: avatarColor
+                        }}
+                      >
+                        {publication.basicInfo.publicationName.charAt(0)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{publication.basicInfo.publicationName}</div>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{publication.basicInfo.publicationName}</div>
-                    </div>
-                  </div>
-                </SelectItem>
-              ))
+                  </SelectItem>
+                );
+              })
             ) : (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 No publications found
@@ -229,22 +236,29 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
             </div>
           </div>
           {filteredPublications.length > 0 ? (
-            filteredPublications.map((publication) => (
-              <SelectItem 
-                key={publication._id || publication.publicationId} 
-                value={publication._id || publication.publicationId.toString()}
-              >
-                <div className="flex items-center gap-3 py-1">
-                  <div 
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold"
-                    style={{ 
-                      backgroundColor: getPublicationBrandColor(publication.publicationId)
-                    }}
-                  >
-                    {publication.basicInfo.publicationName.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">{publication.basicInfo.publicationName}</div>
+            filteredPublications.map((publication) => {
+              // Only use brand color for selected publication, use default for others to avoid 20+ API calls
+              const isSelected = selectedPublication?.publicationId === publication.publicationId;
+              const avatarColor = isSelected 
+                ? getPublicationBrandColor(publication.publicationId)
+                : '#0066cc'; // Default color for non-selected publications
+              
+              return (
+                <SelectItem 
+                  key={publication._id || publication.publicationId} 
+                  value={publication._id || publication.publicationId.toString()}
+                >
+                  <div className="flex items-center gap-3 py-1">
+                    <div 
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold"
+                      style={{ 
+                        backgroundColor: avatarColor
+                      }}
+                    >
+                      {publication.basicInfo.publicationName.charAt(0)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium">{publication.basicInfo.publicationName}</div>
                     <div className="text-xs flex items-center gap-2">
                       {publication.basicInfo.publicationType && (
                         <Badge 
@@ -266,7 +280,8 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                   </div>
                 </div>
               </SelectItem>
-            ))
+              );
+            })
           ) : (
             <div className="p-4 text-center text-sm text-muted-foreground">
               No publications found

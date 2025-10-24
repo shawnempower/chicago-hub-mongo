@@ -49,6 +49,7 @@ export const PublicationStorefront: React.FC = () => {
   const [viewingVersion, setViewingVersion] = useState<'draft' | 'live'>('draft'); // Track which version we're viewing
   const [hasDraft, setHasDraft] = useState(false); // Track if draft exists
   const [hasLive, setHasLive] = useState(false); // Track if live exists
+  const [domainError, setDomainError] = useState<string | null>(null); // Domain validation error
 
   useEffect(() => {
     if (selectedPublication) {
@@ -149,8 +150,52 @@ export const PublicationStorefront: React.FC = () => {
     }
   };
 
+  // Validate website URL is a subdomain of .localmedia.store
+  const validateWebsiteUrl = (url: string): boolean => {
+    if (!url || url.trim() === '') {
+      setDomainError(null);
+      return true; // Empty is allowed
+    }
+    
+    const trimmedUrl = url.trim().toLowerCase();
+    
+    // Remove protocol if present
+    const urlWithoutProtocol = trimmedUrl.replace(/^https?:\/\//, '');
+    
+    // Check if it ends with .localmedia.store
+    if (!urlWithoutProtocol.endsWith('.localmedia.store')) {
+      setDomainError('Domain must be a subdomain of .localmedia.store (e.g., yourname.localmedia.store)');
+      return false;
+    }
+    
+    // Check if it's ONLY .localmedia.store (no subdomain)
+    if (urlWithoutProtocol === '.localmedia.store' || urlWithoutProtocol === 'localmedia.store') {
+      setDomainError('Please provide a subdomain (e.g., yourname.localmedia.store)');
+      return false;
+    }
+    
+    // Extract subdomain part
+    const subdomain = urlWithoutProtocol.replace('.localmedia.store', '');
+    
+    // Validate subdomain format (alphanumeric and hyphens only, can't start/end with hyphen)
+    const subdomainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+    if (!subdomainRegex.test(subdomain)) {
+      setDomainError('Subdomain can only contain lowercase letters, numbers, and hyphens (not at start/end)');
+      return false;
+    }
+    
+    setDomainError(null);
+    return true;
+  };
+
   const handleSaveConfig = async (config: StorefrontConfiguration) => {
     if (!selectedPublication?.publicationId) return;
+    
+    // Validate website URL before saving
+    if (config.meta.websiteUrl && !validateWebsiteUrl(config.meta.websiteUrl)) {
+      setError(domainError || 'Please fix the website URL before saving');
+      return;
+    }
     
     try {
       setSaving(true);
@@ -170,14 +215,53 @@ export const PublicationStorefront: React.FC = () => {
   };
 
   const handleConfigChange = (config: StorefrontConfiguration) => {
+    // Validate website URL on change
+    if (config.meta.websiteUrl) {
+      validateWebsiteUrl(config.meta.websiteUrl);
+    }
+    
     setStorefrontConfig(config);
     setHasChanges(true);
+  };
+
+  // Check if storefront is ready to publish
+  const isReadyToPublish = () => {
+    if (!storefrontConfig) return { ready: false, reason: 'No configuration' };
+    
+    // Check if domain is set
+    if (!storefrontConfig.meta.websiteUrl) {
+      return { ready: false, reason: 'Storefront domain is required' };
+    }
+    
+    // Validate domain format
+    const urlWithoutProtocol = storefrontConfig.meta.websiteUrl.replace(/^https?:\/\//, '').toLowerCase();
+    if (!urlWithoutProtocol.endsWith('.localmedia.store')) {
+      return { ready: false, reason: 'Domain must be a subdomain of .localmedia.store' };
+    }
+    
+    const subdomain = urlWithoutProtocol.replace('.localmedia.store', '');
+    if (!subdomain || subdomain === '' || subdomain === '.') {
+      return { ready: false, reason: 'Please provide a subdomain (e.g., yourname.localmedia.store)' };
+    }
+    
+    return { ready: true, reason: null };
   };
 
   const handlePublishDraft = async () => {
     if (!selectedPublication?.publicationId) return;
     
-    if (!confirm('Are you sure you want to publish this draft? This will replace the current live version.')) {
+    // Check if ready to publish
+    const readyCheck = isReadyToPublish();
+    if (!readyCheck.ready) {
+      setError(readyCheck.reason || 'Cannot publish yet');
+      // Scroll to domain field if that's the issue
+      if (readyCheck.reason?.toLowerCase().includes('domain')) {
+        document.getElementById('website-url')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to publish this draft?\n\nYour storefront will be live at:\n${storefrontConfig?.meta.websiteUrl}`)) {
       return;
     }
 
@@ -192,7 +276,7 @@ export const PublicationStorefront: React.FC = () => {
         setHasDraft(false); // Draft was deleted during publish
         setHasLive(true); // New live version created
         setHasChanges(false);
-        alert('Draft published successfully! You are now viewing the live version.');
+        alert(`🎉 Draft published successfully!\n\nYour storefront is now live at:\n${publishedConfig.meta.websiteUrl}`);
       }
     } catch (err: any) {
       console.error('Error publishing draft:', err);
@@ -1148,17 +1232,47 @@ export const PublicationStorefront: React.FC = () => {
                     
                     {storefrontConfig.meta.isDraft ? (
                       <div className="space-y-2">
-                        <Button 
-                          onClick={handlePublishDraft}
-                          className="w-full"
-                          disabled={saving}
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          {saving ? 'Publishing...' : 'Publish Draft to Live'}
-                        </Button>
-                        <p className="text-xs text-muted-foreground">
-                          Make this draft version live and visible to the public
-                        </p>
+                        {(() => {
+                          const readyCheck = isReadyToPublish();
+                          return (
+                            <>
+                              {!readyCheck.ready && (
+                                <Alert className="mb-2">
+                                  <AlertDescription className="text-xs">
+                                    ⚠️ {readyCheck.reason} - <button 
+                                      onClick={() => {
+                                        setActiveTab('settings');
+                                        setTimeout(() => {
+                                          document.getElementById('website-url')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        }, 100);
+                                      }}
+                                      className="underline font-medium hover:text-primary"
+                                    >
+                                      Set it now
+                                    </button>
+                                  </AlertDescription>
+                                </Alert>
+                              )}
+                              <Button 
+                                onClick={handlePublishDraft}
+                                className="w-full"
+                                disabled={saving || !readyCheck.ready}
+                              >
+                                <Upload className="w-4 h-4 mr-2" />
+                                {saving ? 'Publishing...' : 'Publish Draft to Live'}
+                              </Button>
+                              {readyCheck.ready ? (
+                                <p className="text-xs text-muted-foreground">
+                                  ✅ Ready to publish to {storefrontConfig.meta.websiteUrl}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">
+                                  Complete requirements above to publish
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -1241,22 +1355,41 @@ export const PublicationStorefront: React.FC = () => {
 
                 <div>
                   <Label htmlFor="website-url">
-                    Website URL <span className="text-red-500">*</span>
+                    Storefront Domain <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="website-url"
-                    type="url"
-                    value={storefrontConfig.meta.websiteUrl || ''}
-                    onChange={(e) => handleConfigChange({
-                      ...storefrontConfig,
-                      meta: { ...storefrontConfig.meta, websiteUrl: e.target.value }
-                    })}
-                    placeholder="https://yourwebsite.com"
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    The website URL where this storefront will be hosted (required for preview and publishing)
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground whitespace-nowrap font-mono text-sm">
+                      https://
+                    </span>
+                    <Input
+                      id="website-url"
+                      value={(storefrontConfig.meta.websiteUrl || '').replace(/^https?:\/\//, '').replace('.localmedia.store', '')}
+                      onChange={(e) => {
+                        const subdomain = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                        const fullUrl = subdomain ? `https://${subdomain}.localmedia.store` : '';
+                        handleConfigChange({
+                          ...storefrontConfig,
+                          meta: { ...storefrontConfig.meta, websiteUrl: fullUrl }
+                        });
+                      }}
+                      placeholder="yourname"
+                      className={domainError ? 'border-red-500' : ''}
+                      required
+                    />
+                    <span className="text-muted-foreground whitespace-nowrap font-mono text-sm">
+                      .localmedia.store
+                    </span>
+                  </div>
+                  {domainError ? (
+                    <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                      <span>⚠️</span>
+                      {domainError}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Enter your subdomain (lowercase letters, numbers, and hyphens only)
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1373,14 +1506,56 @@ export const PublicationStorefront: React.FC = () => {
               <Store className="h-16 w-16 text-muted-foreground/50 mb-4" />
               {hasDraft && !hasLive ? (
                 <>
-                  <h3 className="text-xl font-semibold mb-2">Draft Ready to Publish</h3>
-                  <p className="text-muted-foreground mb-6 max-w-md">
-                    You have a draft storefront configuration. Publish it to make it live.
-                  </p>
-                  <Button onClick={handlePublishDraft} disabled={saving} size="lg">
-                    <Upload className="w-4 h-4 mr-2" />
-                    {saving ? 'Publishing...' : 'Publish Draft to Live'}
-                  </Button>
+                  {(() => {
+                    const readyCheck = isReadyToPublish();
+                    return (
+                      <>
+                        <h3 className="text-xl font-semibold mb-2">
+                          {readyCheck.ready ? 'Draft Ready to Publish' : 'Almost Ready to Publish'}
+                        </h3>
+                        {readyCheck.ready ? (
+                          <p className="text-muted-foreground mb-6 max-w-md">
+                            Your storefront configuration is ready. Publish it to make it live at {storefrontConfig?.meta.websiteUrl}
+                          </p>
+                        ) : (
+                          <div className="mb-6 max-w-md">
+                            <Alert className="mb-4">
+                              <AlertDescription>
+                                ⚠️ {readyCheck.reason}
+                              </AlertDescription>
+                            </Alert>
+                            <p className="text-muted-foreground text-sm">
+                              Click below to configure your storefront domain
+                            </p>
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          {!readyCheck.ready && (
+                            <Button 
+                              onClick={() => {
+                                setActiveTab('settings');
+                                setTimeout(() => {
+                                  document.getElementById('website-url')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }, 100);
+                              }}
+                              size="lg"
+                              variant="outline"
+                            >
+                              Configure Domain
+                            </Button>
+                          )}
+                          <Button 
+                            onClick={handlePublishDraft} 
+                            disabled={saving || !readyCheck.ready} 
+                            size="lg"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            {saving ? 'Publishing...' : 'Publish Draft to Live'}
+                          </Button>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </>
               ) : (
                 <>

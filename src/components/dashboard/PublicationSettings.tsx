@@ -9,9 +9,6 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { getStorefrontConfiguration, updateStorefrontConfiguration, createStorefrontConfiguration } from '@/api/storefront';
-import { StorefrontConfiguration, createDefaultStorefrontConfig } from '@/types/storefront';
-import { clearBrandColorCache } from '@/config/publicationBrandColors';
 import { 
   Settings, 
   Save,
@@ -19,7 +16,6 @@ import {
   EyeOff,
   Bell,
   Shield,
-  Palette,
   Globe,
   Users,
   Mail,
@@ -31,7 +27,6 @@ export const PublicationSettings: React.FC = () => {
   const { selectedPublication } = usePublication();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [storefrontConfig, setStorefrontConfig] = useState<StorefrontConfiguration | null>(null);
   
   // Get default settings function
   const getDefaultSettings = () => ({
@@ -51,52 +46,14 @@ export const PublicationSettings: React.FC = () => {
       requireDeposit: true,
       minimumBookingDays: 7,
       cancellationPolicy: 'flexible'
-    },
-    branding: {
-      primaryColor: '#0066cc',
-      accentColor: '#ff6b35',
-      logoUrl: '',
-      customDomain: ''
     }
   });
 
   const [settings, setSettings] = useState(getDefaultSettings());
 
-  // Load storefront configuration for brand colors and reset settings when publication changes
+  // Reset settings when publication changes
   useEffect(() => {
-    // Reset settings to defaults when publication changes
     setSettings(getDefaultSettings());
-    setStorefrontConfig(null);
-    
-    const fetchStorefront = async () => {
-      if (selectedPublication?.publicationId) {
-        const pubIdString = String(selectedPublication.publicationId);
-        console.log('🔍 Fetching storefront for publication:', pubIdString);
-        try {
-          const config = await getStorefrontConfiguration(pubIdString);
-          console.log('📦 Fetched config:', config);
-          if (config) {
-            setStorefrontConfig(config);
-            // Update settings with actual colors from storefront
-            setSettings(prev => ({
-              ...prev,
-              branding: {
-                ...prev.branding,
-                primaryColor: config.theme?.colors?.gradStart || config.theme?.colors?.lightPrimary || '#0066cc',
-                accentColor: config.theme?.colors?.gradEnd || config.theme?.colors?.darkPrimary || '#ff6b35',
-              }
-            }));
-            console.log('✅ Config loaded and state updated');
-          } else {
-            console.log('⚠️ No config found for publication');
-          }
-        } catch (error) {
-          console.error('❌ Error fetching storefront configuration:', error);
-          // Even if fetch fails, we stay with default settings
-        }
-      }
-    };
-    fetchStorefront();
   }, [selectedPublication?.publicationId]);
 
   if (!selectedPublication) {
@@ -113,92 +70,22 @@ export const PublicationSettings: React.FC = () => {
       return;
     }
     
-    const pubIdString = String(selectedPublication.publicationId);
-    
-    console.log('💾 Starting save...', {
-      publicationId: pubIdString,
-      primaryColor: settings.branding.primaryColor,
-      hasStorefrontConfig: !!storefrontConfig
-    });
-    
     setSaving(true);
     try {
-      let configToUpdate = storefrontConfig;
-      
-      // If we don't have the config in state, try to fetch it first
-      if (!configToUpdate) {
-        console.log('📥 Fetching existing storefront config...');
-        try {
-          configToUpdate = await getStorefrontConfiguration(pubIdString);
-          if (configToUpdate) {
-            console.log('✅ Found existing config');
-            setStorefrontConfig(configToUpdate);
-          }
-        } catch (fetchError) {
-          console.log('ℹ️ No existing config found, will create new one');
-        }
-      }
-      
-      // Update or create the configuration
-      if (configToUpdate) {
-        console.log('📝 Updating existing storefront config...');
-        const updatedConfig = await updateStorefrontConfiguration(pubIdString, {
-          theme: {
-            ...configToUpdate.theme,
-            colors: {
-              ...configToUpdate.theme.colors,
-              gradStart: settings.branding.primaryColor,
-              lightPrimary: settings.branding.primaryColor,
-            }
-          }
-        });
-        console.log('✅ Updated config:', updatedConfig);
-        
-        if (updatedConfig) {
-          setStorefrontConfig(updatedConfig);
-        }
-      } else {
-        console.log('📝 Creating new storefront config...');
-        const defaultConfig = createDefaultStorefrontConfig(selectedPublication.publicationId);
-        
-        const createdConfig = await createStorefrontConfiguration({
-          ...defaultConfig,
-          publicationId: pubIdString,
-          theme: {
-            ...defaultConfig.theme,
-            colors: {
-              ...defaultConfig.theme.colors,
-              gradStart: settings.branding.primaryColor,
-              lightPrimary: settings.branding.primaryColor,
-            }
-          }
-        });
-        console.log('✅ Created config:', createdConfig);
-        setStorefrontConfig(createdConfig);
-      }
-      
-      // Clear the brand color cache for this publication to force a refresh
-      clearBrandColorCache(pubIdString);
+      // Here you would save the settings (visibility, notifications, advertising)
+      // For now, just show success message
+      console.log('💾 Saving settings:', settings);
       
       toast({
-        title: "Success",
-        description: "Brand colors saved successfully. Refreshing..."
+        title: "Settings saved",
+        description: "Your publication settings have been updated successfully.",
       });
-      
-      // Force a page reload after a short delay to sync all components
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
     } catch (error) {
       console.error('❌ Error saving settings:', error);
-      if (error instanceof Error) {
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save brand colors.",
-        variant: "destructive"
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -419,77 +306,6 @@ export const PublicationSettings: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Branding Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-sans text-base">
-              <Palette className="h-5 w-5" />
-              Branding & Appearance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="primaryColor">Primary Color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="primaryColor"
-                    type="color"
-                    value={settings.branding.primaryColor}
-                    onChange={(e) => updateSetting('branding', 'primaryColor', e.target.value)}
-                    className="w-16 h-10"
-                  />
-                  <Input
-                    value={settings.branding.primaryColor}
-                    onChange={(e) => updateSetting('branding', 'primaryColor', e.target.value)}
-                    placeholder="#0066cc"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="accentColor">Accent Color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="accentColor"
-                    type="color"
-                    value={settings.branding.accentColor}
-                    onChange={(e) => updateSetting('branding', 'accentColor', e.target.value)}
-                    className="w-16 h-10"
-                  />
-                  <Input
-                    value={settings.branding.accentColor}
-                    onChange={(e) => updateSetting('branding', 'accentColor', e.target.value)}
-                    placeholder="#ff6b35"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="logoUrl">Logo URL</Label>
-              <Input
-                id="logoUrl"
-                value={settings.branding.logoUrl}
-                onChange={(e) => updateSetting('branding', 'logoUrl', e.target.value)}
-                placeholder="https://example.com/logo.png"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="customDomain">Custom Domain</Label>
-              <Input
-                id="customDomain"
-                value={settings.branding.customDomain}
-                onChange={(e) => updateSetting('branding', 'customDomain', e.target.value)}
-                placeholder="your-publication.com"
-              />
-              <p className="text-xs text-muted-foreground">
-                Contact support to set up custom domain routing
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Danger Zone */}

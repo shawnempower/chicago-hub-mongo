@@ -67,26 +67,21 @@ export default function Dashboard() {
   ];
 
   const renderContent = () => {
-    switch (currentTab) {
-      case 'dashboard':
-        return <DashboardOverview />;
-      case 'profile':
-        return <PublicationProfile />;
-      case 'inventory':
-        return <DashboardInventoryManager />;
-      case 'knowledgebase':
-        return <PublicationKnowledgeBase />;
-      case 'settings':
-        return <PublicationSettings />;
-      case 'storefront':
-        return <PublicationStorefront />;
-      case 'summary':
-        return <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />;
-      case 'hub-pricing':
-        return <HubPricingReport onBack={() => handleTabChange('dashboard')} />;
-      default:
-        return <DashboardOverview />;
-    }
+    // Only render the active tab component to prevent unnecessary mounting and data loading
+    // This ensures components like PublicationStorefront only load data when the user navigates to that tab
+    return (
+      <>
+        {currentTab === 'dashboard' && <DashboardOverview />}
+        {currentTab === 'profile' && <PublicationProfile />}
+        {currentTab === 'inventory' && <DashboardInventoryManager />}
+        {currentTab === 'knowledgebase' && <PublicationKnowledgeBase />}
+        {currentTab === 'settings' && <PublicationSettings />}
+        {currentTab === 'storefront' && <PublicationStorefront />}
+        {currentTab === 'summary' && <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />}
+        {currentTab === 'hub-pricing' && <HubPricingReport onBack={() => handleTabChange('dashboard')} />}
+        {!['dashboard', 'profile', 'inventory', 'knowledgebase', 'settings', 'storefront', 'summary', 'hub-pricing'].includes(currentTab) && <DashboardOverview />}
+      </>
+    );
   };
 
   if (authLoading || publicationLoading) {
