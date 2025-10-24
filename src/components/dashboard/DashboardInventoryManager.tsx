@@ -1171,6 +1171,51 @@ export const DashboardInventoryManager = () => {
     }
   };
 
+  const cloneNewsletterOpportunity = async (newsletterIndex: number, adIndex: number) => {
+    if (!currentPublication?.distributionChannels?.newsletters?.[newsletterIndex]) return;
+    
+    const originalAd = currentPublication.distributionChannels.newsletters[newsletterIndex].advertisingOpportunities?.[adIndex];
+    if (!originalAd) return;
+
+    const clonedAd = {
+      ...originalAd,
+      name: `${originalAd.name} (Copy)`,
+      hubPricing: originalAd.hubPricing ? [...originalAd.hubPricing] : []
+    };
+
+    const updatedNewsletters = [...currentPublication.distributionChannels.newsletters];
+    const updatedOpportunities = [
+      ...(updatedNewsletters[newsletterIndex].advertisingOpportunities || []),
+      clonedAd
+    ];
+    
+    updatedNewsletters[newsletterIndex] = {
+      ...updatedNewsletters[newsletterIndex],
+      advertisingOpportunities: updatedOpportunities
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          newsletters: updatedNewsletters
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Newsletter ad cloned successfully"
+      });
+    } catch (error) {
+      console.error('Error cloning newsletter opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clone newsletter ad",
+        variant: "destructive"
+      });
+    }
+  };
+
   const addPrintOpportunity = async (printIndex: number) => {
     if (!currentPublication?.distributionChannels?.print) return;
     
@@ -1251,6 +1296,54 @@ export const DashboardInventoryManager = () => {
       toast({
         title: "Error",
         description: "Failed to remove print advertising opportunity",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const clonePrintOpportunity = async (printIndex: number, adIndex: number) => {
+    if (!currentPublication?.distributionChannels?.print) return;
+    
+    const updatedPrint = Array.isArray(currentPublication.distributionChannels.print) 
+      ? [...currentPublication.distributionChannels.print]
+      : [currentPublication.distributionChannels.print];
+      
+    const originalAd = updatedPrint[printIndex]?.advertisingOpportunities?.[adIndex];
+    if (!originalAd) return;
+
+    const clonedAd = {
+      ...originalAd,
+      name: `${originalAd.name} (Copy)`,
+      hubPricing: originalAd.hubPricing ? [...originalAd.hubPricing] : []
+    };
+
+    const updatedOpportunities = [
+      ...(updatedPrint[printIndex].advertisingOpportunities || []),
+      clonedAd
+    ];
+    
+    updatedPrint[printIndex] = {
+      ...updatedPrint[printIndex],
+      advertisingOpportunities: updatedOpportunities
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          print: updatedPrint
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Print ad cloned successfully"
+      });
+    } catch (error) {
+      console.error('Error cloning print opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clone print ad",
         variant: "destructive"
       });
     }
@@ -1476,6 +1569,51 @@ export const DashboardInventoryManager = () => {
     }
   };
 
+  const cloneSocialMediaOpportunity = async (socialIndex: number, adIndex: number) => {
+    if (!currentPublication?.distributionChannels?.socialMedia?.[socialIndex]) return;
+    
+    const originalAd = currentPublication.distributionChannels.socialMedia[socialIndex].advertisingOpportunities?.[adIndex];
+    if (!originalAd) return;
+
+    const clonedAd = {
+      ...originalAd,
+      name: `${originalAd.name} (Copy)`,
+      hubPricing: originalAd.hubPricing ? [...originalAd.hubPricing] : []
+    };
+
+    const updatedSocialMedia = [...currentPublication.distributionChannels.socialMedia];
+    const updatedOpportunities = [
+      ...(updatedSocialMedia[socialIndex].advertisingOpportunities || []),
+      clonedAd
+    ];
+    
+    updatedSocialMedia[socialIndex] = {
+      ...updatedSocialMedia[socialIndex],
+      advertisingOpportunities: updatedOpportunities
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          socialMedia: updatedSocialMedia
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Social media ad cloned successfully"
+      });
+    } catch (error) {
+      console.error('Error cloning social media opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clone social media ad",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Television functions
   const addTelevisionStation = async () => {
     if (!currentPublication) return;
@@ -1615,6 +1753,51 @@ export const DashboardInventoryManager = () => {
       });
     }
   };
+
+  const cloneTelevisionOpportunity = async (stationIndex: number, adIndex: number) => {
+    if (!currentPublication?.distributionChannels?.television?.[stationIndex]) return;
+    
+    const originalAd = currentPublication.distributionChannels.television[stationIndex].advertisingOpportunities?.[adIndex];
+    if (!originalAd) return;
+
+    const clonedAd = {
+      ...originalAd,
+      name: `${originalAd.name} (Copy)`,
+      hubPricing: originalAd.hubPricing ? [...originalAd.hubPricing] : []
+    };
+
+    const updatedTelevision = [...currentPublication.distributionChannels.television];
+    const updatedOpportunities = [
+      ...(updatedTelevision[stationIndex].advertisingOpportunities || []),
+      clonedAd
+    ];
+    
+    updatedTelevision[stationIndex] = {
+      ...updatedTelevision[stationIndex],
+      advertisingOpportunities: updatedOpportunities
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          television: updatedTelevision
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "TV ad cloned successfully"
+      });
+    } catch (error) {
+      console.error('Error cloning TV opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clone TV ad",
+        variant: "destructive"
+      });
+    }
+  };
   // Remove functions
   const removeWebsiteOpportunity = (index: number) => {
     if (!currentPublication?.distributionChannels?.website?.advertisingOpportunities) return;
@@ -1635,6 +1818,48 @@ export const DashboardInventoryManager = () => {
       title: "Success",
       description: "Website advertising opportunity removed successfully"
     });
+  };
+
+  const cloneWebsiteOpportunity = async (index: number) => {
+    if (!currentPublication?.distributionChannels?.website?.advertisingOpportunities) return;
+    
+    const originalAd = currentPublication.distributionChannels.website.advertisingOpportunities[index];
+    if (!originalAd) return;
+
+    const clonedAd = {
+      ...originalAd,
+      name: `${originalAd.name} (Copy)`,
+      hubPricing: originalAd.hubPricing ? [...originalAd.hubPricing] : []
+    };
+
+    const updatedOpportunities = [
+      ...currentPublication.distributionChannels.website.advertisingOpportunities,
+      clonedAd
+    ];
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          website: {
+            ...currentPublication.distributionChannels.website,
+            advertisingOpportunities: updatedOpportunities
+          }
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Website ad cloned successfully"
+      });
+    } catch (error) {
+      console.error('Error cloning website opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clone website ad",
+        variant: "destructive"
+      });
+    }
   };
 
   const removeDistributionChannel = async (channelType: 'podcasts' | 'radio' | 'streaming' | 'print' | 'newsletters' | 'socialMedia' | 'television', index: number) => {
@@ -1771,6 +1996,51 @@ export const DashboardInventoryManager = () => {
       toast({
         title: "Error",
         description: "Failed to remove podcast advertising opportunity",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const clonePodcastOpportunity = async (podcastIndex: number, adIndex: number) => {
+    if (!currentPublication?.distributionChannels?.podcasts?.[podcastIndex]) return;
+    
+    const originalAd = currentPublication.distributionChannels.podcasts[podcastIndex].advertisingOpportunities?.[adIndex];
+    if (!originalAd) return;
+
+    const clonedAd = {
+      ...originalAd,
+      name: `${originalAd.name} (Copy)`,
+      hubPricing: originalAd.hubPricing ? [...originalAd.hubPricing] : []
+    };
+
+    const updatedPodcasts = [...currentPublication.distributionChannels.podcasts];
+    const updatedOpportunities = [
+      ...(updatedPodcasts[podcastIndex].advertisingOpportunities || []),
+      clonedAd
+    ];
+    
+    updatedPodcasts[podcastIndex] = {
+      ...updatedPodcasts[podcastIndex],
+      advertisingOpportunities: updatedOpportunities
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          podcasts: updatedPodcasts
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Podcast ad cloned successfully"
+      });
+    } catch (error) {
+      console.error('Error cloning podcast opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clone podcast ad",
         variant: "destructive"
       });
     }
@@ -1967,6 +2237,51 @@ export const DashboardInventoryManager = () => {
       toast({
         title: "Error",
         description: "Failed to remove streaming advertising opportunity",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const cloneStreamingOpportunity = async (channelIndex: number, adIndex: number) => {
+    if (!currentPublication?.distributionChannels?.streamingVideo?.[channelIndex]) return;
+    
+    const originalAd = currentPublication.distributionChannels.streamingVideo[channelIndex].advertisingOpportunities?.[adIndex];
+    if (!originalAd) return;
+
+    const clonedAd = {
+      ...originalAd,
+      name: `${originalAd.name} (Copy)`,
+      hubPricing: originalAd.hubPricing ? [...originalAd.hubPricing] : []
+    };
+
+    const updatedChannels = [...currentPublication.distributionChannels.streamingVideo];
+    const updatedOpportunities = [
+      ...(updatedChannels[channelIndex].advertisingOpportunities || []),
+      clonedAd
+    ];
+    
+    updatedChannels[channelIndex] = {
+      ...updatedChannels[channelIndex],
+      advertisingOpportunities: updatedOpportunities
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          streamingVideo: updatedChannels
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Streaming ad cloned successfully"
+      });
+    } catch (error) {
+      console.error('Error cloning streaming opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clone streaming ad",
         variant: "destructive"
       });
     }
@@ -2359,6 +2674,15 @@ export const DashboardInventoryManager = () => {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => cloneWebsiteOpportunity(index)}
+                          title="Clone this ad"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                           onClick={() => removeWebsiteOpportunity(index)}
                         >
@@ -2521,6 +2845,15 @@ export const DashboardInventoryManager = () => {
                                     onClick={() => openEditDialog(ad, 'podcast-ad', index, adIndex)}
                                   >
                                     <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    onClick={() => clonePodcastOpportunity(index, adIndex)}
+                                    title="Clone this ad"
+                                  >
+                                    <Copy className="w-3 h-3" />
                                   </Button>
                                   <Button 
                                     variant="ghost" 
@@ -2864,6 +3197,15 @@ export const DashboardInventoryManager = () => {
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
+                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  onClick={() => cloneStreamingOpportunity(index, adIndex)}
+                                  title="Clone this ad"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
                                   className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                   onClick={() => removeStreamingOpportunity(index, adIndex)}
                                 >
@@ -3039,6 +3381,15 @@ export const DashboardInventoryManager = () => {
                                     onClick={() => openEditDialog(ad, 'print-ad', index, adIndex)}
                                   >
                                     <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    onClick={() => clonePrintOpportunity(index, adIndex)}
+                                    title="Clone this ad"
+                                  >
+                                    <Copy className="w-3 h-3" />
                                   </Button>
                                   <Button 
                                     variant="ghost" 
@@ -3378,6 +3729,15 @@ export const DashboardInventoryManager = () => {
                             <Button 
                               variant="ghost" 
                               size="sm"
+                              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => cloneNewsletterOpportunity(index, adIndex)}
+                              title="Clone this ad"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
                               className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                               onClick={() => removeNewsletterOpportunity(index, adIndex)}
                             >
@@ -3541,6 +3901,15 @@ export const DashboardInventoryManager = () => {
                               onClick={() => openEditDialog(ad, 'social-media-ad', index, adIndex)}
                             >
                               <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => cloneSocialMediaOpportunity(index, adIndex)}
+                              title="Clone this ad"
+                            >
+                              <Copy className="w-3 h-3" />
                             </Button>
                             <Button 
                               variant="ghost" 
@@ -3710,6 +4079,15 @@ export const DashboardInventoryManager = () => {
                               onClick={() => openEditDialog(ad, 'television-ad', index, adIndex)}
                             >
                               <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => cloneTelevisionOpportunity(index, adIndex)}
+                              title="Clone this ad"
+                            >
+                              <Copy className="w-3 h-3" />
                             </Button>
                             <Button 
                               variant="ghost" 
