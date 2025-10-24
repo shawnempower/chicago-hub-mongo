@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, Edit, Trash2, DollarSign, Target, BarChart3, 
   Globe, Mail, Printer, Calendar, Package, Search,
-  RefreshCw, Save, X, TrendingUp, Users, Mic, Radio, Video, Tv
+  RefreshCw, Save, X, TrendingUp, Users, Mic, Radio, Video, Tv, Copy
 } from 'lucide-react';
 
 import { usePublication } from '@/contexts/PublicationContext';
@@ -279,18 +279,18 @@ export const DashboardInventoryManager = () => {
     }
   };
 
-  // Helper function to check if inventory type has opportunities
+  // Helper function to check if inventory type has data (channel exists)
   const hasActiveOpportunities = (type: keyof typeof visibleTabs): boolean => {
     if (!currentPublication) return false;
     
     switch(type) {
       case 'website':
-        return (currentPublication.distributionChannels?.website?.advertisingOpportunities?.length || 0) > 0;
+        // Show if website object exists (regardless of ads)
+        return !!currentPublication.distributionChannels?.website;
       case 'newsletters': {
         const newsletters = currentPublication.distributionChannels?.newsletters;
-        if (!newsletters || newsletters.length === 0) return false;
-        return newsletters.reduce((sum, n) => 
-          sum + (n.advertisingOpportunities?.length || 0), 0) > 0;
+        // Show if newsletters array exists and has at least one newsletter
+        return !!(newsletters && newsletters.length > 0);
       }
       case 'print': {
         // Print can be either a single object OR an array
@@ -298,51 +298,42 @@ export const DashboardInventoryManager = () => {
         if (!printData) return false;
         
         if (Array.isArray(printData)) {
-          // New array format - check all print publications
-          // Empty array should return false
-          if (printData.length === 0) return false;
-          return printData.reduce((sum, p) => 
-            sum + (p.advertisingOpportunities?.length || 0), 0) > 0;
+          // Show if array has at least one print publication
+          return printData.length > 0;
         } else {
-          // Old single object format
-          return (printData.advertisingOpportunities?.length || 0) > 0;
+          // Show if print object exists
+          return true;
         }
       }
       case 'events': {
         const events = currentPublication.distributionChannels?.events;
-        if (!events || events.length === 0) return false;
-        return events.reduce((sum, e) => 
-          sum + (e.sponsorshipOpportunities?.length || 0), 0) > 0;
+        // Show if events array exists and has at least one event
+        return !!(events && events.length > 0);
       }
       case 'podcasts': {
         const podcasts = currentPublication.distributionChannels?.podcasts;
-        if (!podcasts || podcasts.length === 0) return false;
-        return podcasts.reduce((sum, p) => 
-          sum + (p.advertisingOpportunities?.length || 0), 0) > 0;
+        // Show if podcasts array exists and has at least one podcast
+        return !!(podcasts && podcasts.length > 0);
       }
       case 'radio': {
         const radioStations = currentPublication.distributionChannels?.radioStations;
-        if (!radioStations || radioStations.length === 0) return false;
-        return radioStations.reduce((sum, r) => 
-          sum + (r.advertisingOpportunities?.length || 0), 0) > 0;
+        // Show if radio stations array exists and has at least one station
+        return !!(radioStations && radioStations.length > 0);
       }
       case 'streaming': {
         const streamingVideo = currentPublication.distributionChannels?.streamingVideo;
-        if (!streamingVideo || streamingVideo.length === 0) return false;
-        return streamingVideo.reduce((sum, s) => 
-          sum + (s.advertisingOpportunities?.length || 0), 0) > 0;
+        // Show if streaming video array exists and has at least one channel
+        return !!(streamingVideo && streamingVideo.length > 0);
       }
       case 'television': {
         const television = currentPublication.distributionChannels?.television;
-        if (!television || television.length === 0) return false;
-        return television.reduce((sum, t) => 
-          sum + (t.advertisingOpportunities?.length || 0), 0) > 0;
+        // Show if television array exists and has at least one station
+        return !!(television && television.length > 0);
       }
       case 'social': {
         const socialMedia = currentPublication.distributionChannels?.socialMedia;
-        if (!socialMedia || socialMedia.length === 0) return false;
-        return socialMedia.reduce((sum, sm) => 
-          sum + (sm.advertisingOpportunities?.length || 0), 0) > 0;
+        // Show if social media array exists and has at least one platform
+        return !!(socialMedia && socialMedia.length > 0);
       }
       default:
         return false;
@@ -1860,6 +1851,52 @@ export const DashboardInventoryManager = () => {
     }
   };
 
+  const cloneRadioOpportunity = async (stationIndex: number, adIndex: number) => {
+    if (!currentPublication?.distributionChannels?.radioStations?.[stationIndex]) return;
+    
+    const originalAd = currentPublication.distributionChannels.radioStations[stationIndex].advertisingOpportunities?.[adIndex];
+    if (!originalAd) return;
+
+    // Create a deep copy of the ad with "(Copy)" appended to the name
+    const clonedAd = {
+      ...originalAd,
+      name: `${originalAd.name} (Copy)`,
+      hubPricing: originalAd.hubPricing ? [...originalAd.hubPricing] : []
+    };
+
+    const updatedStations = [...currentPublication.distributionChannels.radioStations];
+    const updatedOpportunities = [
+      ...(updatedStations[stationIndex].advertisingOpportunities || []),
+      clonedAd
+    ];
+    
+    updatedStations[stationIndex] = {
+      ...updatedStations[stationIndex],
+      advertisingOpportunities: updatedOpportunities
+    };
+
+    try {
+      await handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          radioStations: updatedStations
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Radio ad cloned successfully"
+      });
+    } catch (error) {
+      console.error('Error cloning radio opportunity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clone radio ad",
+        variant: "destructive"
+      });
+    }
+  };
+
   const addStreamingOpportunity = async (channelIndex: number) => {
     if (!currentPublication?.distributionChannels?.streamingVideo?.[channelIndex]) return;
     
@@ -2646,6 +2683,15 @@ export const DashboardInventoryManager = () => {
                                   onClick={() => openEditDialog(ad, 'radio-ad', index, adIndex)}
                                 >
                                   <Edit className="w-3 h-3" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  onClick={() => cloneRadioOpportunity(index, adIndex)}
+                                  title="Clone this ad"
+                                >
+                                  <Copy className="w-3 h-3" />
                                 </Button>
                                 <Button 
                                   variant="ghost" 

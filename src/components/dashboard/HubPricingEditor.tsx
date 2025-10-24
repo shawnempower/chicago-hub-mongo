@@ -81,8 +81,14 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
     : [{ pricing: defaultPricing }];
 
   const addDefaultPricing = () => {
+    // Initialize with the default pricing model that will be shown in the Select dropdown
+    // This ensures what's displayed is what's actually saved
+    const defaultPricingModel = pricingModels?.[0]?.value;
+    
     const newDefaultPrice: DefaultPrice = {
-      pricing: {},
+      pricing: {
+        ...(defaultPricingModel && { pricingModel: defaultPricingModel }),
+      },
     };
     const updated = [...defaultPricingArray, newDefaultPrice];
     // Multiple pricing tiers, return as array
