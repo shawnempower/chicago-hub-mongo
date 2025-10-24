@@ -243,7 +243,7 @@ export function DashboardOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{metrics.totalInventory}</div>
+            <div className="text-3xl font-bold text-gray-900">{metrics.totalInventory}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Across {metrics.activeChannels} {metrics.activeChannels === 1 ? 'channel' : 'channels'}
             </p>
@@ -259,7 +259,7 @@ export function DashboardOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">
+            <div className="text-3xl font-bold text-gray-900">
               {formatCurrency(metrics.totalRevenuePotential)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -277,7 +277,7 @@ export function DashboardOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-600">
+            <div className="text-3xl font-bold text-gray-900">
               {formatNumber(metrics.totalReach)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -295,7 +295,7 @@ export function DashboardOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-600">
+            <div className="text-3xl font-bold text-gray-900">
               {metrics.hubPricingCount}
             </div>
             <p className="text-xs text-muted-foreground mt-1">

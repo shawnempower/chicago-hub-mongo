@@ -59,7 +59,7 @@ export default function Dashboard() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'inventory', label: 'Inventory', icon: Package },
-    { id: 'knowledgebase', label: 'Knowledge Base', icon: BookOpen },
+    { id: 'knowledgebase', label: 'Knowledge', icon: BookOpen },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'storefront', label: 'Storefront', icon: Store },
     { id: 'summary', label: 'Summary', icon: FileText },
@@ -117,7 +117,7 @@ export default function Dashboard() {
         {selectedPublication ? (
           <div className="flex gap-6">
             {/* Vertical Left Navigation */}
-            <aside className="w-64 flex-shrink-0">
+            <aside className="w-24 flex-shrink-0">
               <nav className="p-2 sticky top-6">
                 <div className="space-y-1">
                   {navItems.map((item) => {
@@ -129,14 +129,14 @@ export default function Dashboard() {
                         key={item.id}
                         onClick={() => handleTabChange(item.id)}
                         className={cn(
-                          "w-full flex items-center gap-3 px-4 py-3 text-sm rounded-md transition-colors",
+                          "w-full flex flex-col items-center gap-1 px-2 py-3 rounded-md transition-colors",
                           isActive
-                            ? "bg-[#EDEAE1] font-semibold"
-                            : "hover:bg-[#E2E0D8]"
+                            ? "bg-[#EDEAE1] font-bold"
+                            : "hover:bg-[#E2E0D8] font-bold"
                         )}
                       >
                         <Icon className="h-5 w-5" />
-                        <span>{item.label}</span>
+                        <span className="text-[11px]">{item.label}</span>
                       </button>
                     );
                   })}

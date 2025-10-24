@@ -25,7 +25,7 @@ export const AdOpportunityCard: React.FC<AdOpportunityCardProps> = ({
   return (
     <div className={`border border-gray-200 rounded-lg shadow-sm p-4 bg-white ${className}`}>
       {/* Title and Hub Badge */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-3">
         <h4 className="text-base font-semibold text-gray-900">{title}</h4>
         {hubPricingCount > 0 && (
           <Badge 
@@ -37,29 +37,32 @@ export const AdOpportunityCard: React.FC<AdOpportunityCardProps> = ({
         )}
       </div>
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-        {/* Left Column */}
-        <div className="space-y-3">
-          {leftColumn.map((field, index) => (
-            <div key={index}>
-              <p className="text-xs font-medium text-gray-500 mb-1">{field.label}</p>
-              <p className="text-sm text-gray-900">{field.value || 'N/A'}</p>
-            </div>
-          ))}
-        </div>
+      {/* Specifications Container */}
+      <div className="p-3 bg-gray-50 rounded-md border">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+          {/* Left Column */}
+          <div className="space-y-3">
+            {leftColumn.map((field, index) => (
+              <div key={index}>
+                <p className="text-xs font-medium text-gray-500 mb-1">{field.label}</p>
+                <p className="text-sm text-gray-900">{field.value || 'N/A'}</p>
+              </div>
+            ))}
+          </div>
 
-        {/* Right Column */}
-        <div className="space-y-3">
-          {rightColumn.map((field, index) => (
-            <div key={index}>
-              <p className="text-xs font-medium text-gray-500 mb-1">{field.label}</p>
-              <p className="text-sm text-gray-900">{field.value || 'N/A'}</p>
-            </div>
-          ))}
+          {/* Right Column */}
+          <div className="space-y-3">
+            {rightColumn.map((field, index) => (
+              <div key={index}>
+                <p className="text-xs font-medium text-gray-500 mb-1">{field.label}</p>
+                <p className="text-sm text-gray-900">{field.value || 'N/A'}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
 

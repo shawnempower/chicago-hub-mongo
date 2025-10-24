@@ -38,6 +38,9 @@ import {
 import { SchemaField, SchemaSection, SchemaFieldLegend } from './SchemaField';
 import { transformers } from '@/config/publicationFieldMapping';
 import { getNestedValue, setNestedValue, deepClone } from '@/utils/schemaHelpers';
+import { DemographicSliders, GenderSlider, DemographicSlidersReadOnly, GenderSliderReadOnly } from './DemographicSliders';
+import { getActiveChannelMetrics } from '@/utils/channelMetrics';
+import { ChannelMetricCard } from './ChannelMetricCard';
 
 export const PublicationProfile: React.FC = () => {
   const { selectedPublication, setSelectedPublication } = usePublication();
@@ -99,9 +102,11 @@ export const PublicationProfile: React.FC = () => {
   };
 
   const updateField = (schemaPath: string, value: any) => {
-    const newData = deepClone(formData);
-    setNestedValue(newData, schemaPath, value);
-    setFormData(newData);
+    setFormData(prevData => {
+      const newData = deepClone(prevData);
+      setNestedValue(newData, schemaPath, value);
+      return newData;
+    });
   };
 
   const getFieldValue = (schemaPath: string, transform?: (value: any) => any): any => {
@@ -415,245 +420,71 @@ export const PublicationProfile: React.FC = () => {
               </SchemaField>
             </div>
 
-            {/* Age Groups */}
-            <div>
-              <h3 className="font-medium mb-3">Age Groups (percentages)</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.18-24" showSchemaPath={showSchemaDebug}>
-                  <Label>18-24</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.ageGroups.18-24')} 
-                    onChange={(e) => updateField('audienceDemographics.ageGroups.18-24', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.25-34" showSchemaPath={showSchemaDebug}>
-                  <Label>25-34</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.ageGroups.25-34')} 
-                    onChange={(e) => updateField('audienceDemographics.ageGroups.25-34', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.35-44" showSchemaPath={showSchemaDebug}>
-                  <Label>35-44</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.ageGroups.35-44')} 
-                    onChange={(e) => updateField('audienceDemographics.ageGroups.35-44', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.45-54" showSchemaPath={showSchemaDebug}>
-                  <Label>45-54</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.ageGroups.45-54')} 
-                    onChange={(e) => updateField('audienceDemographics.ageGroups.45-54', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.55-64" showSchemaPath={showSchemaDebug}>
-                  <Label>55-64</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.ageGroups.55-64')} 
-                    onChange={(e) => updateField('audienceDemographics.ageGroups.55-64', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.ageGroups.65+" showSchemaPath={showSchemaDebug}>
-                  <Label>65+</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.ageGroups.65+')} 
-                    onChange={(e) => updateField('audienceDemographics.ageGroups.65+', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
+            {/* Age Groups & Household Income - Side by Side on Desktop */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:divide-x lg:divide-gray-200">
+              {/* Age Groups */}
+              <div>
+                <DemographicSliders
+                  title="Age Groups (percentages)"
+                  groups={[
+                    { key: '18-24', label: '18-24', value: getFieldValue('audienceDemographics.ageGroups.18-24') || 0 },
+                    { key: '25-34', label: '25-34', value: getFieldValue('audienceDemographics.ageGroups.25-34') || 0 },
+                    { key: '35-44', label: '35-44', value: getFieldValue('audienceDemographics.ageGroups.35-44') || 0 },
+                    { key: '45-54', label: '45-54', value: getFieldValue('audienceDemographics.ageGroups.45-54') || 0 },
+                    { key: '55-64', label: '55-64', value: getFieldValue('audienceDemographics.ageGroups.55-64') || 0 },
+                    { key: '65+', label: '65+', value: getFieldValue('audienceDemographics.ageGroups.65+') || 0 }
+                  ]}
+                  onChange={(key, value) => updateField(`audienceDemographics.ageGroups.${key}`, value)}
+                />
+              </div>
+
+              {/* Household Income */}
+              <div className="lg:pl-8">
+                <DemographicSliders
+                  title="Household Income (percentages)"
+                  groups={[
+                    { key: 'under35k', label: 'Under $35K', value: getFieldValue('audienceDemographics.householdIncome.under35k') || 0 },
+                    { key: '35k-50k', label: '$35K-$50K', value: getFieldValue('audienceDemographics.householdIncome.35k-50k') || 0 },
+                    { key: '50k-75k', label: '$50K-$75K', value: getFieldValue('audienceDemographics.householdIncome.50k-75k') || 0 },
+                    { key: '75k-100k', label: '$75K-$100K', value: getFieldValue('audienceDemographics.householdIncome.75k-100k') || 0 },
+                    { key: '100k-150k', label: '$100K-$150K', value: getFieldValue('audienceDemographics.householdIncome.100k-150k') || 0 },
+                    { key: 'over150k', label: 'Over $150K', value: getFieldValue('audienceDemographics.householdIncome.over150k') || 0 }
+                  ]}
+                  onChange={(key, value) => updateField(`audienceDemographics.householdIncome.${key}`, value)}
+                />
               </div>
             </div>
 
             {/* Gender */}
-            <div>
-              <h3 className="font-medium mb-3">Gender (percentages)</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.gender.male" showSchemaPath={showSchemaDebug}>
-                  <Label>Male</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.gender.male')} 
-                    onChange={(e) => updateField('audienceDemographics.gender.male', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.gender.female" showSchemaPath={showSchemaDebug}>
-                  <Label>Female</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.gender.female')} 
-                    onChange={(e) => updateField('audienceDemographics.gender.female', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.gender.other" showSchemaPath={showSchemaDebug}>
-                  <Label>Other</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.gender.other')} 
-                    onChange={(e) => updateField('audienceDemographics.gender.other', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-              </div>
-            </div>
-
-            {/* Household Income */}
-            <div>
-              <h3 className="font-medium mb-3">Household Income (percentages)</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.under35k" showSchemaPath={showSchemaDebug}>
-                  <Label>Under $35K</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.householdIncome.under35k')} 
-                    onChange={(e) => updateField('audienceDemographics.householdIncome.under35k', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.35k-50k" showSchemaPath={showSchemaDebug}>
-                  <Label>$35K-$50K</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.householdIncome.35k-50k')} 
-                    onChange={(e) => updateField('audienceDemographics.householdIncome.35k-50k', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.50k-75k" showSchemaPath={showSchemaDebug}>
-                  <Label>$50K-$75K</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.householdIncome.50k-75k')} 
-                    onChange={(e) => updateField('audienceDemographics.householdIncome.50k-75k', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.75k-100k" showSchemaPath={showSchemaDebug}>
-                  <Label>$75K-$100K</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.householdIncome.75k-100k')} 
-                    onChange={(e) => updateField('audienceDemographics.householdIncome.75k-100k', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.100k-150k" showSchemaPath={showSchemaDebug}>
-                  <Label>$100K-$150K</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.householdIncome.100k-150k')} 
-                    onChange={(e) => updateField('audienceDemographics.householdIncome.100k-150k', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.householdIncome.over150k" showSchemaPath={showSchemaDebug}>
-                  <Label>Over $150K</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.householdIncome.over150k')} 
-                    onChange={(e) => updateField('audienceDemographics.householdIncome.over150k', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-              </div>
+            <div className="pt-6 border-t">
+              <GenderSlider
+                malePercentage={getFieldValue('audienceDemographics.gender.male') || 0}
+                femalePercentage={getFieldValue('audienceDemographics.gender.female') || 0}
+                otherPercentage={getFieldValue('audienceDemographics.gender.other') || 0}
+                onChange={(male, female, other) => {
+                  updateField('audienceDemographics.gender.male', male);
+                  updateField('audienceDemographics.gender.female', female);
+                  updateField('audienceDemographics.gender.other', other);
+                }}
+              />
             </div>
 
             {/* Education */}
-            <div>
-              <h3 className="font-medium mb-3">Education Level (percentages)</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.education.highSchool" showSchemaPath={showSchemaDebug}>
-                  <Label>High School</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.education.highSchool')} 
-                    onChange={(e) => updateField('audienceDemographics.education.highSchool', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.education.someCollege" showSchemaPath={showSchemaDebug}>
-                  <Label>Some College</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.education.someCollege')} 
-                    onChange={(e) => updateField('audienceDemographics.education.someCollege', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.education.bachelors" showSchemaPath={showSchemaDebug}>
-                  <Label>Bachelor's</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.education.bachelors')} 
-                    onChange={(e) => updateField('audienceDemographics.education.bachelors', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="audienceDemographics.education.graduate" showSchemaPath={showSchemaDebug}>
-                  <Label>Graduate</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    value={getFieldValue('audienceDemographics.education.graduate')} 
-                    onChange={(e) => updateField('audienceDemographics.education.graduate', parseFloat(e.target.value) || 0)} 
-                    placeholder="%" 
-                  />
-                </SchemaField>
-              </div>
+            <div className="pt-6 border-t">
+              <DemographicSliders
+                title="Education Level (percentages)"
+                groups={[
+                  { key: 'highSchool', label: 'High School', value: getFieldValue('audienceDemographics.education.highSchool') || 0 },
+                  { key: 'someCollege', label: 'Some College', value: getFieldValue('audienceDemographics.education.someCollege') || 0 },
+                  { key: 'bachelors', label: "Bachelor's", value: getFieldValue('audienceDemographics.education.bachelors') || 0 },
+                  { key: 'graduate', label: 'Graduate', value: getFieldValue('audienceDemographics.education.graduate') || 0 }
+                ]}
+                onChange={(key, value) => updateField(`audienceDemographics.education.${key}`, value)}
+              />
             </div>
 
             {/* Location and Interests */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t">
               <SchemaField mappingStatus="full" schemaPath="audienceDemographics.location" showSchemaPath={showSchemaDebug}>
                 <Label>Primary Geographic Audience</Label>
                 <Input 
@@ -835,210 +666,280 @@ export const PublicationProfile: React.FC = () => {
             </p>
           </div>
 
-          <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-2">Primary Contact</p>
-              <p>{get('contactInfo.primaryContact.name') || 'Not specified'} | {get('contactInfo.primaryContact.email') || 'Not specified'} | {get('contactInfo.primaryContact.phone') || 'Not specified'}</p>
-              {get('contactInfo.primaryContact.title') && <p className="text-sm text-muted-foreground">{get('contactInfo.primaryContact.title')}</p>}
-              {get('contactInfo.primaryContact.preferredContact') && <p className="text-sm text-muted-foreground">Prefers: {get('contactInfo.primaryContact.preferredContact')}</p>}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-2">Sales Contact</p>
-              <p>{get('contactInfo.salesContact.name') || 'Not specified'} | {get('contactInfo.salesContact.email') || 'Not specified'} | {get('contactInfo.salesContact.phone') || 'Not specified'}</p>
-              {get('contactInfo.salesContact.title') && <p className="text-sm text-muted-foreground">{get('contactInfo.salesContact.title')}</p>}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-2">Editorial Contact</p>
-              <p>{get('contactInfo.editorialContact.name') || 'Not specified'} | {get('contactInfo.editorialContact.email') || 'Not specified'} | {get('contactInfo.editorialContact.phone') || 'Not specified'}</p>
-              {get('contactInfo.editorialContact.title') && <p className="text-sm text-muted-foreground">{get('contactInfo.editorialContact.title')}</p>}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-2">General Manager</p>
-              <p>{get('contactInfo.generalManager.name') || 'Not specified'} | {get('contactInfo.generalManager.email') || 'Not specified'} | {get('contactInfo.generalManager.phone') || 'Not specified'}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-2">Advertising Director</p>
-              <p>{get('contactInfo.advertisingDirector.name') || 'Not specified'} | {get('contactInfo.advertisingDirector.email') || 'Not specified'} | {get('contactInfo.advertisingDirector.phone') || 'Not specified'}</p>
-                    </div>
-                  </div>
-        </CardContent>
-      </Card>
-
-      {/* BUSINESS INFORMATION */}
-      <Card>
-        <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Business Information</h2>
-        </div>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Legal Entity</p>
-              <p className="mt-1">{get('businessInfo.legalEntity') || 'Not specified'}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Tax ID / EIN</p>
-              <p className="mt-1">{get('businessInfo.taxId') || 'Not specified'}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Parent Company</p>
-              <p className="mt-1">{get('businessInfo.parentCompany') || 'Not specified'}</p>
-            </div>
+          {(() => {
+            const primaryContact = get('contactInfo.primaryContact');
+            const salesContact = get('contactInfo.salesContact');
+            const editorialContact = get('contactInfo.editorialContact');
+            const generalManager = get('contactInfo.generalManager');
+            const advertisingDirector = get('contactInfo.advertisingDirector');
+            
+            // Check if any contact has data
+            const hasPrimaryData = primaryContact && (primaryContact.name || primaryContact.email || primaryContact.phone);
+            const hasSalesData = salesContact && (salesContact.name || salesContact.email || salesContact.phone);
+            const hasEditorialData = editorialContact && (editorialContact.name || editorialContact.email || editorialContact.phone);
+            const hasGeneralManagerData = generalManager && (generalManager.name || generalManager.email || generalManager.phone);
+            const hasAdvertisingDirectorData = advertisingDirector && (advertisingDirector.name || advertisingDirector.email || advertisingDirector.phone);
+            
+            const hasAnyContactData = hasPrimaryData || hasSalesData || hasEditorialData || hasGeneralManagerData || hasAdvertisingDirectorData;
+            
+            if (!hasAnyContactData) return null;
+            
+            return (
+              <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {hasPrimaryData && (
                   <div>
-              <p className="text-sm font-medium text-muted-foreground">Ownership Type</p>
-              <p className="mt-1">{get('businessInfo.ownershipType') || 'Not specified'}</p>
-                            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Years in Operation</p>
-              <p className="mt-1">{get('businessInfo.yearsInOperation') || 'Not specified'}</p>
-                          </div>
-                        </div>
-        </CardContent>
-      </Card>
-
-      {/* GEOGRAPHIC MARKETS */}
-      <Card>
-        <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Geographic Markets</h2>
-        </div>
-        <CardContent className="space-y-3">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Primary Coverage</p>
-            <p className="mt-1">{get('basicInfo.primaryServiceArea') || 'Not specified'}</p>
-                    </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Secondary Coverage</p>
-            <p className="mt-1">{transformers.arrayToString(get('basicInfo.secondaryMarkets')) || 'Not specified'}</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Primary Contact</p>
+                    <p>{primaryContact.name || 'Not specified'} | {primaryContact.email || 'Not specified'} | {primaryContact.phone || 'Not specified'}</p>
+                    {primaryContact.title && <p className="text-sm text-muted-foreground">{primaryContact.title}</p>}
+                    {primaryContact.preferredContact && <p className="text-sm text-muted-foreground">Prefers: {primaryContact.preferredContact}</p>}
                   </div>
+                )}
+                {hasSalesData && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Sales Contact</p>
+                    <p>{salesContact.name || 'Not specified'} | {salesContact.email || 'Not specified'} | {salesContact.phone || 'Not specified'}</p>
+                    {salesContact.title && <p className="text-sm text-muted-foreground">{salesContact.title}</p>}
+                  </div>
+                )}
+                {hasEditorialData && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Editorial Contact</p>
+                    <p>{editorialContact.name || 'Not specified'} | {editorialContact.email || 'Not specified'} | {editorialContact.phone || 'Not specified'}</p>
+                    {editorialContact.title && <p className="text-sm text-muted-foreground">{editorialContact.title}</p>}
+                  </div>
+                )}
+                {hasGeneralManagerData && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">General Manager</p>
+                    <p>{generalManager.name || 'Not specified'} | {generalManager.email || 'Not specified'} | {generalManager.phone || 'Not specified'}</p>
+                  </div>
+                )}
+                {hasAdvertisingDirectorData && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Advertising Director</p>
+                    <p>{advertisingDirector.name || 'Not specified'} | {advertisingDirector.email || 'Not specified'} | {advertisingDirector.phone || 'Not specified'}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
-      {/* KEY METRICS */}
+      {/* BUSINESS INFORMATION - Only show if there's data */}
+      {(() => {
+        const businessInfo = get('businessInfo');
+        const hasBusinessData = businessInfo && (
+          businessInfo.legalEntity || 
+          businessInfo.taxId || 
+          businessInfo.parentCompany || 
+          businessInfo.ownershipType || 
+          businessInfo.yearsInOperation
+        );
+        
+        if (!hasBusinessData) return null;
+        
+        return (
+          <Card>
+            <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
+              <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Business Information</h2>
+            </div>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {businessInfo.legalEntity && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Legal Entity</p>
+                    <p className="mt-1">{businessInfo.legalEntity}</p>
+                  </div>
+                )}
+                {businessInfo.taxId && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Tax ID / EIN</p>
+                    <p className="mt-1">{businessInfo.taxId}</p>
+                  </div>
+                )}
+                {businessInfo.parentCompany && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Parent Company</p>
+                    <p className="mt-1">{businessInfo.parentCompany}</p>
+                  </div>
+                )}
+                {businessInfo.ownershipType && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Ownership Type</p>
+                    <p className="mt-1">{businessInfo.ownershipType}</p>
+                  </div>
+                )}
+                {businessInfo.yearsInOperation && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Years in Operation</p>
+                    <p className="mt-1">{businessInfo.yearsInOperation}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* GEOGRAPHIC MARKETS - Only show if there's data */}
+      {(() => {
+        const primaryArea = get('basicInfo.primaryServiceArea');
+        const secondaryMarkets = get('basicInfo.secondaryMarkets');
+        const hasSecondaryData = secondaryMarkets && Array.isArray(secondaryMarkets) && secondaryMarkets.length > 0;
+        
+        if (!primaryArea && !hasSecondaryData) return null;
+        
+        return (
+          <Card>
+            <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
+              <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Geographic Markets</h2>
+            </div>
+            <CardContent className="space-y-3">
+              {primaryArea && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Primary Coverage</p>
+                  <p className="mt-1">{primaryArea}</p>
+                </div>
+              )}
+              {hasSecondaryData && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Secondary Coverage</p>
+                  <p className="mt-1">{transformers.arrayToString(secondaryMarkets)}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* KEY METRICS - Dynamic based on active channels with inventory */}
       <Card>
         <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
           <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Key Metrics</h2>
         </div>
         <CardContent className="space-y-4">
-          {/* Digital */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="bg-blue-500 p-2 rounded-lg">
-                <Globe className="w-4 h-4 text-white" />
-              </div>
-              <h3 className="text-sm font-sans font-medium text-blue-600">Digital</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-xs font-sans text-gray-600">Monthly Visitors</p>
-                <p className="font-medium text-gray-900">{get('distributionChannels.website.metrics.monthlyVisitors')?.toLocaleString() || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-sans text-gray-600">Monthly Pageviews</p>
-                <p className="font-medium text-gray-900">{get('distributionChannels.website.metrics.monthlyPageViews')?.toLocaleString() || 'N/A'}</p>
-              </div>
-              <div className="flex items-start gap-1">
-                <Mail className="w-3 h-3 text-blue-500 mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-xs font-sans text-gray-600">Email Subscribers</p>
-                  <p className="font-medium text-gray-900">{get('distributionChannels.newsletters.0.subscribers')?.toLocaleString() || 'N/A'}</p>
+          {(() => {
+            const activeChannels = getActiveChannelMetrics(selectedPublication);
+            
+            if (activeChannels.length === 0) {
+              return (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-500">
+                    No channel metrics available. Add advertising inventory to see key metrics.
+                  </p>
                 </div>
-              </div>
-            </div>
-          </div>
+              );
+            }
+            
+            return activeChannels.map(channel => (
+              <ChannelMetricCard key={channel.key} channel={channel} />
+            ));
+          })()}
+        </CardContent>
+      </Card>
 
-          {/* Social */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="bg-purple-500 p-2 rounded-lg">
-                <Users className="w-4 h-4 text-white" />
-              </div>
-              <h3 className="text-sm font-sans font-medium text-purple-600">Social Media</h3>
+      {/* AUDIENCE DEMOGRAPHICS - Only show if there's data */}
+      {(() => {
+        const ageGroups = get('audienceDemographics.ageGroups');
+        const income = get('audienceDemographics.householdIncome');
+        const gender = get('audienceDemographics.gender');
+        const education = get('audienceDemographics.education');
+        const location = get('audienceDemographics.location');
+        
+        // Check if any demographic data exists
+        const hasAgeData = ageGroups && Object.values(ageGroups).some((val: any) => val > 0);
+        const hasIncomeData = income && Object.values(income).some((val: any) => val > 0);
+        const hasGenderData = gender && (gender.male > 0 || gender.female > 0 || gender.other > 0);
+        const hasEducationData = education && Object.values(education).some((val: any) => val > 0);
+        const hasLocationData = location && location !== 'Not specified';
+        
+        const hasDemographicData = hasAgeData || hasIncomeData || hasGenderData || hasEducationData || hasLocationData;
+        
+        if (!hasDemographicData) return null;
+        
+        return (
+          <Card>
+            <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
+              <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Audience Demographics</h2>
             </div>
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex-shrink-0">
-                <p className="text-xs font-sans text-gray-600 mb-1">Combined Following</p>
-                <p className="font-medium text-gray-900">{transformers.calculateSocialFollowing(get('distributionChannels.socialMedia'))?.toLocaleString() || 'N/A'}</p>
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-sans text-gray-600 mb-2">Primary Platforms</p>
-                {(() => {
-                  const socialMedia = get('distributionChannels.socialMedia');
-                  
-                  if (!socialMedia || !Array.isArray(socialMedia) || socialMedia.length === 0) {
-                    return <p className="text-gray-500 text-sm">N/A</p>;
-                  }
-                  
-                  return (
-                    <div className="flex flex-wrap gap-2">
-                      {socialMedia.map((platform: any, idx: number) => {
-                        if (!platform.platform) return null;
-                        const followers = platform.metrics?.followers || platform.followers;
-                        if (!followers) return null;
-                        
-                        return (
-                          <div key={idx} className="flex items-center gap-1.5 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5">
-                            <div className="text-purple-600">
-                              {getSocialIcon(platform.platform)}
-                            </div>
-                            <div className="text-xs">
-                              <span className="font-sans font-medium text-gray-700 capitalize">{platform.platform}</span>
-                              <span className="text-gray-500 ml-1">{followers?.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
+            <CardContent className="space-y-6">
+              {/* Age Groups & Household Income - Side by Side on Desktop */}
+              {(hasAgeData || hasIncomeData) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:divide-x lg:divide-gray-200">
+                  {/* Age Groups */}
+                  {hasAgeData && (
+                    <div>
+                      <DemographicSlidersReadOnly
+                        title="Age Groups"
+                        groups={[
+                          { key: '18-24', label: '18-24', value: get('audienceDemographics.ageGroups.18-24') || 0 },
+                          { key: '25-34', label: '25-34', value: get('audienceDemographics.ageGroups.25-34') || 0 },
+                          { key: '35-44', label: '35-44', value: get('audienceDemographics.ageGroups.35-44') || 0 },
+                          { key: '45-54', label: '45-54', value: get('audienceDemographics.ageGroups.45-54') || 0 },
+                          { key: '55-64', label: '55-64', value: get('audienceDemographics.ageGroups.55-64') || 0 },
+                          { key: '65+', label: '65+', value: get('audienceDemographics.ageGroups.65+') || 0 }
+                        ]}
+                      />
                     </div>
-                  );
-                })()}
-              </div>
-            </div>
-          </div>
+                  )}
 
-          {/* Events */}
-          {get('distributionChannels.events')?.length > 0 && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="bg-green-500 p-2 rounded-lg">
-                  <Calendar className="w-4 h-4 text-white" />
+                  {/* Household Income */}
+                  {hasIncomeData && (
+                    <div className={hasAgeData ? "lg:pl-8" : ""}>
+                      <DemographicSlidersReadOnly
+                        title="Household Income"
+                        groups={[
+                          { key: 'under35k', label: 'Under $35K', value: get('audienceDemographics.householdIncome.under35k') || 0 },
+                          { key: '35k-50k', label: '$35K-$50K', value: get('audienceDemographics.householdIncome.35k-50k') || 0 },
+                          { key: '50k-75k', label: '$50K-$75K', value: get('audienceDemographics.householdIncome.50k-75k') || 0 },
+                          { key: '75k-100k', label: '$75K-$100K', value: get('audienceDemographics.householdIncome.75k-100k') || 0 },
+                          { key: '100k-150k', label: '$100K-$150K', value: get('audienceDemographics.householdIncome.100k-150k') || 0 },
+                          { key: 'over150k', label: 'Over $150K', value: get('audienceDemographics.householdIncome.over150k') || 0 }
+                        ]}
+                      />
+                    </div>
+                  )}
                 </div>
-                <h3 className="text-sm font-sans font-medium text-green-600">Events</h3>
-              </div>
-              <ul className="space-y-2">
-                {(get('distributionChannels.events') || []).map((event: any, idx: number) => (
-                  <li key={idx} className="text-sm">
-                    <strong className="text-gray-900">{event.name || 'Unnamed Event'}:</strong>{' '}
-                    <span className="text-gray-700">{event.averageAttendance?.toLocaleString() || 'N/A'} attendees, {event.frequency || 'N/A'}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )}
 
-      {/* AUDIENCE SNAPSHOT */}
-      <Card>
-        <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Audience Snapshot</h2>
-        </div>
-        <CardContent className="space-y-3">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Age</p>
-            <p className="mt-1">{transformers.ageGroupsToText(get('audienceDemographics.ageGroups')) || 'Not specified'}</p>
-                  </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Income</p>
-            <p className="mt-1">{transformers.incomeToText(get('audienceDemographics.householdIncome')) || 'Not specified'}</p>
-                  </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Education</p>
-            <p className="mt-1">{transformers.educationToText(get('audienceDemographics.education')) || 'Not specified'}</p>
-                  </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Geography</p>
-            <p className="mt-1">{get('audienceDemographics.location') || 'Not specified'}</p>
-                  </div>
-        </CardContent>
-      </Card>
+              {/* Gender */}
+              {hasGenderData && (
+                <div className="pt-6 border-t">
+                  <GenderSliderReadOnly
+                    malePercentage={get('audienceDemographics.gender.male') || 0}
+                    femalePercentage={get('audienceDemographics.gender.female') || 0}
+                    otherPercentage={get('audienceDemographics.gender.other') || 0}
+                  />
+                </div>
+              )}
+
+              {/* Education */}
+              {hasEducationData && (
+                <div className="pt-6 border-t">
+                  <DemographicSlidersReadOnly
+                    title="Education Level"
+                    groups={[
+                      { key: 'highSchool', label: 'High School', value: get('audienceDemographics.education.highSchool') || 0 },
+                      { key: 'someCollege', label: 'Some College', value: get('audienceDemographics.education.someCollege') || 0 },
+                      { key: 'bachelors', label: "Bachelor's", value: get('audienceDemographics.education.bachelors') || 0 },
+                      { key: 'graduate', label: 'Graduate', value: get('audienceDemographics.education.graduate') || 0 }
+                    ]}
+                  />
+                </div>
+              )}
+
+              {/* Geography */}
+              {hasLocationData && (
+                <div className="pt-6 border-t">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Primary Geographic Audience</p>
+                  <p className="text-sm text-gray-900">{location}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* POSITIONING & UNIQUE VALUE */}
       <Card>

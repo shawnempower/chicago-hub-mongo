@@ -10,11 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, Edit, Trash2, DollarSign, Target, BarChart3, 
   Globe, Mail, Printer, Calendar, Package, Search,
-  RefreshCw, Save, X, TrendingUp, Users, Mic, Radio, Video
+  RefreshCw, Save, X, TrendingUp, Users, Mic, Radio, Video, Tv
 } from 'lucide-react';
 
 import { usePublication } from '@/contexts/PublicationContext';
@@ -49,6 +50,27 @@ export const DashboardInventoryManager = () => {
   const [activeTab, setActiveTab] = useState('website');
   const [currentPublication, setCurrentPublication] = useState<PublicationFrontend | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Helper function to get localStorage key for visibility settings
+  const getVisibilityStorageKey = (publicationId: string) => {
+    return `inventory_visibility_${publicationId}`;
+  };
+
+  // Default visibility state
+  const getDefaultVisibilityState = () => ({
+    website: true,
+    newsletters: true,
+    print: true,
+    events: true,
+    podcasts: true,
+    radio: true,
+    streaming: true,
+    television: true,
+    social: true,
+  });
+  
+  // Tab visibility state - always start with defaults
+  const [visibleTabs, setVisibleTabs] = useState(getDefaultVisibilityState());
   
   // Edit dialog states
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -152,7 +174,7 @@ export const DashboardInventoryManager = () => {
             const pricingModel = inferPricingModel(priceTier.pricing, priceField);
             
             return (
-              <div key={idx} className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1">
+              <div key={idx} className="flex items-center gap-2 text-xs">
                 <span className="font-medium text-gray-900">
                   {pricingModel === 'contact' 
                     ? 'Contact' 
@@ -176,7 +198,7 @@ export const DashboardInventoryManager = () => {
       if (pricingObj.pricingModel) {
         const priceValue = pricingObj.flatRate || pricingObj.cpm || 0;
         return (
-          <div className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1">
+          <div className="flex items-center gap-2 text-xs">
             <span className="font-medium text-gray-900">
               {pricingObj.pricingModel === 'contact' 
                 ? 'Contact' 
@@ -204,7 +226,7 @@ export const DashboardInventoryManager = () => {
             {availablePrices.map((item, idx) => {
               const pricingModel = inferPricingModel(pricingObj, item.field);
               return (
-                <div key={idx} className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1">
+                <div key={idx} className="flex items-center gap-2 text-xs">
                   <span className="font-medium text-gray-900">${item.value}</span>
                   <span className="text-gray-600">{formatPricingModel(pricingModel)}</span>
                 </div>
@@ -218,7 +240,7 @@ export const DashboardInventoryManager = () => {
         const pricingModel = inferPricingModel(pricingObj, item.field);
         
         return (
-          <div className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1">
+          <div className="flex items-center gap-2 text-xs">
             <span className="font-medium text-gray-900">${item.value}</span>
             <span className="text-gray-600">{formatPricingModel(pricingModel)}</span>
           </div>
@@ -226,12 +248,47 @@ export const DashboardInventoryManager = () => {
       } else {
         // No price found
         return (
-          <div className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1">
+          <div className="flex items-center gap-2 text-xs">
             <span className="font-medium text-gray-900">N/A</span>
             <span className="text-gray-600">N/A</span>
           </div>
         );
       }
+    }
+  };
+
+  // Helper function to check if inventory type has opportunities
+  const hasActiveOpportunities = (type: keyof typeof visibleTabs): boolean => {
+    if (!currentPublication) return false;
+    
+    switch(type) {
+      case 'website':
+        return (currentPublication.distributionChannels?.website?.advertisingOpportunities?.length || 0) > 0;
+      case 'newsletters':
+        return (currentPublication.distributionChannels?.newsletters?.reduce((sum, n) => 
+          sum + (n.advertisingOpportunities?.length || 0), 0) || 0) > 0;
+      case 'print':
+        return (currentPublication.distributionChannels?.print?.advertisingOpportunities?.length || 0) > 0;
+      case 'events':
+        return (currentPublication.distributionChannels?.events?.reduce((sum, e) => 
+          sum + (e.sponsorshipOpportunities?.length || 0), 0) || 0) > 0;
+      case 'podcasts':
+        return (currentPublication.distributionChannels?.podcasts?.reduce((sum, p) => 
+          sum + (p.advertisingOpportunities?.length || 0), 0) || 0) > 0;
+      case 'radio':
+        return (currentPublication.distributionChannels?.radio?.reduce((sum, r) => 
+          sum + (r.advertisingOpportunities?.length || 0), 0) || 0) > 0;
+      case 'streaming':
+        return (currentPublication.distributionChannels?.streaming?.reduce((sum, s) => 
+          sum + (s.advertisingOpportunities?.length || 0), 0) || 0) > 0;
+      case 'television':
+        return (currentPublication.distributionChannels?.television?.reduce((sum, t) => 
+          sum + (t.advertisingOpportunities?.length || 0), 0) || 0) > 0;
+      case 'social':
+        return (currentPublication.distributionChannels?.socialMedia?.reduce((sum, sm) => 
+          sum + (sm.advertisingOpportunities?.length || 0), 0) || 0) > 0;
+      default:
+        return false;
     }
   };
 
@@ -281,6 +338,66 @@ export const DashboardInventoryManager = () => {
     console.log('Publication changed, resetting tab to website. Publication ID:', selectedPublication?._id);
     setActiveTab('website');
   }, [selectedPublication?._id]);
+
+  // Load saved visibility state when publication changes
+  // This runs when selectedPublication changes to load that publication's specific settings
+  useEffect(() => {
+    if (selectedPublication?._id) {
+      const storageKey = getVisibilityStorageKey(selectedPublication._id);
+      const savedState = localStorage.getItem(storageKey);
+      
+      if (savedState) {
+        try {
+          const parsedState = JSON.parse(savedState);
+          setVisibleTabs(parsedState);
+          console.log('Loaded saved visibility settings for publication:', selectedPublication._id, parsedState);
+        } catch (error) {
+          console.error('Error loading saved visibility state:', error);
+          setVisibleTabs(getDefaultVisibilityState());
+        }
+      } else {
+        // No saved state for this publication - will be initialized by the next useEffect
+        console.log('No saved settings for publication:', selectedPublication._id, '- will auto-initialize');
+        setVisibleTabs(getDefaultVisibilityState());
+      }
+    }
+  }, [selectedPublication?._id]);
+
+  // Auto-initialize visibility based on active opportunities for new publications
+  // This runs after currentPublication loads, but only if there's no saved preference
+  useEffect(() => {
+    if (currentPublication && selectedPublication?._id) {
+      const storageKey = getVisibilityStorageKey(selectedPublication._id);
+      const hasSavedState = localStorage.getItem(storageKey);
+      
+      // Only auto-initialize if no saved preferences exist for this publication
+      if (!hasSavedState) {
+        const initializedState = {
+          website: hasActiveOpportunities('website'),
+          newsletters: hasActiveOpportunities('newsletters'),
+          print: hasActiveOpportunities('print'),
+          events: hasActiveOpportunities('events'),
+          podcasts: hasActiveOpportunities('podcasts'),
+          radio: hasActiveOpportunities('radio'),
+          streaming: hasActiveOpportunities('streaming'),
+          television: hasActiveOpportunities('television'),
+          social: hasActiveOpportunities('social'),
+        };
+        console.log('Auto-initializing visibility for publication:', selectedPublication._id, initializedState);
+        setVisibleTabs(initializedState);
+      }
+    }
+  }, [currentPublication?._id, selectedPublication?._id]);
+
+  // Save visibility state to localStorage whenever it changes
+  // This ensures any changes (hide/show) are persisted for this specific publication
+  useEffect(() => {
+    if (selectedPublication?._id) {
+      const storageKey = getVisibilityStorageKey(selectedPublication._id);
+      localStorage.setItem(storageKey, JSON.stringify(visibleTabs));
+      console.log('Saved visibility settings for publication:', selectedPublication._id, visibleTabs);
+    }
+  }, [visibleTabs, selectedPublication?._id]);
 
   // Debug tab changes
   const handleTabChange = (value: string) => {
@@ -1876,18 +1993,146 @@ export const DashboardInventoryManager = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header with Manage Channels Button */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Inventory</h2>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Edit className="w-4 h-4" />
+              Manage Channels
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Manage Inventory Channels
+              </DialogTitle>
+              <DialogDescription>
+                Add or remove inventory channels. Channels with active opportunities cannot be removed.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-3">
+              {/* Active Channels */}
+              <div>
+                <h3 className="text-xs font-semibold mb-2 text-muted-foreground uppercase">Active Channels</h3>
+                <div className="space-y-1.5">
+                  {Object.entries(visibleTabs).filter(([_, visible]) => visible).map(([key]) => {
+                    const channelKey = key as keyof typeof visibleTabs;
+                    const hasOpportunities = hasActiveOpportunities(channelKey);
+                    const channelConfig = {
+                      website: { icon: Globe, label: 'Website' },
+                      newsletters: { icon: Mail, label: 'Newsletters' },
+                      print: { icon: Printer, label: 'Print' },
+                      events: { icon: Calendar, label: 'Events' },
+                      podcasts: { icon: Mic, label: 'Podcasts' },
+                      radio: { icon: Radio, label: 'Radio' },
+                      streaming: { icon: Video, label: 'Streaming' },
+                      television: { icon: Tv, label: 'Television' },
+                      social: { icon: Users, label: 'Social' }
+                    };
+                    const config = channelConfig[channelKey];
+                    const Icon = config.icon;
+
+                    return (
+                      <div key={key} className="flex items-center justify-between px-3 py-2 border rounded-md bg-gray-50">
+                        <div className="flex items-center gap-2">
+                          <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm font-medium">{config.label}</span>
+                        </div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={hasOpportunities}
+                                  onClick={() => setVisibleTabs(prev => ({ ...prev, [channelKey]: false }))}
+                                  className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  <X className="w-3.5 h-3.5 mr-1" />
+                                  Remove
+                                </Button>
+                              </div>
+                            </TooltipTrigger>
+                            {hasOpportunities && (
+                              <TooltipContent>
+                                <p>Cannot remove channels with active advertising opportunities</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Available Channels */}
+              <div>
+                <h3 className="text-xs font-semibold mb-2 text-muted-foreground uppercase">Available Channels</h3>
+                {Object.entries(visibleTabs).filter(([_, visible]) => !visible).length > 0 ? (
+                  <div className="space-y-1.5">
+                    {Object.entries(visibleTabs).filter(([_, visible]) => !visible).map(([key]) => {
+                      const channelKey = key as keyof typeof visibleTabs;
+                      const channelConfig = {
+                        website: { icon: Globe, label: 'Website' },
+                        newsletters: { icon: Mail, label: 'Newsletters' },
+                        print: { icon: Printer, label: 'Print' },
+                        events: { icon: Calendar, label: 'Events' },
+                        podcasts: { icon: Mic, label: 'Podcasts' },
+                        radio: { icon: Radio, label: 'Radio' },
+                        streaming: { icon: Video, label: 'Streaming' },
+                        television: { icon: Tv, label: 'Television' },
+                        social: { icon: Users, label: 'Social' }
+                      };
+                      const config = channelConfig[channelKey];
+                      const Icon = config.icon;
+
+                      return (
+                        <div key={key} className="flex items-center justify-between px-3 py-2 border rounded-md">
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="text-sm">{config.label}</span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setVisibleTabs(prev => ({ ...prev, [channelKey]: true }))}
+                            className="h-7 text-xs"
+                          >
+                            <Plus className="w-3.5 h-3.5 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">All channels are currently active</p>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       {/* Inventory Tabs */}
       <Tabs key={currentPublication._id} value={activeTab} onValueChange={handleTabChange} className="shadow-sm rounded-lg">
-        <TabsList className="grid w-full grid-cols-9 gap-0">
-          <TabsTrigger value="website">Website</TabsTrigger>
-          <TabsTrigger value="newsletters">Newsletters</TabsTrigger>
-          <TabsTrigger value="print">Print</TabsTrigger>
-          <TabsTrigger value="events">Events</TabsTrigger>
-          <TabsTrigger value="podcasts">Podcasts</TabsTrigger>
-          <TabsTrigger value="radio">Radio</TabsTrigger>
-          <TabsTrigger value="streaming">Streaming</TabsTrigger>
-          <TabsTrigger value="television">TV</TabsTrigger>
-          <TabsTrigger value="social">Social</TabsTrigger>
+        <TabsList className={`grid w-full gap-0`} style={{ gridTemplateColumns: `repeat(${Object.values(visibleTabs).filter(Boolean).length}, minmax(0, 1fr))` }}>
+          {visibleTabs.website && <TabsTrigger value="website">Website</TabsTrigger>}
+          {visibleTabs.newsletters && <TabsTrigger value="newsletters">Newsletters</TabsTrigger>}
+          {visibleTabs.print && <TabsTrigger value="print">Print</TabsTrigger>}
+          {visibleTabs.events && <TabsTrigger value="events">Events</TabsTrigger>}
+          {visibleTabs.podcasts && <TabsTrigger value="podcasts">Podcasts</TabsTrigger>}
+          {visibleTabs.radio && <TabsTrigger value="radio">Radio</TabsTrigger>}
+          {visibleTabs.streaming && <TabsTrigger value="streaming">Streaming</TabsTrigger>}
+          {visibleTabs.television && <TabsTrigger value="television">TV</TabsTrigger>}
+          {visibleTabs.social && <TabsTrigger value="social">Social</TabsTrigger>}
         </TabsList>
 
         {/* Website Advertising */}
@@ -3243,7 +3488,7 @@ export const DashboardInventoryManager = () => {
         <TabsContent value="television" className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
-              <Video className="w-5 h-5" />
+              <Tv className="w-5 h-5" />
               Television Advertising
             </h3>
             <Button onClick={() => addTelevisionStation()} size="sm" className="gap-2">

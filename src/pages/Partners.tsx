@@ -115,9 +115,6 @@ export default function Partners() {
                         <CardTitle className="text-lg font-serif text-primary line-clamp-2">
                           {partner.name}
                         </CardTitle>
-                        <Badge variant="secondary" className="text-xs mt-1">
-                          {partner.category}
-                        </Badge>
                       </div>
                     </div>
                   </CardHeader>
