@@ -1175,8 +1175,8 @@ app.post('/api/storefront/:publicationId/images', authenticateToken, upload.sing
     const { publicationId } = req.params;
     const { imageType, channelId } = req.body;
 
-    if (!imageType || !['logo', 'hero', 'channel', 'about', 'ogImage'].includes(imageType)) {
-      return res.status(400).json({ error: 'Valid imageType required (logo, hero, channel, about, ogImage)' });
+    if (!imageType || !['logo', 'hero', 'channel', 'about', 'ogImage', 'favicon', 'metaLogo'].includes(imageType)) {
+      return res.status(400).json({ error: 'Valid imageType required (logo, hero, channel, about, ogImage, favicon, metaLogo)' });
     }
 
     if (imageType === 'channel' && !channelId) {
@@ -1241,8 +1241,8 @@ app.put('/api/storefront/:publicationId/images', authenticateToken, upload.singl
     const { publicationId } = req.params;
     const { imageType, channelId } = req.body;
 
-    if (!imageType || !['logo', 'hero', 'channel', 'about', 'ogImage'].includes(imageType)) {
-      return res.status(400).json({ error: 'Valid imageType required (logo, hero, channel, about, ogImage)' });
+    if (!imageType || !['logo', 'hero', 'channel', 'about', 'ogImage', 'favicon', 'metaLogo'].includes(imageType)) {
+      return res.status(400).json({ error: 'Valid imageType required (logo, hero, channel, about, ogImage, favicon, metaLogo)' });
     }
 
     if (imageType === 'channel' && !channelId) {
@@ -1303,8 +1303,8 @@ app.delete('/api/storefront/:publicationId/images', authenticateToken, async (re
     const { publicationId } = req.params;
     const { imageType, channelId } = req.query;
 
-    if (!imageType || !['logo', 'hero', 'channel', 'about', 'ogImage'].includes(imageType as string)) {
-      return res.status(400).json({ error: 'Valid imageType required (logo, hero, channel, about, ogImage)' });
+    if (!imageType || !['logo', 'hero', 'channel', 'about', 'ogImage', 'favicon', 'metaLogo'].includes(imageType as string)) {
+      return res.status(400).json({ error: 'Valid imageType required (logo, hero, channel, about, ogImage, favicon, metaLogo)' });
     }
 
     if (imageType === 'channel' && !channelId) {

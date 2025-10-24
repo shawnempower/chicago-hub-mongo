@@ -51,26 +51,48 @@ export const DashboardInventoryManager = () => {
   const [currentPublication, setCurrentPublication] = useState<PublicationFrontend | null>(null);
   const [loading, setLoading] = useState(false);
   
-  // Helper function to get localStorage key for visibility settings
-  const getVisibilityStorageKey = (publicationId: string) => {
-    return `inventory_visibility_${publicationId}`;
+  // Helper function to get session storage key for temporarily shown tabs
+  const getTempVisibilityStorageKey = (publicationId: string) => {
+    return `inventory_temp_shown_${publicationId}`;
   };
 
-  // Default visibility state
-  const getDefaultVisibilityState = () => ({
-    website: true,
-    newsletters: true,
-    print: true,
-    events: true,
-    podcasts: true,
-    radio: true,
-    streaming: true,
-    television: true,
-    social: true,
-  });
+  // Get temporarily shown tabs (user manually added, no data yet)
+  const getTempShownTabs = (publicationId: string) => {
+    try {
+      const stored = sessionStorage.getItem(getTempVisibilityStorageKey(publicationId));
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  // Set temporarily shown tab
+  const setTempShownTab = (publicationId: string, channel: string, shown: boolean) => {
+    try {
+      const tempTabs = getTempShownTabs(publicationId);
+      if (shown) {
+        tempTabs[channel] = true;
+      } else {
+        delete tempTabs[channel];
+      }
+      sessionStorage.setItem(getTempVisibilityStorageKey(publicationId), JSON.stringify(tempTabs));
+    } catch (error) {
+      console.error('Error saving temp visibility:', error);
+    }
+  };
   
-  // Tab visibility state - always start with defaults
-  const [visibleTabs, setVisibleTabs] = useState(getDefaultVisibilityState());
+  // Tab visibility state - always start with all hidden (data-driven)
+  const [visibleTabs, setVisibleTabs] = useState({
+    website: false,
+    newsletters: false,
+    print: false,
+    events: false,
+    podcasts: false,
+    radio: false,
+    streaming: false,
+    television: false,
+    social: false,
+  });
   
   // Edit dialog states
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -264,29 +286,64 @@ export const DashboardInventoryManager = () => {
     switch(type) {
       case 'website':
         return (currentPublication.distributionChannels?.website?.advertisingOpportunities?.length || 0) > 0;
-      case 'newsletters':
-        return (currentPublication.distributionChannels?.newsletters?.reduce((sum, n) => 
-          sum + (n.advertisingOpportunities?.length || 0), 0) || 0) > 0;
-      case 'print':
-        return (currentPublication.distributionChannels?.print?.advertisingOpportunities?.length || 0) > 0;
-      case 'events':
-        return (currentPublication.distributionChannels?.events?.reduce((sum, e) => 
-          sum + (e.sponsorshipOpportunities?.length || 0), 0) || 0) > 0;
-      case 'podcasts':
-        return (currentPublication.distributionChannels?.podcasts?.reduce((sum, p) => 
-          sum + (p.advertisingOpportunities?.length || 0), 0) || 0) > 0;
-      case 'radio':
-        return (currentPublication.distributionChannels?.radio?.reduce((sum, r) => 
-          sum + (r.advertisingOpportunities?.length || 0), 0) || 0) > 0;
-      case 'streaming':
-        return (currentPublication.distributionChannels?.streaming?.reduce((sum, s) => 
-          sum + (s.advertisingOpportunities?.length || 0), 0) || 0) > 0;
-      case 'television':
-        return (currentPublication.distributionChannels?.television?.reduce((sum, t) => 
-          sum + (t.advertisingOpportunities?.length || 0), 0) || 0) > 0;
-      case 'social':
-        return (currentPublication.distributionChannels?.socialMedia?.reduce((sum, sm) => 
-          sum + (sm.advertisingOpportunities?.length || 0), 0) || 0) > 0;
+      case 'newsletters': {
+        const newsletters = currentPublication.distributionChannels?.newsletters;
+        if (!newsletters || newsletters.length === 0) return false;
+        return newsletters.reduce((sum, n) => 
+          sum + (n.advertisingOpportunities?.length || 0), 0) > 0;
+      }
+      case 'print': {
+        // Print can be either a single object OR an array
+        const printData = currentPublication.distributionChannels?.print;
+        if (!printData) return false;
+        
+        if (Array.isArray(printData)) {
+          // New array format - check all print publications
+          // Empty array should return false
+          if (printData.length === 0) return false;
+          return printData.reduce((sum, p) => 
+            sum + (p.advertisingOpportunities?.length || 0), 0) > 0;
+        } else {
+          // Old single object format
+          return (printData.advertisingOpportunities?.length || 0) > 0;
+        }
+      }
+      case 'events': {
+        const events = currentPublication.distributionChannels?.events;
+        if (!events || events.length === 0) return false;
+        return events.reduce((sum, e) => 
+          sum + (e.sponsorshipOpportunities?.length || 0), 0) > 0;
+      }
+      case 'podcasts': {
+        const podcasts = currentPublication.distributionChannels?.podcasts;
+        if (!podcasts || podcasts.length === 0) return false;
+        return podcasts.reduce((sum, p) => 
+          sum + (p.advertisingOpportunities?.length || 0), 0) > 0;
+      }
+      case 'radio': {
+        const radioStations = currentPublication.distributionChannels?.radioStations;
+        if (!radioStations || radioStations.length === 0) return false;
+        return radioStations.reduce((sum, r) => 
+          sum + (r.advertisingOpportunities?.length || 0), 0) > 0;
+      }
+      case 'streaming': {
+        const streamingVideo = currentPublication.distributionChannels?.streamingVideo;
+        if (!streamingVideo || streamingVideo.length === 0) return false;
+        return streamingVideo.reduce((sum, s) => 
+          sum + (s.advertisingOpportunities?.length || 0), 0) > 0;
+      }
+      case 'television': {
+        const television = currentPublication.distributionChannels?.television;
+        if (!television || television.length === 0) return false;
+        return television.reduce((sum, t) => 
+          sum + (t.advertisingOpportunities?.length || 0), 0) > 0;
+      }
+      case 'social': {
+        const socialMedia = currentPublication.distributionChannels?.socialMedia;
+        if (!socialMedia || socialMedia.length === 0) return false;
+        return socialMedia.reduce((sum, sm) => 
+          sum + (sm.advertisingOpportunities?.length || 0), 0) > 0;
+      }
       default:
         return false;
     }
@@ -333,71 +390,78 @@ export const DashboardInventoryManager = () => {
     loadPublicationData();
   }, [selectedPublication?._id, toast]);
 
-  // Reset tab to website when publication changes
+  // Reset editing states when publication changes
   useEffect(() => {
-    console.log('Publication changed, resetting tab to website. Publication ID:', selectedPublication?._id);
-    setActiveTab('website');
+    console.log('Publication changed, resetting editing states. Publication ID:', selectedPublication?._id);
+    
+    // Clear all editing states to prevent cross-publication contamination
+    setEditingItem(null);
+    setEditingType(null);
+    setEditingIndex(-1);
+    setEditingSubIndex(-1);
+    setEditingParentIndex(-1);
+    setEditingItemIndex(-1);
+    
+    // DON'T reset activeTab here - let the visibility logic handle it below
   }, [selectedPublication?._id]);
 
-  // Load saved visibility state when publication changes
-  // This runs when selectedPublication changes to load that publication's specific settings
-  useEffect(() => {
-    if (selectedPublication?._id) {
-      const storageKey = getVisibilityStorageKey(selectedPublication._id);
-      const savedState = localStorage.getItem(storageKey);
-      
-      if (savedState) {
-        try {
-          const parsedState = JSON.parse(savedState);
-          setVisibleTabs(parsedState);
-          console.log('Loaded saved visibility settings for publication:', selectedPublication._id, parsedState);
-        } catch (error) {
-          console.error('Error loading saved visibility state:', error);
-          setVisibleTabs(getDefaultVisibilityState());
-        }
-      } else {
-        // No saved state for this publication - will be initialized by the next useEffect
-        console.log('No saved settings for publication:', selectedPublication._id, '- will auto-initialize');
-        setVisibleTabs(getDefaultVisibilityState());
-      }
-    }
-  }, [selectedPublication?._id]);
-
-  // Auto-initialize visibility based on active opportunities for new publications
-  // This runs after currentPublication loads, but only if there's no saved preference
+  // Data-driven visibility with temporary manual overrides
+  // Tabs show if: 1) they have data, OR 2) user manually showed them (temp, session only)
   useEffect(() => {
     if (currentPublication && selectedPublication?._id) {
-      const storageKey = getVisibilityStorageKey(selectedPublication._id);
-      const hasSavedState = localStorage.getItem(storageKey);
+      const tempShownTabs = getTempShownTabs(selectedPublication._id);
       
-      // Only auto-initialize if no saved preferences exist for this publication
-      if (!hasSavedState) {
-        const initializedState = {
-          website: hasActiveOpportunities('website'),
-          newsletters: hasActiveOpportunities('newsletters'),
-          print: hasActiveOpportunities('print'),
-          events: hasActiveOpportunities('events'),
-          podcasts: hasActiveOpportunities('podcasts'),
-          radio: hasActiveOpportunities('radio'),
-          streaming: hasActiveOpportunities('streaming'),
-          television: hasActiveOpportunities('television'),
-          social: hasActiveOpportunities('social'),
-        };
-        console.log('Auto-initializing visibility for publication:', selectedPublication._id, initializedState);
-        setVisibleTabs(initializedState);
+      // Clean up sessionStorage: remove temp tabs that now have data (no longer need temp flag)
+      const cleanedTempTabs = { ...tempShownTabs };
+      Object.keys(cleanedTempTabs).forEach(key => {
+        if (hasActiveOpportunities(key as keyof typeof visibleTabs)) {
+          delete cleanedTempTabs[key];
+        }
+      });
+      if (JSON.stringify(cleanedTempTabs) !== JSON.stringify(tempShownTabs)) {
+        sessionStorage.setItem(getTempVisibilityStorageKey(selectedPublication._id), JSON.stringify(cleanedTempTabs));
+      }
+      
+      // Determine visibility: data-driven OR temporarily shown by user
+      const updatedState = {
+        website: hasActiveOpportunities('website') || cleanedTempTabs.website === true,
+        newsletters: hasActiveOpportunities('newsletters') || cleanedTempTabs.newsletters === true,
+        print: hasActiveOpportunities('print') || cleanedTempTabs.print === true,
+        events: hasActiveOpportunities('events') || cleanedTempTabs.events === true,
+        podcasts: hasActiveOpportunities('podcasts') || cleanedTempTabs.podcasts === true,
+        radio: hasActiveOpportunities('radio') || cleanedTempTabs.radio === true,
+        streaming: hasActiveOpportunities('streaming') || cleanedTempTabs.streaming === true,
+        television: hasActiveOpportunities('television') || cleanedTempTabs.television === true,
+        social: hasActiveOpportunities('social') || cleanedTempTabs.social === true,
+      };
+      
+      console.log('Tab visibility (data-driven + temp shown):', updatedState);
+      console.log('Has data:', {
+        website: hasActiveOpportunities('website'),
+        newsletters: hasActiveOpportunities('newsletters'),
+        print: hasActiveOpportunities('print'),
+        events: hasActiveOpportunities('events'),
+        podcasts: hasActiveOpportunities('podcasts'),
+        radio: hasActiveOpportunities('radio'),
+        streaming: hasActiveOpportunities('streaming'),
+        television: hasActiveOpportunities('television'),
+        social: hasActiveOpportunities('social'),
+      });
+      console.log('Temp shown:', tempShownTabs);
+      
+      setVisibleTabs(updatedState);
+      
+      // Set activeTab to the first visible tab
+      const firstVisibleTab = Object.entries(updatedState).find(([_, visible]) => visible)?.[0];
+      if (firstVisibleTab) {
+        console.log('Setting active tab to first visible:', firstVisibleTab);
+        setActiveTab(firstVisibleTab);
       }
     }
   }, [currentPublication?._id, selectedPublication?._id]);
 
-  // Save visibility state to localStorage whenever it changes
-  // This ensures any changes (hide/show) are persisted for this specific publication
-  useEffect(() => {
-    if (selectedPublication?._id) {
-      const storageKey = getVisibilityStorageKey(selectedPublication._id);
-      localStorage.setItem(storageKey, JSON.stringify(visibleTabs));
-      console.log('Saved visibility settings for publication:', selectedPublication._id, visibleTabs);
-    }
-  }, [visibleTabs, selectedPublication?._id]);
+  // No longer saving to localStorage - tabs are data-driven!
+  // Temporary manual shows are in sessionStorage and clear on page refresh
 
   // Debug tab changes
   const handleTabChange = (value: string) => {
@@ -2049,7 +2113,13 @@ export const DashboardInventoryManager = () => {
                                   variant="ghost"
                                   size="sm"
                                   disabled={hasOpportunities}
-                                  onClick={() => setVisibleTabs(prev => ({ ...prev, [channelKey]: false }))}
+                                  onClick={() => {
+                                    if (selectedPublication?._id) {
+                                      // Remove from temp shown (only works if channel has no data)
+                                      setTempShownTab(selectedPublication._id, channelKey, false);
+                                      setVisibleTabs(prev => ({ ...prev, [channelKey]: false }));
+                                    }
+                                  }}
                                   className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
                                 >
                                   <X className="w-3.5 h-3.5 mr-1" />
@@ -2102,7 +2172,13 @@ export const DashboardInventoryManager = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setVisibleTabs(prev => ({ ...prev, [channelKey]: true }))}
+                            onClick={() => {
+                              if (selectedPublication?._id) {
+                                // Mark as temporarily shown (until data is added or page refreshes)
+                                setTempShownTab(selectedPublication._id, channelKey, true);
+                                setVisibleTabs(prev => ({ ...prev, [channelKey]: true }));
+                              }
+                            }}
                             className="h-7 text-xs"
                           >
                             <Plus className="w-3.5 h-3.5 mr-1" />

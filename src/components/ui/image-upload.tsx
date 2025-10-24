@@ -14,6 +14,7 @@ interface ImageUploadProps {
   accept?: string;
   maxSize?: number; // in MB
   disabled?: boolean;
+  previewSize?: 'small' | 'medium' | 'large'; // Preview image size
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -25,7 +26,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   placeholder = "Upload an image",
   accept = "image/*",
   maxSize = 5,
-  disabled = false
+  disabled = false,
+  previewSize = 'large'
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -70,6 +72,25 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     }
     // Reset input value to allow selecting the same file again
     e.target.value = '';
+  };
+
+  const getPreviewHeightClass = () => {
+    switch (previewSize) {
+      case 'small':
+        return 'h-16'; // 64px - good for favicons
+      case 'medium':
+        return 'h-32'; // 128px - good for logos
+      case 'large':
+        return 'h-48'; // 192px - good for hero/large images
+      default:
+        return 'h-48';
+    }
+  };
+
+  const getObjectFitClass = () => {
+    // Use object-contain for small/medium (logos, favicons) to prevent stretching
+    // Use object-cover for large images (hero, banners) to fill the space
+    return previewSize === 'large' ? 'object-cover' : 'object-contain';
   };
 
   const handleRemove = async () => {
@@ -138,11 +159,14 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       {value && (
         <Card>
           <CardContent className="p-4">
-            <div className="relative group">
+            <div className={cn(
+              "relative group",
+              previewSize !== 'large' && "bg-gray-50 dark:bg-gray-800 p-4 rounded-lg"
+            )}>
               <img
                 src={value}
                 alt="Uploaded image"
-                className="w-full h-48 object-cover rounded-lg"
+                className={cn("w-full rounded-lg", getPreviewHeightClass(), getObjectFitClass())}
               />
               <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
                 <Button

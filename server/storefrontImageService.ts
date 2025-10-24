@@ -99,8 +99,11 @@ export class StorefrontImageService {
    */
   async replaceStorefrontImage(options: StorefrontImageUploadOptions): Promise<StorefrontImageResult> {
     try {
-      // Get current configuration to find existing image
-      const currentConfig = await storefrontConfigurationsService.getByPublicationId(options.publicationId);
+      // Get current configuration to find existing image - try draft first, then live
+      let currentConfig = await storefrontConfigurationsService.getByPublicationId(options.publicationId, true);
+      if (!currentConfig) {
+        currentConfig = await storefrontConfigurationsService.getByPublicationId(options.publicationId, false);
+      }
       if (!currentConfig) {
         return {
           success: false,
@@ -155,8 +158,11 @@ export class StorefrontImageService {
     channelId?: string
   ): Promise<StorefrontImageResult> {
     try {
-      // Get current configuration
-      const currentConfig = await storefrontConfigurationsService.getByPublicationId(publicationId);
+      // Get current configuration - try draft first, then live
+      let currentConfig = await storefrontConfigurationsService.getByPublicationId(publicationId, true);
+      if (!currentConfig) {
+        currentConfig = await storefrontConfigurationsService.getByPublicationId(publicationId, false);
+      }
       if (!currentConfig) {
         return {
           success: false,
@@ -230,7 +236,11 @@ export class StorefrontImageService {
     channelId?: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const currentConfig = await storefrontConfigurationsService.getByPublicationId(publicationId);
+      // Try to get draft first (for editing), fall back to live
+      let currentConfig = await storefrontConfigurationsService.getByPublicationId(publicationId, true);
+      if (!currentConfig) {
+        currentConfig = await storefrontConfigurationsService.getByPublicationId(publicationId, false);
+      }
       if (!currentConfig) {
         return { success: false, error: 'Storefront configuration not found' };
       }
@@ -323,8 +333,12 @@ export class StorefrontImageService {
           return { success: false, error: `Unknown image type: ${imageType}` };
       }
 
-      // Update the configuration
-      const result = await storefrontConfigurationsService.update(publicationId, updatedConfig);
+      // Update the configuration with the correct isDraft flag
+      const result = await storefrontConfigurationsService.update(
+        publicationId, 
+        updatedConfig, 
+        currentConfig.meta.isDraft
+      );
       
       return {
         success: !!result,

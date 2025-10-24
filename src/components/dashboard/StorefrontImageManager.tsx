@@ -173,8 +173,29 @@ export const StorefrontImageManager: React.FC<StorefrontImageManagerProps> = ({
         return 'Upload about us image';
       case 'ogImage':
         return 'Upload social sharing image';
+      case 'favicon':
+        return 'Upload favicon (16x16 or 32x32)';
+      case 'metaLogo':
+        return 'Upload primary logo';
       default:
         return 'Upload image';
+    }
+  };
+
+  const getPreviewSize = (): 'small' | 'medium' | 'large' => {
+    switch (imageType) {
+      case 'favicon':
+        return 'small'; // Favicon is tiny
+      case 'logo':
+      case 'metaLogo':
+        return 'medium'; // Logos are medium
+      case 'hero':
+      case 'about':
+      case 'channel':
+      case 'ogImage':
+        return 'large'; // Hero/about/og images are large
+      default:
+        return 'large';
     }
   };
 
@@ -201,6 +222,7 @@ export const StorefrontImageManager: React.FC<StorefrontImageManagerProps> = ({
         placeholder={getPlaceholder()}
         disabled={isUploading || isRemoving}
         maxSize={5}
+        previewSize={getPreviewSize()}
       />
     </div>
   );
