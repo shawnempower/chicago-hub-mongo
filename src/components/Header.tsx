@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/CustomAuthContext";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { User, ChevronDown } from "lucide-react";
-import empowerLogo from "@/assets/empower-logo.svg";
+import empowerLogo from "@/assets/empower-logo.png";
 import { PublicationSelector } from "@/components/PublicationSelector";
 import { usePublication } from "@/contexts/PublicationContext";
 import { getPublicationBrandColor } from "@/config/publicationBrandColors";

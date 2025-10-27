@@ -41,6 +41,20 @@ import { getNestedValue, setNestedValue, deepClone } from '@/utils/schemaHelpers
 import { DemographicSliders, GenderSlider, DemographicSlidersReadOnly, GenderSliderReadOnly } from './DemographicSliders';
 import { getActiveChannelMetrics } from '@/utils/channelMetrics';
 import { ChannelMetricCard } from './ChannelMetricCard';
+import { FieldError } from '@/components/ui/field-error';
+import { 
+  validateEmail, 
+  validatePhone, 
+  validateUrl, 
+  validateTaxId, 
+  validateYear,
+  validatePositiveInteger,
+  validatePercentage,
+  validatePercentageGroup,
+  getValidationClass,
+  formatPhoneNumber,
+  ValidationResult
+} from '@/utils/fieldValidation';
 
 export const PublicationProfile: React.FC = () => {
   const { selectedPublication, setSelectedPublication } = usePublication();
@@ -50,6 +64,7 @@ export const PublicationProfile: React.FC = () => {
   const [formData, setFormData] = useState<Partial<PublicationFrontend>>({});
   const [showSchemaDebug, setShowSchemaDebug] = useState(false);
   const [differentiators, setDifferentiators] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (selectedPublication && isEditing) {
@@ -70,6 +85,41 @@ export const PublicationProfile: React.FC = () => {
   const handleSave = async () => {
     if (!selectedPublication?._id) return;
 
+    // Validate all fields before saving
+    const errors: Record<string, string> = {};
+    
+    // Validate all fields in formData
+    const validateAllFields = (data: any, path: string = '') => {
+      if (typeof data === 'object' && data !== null) {
+        Object.keys(data).forEach(key => {
+          const currentPath = path ? `${path}.${key}` : key;
+          const value = data[key];
+          
+          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            validateAllFields(value, currentPath);
+          } else {
+            const error = validateField(currentPath, value);
+            if (error) {
+              errors[currentPath] = error;
+            }
+          }
+        });
+      }
+    };
+    
+    validateAllFields(formData);
+    
+    // If there are errors, show toast and set field errors
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      toast({
+        title: "Validation Error",
+        description: "Please fix the errors in the form before saving.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const finalData = deepClone(formData);
@@ -77,8 +127,9 @@ export const PublicationProfile: React.FC = () => {
       
       const updatedPublication = await updatePublication(selectedPublication._id, finalData);
       if (updatedPublication) {
-    setSelectedPublication(updatedPublication);
-    setIsEditing(false);
+        setSelectedPublication(updatedPublication);
+        setIsEditing(false);
+        setFieldErrors({});
         toast({
           title: "Success",
           description: "Publication profile updated successfully."
@@ -99,6 +150,7 @@ export const PublicationProfile: React.FC = () => {
   const handleCancel = () => {
     setIsEditing(false);
     setFormData({});
+    setFieldErrors({});
   };
 
   const updateField = (schemaPath: string, value: any) => {
@@ -115,6 +167,86 @@ export const PublicationProfile: React.FC = () => {
   };
 
   const get = (path: string) => getNestedValue(selectedPublication, path);
+
+  // Validation helpers
+  const validateField = (fieldPath: string, value: any): string | undefined => {
+    // Email fields
+    if (fieldPath.includes('.email')) {
+      const result = validateEmail(value);
+      return result.error;
+    }
+    
+    // Phone fields
+    if (fieldPath.includes('.phone')) {
+      const result = validatePhone(value);
+      return result.error;
+    }
+    
+    // URL fields
+    if (fieldPath === 'basicInfo.websiteUrl') {
+      const result = validateUrl(value);
+      return result.error;
+    }
+    
+    // Tax ID
+    if (fieldPath === 'businessInfo.taxId') {
+      const result = validateTaxId(value);
+      return result.error;
+    }
+    
+    // Year fields
+    if (fieldPath === 'basicInfo.founded') {
+      const result = validateYear(value);
+      return result.error;
+    }
+    
+    if (fieldPath === 'businessInfo.yearsInOperation') {
+      const result = validatePositiveInteger(value);
+      return result.error;
+    }
+    
+    // Audience numbers
+    if (fieldPath === 'audienceDemographics.totalAudience') {
+      const result = validatePositiveInteger(value);
+      return result.error;
+    }
+    
+    // Percentage fields
+    if (fieldPath.includes('ageGroups.') || 
+        fieldPath.includes('householdIncome.') ||
+        fieldPath.includes('gender.') ||
+        fieldPath.includes('education.')) {
+      const result = validatePercentage(value);
+      return result.error;
+    }
+    
+    return undefined;
+  };
+
+  const setFieldError = (fieldPath: string, error?: string) => {
+    setFieldErrors(prev => {
+      if (!error) {
+        const { [fieldPath]: removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [fieldPath]: error };
+    });
+  };
+
+  const updateFieldWithValidation = (schemaPath: string, value: any) => {
+    // Update the value
+    updateField(schemaPath, value);
+    
+    // Validate and set error
+    const error = validateField(schemaPath, value);
+    setFieldError(schemaPath, error);
+  };
+
+  // Helper to update phone fields with formatting
+  const updatePhoneField = (schemaPath: string, value: string) => {
+    const formatted = formatPhoneNumber(value);
+    updateFieldWithValidation(schemaPath, formatted);
+  };
 
   // Helper to get social media icon
   const getSocialIcon = (platform: string) => {
@@ -157,7 +289,7 @@ export const PublicationProfile: React.FC = () => {
 
 
         {/* ESSENTIAL INFORMATION */}
-        <Card>
+        <Card className="border rounded-lg">
           <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Essential Information</h2>
           </div>
@@ -190,13 +322,29 @@ export const PublicationProfile: React.FC = () => {
 
               <SchemaField mappingStatus="full" schemaPath="basicInfo.founded" showSchemaPath={showSchemaDebug}>
                 <Label>Founded</Label>
-                <Input type="number" value={getFieldValue('basicInfo.founded')} onChange={(e) => updateField('basicInfo.founded', parseInt(e.target.value) || '')} placeholder="Year (YYYY)" />
+                <Input 
+                  type="number" 
+                  value={getFieldValue('basicInfo.founded')} 
+                  onChange={(e) => updateFieldWithValidation('basicInfo.founded', parseInt(e.target.value) || '')} 
+                  placeholder="Year (YYYY)" 
+                  className={getValidationClass(!!fieldErrors['basicInfo.founded'])}
+                  onBlur={(e) => updateFieldWithValidation('basicInfo.founded', parseInt(e.target.value) || '')}
+                />
+                <FieldError error={fieldErrors['basicInfo.founded']} />
               </SchemaField>
             </div>
             
             <SchemaField mappingStatus="full" schemaPath="basicInfo.websiteUrl" showSchemaPath={showSchemaDebug}>
               <Label>Website <span className="text-red-500">*</span></Label>
-              <Input type="url" value={getFieldValue('basicInfo.websiteUrl')} onChange={(e) => updateField('basicInfo.websiteUrl', e.target.value)} placeholder="https://" />
+              <Input 
+                type="url" 
+                value={getFieldValue('basicInfo.websiteUrl')} 
+                onChange={(e) => updateFieldWithValidation('basicInfo.websiteUrl', e.target.value)} 
+                placeholder="https://" 
+                className={getValidationClass(!!fieldErrors['basicInfo.websiteUrl'])}
+                onBlur={(e) => updateFieldWithValidation('basicInfo.websiteUrl', e.target.value)}
+              />
+              <FieldError error={fieldErrors['basicInfo.websiteUrl']} />
             </SchemaField>
 
             <div className="border-t pt-4">
@@ -212,11 +360,26 @@ export const PublicationProfile: React.FC = () => {
                 </SchemaField>
                 <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.email" showSchemaPath={showSchemaDebug}>
                   <Label>Email <span className="text-red-500">*</span></Label>
-                  <Input type="email" value={getFieldValue('contactInfo.primaryContact.email')} onChange={(e) => updateField('contactInfo.primaryContact.email', e.target.value)} />
+                  <Input 
+                    type="email" 
+                    value={getFieldValue('contactInfo.primaryContact.email')} 
+                    onChange={(e) => updateFieldWithValidation('contactInfo.primaryContact.email', e.target.value)} 
+                    className={getValidationClass(!!fieldErrors['contactInfo.primaryContact.email'])}
+                    onBlur={(e) => updateFieldWithValidation('contactInfo.primaryContact.email', e.target.value)}
+                  />
+                  <FieldError error={fieldErrors['contactInfo.primaryContact.email']} />
                 </SchemaField>
                 <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.phone" showSchemaPath={showSchemaDebug}>
                   <Label>Phone</Label>
-                  <Input type="tel" value={getFieldValue('contactInfo.primaryContact.phone')} onChange={(e) => updateField('contactInfo.primaryContact.phone', e.target.value)} placeholder="(555) 555-5555" />
+                  <Input 
+                    type="tel" 
+                    value={getFieldValue('contactInfo.primaryContact.phone')} 
+                    onChange={(e) => updatePhoneField('contactInfo.primaryContact.phone', e.target.value)} 
+                    placeholder="(555) 555-5555" 
+                    className={getValidationClass(!!fieldErrors['contactInfo.primaryContact.phone'])}
+                    onBlur={(e) => updatePhoneField('contactInfo.primaryContact.phone', e.target.value)}
+                  />
+                  <FieldError error={fieldErrors['contactInfo.primaryContact.phone']} />
                 </SchemaField>
               </div>
               <div className="mt-3">
@@ -253,11 +416,25 @@ export const PublicationProfile: React.FC = () => {
                     </SchemaField>
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.salesContact.email" showSchemaPath={showSchemaDebug}>
                       <Label>Email</Label>
-                      <Input type="email" value={getFieldValue('contactInfo.salesContact.email')} onChange={(e) => updateField('contactInfo.salesContact.email', e.target.value)} />
+                      <Input 
+                        type="email" 
+                        value={getFieldValue('contactInfo.salesContact.email')} 
+                        onChange={(e) => updateFieldWithValidation('contactInfo.salesContact.email', e.target.value)} 
+                        className={getValidationClass(!!fieldErrors['contactInfo.salesContact.email'])}
+                        onBlur={(e) => updateFieldWithValidation('contactInfo.salesContact.email', e.target.value)}
+                      />
+                      <FieldError error={fieldErrors['contactInfo.salesContact.email']} />
                     </SchemaField>
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.salesContact.phone" showSchemaPath={showSchemaDebug}>
                       <Label>Phone</Label>
-                      <Input type="tel" value={getFieldValue('contactInfo.salesContact.phone')} onChange={(e) => updateField('contactInfo.salesContact.phone', e.target.value)} />
+                      <Input 
+                        type="tel" 
+                        value={getFieldValue('contactInfo.salesContact.phone')} 
+                        onChange={(e) => updatePhoneField('contactInfo.salesContact.phone', e.target.value)} 
+                        className={getValidationClass(!!fieldErrors['contactInfo.salesContact.phone'])}
+                        onBlur={(e) => updatePhoneField('contactInfo.salesContact.phone', e.target.value)}
+                      />
+                      <FieldError error={fieldErrors['contactInfo.salesContact.phone']} />
                     </SchemaField>
                   </div>
                 </div>
@@ -276,11 +453,25 @@ export const PublicationProfile: React.FC = () => {
                     </SchemaField>
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.editorialContact.email" showSchemaPath={showSchemaDebug}>
                       <Label>Email</Label>
-                      <Input type="email" value={getFieldValue('contactInfo.editorialContact.email')} onChange={(e) => updateField('contactInfo.editorialContact.email', e.target.value)} />
+                      <Input 
+                        type="email" 
+                        value={getFieldValue('contactInfo.editorialContact.email')} 
+                        onChange={(e) => updateFieldWithValidation('contactInfo.editorialContact.email', e.target.value)} 
+                        className={getValidationClass(!!fieldErrors['contactInfo.editorialContact.email'])}
+                        onBlur={(e) => updateFieldWithValidation('contactInfo.editorialContact.email', e.target.value)}
+                      />
+                      <FieldError error={fieldErrors['contactInfo.editorialContact.email']} />
                     </SchemaField>
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.editorialContact.phone" showSchemaPath={showSchemaDebug}>
                       <Label>Phone</Label>
-                      <Input type="tel" value={getFieldValue('contactInfo.editorialContact.phone')} onChange={(e) => updateField('contactInfo.editorialContact.phone', e.target.value)} />
+                      <Input 
+                        type="tel" 
+                        value={getFieldValue('contactInfo.editorialContact.phone')} 
+                        onChange={(e) => updatePhoneField('contactInfo.editorialContact.phone', e.target.value)} 
+                        className={getValidationClass(!!fieldErrors['contactInfo.editorialContact.phone'])}
+                        onBlur={(e) => updatePhoneField('contactInfo.editorialContact.phone', e.target.value)}
+                      />
+                      <FieldError error={fieldErrors['contactInfo.editorialContact.phone']} />
                     </SchemaField>
                   </div>
                 </div>
@@ -295,11 +486,25 @@ export const PublicationProfile: React.FC = () => {
                     </SchemaField>
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.generalManager.email" showSchemaPath={showSchemaDebug}>
                       <Label>Email</Label>
-                      <Input type="email" value={getFieldValue('contactInfo.generalManager.email')} onChange={(e) => updateField('contactInfo.generalManager.email', e.target.value)} />
+                      <Input 
+                        type="email" 
+                        value={getFieldValue('contactInfo.generalManager.email')} 
+                        onChange={(e) => updateFieldWithValidation('contactInfo.generalManager.email', e.target.value)} 
+                        className={getValidationClass(!!fieldErrors['contactInfo.generalManager.email'])}
+                        onBlur={(e) => updateFieldWithValidation('contactInfo.generalManager.email', e.target.value)}
+                      />
+                      <FieldError error={fieldErrors['contactInfo.generalManager.email']} />
                     </SchemaField>
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.generalManager.phone" showSchemaPath={showSchemaDebug}>
                       <Label>Phone</Label>
-                      <Input type="tel" value={getFieldValue('contactInfo.generalManager.phone')} onChange={(e) => updateField('contactInfo.generalManager.phone', e.target.value)} />
+                      <Input 
+                        type="tel" 
+                        value={getFieldValue('contactInfo.generalManager.phone')} 
+                        onChange={(e) => updatePhoneField('contactInfo.generalManager.phone', e.target.value)} 
+                        className={getValidationClass(!!fieldErrors['contactInfo.generalManager.phone'])}
+                        onBlur={(e) => updatePhoneField('contactInfo.generalManager.phone', e.target.value)}
+                      />
+                      <FieldError error={fieldErrors['contactInfo.generalManager.phone']} />
                     </SchemaField>
                   </div>
                 </div>
@@ -314,11 +519,25 @@ export const PublicationProfile: React.FC = () => {
                     </SchemaField>
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.advertisingDirector.email" showSchemaPath={showSchemaDebug}>
                       <Label>Email</Label>
-                      <Input type="email" value={getFieldValue('contactInfo.advertisingDirector.email')} onChange={(e) => updateField('contactInfo.advertisingDirector.email', e.target.value)} />
+                      <Input 
+                        type="email" 
+                        value={getFieldValue('contactInfo.advertisingDirector.email')} 
+                        onChange={(e) => updateFieldWithValidation('contactInfo.advertisingDirector.email', e.target.value)} 
+                        className={getValidationClass(!!fieldErrors['contactInfo.advertisingDirector.email'])}
+                        onBlur={(e) => updateFieldWithValidation('contactInfo.advertisingDirector.email', e.target.value)}
+                      />
+                      <FieldError error={fieldErrors['contactInfo.advertisingDirector.email']} />
                     </SchemaField>
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.advertisingDirector.phone" showSchemaPath={showSchemaDebug}>
                       <Label>Phone</Label>
-                      <Input type="tel" value={getFieldValue('contactInfo.advertisingDirector.phone')} onChange={(e) => updateField('contactInfo.advertisingDirector.phone', e.target.value)} />
+                      <Input 
+                        type="tel" 
+                        value={getFieldValue('contactInfo.advertisingDirector.phone')} 
+                        onChange={(e) => updatePhoneField('contactInfo.advertisingDirector.phone', e.target.value)} 
+                        className={getValidationClass(!!fieldErrors['contactInfo.advertisingDirector.phone'])}
+                        onBlur={(e) => updatePhoneField('contactInfo.advertisingDirector.phone', e.target.value)}
+                      />
+                      <FieldError error={fieldErrors['contactInfo.advertisingDirector.phone']} />
                     </SchemaField>
                   </div>
                 </div>
@@ -329,7 +548,7 @@ export const PublicationProfile: React.FC = () => {
         </Card>
 
         {/* BUSINESS INFORMATION */}
-        <Card>
+        <Card className="border rounded-lg">
           <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Business Information</h2>
           </div>
@@ -344,11 +563,12 @@ export const PublicationProfile: React.FC = () => {
                 <Label>Tax ID / EIN</Label>
                 <Input 
                   value={getFieldValue('businessInfo.taxId')} 
-                  onChange={(e) => updateField('businessInfo.taxId', e.target.value)} 
+                  onChange={(e) => updateFieldWithValidation('businessInfo.taxId', e.target.value)} 
                   placeholder="XX-XXXXXXX"
-                  pattern="[0-9]{2}-[0-9]{7}"
-                  title="Format: XX-XXXXXXX (e.g. 12-3456789)"
+                  className={getValidationClass(!!fieldErrors['businessInfo.taxId'])}
+                  onBlur={(e) => updateFieldWithValidation('businessInfo.taxId', e.target.value)}
                 />
+                <FieldError error={fieldErrors['businessInfo.taxId']} />
               </SchemaField>
 
               <SchemaField mappingStatus="full" schemaPath="businessInfo.parentCompany" showSchemaPath={showSchemaDebug}>
@@ -375,14 +595,21 @@ export const PublicationProfile: React.FC = () => {
 
               <SchemaField mappingStatus="full" schemaPath="businessInfo.yearsInOperation" showSchemaPath={showSchemaDebug}>
                 <Label>Years in Operation</Label>
-                <Input type="number" value={getFieldValue('businessInfo.yearsInOperation')} onChange={(e) => updateField('businessInfo.yearsInOperation', parseInt(e.target.value) || '')} />
+                <Input 
+                  type="number" 
+                  value={getFieldValue('businessInfo.yearsInOperation')} 
+                  onChange={(e) => updateFieldWithValidation('businessInfo.yearsInOperation', parseInt(e.target.value) || '')} 
+                  className={getValidationClass(!!fieldErrors['businessInfo.yearsInOperation'])}
+                  onBlur={(e) => updateFieldWithValidation('businessInfo.yearsInOperation', parseInt(e.target.value) || '')}
+                />
+                <FieldError error={fieldErrors['businessInfo.yearsInOperation']} />
               </SchemaField>
               </div>
           </CardContent>
         </Card>
 
         {/* GEOGRAPHIC MARKETS */}
-        <Card>
+        <Card className="border rounded-lg">
           <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Geographic Markets</h2>
           </div>
@@ -401,7 +628,7 @@ export const PublicationProfile: React.FC = () => {
 
 
         {/* AUDIENCE DEMOGRAPHICS */}
-        <Card>
+        <Card className="border rounded-lg">
           <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Audience Demographics</h2>
           </div>
@@ -414,9 +641,12 @@ export const PublicationProfile: React.FC = () => {
                 <Input 
                   type="number" 
                   value={getFieldValue('audienceDemographics.totalAudience')} 
-                  onChange={(e) => updateField('audienceDemographics.totalAudience', parseInt(e.target.value) || 0)} 
+                  onChange={(e) => updateFieldWithValidation('audienceDemographics.totalAudience', parseInt(e.target.value) || 0)} 
                   placeholder="Total audience reach across all channels"
+                  className={getValidationClass(!!fieldErrors['audienceDemographics.totalAudience'])}
+                  onBlur={(e) => updateFieldWithValidation('audienceDemographics.totalAudience', parseInt(e.target.value) || 0)}
                 />
+                <FieldError error={fieldErrors['audienceDemographics.totalAudience']} />
               </SchemaField>
             </div>
 
@@ -521,7 +751,7 @@ export const PublicationProfile: React.FC = () => {
         </Card>
 
         {/* POSITIONING & UNIQUE VALUE */}
-        <Card>
+        <Card className="border rounded-lg">
           <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Positioning & Unique Value</h2>
           </div>
@@ -559,7 +789,7 @@ export const PublicationProfile: React.FC = () => {
 
 
         {/* NOTES */}
-        <Card>
+        <Card className="border rounded-lg">
           <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Notes</h2>
           </div>

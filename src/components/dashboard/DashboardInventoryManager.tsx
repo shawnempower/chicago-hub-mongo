@@ -23,6 +23,13 @@ import { PublicationFrontend } from '@/types/publication';
 import { updatePublication, getPublicationById } from '@/api/publications';
 import { HubPricingEditor, HubPrice } from './HubPricingEditor';
 import { GeneralTermsEditor, GeneralTerms } from './GeneralTermsEditor';
+import { FieldError } from '@/components/ui/field-error';
+import { 
+  validatePositiveInteger,
+  validatePositiveNumber,
+  validatePercentage,
+  getValidationClass
+} from '@/utils/fieldValidation';
 
 // Helper function to validate inventory item data
 const validateInventoryItem = (item: any, type: string): boolean => {
@@ -98,6 +105,7 @@ export const DashboardInventoryManager = () => {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editingType, setEditingType] = useState<'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'podcast' | 'radio' | 'streaming' | 'television' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'social-media-container' | 'television-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'television-ad' | 'social-media-ad' | 'print-ad' | null>(null);
   const [editingIndex, setEditingIndex] = useState<number>(-1);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [editingSubIndex, setEditingSubIndex] = useState<number>(-1); // for newsletter ads within newsletters
   const [editingParentIndex, setEditingParentIndex] = useState<number>(-1); // for event parent index
   const [editingItemIndex, setEditingItemIndex] = useState<number>(-1); // for event sponsorship index
@@ -144,6 +152,47 @@ export const DashboardInventoryManager = () => {
       // If we get something unexpected, return it as-is
       default: return model;
     }
+  };
+
+  // Validation helper functions
+  const validateAndSetField = (fieldName: string, value: any, validationType: 'integer' | 'number' | 'percentage') => {
+    let validationResult;
+    
+    switch(validationType) {
+      case 'integer':
+        validationResult = validatePositiveInteger(value);
+        break;
+      case 'number':
+        validationResult = validatePositiveNumber(value);
+        break;
+      case 'percentage':
+        validationResult = validatePercentage(value);
+        break;
+      default:
+        validationResult = { isValid: true };
+    }
+    
+    if (validationResult.error) {
+      setFieldErrors(prev => ({ ...prev, [fieldName]: validationResult.error! }));
+    } else {
+      setFieldErrors(prev => {
+        const { [fieldName]: removed, ...rest } = prev;
+        return rest;
+      });
+    }
+    
+    return validationResult.isValid;
+  };
+
+  const clearFieldError = (fieldName: string) => {
+    setFieldErrors(prev => {
+      const { [fieldName]: removed, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const clearAllErrors = () => {
+    setFieldErrors({});
   };
 
   // Helper component to render pricing display
@@ -2653,14 +2702,6 @@ export const DashboardInventoryManager = () => {
                             {opportunity.adFormat}
                           </Badge>
                         )}
-                        {opportunity.hubPricing && opportunity.hubPricing.length > 0 && (
-                          <Badge 
-                            variant="secondary" 
-                            className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-2 py-0.5"
-                          >
-                            +{opportunity.hubPricing.length} CUSTOM
-                          </Badge>
-                        )}
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
                         <Button
@@ -2711,7 +2752,17 @@ export const DashboardInventoryManager = () => {
 
                       {/* Pricing section */}
                       <div>
-                        <p className="text-xs font-medium text-gray-500 mb-2">Pricing</p>
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="text-xs font-medium text-gray-500">Pricing</p>
+                          {opportunity.hubPricing && opportunity.hubPricing.length > 0 && (
+                            <Badge 
+                              variant="secondary" 
+                              className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-2 py-0.5"
+                            >
+                              +{opportunity.hubPricing.length} CUSTOM
+                            </Badge>
+                          )}
+                        </div>
                         {renderPricingDisplay(opportunity.pricing)}
                       </div>
                     </div>
@@ -2757,7 +2808,7 @@ export const DashboardInventoryManager = () => {
           
           <div className="space-y-4">
             {currentPublication.distributionChannels?.podcasts?.map((podcast, index) => (
-                  <Card key={index} className="p-4">
+                  <Card key={index} className="p-4 shadow-lg">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <h4 className="font-semibold">{podcast.name}</h4>
@@ -2803,14 +2854,16 @@ export const DashboardInventoryManager = () => {
                     </div>
                     
                     {/* Advertising Opportunities */}
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-sans font-medium text-sm">Advertising Opportunities</h5>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => addPodcastOpportunity(index)}
-                        >
+                    <div className="-mx-4 -mb-4 mt-4">
+                      <div className="border-t border-gray-200"></div>
+                      <div className="p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <h5 className="font-sans font-semibold text-sm">Advertising Opportunities</h5>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => addPodcastOpportunity(index)}
+                          >
                           <Plus className="w-3 h-3 mr-1" />
                           Add Ad
                         </Button>
@@ -2819,21 +2872,13 @@ export const DashboardInventoryManager = () => {
                       {podcast.advertisingOpportunities && podcast.advertisingOpportunities.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {podcast.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                            <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                            <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                                   {ad.adFormat && (
                                     <Badge variant="outline" className="text-xs font-normal">
                                       {ad.adFormat}
-                                    </Badge>
-                                  )}
-                                  {ad.hubPricing && ad.hubPricing.length > 0 && (
-                                    <Badge 
-                                      variant="secondary" 
-                                      className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
-                                    >
-                                      +{ad.hubPricing.length} CUSTOM
                                     </Badge>
                                   )}
                                 </div>
@@ -2871,7 +2916,17 @@ export const DashboardInventoryManager = () => {
                                   <p className="text-xs text-gray-900">{ad.duration ? `${ad.duration}s` : 'N/A'}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="text-xs font-medium text-gray-500">Pricing</p>
+                                    {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                      <Badge 
+                                        variant="secondary" 
+                                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-1.5 py-0.5"
+                                      >
+                                        +{ad.hubPricing.length} CUSTOM
+                                      </Badge>
+                                    )}
+                                  </div>
                                   {renderPricingDisplay(ad.pricing)}
                                 </div>
                               </div>
@@ -2881,6 +2936,7 @@ export const DashboardInventoryManager = () => {
                       ) : (
                         <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                       )}
+                      </div>
                     </div>
 
                   </Card>
@@ -2928,7 +2984,7 @@ export const DashboardInventoryManager = () => {
           
           <div className="space-y-4">
             {currentPublication.distributionChannels?.radioStations?.map((station, index) => (
-                  <Card key={index} className="p-4">
+                  <Card key={index} className="p-4 shadow-lg">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <h4 className="font-semibold">{station.callSign}</h4>
@@ -2974,14 +3030,16 @@ export const DashboardInventoryManager = () => {
                     </div>
                     
                     {/* Advertising Opportunities */}
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-sans font-medium text-sm">Advertising Opportunities</h5>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => addRadioOpportunity(index)}
-                        >
+                    <div className="-mx-4 -mb-4 mt-4">
+                      <div className="border-t border-gray-200"></div>
+                      <div className="p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <h5 className="font-sans font-semibold text-sm">Advertising Opportunities</h5>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => addRadioOpportunity(index)}
+                          >
                           <Plus className="w-3 h-3 mr-1" />
                           Add Ad
                         </Button>
@@ -2990,21 +3048,13 @@ export const DashboardInventoryManager = () => {
                       {station.advertisingOpportunities && station.advertisingOpportunities.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {station.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                            <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                            <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                                   {ad.adFormat && (
                                     <Badge variant="outline" className="text-xs font-normal">
                                       {ad.adFormat}
-                                    </Badge>
-                                  )}
-                                  {ad.hubPricing && ad.hubPricing.length > 0 && (
-                                    <Badge 
-                                      variant="secondary" 
-                                      className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
-                                    >
-                                      +{ad.hubPricing.length} CUSTOM
                                     </Badge>
                                   )}
                                 </div>
@@ -3048,22 +3098,33 @@ export const DashboardInventoryManager = () => {
                                   </div>
                                 </div>
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="text-xs font-medium text-gray-500">Pricing</p>
+                                    {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                      <Badge 
+                                        variant="secondary" 
+                                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-1.5 py-0.5"
+                                      >
+                                        +{ad.hubPricing.length} CUSTOM
+                                      </Badge>
+                                    )}
+                                  </div>
                                   {renderPricingDisplay(ad.pricing)}
                                 </div>
                               </div>
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
-                      )}
-                    </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                        )}
+                        </div>
+                      </div>
 
-                  </Card>
-                ))}
-                
-            {(!currentPublication.distributionChannels?.radioStations || 
+                    </Card>
+                  ))}
+                  
+              {(!currentPublication.distributionChannels?.radioStations ||
               currentPublication.distributionChannels.radioStations.length === 0) && (
               <div className="text-center py-8 text-muted-foreground">
                 <Radio className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -3105,7 +3166,7 @@ export const DashboardInventoryManager = () => {
           
           <div className="space-y-4">
             {currentPublication.distributionChannels?.streamingVideo?.map((channel, index) => (
-                  <Card key={index} className="p-4">
+                  <Card key={index} className="p-4 shadow-lg">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <h4 className="font-semibold">{channel.name}</h4>
@@ -3151,14 +3212,16 @@ export const DashboardInventoryManager = () => {
                     </div>
                     
                     {/* Advertising Opportunities */}
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-sans font-medium text-sm">Advertising Opportunities</h5>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => addStreamingOpportunity(index)}
-                        >
+                    <div className="-mx-4 -mb-4 mt-4">
+                      <div className="border-t border-gray-200"></div>
+                      <div className="p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <h5 className="font-sans font-semibold text-sm">Advertising Opportunities</h5>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => addStreamingOpportunity(index)}
+                          >
                           <Plus className="w-3 h-3 mr-1" />
                           Add Ad
                         </Button>
@@ -3167,21 +3230,13 @@ export const DashboardInventoryManager = () => {
                       {channel.advertisingOpportunities && channel.advertisingOpportunities.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {channel.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                            <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                            <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                                   {ad.adFormat && (
                                     <Badge variant="outline" className="text-xs font-normal">
                                       {ad.adFormat}
-                                    </Badge>
-                                  )}
-                                  {ad.hubPricing && ad.hubPricing.length > 0 && (
-                                    <Badge 
-                                      variant="secondary" 
-                                      className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
-                                    >
-                                      +{ad.hubPricing.length} CUSTOM
                                     </Badge>
                                   )}
                                 </div>
@@ -3225,22 +3280,33 @@ export const DashboardInventoryManager = () => {
                                   </div>
                                 </div>
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="text-xs font-medium text-gray-500">Pricing</p>
+                                    {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                      <Badge 
+                                        variant="secondary" 
+                                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-1.5 py-0.5"
+                                      >
+                                        +{ad.hubPricing.length} CUSTOM
+                                      </Badge>
+                                    )}
+                                  </div>
                                   {renderPricingDisplay(ad.pricing)}
                                 </div>
                               </div>
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
-                      )}
-                    </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                        )}
+                        </div>
+                      </div>
 
-                  </Card>
-                ))}
-                
-            {(!currentPublication.distributionChannels?.streamingVideo ||
+                    </Card>
+                  ))}
+                  
+              {(!currentPublication.distributionChannels?.streamingVideo ||
               currentPublication.distributionChannels.streamingVideo.length === 0) && (
               <div className="text-center py-8 text-muted-foreground">
                 <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -3297,7 +3363,7 @@ export const DashboardInventoryManager = () => {
                   }
                   
                   return printArray.map((publication, index) => (
-                    <Card key={index} className="p-4">
+                    <Card key={index} className="p-4 shadow-lg">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
                           <h4 className="font-semibold">{publication.name}</h4>
@@ -3339,14 +3405,16 @@ export const DashboardInventoryManager = () => {
                       </div>
 
                       {/* Advertising Opportunities */}
-                      <div className="mt-4 pt-4 border-t">
-                        <div className="flex items-center justify-between mb-2">
-                          <h5 className="font-sans font-medium text-sm">Advertising Opportunities</h5>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => addPrintOpportunity(index)}
-                          >
+                      <div className="-mx-4 -mb-4 mt-4">
+                        <div className="border-t border-gray-200"></div>
+                        <div className="p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <h5 className="font-sans font-semibold text-sm">Advertising Opportunities</h5>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => addPrintOpportunity(index)}
+                            >
                             <Plus className="w-3 h-3 mr-1" />
                             Add Ad
                           </Button>
@@ -3355,21 +3423,13 @@ export const DashboardInventoryManager = () => {
                         {publication.advertisingOpportunities && publication.advertisingOpportunities.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {publication.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                              <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                              <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
                                 <div className="flex items-center justify-between mb-3">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                                     {ad.adFormat && (
                                       <Badge variant="outline" className="text-xs font-normal">
                                         {ad.adFormat}
-                                      </Badge>
-                                    )}
-                                    {ad.hubPricing && ad.hubPricing.length > 0 && (
-                                      <Badge 
-                                        variant="secondary" 
-                                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
-                                      >
-                                        +{ad.hubPricing.length} CUSTOM
                                       </Badge>
                                     )}
                                   </div>
@@ -3413,23 +3473,34 @@ export const DashboardInventoryManager = () => {
                                     </div>
                                   </div>
                                   <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <p className="text-xs font-medium text-gray-500">Pricing</p>
+                                      {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                        <Badge 
+                                          variant="secondary" 
+                                          className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-1.5 py-0.5"
+                                        >
+                                          +{ad.hubPricing.length} CUSTOM
+                                        </Badge>
+                                      )}
+                                    </div>
                                     {renderPricingDisplay(ad.pricing)}
                                   </div>
                                 </div>
                               </div>
                             ))}
                           </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
-                        )}
-                      </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                          )}
+                          </div>
+                        </div>
 
-                    </Card>
-                  ));
-                })()}
-                
-            {!currentPublication.distributionChannels?.print && (
+                      </Card>
+                    ));
+                  })()}
+                  
+              {!currentPublication.distributionChannels?.print && (
               <div className="text-center py-8 text-muted-foreground">
                 <Printer className="w-16 h-16 mx-auto mb-4 opacity-50" />
                 <h3 className="text-lg font-semibold mb-2">No Print Publications</h3>
@@ -3474,7 +3545,7 @@ export const DashboardInventoryManager = () => {
 
           {currentPublication.distributionChannels?.events && currentPublication.distributionChannels.events.length > 0 ? (
             currentPublication.distributionChannels.events.map((event, eventIndex) => (
-              <Card key={eventIndex} className="p-6">
+              <Card key={eventIndex} className="p-6 shadow-lg">
                 <div className="space-y-4">
                   {/* Event Header */}
                   <div className="flex items-start justify-between">
@@ -3519,9 +3590,11 @@ export const DashboardInventoryManager = () => {
                   </div>
 
                   {/* Sponsorship Opportunities */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-sm font-medium text-gray-700">Sponsorship Levels</h5>
+                  <div className="-mx-6 -mb-6 mt-4">
+                    <div className="border-t border-gray-200"></div>
+                    <div className="p-6 bg-gray-50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-sm font-semibold">Sponsorship Levels</h5>
                       <Button
                         variant="outline"
                         size="sm"
@@ -3534,7 +3607,7 @@ export const DashboardInventoryManager = () => {
                     </div>
                     {event.advertisingOpportunities && event.advertisingOpportunities.length > 0 ? (
                       event.advertisingOpportunities.map((opportunity, oppIndex) => (
-                        <div key={oppIndex} className="border rounded-lg p-4 bg-gray-50">
+                        <div key={oppIndex} className="border rounded-lg p-4 bg-white">
                           <div className="flex items-center justify-between mb-2">
                             <h6 className="font-medium capitalize">{opportunity.level || 'Sponsorship'}</h6>
                             <div className="flex gap-2">
@@ -3608,6 +3681,7 @@ export const DashboardInventoryManager = () => {
                     ) : (
                       <p className="text-xs text-muted-foreground">No sponsorship opportunities defined</p>
                     )}
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -3636,7 +3710,7 @@ export const DashboardInventoryManager = () => {
           
           <div className="space-y-4">
             {currentPublication.distributionChannels?.newsletters?.map((newsletter, index) => (
-              <Card key={index} className="p-4">
+              <Card key={index} className="p-4 shadow-lg">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     <h4 className="font-semibold">{newsletter.name}</h4>
@@ -3694,26 +3768,20 @@ export const DashboardInventoryManager = () => {
                 </div>
 
                 {/* Advertising Opportunities */}
-                <div className="mt-4 pt-4 border-t">
-                  <h5 className="font-sans font-medium text-sm mb-2">Advertising Opportunities</h5>
-                  {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 ? (
+                <div className="-mx-4 -mb-4 mt-4">
+                  <div className="border-t border-gray-200"></div>
+                  <div className="p-4 bg-gray-50">
+                    <h5 className="font-sans font-semibold text-sm mb-3">Advertising Opportunities</h5>
+                    {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {newsletter.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                        <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                        <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                               {ad.position && (
                                 <Badge variant="outline" className="text-xs font-normal">
                                   {ad.position}
-                                </Badge>
-                              )}
-                              {ad.hubPricing && ad.hubPricing.length > 0 && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
-                                >
-                                  +{ad.hubPricing.length} CUSTOM
                                 </Badge>
                               )}
                             </div>
@@ -3751,7 +3819,17 @@ export const DashboardInventoryManager = () => {
                               <p className="text-xs text-gray-900">{ad.dimensions || 'N/A'}</p>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-xs font-medium text-gray-500">Pricing</p>
+                                {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                  <Badge 
+                                    variant="secondary" 
+                                    className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-1.5 py-0.5"
+                                  >
+                                    +{ad.hubPricing.length} CUSTOM
+                                  </Badge>
+                                )}
+                              </div>
                               {renderPricingDisplay(ad.pricing)}
                             </div>
                           </div>
@@ -3761,6 +3839,7 @@ export const DashboardInventoryManager = () => {
                   ) : (
                     <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                   )}
+                  </div>
                 </div>
 
               </Card>
@@ -3807,7 +3886,7 @@ export const DashboardInventoryManager = () => {
           
           <div className="space-y-4">
             {currentPublication.distributionChannels?.socialMedia?.map((profile, index) => (
-              <Card key={index} className="p-4">
+              <Card key={index} className="p-4 shadow-lg">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     <h4 className="font-semibold capitalize">{profile.platform}</h4>
@@ -3859,14 +3938,16 @@ export const DashboardInventoryManager = () => {
                 )}
 
                 {/* Advertising Opportunities */}
-                <div className="mt-4 pt-4 border-t">
-                  <div className="flex items-center justify-between mb-2">
-                    <h5 className="font-sans font-medium text-sm">Advertising Opportunities</h5>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => addSocialMediaOpportunity(index)}
-                    >
+                <div className="-mx-4 -mb-4 mt-4">
+                  <div className="border-t border-gray-200"></div>
+                  <div className="p-4 bg-gray-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="font-sans font-semibold text-sm">Advertising Opportunities</h5>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => addSocialMediaOpportunity(index)}
+                      >
                       <Plus className="w-3 h-3 mr-1" />
                       Add Ad
                     </Button>
@@ -3875,21 +3956,13 @@ export const DashboardInventoryManager = () => {
                   {profile.advertisingOpportunities && profile.advertisingOpportunities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {profile.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                        <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                        <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                               {ad.adFormat && (
                                 <Badge variant="outline" className="text-xs font-normal">
                                   {ad.adFormat}
-                                </Badge>
-                              )}
-                              {ad.hubPricing && ad.hubPricing.length > 0 && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
-                                >
-                                  +{ad.hubPricing.length} CUSTOM
                                 </Badge>
                               )}
                             </div>
@@ -3933,7 +4006,17 @@ export const DashboardInventoryManager = () => {
                               </div>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-xs font-medium text-gray-500">Pricing</p>
+                                {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                  <Badge 
+                                    variant="secondary" 
+                                    className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-1.5 py-0.5"
+                                  >
+                                    +{ad.hubPricing.length} CUSTOM
+                                  </Badge>
+                                )}
+                              </div>
                               {renderPricingDisplay(ad.pricing)}
                             </div>
                           </div>
@@ -3943,6 +4026,7 @@ export const DashboardInventoryManager = () => {
                   ) : (
                     <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                   )}
+                  </div>
                 </div>
 
               </Card>
@@ -3990,7 +4074,7 @@ export const DashboardInventoryManager = () => {
 
           <div className="space-y-4">
             {currentPublication.distributionChannels?.television?.map((station, index) => (
-              <Card key={index} className="p-4">
+              <Card key={index} className="p-4 shadow-lg">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <h4 className="font-medium text-base">{station.callSign || `TV Station ${index + 1}`}</h4>
@@ -4037,14 +4121,16 @@ export const DashboardInventoryManager = () => {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-sans text-sm font-medium">Ad Products</span>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => addTelevisionOpportunity(index)}
-                    >
+                <div className="-mx-4 -mb-4 mt-4">
+                  <div className="border-t border-gray-200"></div>
+                  <div className="p-4 bg-gray-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-sans text-sm font-semibold">Ad Products</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => addTelevisionOpportunity(index)}
+                      >
                       <Plus className="w-3 h-3 mr-1" />
                       Add Ad Product
                     </Button>
@@ -4053,21 +4139,13 @@ export const DashboardInventoryManager = () => {
                   {station.advertisingOpportunities && station.advertisingOpportunities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {station.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                        <div key={adIndex} className="border border-gray-200 rounded-lg shadow-sm p-3 bg-white">
+                        <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                               {ad.adFormat && (
                                 <Badge variant="outline" className="text-xs font-normal">
                                   {ad.adFormat}
-                                </Badge>
-                              )}
-                              {ad.hubPricing && ad.hubPricing.length > 0 && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium px-1.5 py-0.5"
-                                >
-                                  +{ad.hubPricing.length} CUSTOM
                                 </Badge>
                               )}
                             </div>
@@ -4111,7 +4189,17 @@ export const DashboardInventoryManager = () => {
                               </div>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-gray-500 mb-1">Pricing</p>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-xs font-medium text-gray-500">Pricing</p>
+                                {ad.hubPricing && ad.hubPricing.length > 0 && (
+                                  <Badge 
+                                    variant="secondary" 
+                                    className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-1.5 py-0.5"
+                                  >
+                                    +{ad.hubPricing.length} CUSTOM
+                                  </Badge>
+                                )}
+                              </div>
                               {renderPricingDisplay(ad.pricing)}
                             </div>
                           </div>
@@ -4121,6 +4209,7 @@ export const DashboardInventoryManager = () => {
                   ) : (
                     <p className="text-xs text-muted-foreground">No ad products yet</p>
                   )}
+                  </div>
                 </div>
 
               </Card>
@@ -4283,9 +4372,15 @@ export const DashboardInventoryManager = () => {
                       id="monthlyImpressions"
                       type="number"
                       value={editingItem.monthlyImpressions || ''}
-                      onChange={(e) => setEditingItem({ ...editingItem, monthlyImpressions: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        setEditingItem({ ...editingItem, monthlyImpressions: val });
+                      }}
+                      onBlur={(e) => validateAndSetField('monthlyImpressions', parseInt(e.target.value) || 0, 'integer')}
                       placeholder="10000"
+                      className={getValidationClass(!!fieldErrors['monthlyImpressions'])}
                     />
+                    <FieldError error={fieldErrors['monthlyImpressions']} />
                   </div>
 
                   <HubPricingEditor
@@ -4815,9 +4910,15 @@ export const DashboardInventoryManager = () => {
                         id="subscribers"
                         type="number"
                         value={editingItem.subscribers || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, subscribers: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setEditingItem({ ...editingItem, subscribers: val });
+                        }}
+                        onBlur={(e) => validateAndSetField('subscribers', parseInt(e.target.value) || 0, 'integer')}
                         placeholder="10000"
+                        className={getValidationClass(!!fieldErrors['subscribers'])}
                       />
+                      <FieldError error={fieldErrors['subscribers']} />
                     </div>
                     <div>
                       <Label htmlFor="openRate">Open Rate (%)</Label>
@@ -4825,9 +4926,15 @@ export const DashboardInventoryManager = () => {
                         id="openRate"
                         type="number"
                         value={editingItem.openRate || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, openRate: parseFloat(e.target.value) || 0 })}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setEditingItem({ ...editingItem, openRate: val });
+                        }}
+                        onBlur={(e) => validateAndSetField('openRate', parseFloat(e.target.value) || 0, 'percentage')}
                         placeholder="25"
+                        className={getValidationClass(!!fieldErrors['openRate'])}
                       />
+                      <FieldError error={fieldErrors['openRate']} />
                     </div>
                     <div>
                       <Label htmlFor="frequency">Frequency</Label>
@@ -4929,9 +5036,15 @@ export const DashboardInventoryManager = () => {
                         id="averageAttendance"
                         type="number"
                         value={editingItem.averageAttendance || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, averageAttendance: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setEditingItem({ ...editingItem, averageAttendance: val });
+                        }}
+                        onBlur={(e) => validateAndSetField('averageAttendance', parseInt(e.target.value) || 0, 'integer')}
                         placeholder="500"
+                        className={getValidationClass(!!fieldErrors['averageAttendance'])}
                       />
+                      <FieldError error={fieldErrors['averageAttendance']} />
                     </div>
                     <div>
                       <Label htmlFor="location">Location</Label>
@@ -5006,9 +5119,15 @@ export const DashboardInventoryManager = () => {
                         id="paidCirculation"
                         type="number"
                         value={editingItem.paidCirculation || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, paidCirculation: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setEditingItem({ ...editingItem, paidCirculation: val });
+                        }}
+                        onBlur={(e) => validateAndSetField('paidCirculation', parseInt(e.target.value) || 0, 'integer')}
                         placeholder="30000"
+                        className={getValidationClass(!!fieldErrors['paidCirculation'])}
                       />
+                      <FieldError error={fieldErrors['paidCirculation']} />
                     </div>
                     <div>
                       <Label htmlFor="freeCirculation">Free Circulation</Label>
@@ -5016,9 +5135,15 @@ export const DashboardInventoryManager = () => {
                         id="freeCirculation"
                         type="number"
                         value={editingItem.freeCirculation || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, freeCirculation: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setEditingItem({ ...editingItem, freeCirculation: val });
+                        }}
+                        onBlur={(e) => validateAndSetField('freeCirculation', parseInt(e.target.value) || 0, 'integer')}
                         placeholder="20000"
+                        className={getValidationClass(!!fieldErrors['freeCirculation'])}
                       />
+                      <FieldError error={fieldErrors['freeCirculation']} />
                     </div>
                   </div>
                   <div>
@@ -5074,9 +5199,15 @@ export const DashboardInventoryManager = () => {
                         id="averageDownloads"
                         type="number"
                         value={editingItem.averageDownloads || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, averageDownloads: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setEditingItem({ ...editingItem, averageDownloads: val });
+                        }}
+                        onBlur={(e) => validateAndSetField('averageDownloads', parseInt(e.target.value) || 0, 'integer')}
                         placeholder="50000"
+                        className={getValidationClass(!!fieldErrors['averageDownloads'])}
                       />
+                      <FieldError error={fieldErrors['averageDownloads']} />
                     </div>
                     <div>
                       <Label htmlFor="averageListeners">Average Listeners</Label>
@@ -5084,9 +5215,15 @@ export const DashboardInventoryManager = () => {
                         id="averageListeners"
                         type="number"
                         value={editingItem.averageListeners || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, averageListeners: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setEditingItem({ ...editingItem, averageListeners: val });
+                        }}
+                        onBlur={(e) => validateAndSetField('averageListeners', parseInt(e.target.value) || 0, 'integer')}
                         placeholder="25000"
+                        className={getValidationClass(!!fieldErrors['averageListeners'])}
                       />
+                      <FieldError error={fieldErrors['averageListeners']} />
                     </div>
                     <div>
                       <Label htmlFor="episodeCount">Episode Count</Label>
@@ -5094,9 +5231,15 @@ export const DashboardInventoryManager = () => {
                         id="episodeCount"
                         type="number"
                         value={editingItem.episodeCount || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, episodeCount: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setEditingItem({ ...editingItem, episodeCount: val });
+                        }}
+                        onBlur={(e) => validateAndSetField('episodeCount', parseInt(e.target.value) || 0, 'integer')}
                         placeholder="100"
+                        className={getValidationClass(!!fieldErrors['episodeCount'])}
                       />
+                      <FieldError error={fieldErrors['episodeCount']} />
                     </div>
                   </div>
                 </>
@@ -5250,15 +5393,21 @@ export const DashboardInventoryManager = () => {
                         id="followers"
                         type="number"
                         value={editingItem.metrics?.followers || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          metrics: { 
-                            ...editingItem.metrics, 
-                            followers: parseInt(e.target.value) || 0 
-                          } 
-                        })}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setEditingItem({ 
+                            ...editingItem, 
+                            metrics: { 
+                              ...editingItem.metrics, 
+                              followers: val 
+                            } 
+                          });
+                        }}
+                        onBlur={(e) => validateAndSetField('followers', parseInt(e.target.value) || 0, 'integer')}
                         placeholder="10000"
+                        className={getValidationClass(!!fieldErrors['followers'])}
                       />
+                      <FieldError error={fieldErrors['followers']} />
                     </div>
                     <div>
                       <Label htmlFor="engagementRate">Engagement Rate (%)</Label>
@@ -5267,15 +5416,21 @@ export const DashboardInventoryManager = () => {
                         type="number"
                         step="0.1"
                         value={editingItem.metrics?.engagementRate || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          metrics: { 
-                            ...editingItem.metrics, 
-                            engagementRate: parseFloat(e.target.value) || 0 
-                          } 
-                        })}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setEditingItem({ 
+                            ...editingItem, 
+                            metrics: { 
+                              ...editingItem.metrics, 
+                              engagementRate: val 
+                            } 
+                          });
+                        }}
+                        onBlur={(e) => validateAndSetField('engagementRate', parseFloat(e.target.value) || 0, 'percentage')}
                         placeholder="2.5"
+                        className={getValidationClass(!!fieldErrors['engagementRate'])}
                       />
+                      <FieldError error={fieldErrors['engagementRate']} />
                     </div>
                   </div>
 
