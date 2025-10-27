@@ -11,6 +11,16 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, Edit, Trash2, DollarSign, Target, BarChart3, 
@@ -113,6 +123,12 @@ export const DashboardInventoryManager = () => {
   const [editingParentIndex, setEditingParentIndex] = useState<number>(-1); // for event parent index
   const [editingItemIndex, setEditingItemIndex] = useState<number>(-1); // for event sponsorship index
 
+  // Delete confirmation dialog states
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteAction, setDeleteAction] = useState<(() => void) | null>(null);
+  const [deleteItemName, setDeleteItemName] = useState<string>('');
+  const [deleteItemType, setDeleteItemType] = useState<string>('');
+
   // Helper function to format pricing model labels
   const formatPricingModel = (model: string) => {
     if (!model) return 'N/A';
@@ -196,6 +212,24 @@ export const DashboardInventoryManager = () => {
 
   const clearAllErrors = () => {
     setFieldErrors({});
+  };
+
+  // Helper function to open delete confirmation dialog
+  const confirmDelete = (itemName: string, itemType: string, onConfirm: () => void) => {
+    setDeleteItemName(itemName);
+    setDeleteItemType(itemType);
+    setDeleteAction(() => onConfirm);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteAction) {
+      deleteAction();
+    }
+    setDeleteConfirmOpen(false);
+    setDeleteAction(null);
+    setDeleteItemName('');
+    setDeleteItemType('');
   };
 
   // Helper component to render pricing display
@@ -1192,35 +1226,42 @@ export const DashboardInventoryManager = () => {
   const removeNewsletterOpportunity = async (newsletterIndex: number, adIndex: number) => {
     if (!currentPublication?.distributionChannels?.newsletters?.[newsletterIndex]?.advertisingOpportunities?.[adIndex]) return;
     
-    const updatedNewsletters = [...currentPublication.distributionChannels.newsletters];
-    const updatedOpportunities = [...updatedNewsletters[newsletterIndex].advertisingOpportunities];
-    
-    updatedOpportunities.splice(adIndex, 1);
-    
-    updatedNewsletters[newsletterIndex] = {
-      ...updatedNewsletters[newsletterIndex],
-      advertisingOpportunities: updatedOpportunities
+    const ad = currentPublication.distributionChannels.newsletters[newsletterIndex].advertisingOpportunities[adIndex];
+    const adName = ad?.name || `Newsletter Ad #${adIndex + 1}`;
+
+    const executeDelete = async () => {
+      const updatedNewsletters = [...currentPublication.distributionChannels.newsletters];
+      const updatedOpportunities = [...updatedNewsletters[newsletterIndex].advertisingOpportunities];
+      
+      updatedOpportunities.splice(adIndex, 1);
+      
+      updatedNewsletters[newsletterIndex] = {
+        ...updatedNewsletters[newsletterIndex],
+        advertisingOpportunities: updatedOpportunities
+      };
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            newsletters: updatedNewsletters
+          }
+        });
+        toast({
+          title: "Success",
+          description: "Newsletter advertising opportunity removed successfully"
+        });
+      } catch (error) {
+        console.error('Error removing newsletter opportunity:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove newsletter advertising opportunity",
+          variant: "destructive"
+        });
+      }
     };
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          newsletters: updatedNewsletters
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Newsletter advertising opportunity removed successfully"
-      });
-    } catch (error) {
-      console.error('Error removing newsletter opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove newsletter advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    confirmDelete(adName, 'Newsletter advertising opportunity', executeDelete);
   };
 
   const cloneNewsletterOpportunity = async (newsletterIndex: number, adIndex: number) => {
@@ -1324,33 +1365,40 @@ export const DashboardInventoryManager = () => {
       
     if (!updatedPrint[printIndex]?.advertisingOpportunities?.[adIndex]) return;
     
-    const updatedOpportunities = [...updatedPrint[printIndex].advertisingOpportunities];
-    updatedOpportunities.splice(adIndex, 1);
-    
-    updatedPrint[printIndex] = {
-      ...updatedPrint[printIndex],
-      advertisingOpportunities: updatedOpportunities
+    const ad = updatedPrint[printIndex].advertisingOpportunities[adIndex];
+    const adName = ad?.name || `Print Ad #${adIndex + 1}`;
+
+    const executeDelete = async () => {
+      const updatedOpportunities = [...updatedPrint[printIndex].advertisingOpportunities];
+      updatedOpportunities.splice(adIndex, 1);
+      
+      updatedPrint[printIndex] = {
+        ...updatedPrint[printIndex],
+        advertisingOpportunities: updatedOpportunities
+      };
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            print: updatedPrint
+          }
+        });
+        toast({
+          title: "Success",
+          description: "Print advertising opportunity removed successfully"
+        });
+      } catch (error) {
+        console.error('Error removing print opportunity:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove print advertising opportunity",
+          variant: "destructive"
+        });
+      }
     };
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          print: updatedPrint
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Print advertising opportunity removed successfully"
-      });
-    } catch (error) {
-      console.error('Error removing print opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove print advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    confirmDelete(adName, 'Print advertising opportunity', executeDelete);
   };
 
   const clonePrintOpportunity = async (printIndex: number, adIndex: number) => {
@@ -1443,27 +1491,34 @@ export const DashboardInventoryManager = () => {
   const removeEvent = async (eventIndex: number) => {
     if (!currentPublication?.distributionChannels?.events) return;
     
-    const updatedEvents = currentPublication.distributionChannels.events.filter((_, index) => index !== eventIndex);
+    const event = currentPublication.distributionChannels.events[eventIndex];
+    const eventName = event?.name || `Event #${eventIndex + 1}`;
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          events: updatedEvents
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Event removed successfully"
-      });
-    } catch (error) {
-      console.error('Error removing event:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove event",
-        variant: "destructive"
-      });
-    }
+    const executeDelete = async () => {
+      const updatedEvents = currentPublication.distributionChannels.events.filter((_, index) => index !== eventIndex);
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            events: updatedEvents
+          }
+        });
+        toast({
+          title: "Success",
+          description: "Event removed successfully"
+        });
+      } catch (error) {
+        console.error('Error removing event:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove event",
+          variant: "destructive"
+        });
+      }
+    };
+
+    confirmDelete(eventName, 'Event', executeDelete);
   };
 
   const addEventOpportunity = async (eventIndex: number) => {
@@ -1516,30 +1571,37 @@ export const DashboardInventoryManager = () => {
     const updatedEvents = [...currentPublication.distributionChannels.events];
     if (!updatedEvents[eventIndex]?.advertisingOpportunities?.[oppIndex]) return;
     
-    updatedEvents[eventIndex] = {
-      ...updatedEvents[eventIndex],
-      advertisingOpportunities: updatedEvents[eventIndex].advertisingOpportunities!.filter((_, index) => index !== oppIndex)
+    const opp = updatedEvents[eventIndex].advertisingOpportunities[oppIndex];
+    const oppName = opp?.level || `Sponsorship #${oppIndex + 1}`;
+
+    const executeDelete = async () => {
+      updatedEvents[eventIndex] = {
+        ...updatedEvents[eventIndex],
+        advertisingOpportunities: updatedEvents[eventIndex].advertisingOpportunities!.filter((_, index) => index !== oppIndex)
+      };
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            events: updatedEvents
+          }
+        });
+        toast({
+          title: "Success",
+          description: "Sponsorship opportunity removed successfully"
+        });
+      } catch (error) {
+        console.error('Error removing event opportunity:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove sponsorship opportunity",
+          variant: "destructive"
+        });
+      }
     };
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          events: updatedEvents
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Sponsorship opportunity removed successfully"
-      });
-    } catch (error) {
-      console.error('Error removing event opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove sponsorship opportunity",
-        variant: "destructive"
-      });
-    }
+    confirmDelete(oppName, 'Sponsorship opportunity', executeDelete);
   };
 
   const addSocialMediaOpportunity = async (socialIndex: number) => {
@@ -1590,35 +1652,42 @@ export const DashboardInventoryManager = () => {
   const removeSocialMediaOpportunity = async (socialIndex: number, adIndex: number) => {
     if (!currentPublication?.distributionChannels?.socialMedia?.[socialIndex]?.advertisingOpportunities?.[adIndex]) return;
     
-    const updatedSocialMedia = [...currentPublication.distributionChannels.socialMedia];
-    const updatedOpportunities = [...updatedSocialMedia[socialIndex].advertisingOpportunities];
-    
-    updatedOpportunities.splice(adIndex, 1);
-    
-    updatedSocialMedia[socialIndex] = {
-      ...updatedSocialMedia[socialIndex],
-      advertisingOpportunities: updatedOpportunities
+    const ad = currentPublication.distributionChannels.socialMedia[socialIndex].advertisingOpportunities[adIndex];
+    const adName = ad?.name || `Social Media Ad #${adIndex + 1}`;
+
+    const executeDelete = async () => {
+      const updatedSocialMedia = [...currentPublication.distributionChannels.socialMedia];
+      const updatedOpportunities = [...updatedSocialMedia[socialIndex].advertisingOpportunities];
+      
+      updatedOpportunities.splice(adIndex, 1);
+      
+      updatedSocialMedia[socialIndex] = {
+        ...updatedSocialMedia[socialIndex],
+        advertisingOpportunities: updatedOpportunities
+      };
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            socialMedia: updatedSocialMedia
+          }
+        });
+        toast({
+          title: "Success",
+          description: "Social media advertising opportunity removed successfully"
+        });
+      } catch (error) {
+        console.error('Error removing social media opportunity:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove social media advertising opportunity",
+          variant: "destructive"
+        });
+      }
     };
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          socialMedia: updatedSocialMedia
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Social media advertising opportunity removed successfully"
-      });
-    } catch (error) {
-      console.error('Error removing social media opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove social media advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    confirmDelete(adName, 'Social media advertising opportunity', executeDelete);
   };
 
   const cloneSocialMediaOpportunity = async (socialIndex: number, adIndex: number) => {
@@ -1706,27 +1775,34 @@ export const DashboardInventoryManager = () => {
   const removeTelevisionStation = async (index: number) => {
     if (!currentPublication?.distributionChannels?.television) return;
     
-    const updatedTelevision = currentPublication.distributionChannels.television.filter((_, i) => i !== index);
+    const station = currentPublication.distributionChannels.television[index];
+    const stationName = station?.callSign || `TV Station #${index + 1}`;
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          television: updatedTelevision
-        }
-      });
-      toast({
-        title: "Success",
-        description: "TV station removed successfully"
-      });
-    } catch (error) {
-      console.error('Error removing TV station:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove TV station",
-        variant: "destructive"
-      });
-    }
+    const executeDelete = async () => {
+      const updatedTelevision = currentPublication.distributionChannels.television.filter((_, i) => i !== index);
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            television: updatedTelevision
+          }
+        });
+        toast({
+          title: "Success",
+          description: "TV station removed successfully"
+        });
+      } catch (error) {
+        console.error('Error removing TV station:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove TV station",
+          variant: "destructive"
+        });
+      }
+    };
+
+    confirmDelete(stationName, 'TV station', executeDelete);
   };
 
   const addTelevisionOpportunity = async (stationIndex: number) => {
@@ -1775,35 +1851,42 @@ export const DashboardInventoryManager = () => {
   const removeTelevisionOpportunity = async (stationIndex: number, adIndex: number) => {
     if (!currentPublication?.distributionChannels?.television?.[stationIndex]?.advertisingOpportunities?.[adIndex]) return;
     
-    const updatedTelevision = [...currentPublication.distributionChannels.television];
-    const updatedOpportunities = [...updatedTelevision[stationIndex].advertisingOpportunities];
-    
-    updatedOpportunities.splice(adIndex, 1);
-    
-    updatedTelevision[stationIndex] = {
-      ...updatedTelevision[stationIndex],
-      advertisingOpportunities: updatedOpportunities
+    const ad = currentPublication.distributionChannels.television[stationIndex].advertisingOpportunities[adIndex];
+    const adName = ad?.name || `TV Ad #${adIndex + 1}`;
+
+    const executeDelete = async () => {
+      const updatedTelevision = [...currentPublication.distributionChannels.television];
+      const updatedOpportunities = [...updatedTelevision[stationIndex].advertisingOpportunities];
+      
+      updatedOpportunities.splice(adIndex, 1);
+      
+      updatedTelevision[stationIndex] = {
+        ...updatedTelevision[stationIndex],
+        advertisingOpportunities: updatedOpportunities
+      };
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            television: updatedTelevision
+          }
+        });
+        toast({
+          title: "Success",
+          description: "TV ad product removed successfully"
+        });
+      } catch (error) {
+        console.error('Error removing TV opportunity:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove TV ad product",
+          variant: "destructive"
+        });
+      }
     };
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          television: updatedTelevision
-        }
-      });
-      toast({
-        title: "Success",
-        description: "TV ad product removed successfully"
-      });
-    } catch (error) {
-      console.error('Error removing TV opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove TV ad product",
-        variant: "destructive"
-      });
-    }
+    confirmDelete(adName, 'TV ad product', executeDelete);
   };
 
   const cloneTelevisionOpportunity = async (stationIndex: number, adIndex: number) => {
@@ -1853,23 +1936,30 @@ export const DashboardInventoryManager = () => {
   // Remove functions
   const removeWebsiteOpportunity = (index: number) => {
     if (!currentPublication?.distributionChannels?.website?.advertisingOpportunities) return;
-
-    const updatedOpportunities = currentPublication.distributionChannels.website.advertisingOpportunities.filter((_, i) => i !== index);
-
-    handleUpdatePublication({
-      distributionChannels: {
-        ...currentPublication.distributionChannels,
-        website: {
-          ...currentPublication.distributionChannels.website,
-          advertisingOpportunities: updatedOpportunities
-        }
-      }
-    });
     
-    toast({
-      title: "Success",
-      description: "Website advertising opportunity removed successfully"
-    });
+    const ad = currentPublication.distributionChannels.website.advertisingOpportunities[index];
+    const adName = ad?.name || `Website Ad #${index + 1}`;
+
+    const executeDelete = () => {
+      const updatedOpportunities = currentPublication.distributionChannels.website.advertisingOpportunities.filter((_, i) => i !== index);
+
+      handleUpdatePublication({
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          website: {
+            ...currentPublication.distributionChannels.website,
+            advertisingOpportunities: updatedOpportunities
+          }
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Website advertising opportunity removed successfully"
+      });
+    };
+
+    confirmDelete(adName, 'Website advertising opportunity', executeDelete);
   };
 
   const cloneWebsiteOpportunity = async (index: number) => {
@@ -1943,7 +2033,6 @@ export const DashboardInventoryManager = () => {
         break;
     }
 
-    let updatedChannels;
     if (channelType === 'print' && !Array.isArray(currentPublication.distributionChannels?.print)) {
       // If print is an object, we can't delete it, just show a message
       toast({
@@ -1952,30 +2041,37 @@ export const DashboardInventoryManager = () => {
         variant: "default"
       });
       return;
-    } else {
-      const currentChannels = currentPublication.distributionChannels?.[channelKey as keyof typeof currentPublication.distributionChannels] as any[] || [];
-      updatedChannels = currentChannels.filter((_, i) => i !== index);
     }
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          [channelKey]: updatedChannels
-        }
-      });
-      toast({
-        title: "Success",
-        description: `${channelType} channel removed successfully`
-      });
-    } catch (error) {
-      console.error(`Error removing ${channelType} channel:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to remove ${channelType} channel`,
-        variant: "destructive"
-      });
-    }
+    const currentChannels = currentPublication.distributionChannels?.[channelKey as keyof typeof currentPublication.distributionChannels] as any[] || [];
+    const channel = currentChannels[index];
+    const channelName = channel?.name || channel?.title || channel?.callSign || `${channelType} #${index + 1}`;
+
+    const executeDelete = async () => {
+      const updatedChannels = currentChannels.filter((_, i) => i !== index);
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            [channelKey]: updatedChannels
+          }
+        });
+        toast({
+          title: "Success",
+          description: `${channelType} channel removed successfully`
+        });
+      } catch (error) {
+        console.error(`Error removing ${channelType} channel:`, error);
+        toast({
+          title: "Error",
+          description: `Failed to remove ${channelType} channel`,
+          variant: "destructive"
+        });
+      }
+    };
+
+    confirmDelete(channelName, `${channelType} channel`, executeDelete);
   };
 
   const addPodcastOpportunity = async (podcastIndex: number) => {
@@ -2026,31 +2122,38 @@ export const DashboardInventoryManager = () => {
   const removePodcastOpportunity = async (podcastIndex: number, adIndex: number) => {
     if (!currentPublication?.distributionChannels?.podcasts?.[podcastIndex]) return;
 
-    const updatedPodcasts = [...currentPublication.distributionChannels.podcasts];
-    if (updatedPodcasts[podcastIndex].advertisingOpportunities) {
-      updatedPodcasts[podcastIndex].advertisingOpportunities = 
-        updatedPodcasts[podcastIndex].advertisingOpportunities.filter((_, i) => i !== adIndex);
-    }
+    const ad = currentPublication.distributionChannels.podcasts[podcastIndex].advertisingOpportunities?.[adIndex];
+    const adName = ad?.name || `Podcast Ad #${adIndex + 1}`;
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          podcasts: updatedPodcasts
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Podcast advertising opportunity removed successfully"
-      });
-    } catch (error) {
-      console.error('Error removing podcast opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove podcast advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    const executeDelete = async () => {
+      const updatedPodcasts = [...currentPublication.distributionChannels.podcasts];
+      if (updatedPodcasts[podcastIndex].advertisingOpportunities) {
+        updatedPodcasts[podcastIndex].advertisingOpportunities = 
+          updatedPodcasts[podcastIndex].advertisingOpportunities.filter((_, i) => i !== adIndex);
+      }
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            podcasts: updatedPodcasts
+          }
+        });
+        toast({
+          title: "Success",
+          description: "Podcast advertising opportunity removed successfully"
+        });
+      } catch (error) {
+        console.error('Error removing podcast opportunity:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove podcast advertising opportunity",
+          variant: "destructive"
+        });
+      }
+    };
+
+    confirmDelete(adName, 'Podcast advertising opportunity', executeDelete);
   };
 
   const clonePodcastOpportunity = async (podcastIndex: number, adIndex: number) => {
@@ -2146,31 +2249,38 @@ export const DashboardInventoryManager = () => {
   const removeRadioOpportunity = async (stationIndex: number, adIndex: number) => {
     if (!currentPublication?.distributionChannels?.radioStations?.[stationIndex]) return;
 
-    const updatedStations = [...currentPublication.distributionChannels.radioStations];
-    if (updatedStations[stationIndex].advertisingOpportunities) {
-      updatedStations[stationIndex].advertisingOpportunities = 
-        updatedStations[stationIndex].advertisingOpportunities.filter((_, i) => i !== adIndex);
-    }
+    const ad = currentPublication.distributionChannels.radioStations[stationIndex].advertisingOpportunities?.[adIndex];
+    const adName = ad?.name || `Radio Ad #${adIndex + 1}`;
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          radioStations: updatedStations
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Radio advertising opportunity removed successfully"
-      });
-    } catch (error) {
-      console.error('Error removing radio opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove radio advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    const executeDelete = async () => {
+      const updatedStations = [...currentPublication.distributionChannels.radioStations];
+      if (updatedStations[stationIndex].advertisingOpportunities) {
+        updatedStations[stationIndex].advertisingOpportunities = 
+          updatedStations[stationIndex].advertisingOpportunities.filter((_, i) => i !== adIndex);
+      }
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            radioStations: updatedStations
+          }
+        });
+        toast({
+          title: "Success",
+          description: "Radio advertising opportunity removed successfully"
+        });
+      } catch (error) {
+        console.error('Error removing radio opportunity:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove radio advertising opportunity",
+          variant: "destructive"
+        });
+      }
+    };
+
+    confirmDelete(adName, 'Radio advertising opportunity', executeDelete);
   };
 
   const cloneRadioOpportunity = async (stationIndex: number, adIndex: number) => {
@@ -2267,31 +2377,38 @@ export const DashboardInventoryManager = () => {
   const removeStreamingOpportunity = async (channelIndex: number, adIndex: number) => {
     if (!currentPublication?.distributionChannels?.streamingVideo?.[channelIndex]) return;
 
-    const updatedChannels = [...currentPublication.distributionChannels.streamingVideo];
-    if (updatedChannels[channelIndex].advertisingOpportunities) {
-      updatedChannels[channelIndex].advertisingOpportunities = 
-        updatedChannels[channelIndex].advertisingOpportunities.filter((_, i) => i !== adIndex);
-    }
+    const ad = currentPublication.distributionChannels.streamingVideo[channelIndex].advertisingOpportunities?.[adIndex];
+    const adName = ad?.name || `Streaming Ad #${adIndex + 1}`;
 
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          streamingVideo: updatedChannels
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Streaming advertising opportunity removed successfully"
-      });
-    } catch (error) {
-      console.error('Error removing streaming opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove streaming advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    const executeDelete = async () => {
+      const updatedChannels = [...currentPublication.distributionChannels.streamingVideo];
+      if (updatedChannels[channelIndex].advertisingOpportunities) {
+        updatedChannels[channelIndex].advertisingOpportunities = 
+          updatedChannels[channelIndex].advertisingOpportunities.filter((_, i) => i !== adIndex);
+      }
+
+      try {
+        await handleUpdatePublication({
+          distributionChannels: {
+            ...currentPublication.distributionChannels,
+            streamingVideo: updatedChannels
+          }
+        });
+        toast({
+          title: "Success",
+          description: "Streaming advertising opportunity removed successfully"
+        });
+      } catch (error) {
+        console.error('Error removing streaming opportunity:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove streaming advertising opportunity",
+          variant: "destructive"
+        });
+      }
+    };
+
+    confirmDelete(adName, 'Streaming advertising opportunity', executeDelete);
   };
 
   const cloneStreamingOpportunity = async (channelIndex: number, adIndex: number) => {
@@ -5774,6 +5891,30 @@ export const DashboardInventoryManager = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deleteItemName}</strong>?
+              <br />
+              <br />
+              This {deleteItemType} will be permanently removed and cannot be recovered.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
