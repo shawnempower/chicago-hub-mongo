@@ -1,4 +1,5 @@
 // Script to make a user admin by updating MongoDB directly
+import 'dotenv/config';
 import { getDatabase } from '../integrations/mongodb/client';
 import { COLLECTIONS } from '../integrations/mongodb/schemas';
 

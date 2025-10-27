@@ -75,20 +75,32 @@ export const adminApi = {
   // Set/unset admin privileges for a user (admin only)
   async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<AdminStatusUpdateResponse> {
     try {
+      console.log(`API call: Updating admin status for userId=${userId}, isAdmin=${isAdmin}`);
+      
       const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/admin`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isAdmin }),
       });
 
+      console.log(`API response status: ${response.status}`);
+
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('API error response:', errorData);
+        
         if (response.status === 403) {
-          throw new Error('Access denied. Admin privileges required.');
+          throw new Error('Access denied. You must be an admin to manage user privileges.');
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (response.status === 400) {
+          throw new Error(errorData.error || 'Invalid request data.');
+        }
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('API success response:', result);
+      return result;
     } catch (error) {
       console.error('Error updating admin status:', error);
       throw error;
