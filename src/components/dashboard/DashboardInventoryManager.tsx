@@ -24,6 +24,9 @@ import { updatePublication, getPublicationById } from '@/api/publications';
 import { HubPricingEditor, HubPrice } from './HubPricingEditor';
 import { GeneralTermsEditor, GeneralTerms } from './GeneralTermsEditor';
 import { FieldError } from '@/components/ui/field-error';
+import { AdFormatSelector } from '@/components/AdFormatSelector';
+import { NewsletterAdFormat } from '@/types/newsletterAdFormat';
+import { WebsiteAdFormatSelector } from '@/components/WebsiteAdFormatSelector';
 import { 
   validatePositiveInteger,
   validatePositiveNumber,
@@ -2697,11 +2700,33 @@ export const DashboardInventoryManager = () => {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="text-base font-semibold text-gray-900">{opportunity.name}</h4>
-                        {opportunity.adFormat && (
-                          <Badge variant="outline" className="text-xs font-normal">
-                            {opportunity.adFormat}
-                          </Badge>
-                        )}
+                        {(() => {
+                          // Prefer new format.dimensions
+                          const dims = opportunity.format?.dimensions;
+                          if (dims) {
+                            const displayText = Array.isArray(dims) 
+                              ? (dims.length > 2 ? `${dims.length} sizes` : dims.join(', '))
+                              : dims;
+                            return (
+                              <Badge variant="outline" className="text-xs font-normal">
+                                {displayText}
+                              </Badge>
+                            );
+                          }
+                          // Fallback to legacy sizes
+                          if (opportunity.sizes && opportunity.sizes.length > 0) {
+                            const sizes = opportunity.sizes.filter((s: string) => s);
+                            const displayText = sizes.length > 2 
+                              ? `${sizes.length} sizes` 
+                              : sizes.join(', ');
+                            return (
+                              <Badge variant="outline" className="text-xs font-normal">
+                                {displayText}
+                              </Badge>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
                         <Button
@@ -2741,11 +2766,27 @@ export const DashboardInventoryManager = () => {
                           <p className="text-sm text-gray-900">{opportunity.location || 'N/A'}</p>
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-gray-500 mb-1">Size{opportunity.sizes?.length > 1 ? 's' : ''}</p>
+                          <p className="text-xs font-medium text-gray-500 mb-1">
+                            {(() => {
+                              const dims = opportunity.format?.dimensions;
+                              const isArray = Array.isArray(dims);
+                              const count = isArray ? dims.length : 0;
+                              return count > 1 ? 'Sizes' : 'Size';
+                            })()}
+                          </p>
                           <p className="text-sm text-gray-900">
-                            {opportunity.sizes && opportunity.sizes.length > 0 
-                              ? opportunity.sizes.filter((s: string) => s).join(', ') 
-                              : 'N/A'}
+                            {(() => {
+                              // Prefer new format.dimensions
+                              if (opportunity.format?.dimensions) {
+                                const dims = opportunity.format.dimensions;
+                                return Array.isArray(dims) ? dims.join(', ') : dims;
+                              }
+                              // Fallback to legacy sizes
+                              if (opportunity.sizes && opportunity.sizes.length > 0) {
+                                return opportunity.sizes.filter((s: string) => s).join(', ');
+                              }
+                              return 'N/A';
+                            })()}
                           </p>
                         </div>
                       </div>
@@ -3094,7 +3135,9 @@ export const DashboardInventoryManager = () => {
                                   </div>
                                   <div>
                                     <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
-                                    <p className="text-xs text-gray-900">{ad.duration || ad.specifications?.duration || 'N/A'}</p>
+                                    <p className="text-xs text-gray-900">
+                                      {ad.specifications?.duration ? `${ad.specifications.duration}s` : ad.duration ? `${ad.duration}s` : 'N/A'}
+                                    </p>
                                   </div>
                                 </div>
                                 <div>
@@ -3779,8 +3822,31 @@ export const DashboardInventoryManager = () => {
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
+                              {(() => {
+                                // Show dimensions badge
+                                const dims = ad.format?.dimensions;
+                                if (dims) {
+                                  const displayText = Array.isArray(dims) 
+                                    ? (dims.length > 2 ? `${dims.length} sizes` : dims.join(', '))
+                                    : dims;
+                                  return (
+                                    <Badge variant="outline" className="text-xs font-normal">
+                                      {displayText}
+                                    </Badge>
+                                  );
+                                }
+                                // Fallback to legacy dimensions
+                                if (ad.dimensions) {
+                                  return (
+                                    <Badge variant="outline" className="text-xs font-normal">
+                                      {ad.dimensions}
+                                    </Badge>
+                                  );
+                                }
+                                return null;
+                              })()}
                               {ad.position && (
-                                <Badge variant="outline" className="text-xs font-normal">
+                                <Badge variant="secondary" className="text-xs font-normal">
                                   {ad.position}
                                 </Badge>
                               )}
@@ -3815,8 +3881,25 @@ export const DashboardInventoryManager = () => {
                           </div>
                           <div className="space-y-2">
                             <div>
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">Dimensions</p>
-                              <p className="text-xs text-gray-900">{ad.dimensions || 'N/A'}</p>
+                              <p className="text-xs font-medium text-gray-500 mb-0.5">
+                                {(() => {
+                                  const dims = ad.format?.dimensions;
+                                  const isArray = Array.isArray(dims);
+                                  const count = isArray ? dims.length : 0;
+                                  return count > 1 ? 'Dimensions' : 'Dimensions';
+                                })()}
+                              </p>
+                              <p className="text-xs text-gray-900">
+                                {(() => {
+                                  // Prefer new format.dimensions
+                                  if (ad.format?.dimensions) {
+                                    const dims = ad.format.dimensions;
+                                    return Array.isArray(dims) ? dims.join(', ') : dims;
+                                  }
+                                  // Fallback to legacy dimensions
+                                  return ad.dimensions || 'N/A';
+                                })()}
+                              </p>
                             </div>
                             <div>
                               <div className="flex items-center gap-2 mb-1">
@@ -4300,88 +4383,13 @@ export const DashboardInventoryManager = () => {
                     </div>
                   </div>
                   
-                  <div>
-                    <Label htmlFor="adFormat">Ad Format</Label>
-                    <Select
-                      value={editingItem.adFormat || 'banner'}
-                      onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select format" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="banner">Banner</SelectItem>
-                        <SelectItem value="video">Video</SelectItem>
-                        <SelectItem value="native">Native</SelectItem>
-                        <SelectItem value="takeover">Takeover</SelectItem>
-                        <SelectItem value="sponsored_content">Sponsored Content</SelectItem>
-                        <SelectItem value="custom">Custom</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Ad Sizes - Multiple inputs */}
-                  <div className="space-y-2">
-                    <Label>Ad Sizes</Label>
-                    {((editingItem.sizes || []).length > 0 ? editingItem.sizes : ['']).map((size: string, index: number) => (
-                      <div key={index} className="flex gap-2">
-                        <Input
-                          value={size}
-                          onChange={(e) => {
-                            const newSizes = [...(editingItem.sizes || [''])];
-                            newSizes[index] = e.target.value;
-                            setEditingItem({ ...editingItem, sizes: newSizes });
-                          }}
-                          placeholder="e.g., 300x250, 728x90, 970x250"
-                          className="flex-1"
-                        />
-                        {index > 0 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const newSizes = editingItem.sizes?.filter((_: any, i: number) => i !== index) || [];
-                              setEditingItem({ ...editingItem, sizes: newSizes.length > 0 ? newSizes : undefined });
-                            }}
-                            className="px-3"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const newSizes = [...(editingItem.sizes || ['']), ''];
-                        setEditingItem({ ...editingItem, sizes: newSizes });
-                      }}
-                      className="w-full"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Size
-                    </Button>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="monthlyImpressions">Monthly Impressions</Label>
-                    <Input
-                      id="monthlyImpressions"
-                      type="number"
-                      value={editingItem.monthlyImpressions || ''}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        setEditingItem({ ...editingItem, monthlyImpressions: val });
-                      }}
-                      onBlur={(e) => validateAndSetField('monthlyImpressions', parseInt(e.target.value) || 0, 'integer')}
-                      placeholder="10000"
-                      className={getValidationClass(!!fieldErrors['monthlyImpressions'])}
-                    />
-                    <FieldError error={fieldErrors['monthlyImpressions']} />
-                  </div>
+                  {/* Website Ad Format Selector */}
+                  <WebsiteAdFormatSelector
+                    value={editingItem.format || null}
+                    onChange={(format) => setEditingItem({ ...editingItem, format })}
+                    allowMultiple={true}
+                    legacyDimensions={editingItem.sizes ? editingItem.sizes.join(', ') : undefined}
+                  />
 
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
@@ -4423,24 +4431,30 @@ export const DashboardInventoryManager = () => {
                     </div>
                     <div>
                       <Label htmlFor="position">Position</Label>
-                      <Input
-                        id="position"
+                      <Select
                         value={editingItem.position || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, position: e.target.value })}
-                        placeholder="Header, Inline, Footer"
-                      />
+                        onValueChange={(value) => setEditingItem({ ...editingItem, position: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select position..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="header">Header</SelectItem>
+                          <SelectItem value="footer">Footer</SelectItem>
+                          <SelectItem value="inline">Inline</SelectItem>
+                          <SelectItem value="dedicated">Dedicated</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   
-                  <div>
-                    <Label htmlFor="dimensions">Dimensions</Label>
-                    <Input
-                      id="dimensions"
-                      value={editingItem.dimensions || ''}
-                      onChange={(e) => setEditingItem({ ...editingItem, dimensions: e.target.value })}
-                      placeholder="600x200, 300x250"
-                    />
-                  </div>
+                  {/* Ad Format Selector */}
+                  <AdFormatSelector
+                    value={editingItem.format || null}
+                    onChange={(format) => setEditingItem({ ...editingItem, format })}
+                    allowMultiple={true}
+                    legacyDimensions={editingItem.dimensions}
+                  />
 
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
@@ -4656,15 +4670,46 @@ export const DashboardInventoryManager = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="duration">Duration (seconds)</Label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      value={editingItem.duration || ''}
-                      onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || 30 })}
-                      placeholder="30"
-                    />
+                    <Label htmlFor="duration">Duration</Label>
+                    <Select 
+                      value={
+                        editingItem.duration && [15, 30, 60, 90, 120].includes(editingItem.duration)
+                          ? String(editingItem.duration)
+                          : 'custom'
+                      }
+                      onValueChange={(value) => {
+                        if (value === 'custom') return;
+                        const duration = parseInt(value);
+                        setEditingItem({ ...editingItem, duration });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select duration..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="15">15 seconds (:15)</SelectItem>
+                        <SelectItem value="30">30 seconds (:30)</SelectItem>
+                        <SelectItem value="60">60 seconds (:60)</SelectItem>
+                        <SelectItem value="90">90 seconds (:90)</SelectItem>
+                        <SelectItem value="120">120 seconds (:120)</SelectItem>
+                        <SelectItem value="custom">Custom...</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                  
+                  {/* Custom duration input - shown for non-standard durations */}
+                  {(!editingItem.duration || ![15, 30, 60, 90, 120].includes(editingItem.duration)) && (
+                    <div>
+                      <Label htmlFor="customDuration">Custom Duration (seconds)</Label>
+                      <Input
+                        id="customDuration"
+                        type="number"
+                        value={editingItem.duration || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || undefined })}
+                        placeholder="Enter seconds"
+                      />
+                    </div>
+                  )}
 
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
@@ -4727,13 +4772,57 @@ export const DashboardInventoryManager = () => {
                   
                   <div>
                     <Label htmlFor="duration">Duration</Label>
-                    <Input
-                      id="duration"
-                      value={editingItem.duration || ''}
-                      onChange={(e) => setEditingItem({ ...editingItem, duration: e.target.value })}
-                      placeholder="30 seconds, 60 seconds"
-                    />
+                    <Select 
+                      value={
+                        editingItem.specifications?.duration && [15, 30, 60, 90, 120].includes(editingItem.specifications.duration)
+                          ? String(editingItem.specifications.duration)
+                          : 'custom'
+                      }
+                      onValueChange={(value) => {
+                        if (value === 'custom') return;
+                        const duration = parseInt(value);
+                        setEditingItem({ 
+                          ...editingItem, 
+                          specifications: {
+                            ...editingItem.specifications,
+                            duration
+                          }
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select duration..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="15">15 seconds (:15)</SelectItem>
+                        <SelectItem value="30">30 seconds (:30)</SelectItem>
+                        <SelectItem value="60">60 seconds (:60)</SelectItem>
+                        <SelectItem value="90">90 seconds (:90)</SelectItem>
+                        <SelectItem value="120">120 seconds (:120)</SelectItem>
+                        <SelectItem value="custom">Custom...</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                  
+                  {/* Custom duration input - shown for non-standard durations */}
+                  {(!editingItem.specifications?.duration || ![15, 30, 60, 90, 120].includes(editingItem.specifications.duration)) && (
+                    <div>
+                      <Label htmlFor="customDuration">Custom Duration (seconds)</Label>
+                      <Input
+                        id="customDuration"
+                        type="number"
+                        value={editingItem.specifications?.duration || ''}
+                        onChange={(e) => setEditingItem({ 
+                          ...editingItem, 
+                          specifications: {
+                            ...editingItem.specifications,
+                            duration: parseInt(e.target.value) || undefined
+                          }
+                        })}
+                        placeholder="Enter seconds (e.g., 20, 1320)"
+                      />
+                    </div>
+                  )}
 
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
@@ -4938,12 +5027,22 @@ export const DashboardInventoryManager = () => {
                     </div>
                     <div>
                       <Label htmlFor="frequency">Frequency</Label>
-                      <Input
-                        id="frequency"
+                      <Select
                         value={editingItem.frequency || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, frequency: e.target.value })}
-                        placeholder="Weekly, Monthly"
-                      />
+                        onValueChange={(value) => setEditingItem({ ...editingItem, frequency: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select frequency..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="irregular">Irregular</SelectItem>
+                          <SelectItem value="on-demand">On Demand</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </>
@@ -5173,12 +5272,22 @@ export const DashboardInventoryManager = () => {
                     </div>
                     <div>
                       <Label htmlFor="frequency">Frequency</Label>
-                      <Input
-                        id="frequency"
+                      <Select
                         value={editingItem.frequency || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, frequency: e.target.value })}
-                        placeholder="Weekly, Daily"
-                      />
+                        onValueChange={(value) => setEditingItem({ ...editingItem, frequency: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select frequency..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="irregular">Irregular</SelectItem>
+                          <SelectItem value="on-demand">On Demand</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   
@@ -5240,6 +5349,38 @@ export const DashboardInventoryManager = () => {
                         className={getValidationClass(!!fieldErrors['episodeCount'])}
                       />
                       <FieldError error={fieldErrors['episodeCount']} />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="platforms">Platforms</Label>
+                    <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
+                      {[
+                        { value: 'apple_podcasts', label: 'Apple Podcasts' },
+                        { value: 'spotify', label: 'Spotify' },
+                        { value: 'youtube_music', label: 'YouTube Music' },
+                        { value: 'amazon_music', label: 'Amazon Music' },
+                        { value: 'stitcher', label: 'Stitcher' },
+                        { value: 'overcast', label: 'Overcast' },
+                        { value: 'castbox', label: 'Castbox' },
+                        { value: 'other', label: 'Other' }
+                      ].map((platform) => (
+                        <label key={platform.value} className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editingItem.platforms?.includes(platform.value) || false}
+                            onChange={(e) => {
+                              const currentPlatforms = editingItem.platforms || [];
+                              const newPlatforms = e.target.checked
+                                ? [...currentPlatforms, platform.value]
+                                : currentPlatforms.filter((p: string) => p !== platform.value);
+                              setEditingItem({ ...editingItem, platforms: newPlatforms });
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                          <span className="text-sm">{platform.label}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
                 </>

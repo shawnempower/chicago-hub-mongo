@@ -228,11 +228,34 @@
                   },
                   "sizes": {
                     "type": "array",
-                    "description": "Array of supported ad sizes",
+                    "description": "LEGACY: Array of supported ad sizes. Use format.dimensions instead.",
                     "items": {
                       "type": "string",
                       "examples": ["300x250", "728x90", "320x50", "300x600", "970x250", "160x600", "custom"]
                     }
+                  },
+                  "format": {
+                    "type": "object",
+                    "description": "Structured ad format specification",
+                    "properties": {
+                      "dimensions": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "description": "Single dimension value (e.g., '300x250', 'text-only', 'responsive')"
+                          },
+                          {
+                            "type": "array",
+                            "description": "Multiple accepted dimensions",
+                            "items": {
+                              "type": "string"
+                            },
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["dimensions"]
                   },
                   "location": {
                     "type": "string",
@@ -571,7 +594,7 @@
               },
               "frequency": {
                 "type": "string",
-                "enum": ["daily", "weekly", "bi-weekly", "monthly", "irregular"]
+                "enum": ["daily", "weekly", "bi-weekly", "monthly", "irregular", "on-demand"]
               },
               "sendDay": {
                 "type": "string",
@@ -613,7 +636,31 @@
                       "enum": ["header", "footer", "inline", "dedicated"]
                     },
                     "dimensions": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "LEGACY: Use format.dimensions instead. Kept for backward compatibility during migration."
+                    },
+                    "format": {
+                      "type": "object",
+                      "description": "Structured ad format specification",
+                      "properties": {
+                        "dimensions": {
+                          "oneOf": [
+                            {
+                              "type": "string",
+                              "description": "Single dimension value (e.g., '600x150', 'text-only', 'full-newsletter')"
+                            },
+                            {
+                              "type": "array",
+                              "description": "Multiple accepted dimensions",
+                              "items": {
+                                "type": "string"
+                              },
+                              "minItems": 1
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["dimensions"]
                     },
                     "pricing": {
                       "oneOf": [
@@ -1106,7 +1153,7 @@
               },
               "frequency": {
                 "type": "string",
-                "enum": ["daily", "weekly", "bi-weekly", "monthly", "irregular"]
+                "enum": ["daily", "weekly", "bi-weekly", "monthly", "irregular", "on-demand"]
               },
               "averageDownloads": {
                 "type": "integer"
@@ -1121,7 +1168,7 @@
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "enum": ["apple_podcasts", "spotify", "google_podcasts", "amazon_music", "stitcher", "overcast", "castbox", "other"]
+                  "enum": ["apple_podcasts", "spotify", "youtube_music", "amazon_music", "stitcher", "overcast", "castbox", "other"]
                 }
               },
               "advertisingOpportunities": {
@@ -1138,7 +1185,7 @@
                     },
                     "duration": {
                       "type": "integer",
-                      "description": "Ad duration in seconds"
+                      "description": "Ad duration in seconds. Standard values: 15, 30, 60, 90, 120. Custom durations are supported for special formats (e.g., extended host-read ads)."
                     },
                     "pricing": {
                       "oneOf": [
@@ -1389,7 +1436,7 @@
                         },
                         "duration": {
                           "type": "integer",
-                          "description": "Ad duration in seconds"
+                          "description": "Ad duration in seconds. Standard values: 15, 30, 60. Custom durations are supported for special formats."
                         }
                       }
                     },

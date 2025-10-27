@@ -9,6 +9,9 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { updatePublication } from '@/api/publications';
 import { PublicationFrontend } from '@/types/publication';
+import { AdFormatSelector } from '@/components/AdFormatSelector';
+import { NewsletterAdFormat, getAdDimensions } from '@/types/newsletterAdFormat';
+import { WebsiteAdFormatSelector } from '@/components/WebsiteAdFormatSelector';
 import { 
   Globe, 
   Mail, 
@@ -723,8 +726,12 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
               ...(radio.advertisingOpportunities || []),
               {
                 name: 'New Radio Ad',
-                adFormat: '30-second spot',
-                timeSlot: 'drive time',
+                adFormat: '30_second_spot',
+                timeSlot: 'drive_time_morning',
+                specifications: {
+                  format: 'mp3',
+                  duration: 30
+                },
                 pricing: { flatRate: 150, pricingModel: 'per_spot' }
               }
             ]
@@ -1186,48 +1193,37 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                   </Button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Ad Name</Label>
-                    <Input
-                      value={ad.name || ''}
-                      onChange={(e) => updateWebsiteAd(index, 'name', e.target.value)}
-                      placeholder="Header Banner"
-                    />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Ad Name</Label>
+                      <Input
+                        value={ad.name || ''}
+                        onChange={(e) => updateWebsiteAd(index, 'name', e.target.value)}
+                        placeholder="Header Banner"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label>Location</Label>
+                      <Input
+                        value={ad.location || ''}
+                        onChange={(e) => updateWebsiteAd(index, 'location', e.target.value)}
+                        placeholder="Header, Sidebar, etc."
+                      />
+                    </div>
                   </div>
-                  
-                  <div>
-                    <Label>Ad Format</Label>
-                    <Select 
-                      value={ad.adFormat || ''} 
-                      onValueChange={(value) => updateWebsiteAd(index, 'adFormat', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="300x250 banner">300x250 Banner</SelectItem>
-                        <SelectItem value="728x90 banner">728x90 Banner</SelectItem>
-                        <SelectItem value="320x50 banner">320x50 Banner</SelectItem>
-                        <SelectItem value="300x600 banner">300x600 Banner</SelectItem>
-                        <SelectItem value="970x250 banner">970x250 Banner</SelectItem>
-                        <SelectItem value="native">Native</SelectItem>
-                        <SelectItem value="sponsored content">Sponsored Content</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label>Location</Label>
-                    <Input
-                      value={ad.location || ''}
-                      onChange={(e) => updateWebsiteAd(index, 'location', e.target.value)}
-                      placeholder="Header, Sidebar, etc."
-                    />
-                  </div>
+
+                  {/* Website Ad Format Selector */}
+                  <WebsiteAdFormatSelector
+                    value={ad.format || null}
+                    onChange={(format) => updateWebsiteAd(index, 'format', format)}
+                    allowMultiple={true}
+                    legacyDimensions={ad.sizes ? ad.sizes.join(', ') : undefined}
+                  />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Pricing Model</Label>
                     <Select 
@@ -1259,16 +1255,6 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         parseFloat(e.target.value)
                       )}
                       placeholder="500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label>Monthly Impressions</Label>
-                    <Input
-                      type="number"
-                      value={ad.monthlyImpressions || ''}
-                      onChange={(e) => updateWebsiteAd(index, 'monthlyImpressions', parseInt(e.target.value))}
-                      placeholder="50000"
                     />
                   </div>
                   
@@ -1341,14 +1327,15 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         onValueChange={(value) => updateNewsletter(newsletterIndex, 'frequency', value)}
                       >
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Select frequency..." />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="daily">Daily</SelectItem>
                           <SelectItem value="weekly">Weekly</SelectItem>
                           <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
                           <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="irregular">Irregular</SelectItem>
+                          <SelectItem value="on-demand">On Demand</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1401,58 +1388,70 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </Button>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                          <Label>Ad Name</Label>
-                          <Input
-                            value={ad.name || ''}
-                            onChange={(e) => updateNewsletterAd(newsletterIndex, adIndex, 'name', e.target.value)}
-                            placeholder="Header Sponsorship"
-                          />
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label>Ad Name</Label>
+                            <Input
+                              value={ad.name || ''}
+                              onChange={(e) => updateNewsletterAd(newsletterIndex, adIndex, 'name', e.target.value)}
+                              placeholder="Header Sponsorship"
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label>Position</Label>
+                            <Select 
+                              value={ad.position || ''} 
+                              onValueChange={(value) => updateNewsletterAd(newsletterIndex, adIndex, 'position', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="header">Header</SelectItem>
+                                <SelectItem value="footer">Footer</SelectItem>
+                                <SelectItem value="inline">Inline</SelectItem>
+                                <SelectItem value="dedicated">Dedicated</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
+
+                        {/* Ad Format Selector */}
+                        <AdFormatSelector
+                          value={ad.format || null}
+                          onChange={(format) => updateNewsletterAd(newsletterIndex, adIndex, 'format', format)}
+                          allowMultiple={true}
+                          legacyDimensions={ad.dimensions}
+                        />
                         
-                        <div>
-                          <Label>Position</Label>
-                          <Select 
-                            value={ad.position || ''} 
-                            onValueChange={(value) => updateNewsletterAd(newsletterIndex, adIndex, 'position', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="header">Header</SelectItem>
-                              <SelectItem value="footer">Footer</SelectItem>
-                              <SelectItem value="inline">Inline</SelectItem>
-                              <SelectItem value="dedicated">Dedicated</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <Label>Pricing Model</Label>
-                          <Select 
-                            value={ad.pricing?.pricingModel || 'per_send'} 
-                            onValueChange={(value) => updateNewsletterAdPricing(newsletterIndex, adIndex, 'pricingModel', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="per_send">/send</SelectItem>
-                              <SelectItem value="contact">Contact for pricing</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <Label>Price ($)</Label>
-                          <Input
-                            type="number"
-                            value={ad.pricing?.flatRate || ''}
-                            onChange={(e) => updateNewsletterAdPricing(newsletterIndex, adIndex, 'flatRate', parseFloat(e.target.value))}
-                            placeholder="200"
-                          />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label>Pricing Model</Label>
+                            <Select 
+                              value={ad.pricing?.pricingModel || 'per_send'} 
+                              onValueChange={(value) => updateNewsletterAdPricing(newsletterIndex, adIndex, 'pricingModel', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="per_send">/send</SelectItem>
+                                <SelectItem value="contact">Contact for pricing</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div>
+                            <Label>Price ($)</Label>
+                            <Input
+                              type="number"
+                              value={ad.pricing?.flatRate || ''}
+                              onChange={(e) => updateNewsletterAdPricing(newsletterIndex, adIndex, 'flatRate', parseFloat(e.target.value))}
+                              placeholder="200"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2253,6 +2252,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
                           <SelectItem value="monthly">Monthly</SelectItem>
                           <SelectItem value="irregular">Irregular</SelectItem>
+                          <SelectItem value="on-demand">On Demand</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -2268,12 +2268,35 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                   </div>
                   
                   <div>
-                    <Label>Platforms (comma-separated)</Label>
-                    <Input
-                      value={podcast.platforms?.join(', ') || ''}
-                      onChange={(e) => updatePodcast(podcastIndex, 'platforms', e.target.value.split(',').map(p => p.trim()).filter(p => p))}
-                      placeholder="Apple Podcasts, Spotify, Google Podcasts"
-                    />
+                    <Label>Platforms</Label>
+                    <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
+                      {[
+                        { value: 'apple_podcasts', label: 'Apple Podcasts' },
+                        { value: 'spotify', label: 'Spotify' },
+                        { value: 'youtube_music', label: 'YouTube Music' },
+                        { value: 'amazon_music', label: 'Amazon Music' },
+                        { value: 'stitcher', label: 'Stitcher' },
+                        { value: 'overcast', label: 'Overcast' },
+                        { value: 'castbox', label: 'Castbox' },
+                        { value: 'other', label: 'Other' }
+                      ].map((platform) => (
+                        <label key={platform.value} className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={podcast.platforms?.includes(platform.value) || false}
+                            onChange={(e) => {
+                              const currentPlatforms = podcast.platforms || [];
+                              const newPlatforms = e.target.checked
+                                ? [...currentPlatforms, platform.value]
+                                : currentPlatforms.filter(p => p !== platform.value);
+                              updatePodcast(podcastIndex, 'platforms', newPlatforms);
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                          <span className="text-sm">{platform.label}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 
@@ -2321,13 +2344,40 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </div>
                         
                         <div>
-                          <Label>Duration (seconds)</Label>
-                          <Input
-                            type="number"
-                            value={ad.duration || ''}
-                            onChange={(e) => updatePodcastAd(podcastIndex, adIndex, 'duration', parseInt(e.target.value))}
-                            placeholder="30"
-                          />
+                          <Label>Duration</Label>
+                          <Select 
+                            value={
+                              ad.duration && [15, 30, 60, 90, 120].includes(ad.duration)
+                                ? String(ad.duration)
+                                : 'custom'
+                            }
+                            onValueChange={(value) => {
+                              if (value === 'custom') return;
+                              const duration = parseInt(value);
+                              updatePodcastAd(podcastIndex, adIndex, 'duration', duration);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select duration..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="15">15 seconds (:15)</SelectItem>
+                              <SelectItem value="30">30 seconds (:30)</SelectItem>
+                              <SelectItem value="60">60 seconds (:60)</SelectItem>
+                              <SelectItem value="90">90 seconds (:90)</SelectItem>
+                              <SelectItem value="120">120 seconds (:120)</SelectItem>
+                              <SelectItem value="custom">Custom...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {(!ad.duration || ![15, 30, 60, 90, 120].includes(ad.duration)) && (
+                            <Input
+                              type="number"
+                              className="mt-2"
+                              value={ad.duration || ''}
+                              onChange={(e) => updatePodcastAd(podcastIndex, adIndex, 'duration', parseInt(e.target.value) || undefined)}
+                              placeholder="Enter seconds"
+                            />
+                          )}
                         </div>
                         
                         <div>
@@ -2487,42 +2537,109 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <Label>Ad Name</Label>
                           <Input
                             value={ad.name || ''}
+                            onChange={(e) => updateRadioAd(radioIndex, adIndex, 'name', e.target.value)}
                             placeholder="Drive Time Spot"
                           />
                         </div>
                         
                         <div>
                           <Label>Ad Format</Label>
-                          <Select value={ad.adFormat || ''}>
+                          <Select 
+                            value={ad.adFormat || ''}
+                            onValueChange={(value) => updateRadioAd(radioIndex, adIndex, 'adFormat', value)}
+                          >
                             <SelectTrigger>
-                              <SelectValue />
+                              <SelectValue placeholder="Select format..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="15-second spot">15-second spot</SelectItem>
-                              <SelectItem value="30-second spot">30-second spot</SelectItem>
-                              <SelectItem value="60-second spot">60-second spot</SelectItem>
-                              <SelectItem value="live read">Live Read</SelectItem>
+                              <SelectItem value="30_second_spot">30-second spot</SelectItem>
+                              <SelectItem value="60_second_spot">60-second spot</SelectItem>
+                              <SelectItem value="live_read">Live Read</SelectItem>
+                              <SelectItem value="sponsorship">Sponsorship</SelectItem>
+                              <SelectItem value="traffic_weather_sponsor">Traffic/Weather Sponsor</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         
                         <div>
                           <Label>Time Slot</Label>
-                          <Input
+                          <Select
                             value={ad.timeSlot || ''}
-                            placeholder="Drive time"
-                          />
+                            onValueChange={(value) => updateRadioAd(radioIndex, adIndex, 'timeSlot', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select time slot..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="drive_time_morning">Morning Drive</SelectItem>
+                              <SelectItem value="drive_time_evening">Evening Drive</SelectItem>
+                              <SelectItem value="midday">Midday</SelectItem>
+                              <SelectItem value="weekend">Weekend</SelectItem>
+                              <SelectItem value="overnight">Overnight</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         
                         <div>
+                          <Label>Duration</Label>
+                          <Select 
+                            value={
+                              ad.specifications?.duration && [15, 30, 60, 90, 120].includes(ad.specifications.duration)
+                                ? String(ad.specifications.duration)
+                                : 'custom'
+                            }
+                            onValueChange={(value) => {
+                              if (value === 'custom') {
+                                // Don't change anything, let user enter custom value
+                                return;
+                              }
+                              const duration = parseInt(value);
+                              updateRadioAd(radioIndex, adIndex, 'specifications', {
+                                ...ad.specifications,
+                                duration
+                              });
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select duration..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="15">15 seconds (:15)</SelectItem>
+                              <SelectItem value="30">30 seconds (:30)</SelectItem>
+                              <SelectItem value="60">60 seconds (:60)</SelectItem>
+                              <SelectItem value="90">90 seconds (:90)</SelectItem>
+                              <SelectItem value="120">120 seconds (:120)</SelectItem>
+                              <SelectItem value="custom">Custom...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {(!ad.specifications?.duration || ![15, 30, 60, 90, 120].includes(ad.specifications.duration)) && (
+                            <Input
+                              type="number"
+                              className="mt-2"
+                              value={ad.specifications?.duration || ''}
+                              onChange={(e) => updateRadioAd(radioIndex, adIndex, 'specifications', {
+                                ...ad.specifications,
+                                duration: parseInt(e.target.value) || undefined
+                              })}
+                              placeholder="Enter seconds"
+                            />
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
                           <Label>Pricing Model</Label>
-                          <Select value={ad.pricing?.pricingModel || 'per_spot'}>
+                          <Select 
+                            value={ad.pricing?.pricingModel || 'per_spot'}
+                            onValueChange={(value) => updateRadioAdPricing(radioIndex, adIndex, 'pricingModel', value)}
+                          >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="per_spot">/spot</SelectItem>
-                              <SelectItem value="contact">Contact for pricing</SelectItem>
+                              <SelectItem value="per_spot">Per Spot</SelectItem>
+                              <SelectItem value="contact">Contact for Pricing</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -2532,8 +2649,21 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <Input
                             type="number"
                             value={ad.pricing?.flatRate || ''}
+                            onChange={(e) => updateRadioAdPricing(radioIndex, adIndex, 'flatRate', parseFloat(e.target.value) || 0)}
                             placeholder="150"
                           />
+                        </div>
+                        
+                        <div className="md:col-span-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeRadioAd(radioIndex, adIndex)}
+                            className="text-destructive hover:text-destructive w-full"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Remove Ad
+                          </Button>
                         </div>
                       </div>
                     </div>

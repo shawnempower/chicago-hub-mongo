@@ -558,27 +558,44 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     <div>
                       <p className="font-medium mb-3">Website Advertising Opportunities</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {publication.distributionChannels.website.advertisingOpportunities.map((ad: any, index: number) => (
-                          <AdOpportunityCard
-                            key={index}
-                            title={ad.name || 'Unnamed Ad'}
-                            hubPricingCount={ad.hubPricing?.length || 0}
-                            fields={[
-                              { label: 'Format', value: ad.adFormat },
-                              { label: 'Location', value: ad.location },
-                              { 
-                                label: ad.sizes?.length > 1 ? 'Sizes' : 'Size', 
-                                value: ad.sizes && ad.sizes.length > 0 
-                                  ? ad.sizes.filter((s: string) => s).join(', ') 
-                                  : ad.specifications?.size 
-                              },
-                              { label: 'Impressions', value: ad.monthlyImpressions ? `${formatNumber(ad.monthlyImpressions)}/mo` : undefined },
-                              { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
-                              { label: 'Model', value: ad.pricing?.pricingModel },
-                              { label: 'Available', value: ad.available ? 'Yes' : 'No' },
-                            ]}
-                          />
-                        ))}
+                        {publication.distributionChannels.website.advertisingOpportunities.map((ad: any, index: number) => {
+                          // Get dimensions from new format or fallback to legacy
+                          const getDimensions = () => {
+                            if (ad.format?.dimensions) {
+                              const dims = ad.format.dimensions;
+                              return Array.isArray(dims) ? dims.join(', ') : dims;
+                            }
+                            if (ad.sizes && ad.sizes.length > 0) {
+                              return ad.sizes.filter((s: string) => s).join(', ');
+                            }
+                            return ad.specifications?.size || undefined;
+                          };
+                          
+                          const dimensions = getDimensions();
+                          const dimsArray = ad.format?.dimensions 
+                            ? (Array.isArray(ad.format.dimensions) ? ad.format.dimensions : [ad.format.dimensions])
+                            : ad.sizes || [];
+                          
+                          return (
+                            <AdOpportunityCard
+                              key={index}
+                              title={ad.name || 'Unnamed Ad'}
+                              hubPricingCount={ad.hubPricing?.length || 0}
+                              fields={[
+                                { label: 'Format', value: ad.adFormat },
+                                { label: 'Location', value: ad.location },
+                                { 
+                                  label: dimsArray.length > 1 ? 'Sizes' : 'Size', 
+                                  value: dimensions
+                                },
+                                { label: 'Impressions', value: ad.monthlyImpressions ? `${formatNumber(ad.monthlyImpressions)}/mo` : undefined },
+                                { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
+                                { label: 'Model', value: ad.pricing?.pricingModel },
+                                { label: 'Available', value: ad.available ? 'Yes' : 'No' },
+                              ]}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -608,19 +625,30 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                         <div>
                           <p className="font-medium mb-3">Newsletter Advertising Opportunities</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {newsletter.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                              <AdOpportunityCard
-                                key={adIndex}
-                                title={ad.name || 'Unnamed Ad'}
-                                hubPricingCount={ad.hubPricing?.length || 0}
-                                fields={[
-                                  { label: 'Position', value: ad.position },
-                                  { label: 'Dimensions', value: ad.dimensions },
-                                  { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
-                                  { label: 'Model', value: ad.pricing?.pricingModel },
-                                ]}
-                              />
-                            ))}
+                            {newsletter.advertisingOpportunities.map((ad: any, adIndex: number) => {
+                              // Get dimensions from new format or fallback to legacy
+                              const getDimensions = () => {
+                                if (ad.format?.dimensions) {
+                                  const dims = ad.format.dimensions;
+                                  return Array.isArray(dims) ? dims.join(', ') : dims;
+                                }
+                                return ad.dimensions || undefined;
+                              };
+                              
+                              return (
+                                <AdOpportunityCard
+                                  key={adIndex}
+                                  title={ad.name || 'Unnamed Ad'}
+                                  hubPricingCount={ad.hubPricing?.length || 0}
+                                  fields={[
+                                    { label: 'Position', value: ad.position },
+                                    { label: 'Dimensions', value: getDimensions() },
+                                    { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
+                                    { label: 'Model', value: ad.pricing?.pricingModel },
+                                  ]}
+                                />
+                              );
+                            })}
                           </div>
                         </div>
                       )}
