@@ -129,7 +129,7 @@ export const AdminDashboard = () => {
                 <CardDescription>Ad opportunities by channel</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-blue-500" />
@@ -216,7 +216,7 @@ export const AdminDashboard = () => {
                 <CardDescription>Total audience across all channels</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600">
                       {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 
@@ -259,7 +259,7 @@ export const AdminDashboard = () => {
                     </div>
                     <p className="text-xs text-muted-foreground">Streaming Subscribers</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center col-span-2">
                     <div className="text-2xl font-bold text-rose-600">
                       {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 
                         (stats?.audienceMetrics?.totalRadioListeners ?? 0).toLocaleString()}
@@ -281,6 +281,11 @@ export const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
+                  <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+                    <p className="font-medium">
+                      📊 {stats?.pricingInsights?.inventoryCount ?? 0} inventory items with default pricing
+                    </p>
+                  </div>
                   <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
                     <p className="font-medium mb-1">💡 Pricing Assumptions:</p>
                     <ul className="space-y-0.5 ml-4 list-disc">

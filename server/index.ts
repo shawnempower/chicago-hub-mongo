@@ -1978,7 +1978,8 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       podcastAdPrices: [] as number[],
       streamingAdPrices: [] as number[],
       radioAdPrices: [] as number[],
-      totalValue: 0
+      totalValue: 0,
+      inventoryCount: 0
     };
 
     // Separate hub pricing data by hub
@@ -2019,6 +2020,7 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       if (defaultPrice > 0) {
         pricingData[channelKey].push(defaultPrice);
         pricingData.totalValue += defaultPrice;
+        pricingData.inventoryCount++;
       }
 
       // Collect hub-specific pricing
@@ -2450,7 +2452,8 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
         averagePodcastAdPrice: calculateAverage(pricingData.podcastAdPrices),
         averageStreamingAdPrice: calculateAverage(pricingData.streamingAdPrices),
         averageRadioAdPrice: calculateAverage(pricingData.radioAdPrices),
-        totalInventoryValue: Math.round(pricingData.totalValue)
+        totalInventoryValue: Math.round(pricingData.totalValue),
+        inventoryCount: pricingData.inventoryCount
       },
       
       // Hub-specific pricing

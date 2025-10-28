@@ -66,6 +66,7 @@ export interface DashboardStats {
     averageStreamingAdPrice: number;
     averageRadioAdPrice: number;
     totalInventoryValue: number;
+    inventoryCount: number;
   };
 
   hubPricingInsights: Record<string, {
