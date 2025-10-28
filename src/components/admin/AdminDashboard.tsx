@@ -21,7 +21,7 @@ export const AdminDashboard = () => {
   const { stats, loading, error } = useDashboardStats();
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="space-y-8">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
         <p className="text-muted-foreground">Manage your EmpowerLocal platform</p>
