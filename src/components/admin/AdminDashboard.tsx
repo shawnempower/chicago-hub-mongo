@@ -21,10 +21,12 @@ export const AdminDashboard = () => {
   const { stats, loading, error } = useDashboardStats();
 
   return (
-    <div className="space-y-8">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Manage your EmpowerLocal platform</p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Manage your EmpowerLocal platform</p>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
