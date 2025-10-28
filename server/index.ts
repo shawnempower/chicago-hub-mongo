@@ -2088,31 +2088,77 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       }
 
       if (channelType === 'print') {
-        // Print ads have different frequency pricing tiers
+        // Print pricing can be either:
+        // 1. Single object: { flatRate: 100, pricingModel: 'per_ad', frequency: '4x' }
+        // 2. Array of tiers: [{ pricing: { flatRate: 100, ... } }, ...]
+        // 3. Legacy format: { oneTime: 100, fourTimes: 400, ... }
+        
         const pricing = ad.pricing || {};
         const hubPricing = useHubPricing ? (ad.hubPricing?.[0]?.pricing || {}) : {};
         
-        // Get all available pricing tiers (use hub pricing if flag is set and available)
-        const rates = {
-          oneTime: hubPricing.oneTime || pricing.oneTime || 0,
-          fourTimes: hubPricing.fourTimes || pricing.fourTimes || 0,
-          sixTimes: hubPricing.sixTimes || pricing.sixTimes || 0,
-          twelveTimes: hubPricing.twelveTimes || pricing.twelveTimes || 0,
-          thirteenTimes: hubPricing.thirteenTimes || pricing.thirteenTimes || 0,
-          twentySixTimes: hubPricing.twentySixTimes || pricing.twentySixTimes || 0,
-          fiftyTwoTimes: hubPricing.fiftyTwoTimes || pricing.fiftyTwoTimes || 0,
+        // Helper to parse frequency string to get per-insertion rate
+        const parseFrequencyRate = (flatRate: number, freqString?: string): { rate: number, count: number } => {
+          if (!freqString) return { rate: flatRate, count: 1 };
+          
+          const freq = freqString.toLowerCase();
+          if (freq.includes('52x') || freq === 'yearly') return { rate: flatRate, count: 52 };
+          if (freq.includes('26x') || freq === 'bi-weekly annual') return { rate: flatRate, count: 26 };
+          if (freq.includes('13x') || freq === 'quarterly') return { rate: flatRate, count: 13 };
+          if (freq.includes('12x') || freq === 'monthly annual') return { rate: flatRate, count: 12 };
+          if (freq.includes('6x')) return { rate: flatRate, count: 6 };
+          if (freq.includes('4x')) return { rate: flatRate, count: 4 };
+          if (freq.includes('one time') || freq === '1x') return { rate: flatRate, count: 1 };
+          
+          return { rate: flatRate, count: 1 };
         };
         
-        // Calculate per-insertion cost from best available rate
-        // (frequency pricing typically shows total cost for X insertions)
-        let perInsertionCost = rates.oneTime;
+        let perInsertionCost = 0;
         
-        if (rates.fiftyTwoTimes > 0) perInsertionCost = rates.fiftyTwoTimes / 52;
-        else if (rates.twentySixTimes > 0) perInsertionCost = rates.twentySixTimes / 26;
-        else if (rates.thirteenTimes > 0) perInsertionCost = rates.thirteenTimes / 13;
-        else if (rates.twelveTimes > 0) perInsertionCost = rates.twelveTimes / 12;
-        else if (rates.sixTimes > 0) perInsertionCost = rates.sixTimes / 6;
-        else if (rates.fourTimes > 0) perInsertionCost = rates.fourTimes / 4;
+        // Check if pricing is an array of tiers (new format)
+        if (Array.isArray(pricing)) {
+          // Find the best rate (highest frequency tier)
+          let bestRate = { rate: 0, count: 1 };
+          for (const tier of pricing) {
+            const tierPricing = tier.pricing || tier;
+            if (tierPricing.flatRate) {
+              const parsed = parseFrequencyRate(tierPricing.flatRate, tierPricing.frequency);
+              if (parsed.count > bestRate.count) {
+                bestRate = parsed;
+              }
+            }
+          }
+          perInsertionCost = bestRate.rate / bestRate.count;
+        }
+        // Check if pricing is a single object with flatRate
+        else if (pricing.flatRate) {
+          const parsed = parseFrequencyRate(pricing.flatRate, pricing.frequency);
+          perInsertionCost = parsed.rate / parsed.count;
+        }
+        // Check for hub pricing
+        else if (hubPricing.flatRate) {
+          const parsed = parseFrequencyRate(hubPricing.flatRate, hubPricing.frequency);
+          perInsertionCost = parsed.rate / parsed.count;
+        }
+        // Legacy format fallback
+        else {
+          const rates = {
+            oneTime: hubPricing.oneTime || pricing.oneTime || 0,
+            fourTimes: hubPricing.fourTimes || pricing.fourTimes || 0,
+            sixTimes: hubPricing.sixTimes || pricing.sixTimes || 0,
+            twelveTimes: hubPricing.twelveTimes || pricing.twelveTimes || 0,
+            thirteenTimes: hubPricing.thirteenTimes || pricing.thirteenTimes || 0,
+            twentySixTimes: hubPricing.twentySixTimes || pricing.twentySixTimes || 0,
+            fiftyTwoTimes: hubPricing.fiftyTwoTimes || pricing.fiftyTwoTimes || 0,
+          };
+          
+          perInsertionCost = rates.oneTime;
+          if (rates.fiftyTwoTimes > 0) perInsertionCost = rates.fiftyTwoTimes / 52;
+          else if (rates.twentySixTimes > 0) perInsertionCost = rates.twentySixTimes / 26;
+          else if (rates.thirteenTimes > 0) perInsertionCost = rates.thirteenTimes / 13;
+          else if (rates.twelveTimes > 0) perInsertionCost = rates.twelveTimes / 12;
+          else if (rates.sixTimes > 0) perInsertionCost = rates.sixTimes / 6;
+          else if (rates.fourTimes > 0) perInsertionCost = rates.fourTimes / 4;
+        }
         
         // Now multiply by issues per month based on publication frequency
         const publishFrequency = frequency || 'weekly';
