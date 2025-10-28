@@ -284,7 +284,7 @@ export const AdminDashboard = () => {
                   <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
                     <p className="font-medium mb-1">💡 Pricing Assumptions:</p>
                     <ul className="space-y-0.5 ml-4 list-disc">
-                      <li>Hub pricing used when available</li>
+                      <li>Default pricing only (excludes hub-specific rates)</li>
                       <li>Monthly estimates based on publication frequency</li>
                       <li>Website: Flat rate/month or CPM × impressions</li>
                       <li>Newsletter: Per-send × frequency (daily/weekly/monthly)</li>
