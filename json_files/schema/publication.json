@@ -57,6 +57,92 @@
           },
           "description": "Additional markets covered"
         },
+        "serviceAreas": {
+          "type": "array",
+          "description": "Geographic areas served by this publication (linked to areas collection)",
+          "items": {
+            "type": "object",
+            "required": ["dmaName", "dmaNormalized"],
+            "properties": {
+              "dmaName": {
+                "type": "string",
+                "description": "DMA display name (e.g., 'CHICAGO, IL')",
+                "examples": ["CHICAGO, IL", "NEW YORK, NY", "LOS ANGELES, CA"]
+              },
+              "dmaNormalized": {
+                "type": "string",
+                "description": "Normalized DMA identifier for lookups in areas collection",
+                "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                "examples": ["chicago-il", "new-york-ny", "los-angeles-ca"]
+              },
+              "isPrimary": {
+                "type": "boolean",
+                "description": "Whether this is the primary service area",
+                "default": false
+              },
+              "counties": {
+                "type": "array",
+                "description": "Specific counties served within this DMA (optional)",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "normalized"],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "County name (e.g., 'COOK')"
+                    },
+                    "normalized": {
+                      "type": "string",
+                      "description": "Normalized county identifier",
+                      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                    }
+                  }
+                }
+              },
+              "zipCodes": {
+                "type": "array",
+                "description": "Specific ZIP codes served (optional, for hyper-local targeting)",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[0-9]{5}$",
+                  "description": "5-digit ZIP code"
+                }
+              },
+              "coveragePercentage": {
+                "type": "number",
+                "description": "Estimated percentage of DMA covered",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "notes": {
+                "type": "string",
+                "description": "Additional notes about coverage in this area"
+              }
+            },
+            "additionalProperties": false
+          },
+          "examples": [
+            [
+              {
+                "dmaName": "CHICAGO, IL",
+                "dmaNormalized": "chicago-il",
+                "isPrimary": true,
+                "counties": [
+                  { "name": "COOK", "normalized": "cook" },
+                  { "name": "LAKE", "normalized": "lake" }
+                ],
+                "coveragePercentage": 85
+              },
+              {
+                "dmaName": "MILWAUKEE, WI",
+                "dmaNormalized": "milwaukee-wi",
+                "isPrimary": false,
+                "coveragePercentage": 25,
+                "notes": "Limited distribution in northern suburbs"
+              }
+            ]
+          ]
+        },
         "numberOfPublications": {
           "type": "integer",
           "default": 1,

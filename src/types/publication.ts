@@ -1,6 +1,19 @@
 // Frontend-only type definitions for Publications
 // These are separated from MongoDB schemas to avoid browser imports
 
+export interface ServiceArea {
+  dmaName: string;
+  dmaNormalized: string;
+  isPrimary?: boolean;
+  counties?: Array<{
+    name: string;
+    normalized: string;
+  }>;
+  zipCodes?: string[];
+  coveragePercentage?: number;
+  notes?: string;
+}
+
 export interface PublicationFrontend {
   _id?: string;
   publicationId: number;
@@ -15,6 +28,7 @@ export interface PublicationFrontend {
     geographicCoverage?: 'local' | 'regional' | 'state' | 'national' | 'international';
     primaryServiceArea?: string;
     secondaryMarkets?: string[];
+    serviceAreas?: ServiceArea[];
     numberOfPublications?: number;
   };
   
