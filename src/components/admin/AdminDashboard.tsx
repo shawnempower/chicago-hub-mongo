@@ -1,15 +1,13 @@
 import React, { useState, Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadManagement } from './LeadManagement';
 import { PackageManagement } from './PackageManagement';
 import { AssistantManagement } from './AssistantManagement';
 import { MediaImportInterface } from './MediaImportInterface';
 import { UserManagement } from './UserManagement';
-import { EnhancedPublicationsManagement } from './EnhancedPublicationsManagement';
 import { PublicationsImport } from './PublicationsImport';
-import { PublicationInventoryManager } from './PublicationInventoryManager';
-import PublicationFilesSearch from './PublicationFilesSearch';
 import SurveyManagement from './SurveyManagement';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
@@ -17,6 +15,7 @@ import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, 
 
 export const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedHub, setSelectedHub] = useState<string>('all');
   const { stats, loading, error } = useDashboardStats();
 
   return (
@@ -27,14 +26,11 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-10">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="surveys">Surveys</TabsTrigger>
-          <TabsTrigger value="publications">Publications</TabsTrigger>
-          <TabsTrigger value="files">Knowledge Base</TabsTrigger>
-          <TabsTrigger value="inventory">Ad Inventory</TabsTrigger>
           <TabsTrigger value="packages">Packages</TabsTrigger>
           <TabsTrigger value="import">Import</TabsTrigger>
           <TabsTrigger value="assistant">Assistant</TabsTrigger>
@@ -273,60 +269,74 @@ export const AdminDashboard = () => {
                   <DollarSign className="h-5 w-5" />
                   Pricing Insights
                 </CardTitle>
-                <CardDescription>Average ad pricing by channel</CardDescription>
+                <CardDescription>Estimated monthly revenue potential per ad unit</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
+                  <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+                    <p className="font-medium mb-1">💡 Pricing Assumptions:</p>
+                    <ul className="space-y-0.5 ml-4 list-disc">
+                      <li>Hub pricing used when available</li>
+                      <li>Monthly estimates based on publication frequency</li>
+                      <li>Website: Flat rate/month or CPM × impressions</li>
+                      <li>Newsletter: Per-send × frequency (daily/weekly/monthly)</li>
+                      <li>Print: Frequency-based rates normalized to monthly</li>
+                      <li>Podcast/Radio/Streaming: Episode/spot frequency × monthly</li>
+                    </ul>
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Website Ads</span>
                     <span className="font-semibold">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averageWebsiteAdPrice ?? 0).toLocaleString()}`}
+                        `$${(stats?.pricingInsights?.averageWebsiteAdPrice ?? 0).toLocaleString()}/mo`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Newsletter Ads</span>
                     <span className="font-semibold">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averageNewsletterAdPrice ?? 0).toLocaleString()}`}
+                        `$${(stats?.pricingInsights?.averageNewsletterAdPrice ?? 0).toLocaleString()}/mo`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Print Ads</span>
                     <span className="font-semibold">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averagePrintAdPrice ?? 0).toLocaleString()}`}
+                        `$${(stats?.pricingInsights?.averagePrintAdPrice ?? 0).toLocaleString()}/mo`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Podcast Ads</span>
                     <span className="font-semibold">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averagePodcastAdPrice ?? 0).toLocaleString()}`}
+                        `$${(stats?.pricingInsights?.averagePodcastAdPrice ?? 0).toLocaleString()}/mo`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Streaming Ads</span>
                     <span className="font-semibold">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averageStreamingAdPrice ?? 0).toLocaleString()}`}
+                        `$${(stats?.pricingInsights?.averageStreamingAdPrice ?? 0).toLocaleString()}/mo`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Radio Ads</span>
                     <span className="font-semibold">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averageRadioAdPrice ?? 0).toLocaleString()}`}
+                        `$${(stats?.pricingInsights?.averageRadioAdPrice ?? 0).toLocaleString()}/mo`}
                     </span>
                   </div>
                   <div className="pt-2 border-t">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Total Value</span>
+                      <span className="text-sm font-medium">Total Monthly Value</span>
                       <span className="font-bold text-green-600">
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                          `$${(stats?.pricingInsights?.totalInventoryValue ?? 0).toLocaleString()}`}
+                          `$${(stats?.pricingInsights?.totalInventoryValue ?? 0).toLocaleString()}/mo`}
                       </span>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Combined potential of all inventory
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -452,20 +462,6 @@ export const AdminDashboard = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 <button 
-                  onClick={() => setActiveTab('publications')}
-                  className="w-full text-left p-3 rounded-lg hover:bg-accent transition-colors"
-                >
-                  <div className="font-medium">Manage Publications</div>
-                  <div className="text-sm text-muted-foreground">Add, edit, and manage your publications database</div>
-                </button>
-                <button 
-                  onClick={() => setActiveTab('inventory')}
-                  className="w-full text-left p-3 rounded-lg hover:bg-accent transition-colors"
-                >
-                  <div className="font-medium">Advertising Inventory</div>
-                  <div className="text-sm text-muted-foreground">Manage website, newsletter, print, and event advertising opportunities</div>
-                </button>
-                <button 
                   onClick={() => setActiveTab('import')}
                   className="w-full text-left p-3 rounded-lg hover:bg-accent transition-colors"
                 >
@@ -503,20 +499,6 @@ export const AdminDashboard = () => {
           <ErrorBoundary>
             <SurveyManagement />
           </ErrorBoundary>
-        </TabsContent>
-
-        <TabsContent value="publications">
-          <EnhancedPublicationsManagement />
-        </TabsContent>
-
-        <TabsContent value="files">
-          <ErrorBoundary>
-            <PublicationFilesSearch />
-          </ErrorBoundary>
-        </TabsContent>
-
-        <TabsContent value="inventory">
-          <PublicationInventoryManager />
         </TabsContent>
 
         <TabsContent value="packages">

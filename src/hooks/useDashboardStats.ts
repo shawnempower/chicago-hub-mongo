@@ -50,6 +50,7 @@ export interface DashboardStats {
   audienceMetrics: {
     totalWebsiteVisitors: number;
     totalNewsletterSubscribers: number;
+    totalPrintCirculation: number;
     totalSocialFollowers: number;
     totalPodcastListeners: number;
     totalStreamingSubscribers: number;
@@ -66,6 +67,17 @@ export interface DashboardStats {
     averageRadioAdPrice: number;
     totalInventoryValue: number;
   };
+
+  hubPricingInsights: Record<string, {
+    averageWebsiteAdPrice: number;
+    averageNewsletterAdPrice: number;
+    averagePrintAdPrice: number;
+    averagePodcastAdPrice: number;
+    averageStreamingAdPrice: number;
+    averageRadioAdPrice: number;
+    totalInventoryValue: number;
+    inventoryCount: number;
+  }>;
 }
 
 export const useDashboardStats = () => {

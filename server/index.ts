@@ -1962,6 +1962,7 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
     const audienceMetrics = {
       totalWebsiteVisitors: 0,
       totalNewsletterSubscribers: 0,
+      totalPrintCirculation: 0,
       totalSocialFollowers: 0,
       totalEngagementRates: 0,
       engagementRateCount: 0,
@@ -1979,6 +1980,18 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       radioAdPrices: [] as number[],
       totalValue: 0
     };
+
+    // Separate hub pricing data by hub
+    const hubPricingData: Record<string, {
+      websiteAdPrices: number[],
+      newsletterAdPrices: number[],
+      printAdPrices: number[],
+      podcastAdPrices: number[],
+      streamingAdPrices: number[],
+      radioAdPrices: number[],
+      totalValue: number,
+      inventoryCount: number
+    }> = {};
 
     // Helper function to get price from ad (prioritize hub pricing)
     const getAdPrice = (ad: any, ...priceKeys: string[]): number | null => {
@@ -1999,14 +2012,60 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       return null;
     };
 
+    // Helper function to collect pricing for both default and hub-specific
+    const collectAdPricing = (ad: any, channelType: string, frequency?: string, channelKey: 'websiteAdPrices' | 'newsletterAdPrices' | 'printAdPrices' | 'podcastAdPrices' | 'streamingAdPrices' | 'radioAdPrices') => {
+      // Always calculate default pricing (without hub pricing)
+      const defaultPrice = estimateMonthlyRevenue(ad, channelType, frequency, false);
+      if (defaultPrice > 0) {
+        pricingData[channelKey].push(defaultPrice);
+        pricingData.totalValue += defaultPrice;
+      }
+
+      // Collect hub-specific pricing
+      if (ad.hubPricing && Array.isArray(ad.hubPricing)) {
+        ad.hubPricing.forEach((hubPrice: any) => {
+          const hubId = hubPrice.hubId || 'unknown';
+          const hubName = hubPrice.hubName || hubId;
+          
+          // Initialize hub data if not exists
+          if (!hubPricingData[hubId]) {
+            hubPricingData[hubId] = {
+              websiteAdPrices: [],
+              newsletterAdPrices: [],
+              printAdPrices: [],
+              podcastAdPrices: [],
+              streamingAdPrices: [],
+              radioAdPrices: [],
+              totalValue: 0,
+              inventoryCount: 0
+            };
+          }
+
+          // Calculate monthly price for this hub
+          const tempAd = { ...ad, pricing: hubPrice.pricing, hubPricing: null };
+          const hubMonthlyPrice = estimateMonthlyRevenue(tempAd, channelType, frequency, false);
+          
+          if (hubMonthlyPrice > 0) {
+            hubPricingData[hubId][channelKey].push(hubMonthlyPrice);
+            hubPricingData[hubId].totalValue += hubMonthlyPrice;
+            hubPricingData[hubId].inventoryCount++;
+          }
+        });
+      }
+    };
+
     // Helper function to estimate monthly revenue from an ad
-    const estimateMonthlyRevenue = (ad: any, channelType: string, frequency?: string): number => {
-      // Get the price (with hub pricing priority)
+    const estimateMonthlyRevenue = (ad: any, channelType: string, frequency?: string, useHubPricing: boolean = true): number => {
+      // Get pricing model
+      let pricingModel = ad.pricing?.pricingModel;
+      if (useHubPricing && ad.hubPricing?.[0]?.pricing?.pricingModel) {
+        pricingModel = ad.hubPricing[0].pricing.pricingModel;
+      }
+
       let price = 0;
-      let pricingModel = ad.hubPricing?.[0]?.pricing?.pricingModel || ad.pricing?.pricingModel;
 
       if (channelType === 'website') {
-        price = getAdPrice(ad, 'flatRate', 'cpm') || 0;
+        price = useHubPricing ? (getAdPrice(ad, 'flatRate', 'cpm') || 0) : (ad.pricing?.flatRate || ad.pricing?.cpm || 0);
         // If flat rate, it's typically monthly. If CPM, estimate based on impressions
         if (pricingModel === 'cpm' && ad.monthlyImpressions) {
           return (price * ad.monthlyImpressions) / 1000;
@@ -2015,7 +2074,7 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       }
 
       if (channelType === 'newsletter') {
-        const perSend = getAdPrice(ad, 'perSend', 'monthly', 'flatRate') || 0;
+        const perSend = useHubPricing ? (getAdPrice(ad, 'perSend', 'monthly', 'flatRate') || 0) : (ad.pricing?.perSend || ad.pricing?.monthly || ad.pricing?.flatRate || 0);
         // Estimate sends per month based on frequency
         const sendsPerMonth = frequency === 'daily' ? 30 : 
                             frequency === 'weekly' ? 4 : 
@@ -2029,46 +2088,47 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       }
 
       if (channelType === 'print') {
-        // Print ads have different frequency pricing
+        // Print ads have different frequency pricing tiers
         const pricing = ad.pricing || {};
-        const hubPricing = ad.hubPricing?.[0]?.pricing || {};
+        const hubPricing = useHubPricing ? (ad.hubPricing?.[0]?.pricing || {}) : {};
         
-        // Prefer hub pricing for frequency-based rates
-        const oneTime = hubPricing.oneTime || pricing.oneTime || 0;
-        const fourTimes = hubPricing.fourTimes || pricing.fourTimes || 0;
-        const twelveTimes = hubPricing.twelveTimes || pricing.twelveTimes || 0;
-        const thirteenTimes = hubPricing.thirteenTimes || pricing.thirteenTimes || 0;
-        const twentySixTimes = hubPricing.twentySixTimes || pricing.twentySixTimes || 0;
-        const fiftyTwoTimes = hubPricing.fiftyTwoTimes || pricing.fiftyTwoTimes || 0;
+        // Get all available pricing tiers (use hub pricing if flag is set and available)
+        const rates = {
+          oneTime: hubPricing.oneTime || pricing.oneTime || 0,
+          fourTimes: hubPricing.fourTimes || pricing.fourTimes || 0,
+          sixTimes: hubPricing.sixTimes || pricing.sixTimes || 0,
+          twelveTimes: hubPricing.twelveTimes || pricing.twelveTimes || 0,
+          thirteenTimes: hubPricing.thirteenTimes || pricing.thirteenTimes || 0,
+          twentySixTimes: hubPricing.twentySixTimes || pricing.twentySixTimes || 0,
+          fiftyTwoTimes: hubPricing.fiftyTwoTimes || pricing.fiftyTwoTimes || 0,
+        };
         
-        // Calculate monthly rate based on frequency
+        // Calculate per-insertion cost from best available rate
+        // (frequency pricing typically shows total cost for X insertions)
+        let perInsertionCost = rates.oneTime;
+        
+        if (rates.fiftyTwoTimes > 0) perInsertionCost = rates.fiftyTwoTimes / 52;
+        else if (rates.twentySixTimes > 0) perInsertionCost = rates.twentySixTimes / 26;
+        else if (rates.thirteenTimes > 0) perInsertionCost = rates.thirteenTimes / 13;
+        else if (rates.twelveTimes > 0) perInsertionCost = rates.twelveTimes / 12;
+        else if (rates.sixTimes > 0) perInsertionCost = rates.sixTimes / 6;
+        else if (rates.fourTimes > 0) perInsertionCost = rates.fourTimes / 4;
+        
+        // Now multiply by issues per month based on publication frequency
         const publishFrequency = frequency || 'weekly';
-        if (publishFrequency === 'daily') {
-          // For daily, use 52-time rate divided by 52 weeks * 4.33 weeks/month
-          if (fiftyTwoTimes > 0) return (fiftyTwoTimes / 52) * 4.33;
-          if (twentySixTimes > 0) return (twentySixTimes / 26) * 4.33;
-          if (thirteenTimes > 0) return (thirteenTimes / 13) * 4.33;
-          return oneTime * 4.33; // Estimate ~22 days/month
-        } else if (publishFrequency === 'weekly') {
-          // For weekly, use 52-time or 13-time rate
-          if (fiftyTwoTimes > 0) return (fiftyTwoTimes / 52) * 4.33;
-          if (twentySixTimes > 0) return (twentySixTimes / 26) * 4.33;
-          if (thirteenTimes > 0) return (thirteenTimes / 13) * 4.33;
-          if (fourTimes > 0) return fourTimes / 4 * 4.33;
-          return oneTime * 4.33; // ~4.33 weeks per month
-        } else if (publishFrequency === 'bi-weekly') {
-          if (twentySixTimes > 0) return (twentySixTimes / 26) * 2.17;
-          if (thirteenTimes > 0) return (thirteenTimes / 13) * 2.17;
-          return oneTime * 2.17; // ~2.17 bi-weekly issues per month
-        } else if (publishFrequency === 'monthly') {
-          if (twelveTimes > 0) return twelveTimes / 12;
-          return oneTime;
-        }
-        return oneTime; // Default to one-time rate
+        let issuesPerMonth = 4.33; // Default to weekly
+        
+        if (publishFrequency === 'daily') issuesPerMonth = 22; // ~22 publishing days/month
+        else if (publishFrequency === 'weekly') issuesPerMonth = 4.33;
+        else if (publishFrequency === 'bi-weekly') issuesPerMonth = 2.17;
+        else if (publishFrequency === 'monthly') issuesPerMonth = 1;
+        else if (publishFrequency === 'quarterly') issuesPerMonth = 0.33;
+        
+        return perInsertionCost * issuesPerMonth;
       }
 
       if (channelType === 'podcast') {
-        price = getAdPrice(ad, 'flatRate', 'cpm') || 0;
+        price = useHubPricing ? (getAdPrice(ad, 'flatRate', 'cpm') || 0) : (ad.pricing?.flatRate || ad.pricing?.cpm || 0);
         // Estimate episodes per month based on frequency
         const episodesPerMonth = frequency === 'daily' ? 30 : 
                                 frequency === 'weekly' ? 4 : 
@@ -2088,7 +2148,7 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       }
 
       if (channelType === 'radio' || channelType === 'streaming') {
-        price = getAdPrice(ad, 'flatRate', 'perSpot', 'weekly', 'monthly') || 0;
+        price = useHubPricing ? (getAdPrice(ad, 'flatRate', 'perSpot', 'weekly', 'monthly') || 0) : (ad.pricing?.flatRate || ad.pricing?.perSpot || ad.pricing?.weekly || ad.pricing?.monthly || 0);
         
         if (pricingModel === 'per_spot' || pricingModel === 'perSpot') {
           // Estimate 4 spots per day, 22 days per month
@@ -2101,7 +2161,7 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       }
 
       // Default: return the first available price
-      return getAdPrice(ad, 'flatRate', 'perSend', 'monthly', 'cpm') || 0;
+      return useHubPricing ? (getAdPrice(ad, 'flatRate', 'perSend', 'monthly', 'cpm') || 0) : (ad.pricing?.flatRate || ad.pricing?.perSend || ad.pricing?.monthly || ad.pricing?.cpm || 0);
     };
 
     for (const pub of publications) {
@@ -2111,13 +2171,9 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
         inventoryByType.website += websiteAds;
         adInventoryCount += websiteAds;
         
-        // Collect website pricing data (with hub pricing and monthly estimates)
+        // Collect website pricing data (separate default and hub pricing)
         pub.distributionChannels.website.advertisingOpportunities.forEach(ad => {
-          const monthlyPrice = estimateMonthlyRevenue(ad, 'website');
-          if (monthlyPrice > 0) {
-            pricingData.websiteAdPrices.push(monthlyPrice);
-            pricingData.totalValue += monthlyPrice;
-          }
+          collectAdPricing(ad, 'website', undefined, 'websiteAdPrices');
         });
       }
       
@@ -2128,13 +2184,9 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
             inventoryByType.newsletter += newsletterAds;
             adInventoryCount += newsletterAds;
             
-            // Collect newsletter pricing data (with hub pricing and frequency-based estimates)
+            // Collect newsletter pricing data (separate default and hub pricing)
             newsletter.advertisingOpportunities.forEach(ad => {
-              const monthlyPrice = estimateMonthlyRevenue(ad, 'newsletter', newsletter.frequency);
-              if (monthlyPrice > 0) {
-                pricingData.newsletterAdPrices.push(monthlyPrice);
-                pricingData.totalValue += monthlyPrice;
-              }
+              collectAdPricing(ad, 'newsletter', newsletter.frequency, 'newsletterAdPrices');
             });
           }
           
@@ -2152,18 +2204,19 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
           : [pub.distributionChannels.print];
           
         for (const printChannel of printChannels) {
+          // Aggregate print circulation
+          if (printChannel.circulation) {
+            audienceMetrics.totalPrintCirculation += printChannel.circulation;
+          }
+          
           if (printChannel?.advertisingOpportunities) {
             const printAds = printChannel.advertisingOpportunities.length;
             inventoryByType.print += printAds;
             adInventoryCount += printAds;
             
-            // Collect print pricing data (with hub pricing and frequency-based monthly estimates)
+            // Collect print pricing data (separate default and hub pricing)
             printChannel.advertisingOpportunities.forEach(ad => {
-              const monthlyPrice = estimateMonthlyRevenue(ad, 'print', printChannel.frequency);
-              if (monthlyPrice > 0) {
-                pricingData.printAdPrices.push(monthlyPrice);
-                pricingData.totalValue += monthlyPrice;
-              }
+              collectAdPricing(ad, 'print', printChannel.frequency, 'printAdPrices');
             });
           }
         }
@@ -2214,13 +2267,9 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
             inventoryByType.podcasts += podcastAds;
             adInventoryCount += podcastAds;
             
-            // Collect podcast pricing data (with hub pricing and frequency-based monthly estimates)
+            // Collect podcast pricing data (separate default and hub pricing)
             podcast.advertisingOpportunities.forEach(ad => {
-              const monthlyPrice = estimateMonthlyRevenue(ad, 'podcast', podcast.frequency);
-              if (monthlyPrice > 0) {
-                pricingData.podcastAdPrices.push(monthlyPrice);
-                pricingData.totalValue += monthlyPrice;
-              }
+              collectAdPricing(ad, 'podcast', podcast.frequency, 'podcastAdPrices');
             });
           }
           
@@ -2239,13 +2288,9 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
             inventoryByType.streamingVideo += streamingAds;
             adInventoryCount += streamingAds;
             
-            // Collect streaming pricing data (with hub pricing and monthly estimates)
+            // Collect streaming pricing data (separate default and hub pricing)
             stream.advertisingOpportunities.forEach(ad => {
-              const monthlyPrice = estimateMonthlyRevenue(ad, 'streaming');
-              if (monthlyPrice > 0) {
-                pricingData.streamingAdPrices.push(monthlyPrice);
-                pricingData.totalValue += monthlyPrice;
-              }
+              collectAdPricing(ad, 'streaming', undefined, 'streamingAdPrices');
             });
           }
           
@@ -2264,13 +2309,9 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
             inventoryByType.radioStations += radioAds;
             adInventoryCount += radioAds;
             
-            // Collect radio pricing data (with hub pricing and monthly estimates)
+            // Collect radio pricing data (separate default and hub pricing)
             radio.advertisingOpportunities.forEach(ad => {
-              const monthlyPrice = estimateMonthlyRevenue(ad, 'radio');
-              if (monthlyPrice > 0) {
-                pricingData.radioAdPrices.push(monthlyPrice);
-                pricingData.totalValue += monthlyPrice;
-              }
+              collectAdPricing(ad, 'radio', undefined, 'radioAdPrices');
             });
           }
           
@@ -2312,6 +2353,22 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
     const calculateAverage = (prices: number[]) => 
       prices.length > 0 ? Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length) : 0;
 
+    // Process hub pricing data for response
+    const hubPricingInsights: Record<string, any> = {};
+    Object.keys(hubPricingData).forEach(hubId => {
+      const hubData = hubPricingData[hubId];
+      hubPricingInsights[hubId] = {
+        averageWebsiteAdPrice: calculateAverage(hubData.websiteAdPrices),
+        averageNewsletterAdPrice: calculateAverage(hubData.newsletterAdPrices),
+        averagePrintAdPrice: calculateAverage(hubData.printAdPrices),
+        averagePodcastAdPrice: calculateAverage(hubData.podcastAdPrices),
+        averageStreamingAdPrice: calculateAverage(hubData.streamingAdPrices),
+        averageRadioAdPrice: calculateAverage(hubData.radioAdPrices),
+        totalInventoryValue: Math.round(hubData.totalValue),
+        inventoryCount: hubData.inventoryCount
+      };
+    });
+
     const stats = {
       leads: leads.length,
       publications: publications.length,
@@ -2329,6 +2386,7 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       audienceMetrics: {
         totalWebsiteVisitors: audienceMetrics.totalWebsiteVisitors,
         totalNewsletterSubscribers: audienceMetrics.totalNewsletterSubscribers,
+        totalPrintCirculation: audienceMetrics.totalPrintCirculation,
         totalSocialFollowers: audienceMetrics.totalSocialFollowers,
         totalPodcastListeners: audienceMetrics.totalPodcastListeners,
         totalStreamingSubscribers: audienceMetrics.totalStreamingSubscribers,
@@ -2338,6 +2396,7 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
           : 0
       },
       
+      // Default pricing (without hub-specific pricing)
       pricingInsights: {
         averageWebsiteAdPrice: calculateAverage(pricingData.websiteAdPrices),
         averageNewsletterAdPrice: calculateAverage(pricingData.newsletterAdPrices),
@@ -2346,7 +2405,10 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
         averageStreamingAdPrice: calculateAverage(pricingData.streamingAdPrices),
         averageRadioAdPrice: calculateAverage(pricingData.radioAdPrices),
         totalInventoryValue: Math.round(pricingData.totalValue)
-      }
+      },
+      
+      // Hub-specific pricing
+      hubPricingInsights
     };
 
     res.json(stats);
