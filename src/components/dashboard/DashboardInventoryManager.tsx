@@ -4419,6 +4419,7 @@ export const DashboardInventoryManager = () => {
                       { value: 'cpc', label: '/click' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
+                    allowMultipleDefaultPricing={true}
                     onDefaultPricingChange={(pricing) => 
                       setEditingItem({ ...editingItem, pricing })
                     }
