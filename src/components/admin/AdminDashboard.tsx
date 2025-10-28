@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LeadManagement } from './LeadManagement';
 import { PackageManagement } from './PackageManagement';
 import { AssistantManagement } from './AssistantManagement';
@@ -12,7 +13,7 @@ import { PublicationsImport } from './PublicationsImport';
 import SurveyManagement from './SurveyManagement';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
-import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, Globe, Mail, Printer, Calendar, DollarSign, TrendingUp, MapPin, Eye } from 'lucide-react';
+import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, Globe, Mail, Printer, Calendar, DollarSign, TrendingUp, MapPin, Eye, Info } from 'lucide-react';
 
 export const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -276,6 +277,26 @@ export const AdminDashboard = () => {
                 <CardTitle className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5" />
                   Default Pricing
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-sm">
+                        <div className="space-y-2">
+                          <p className="font-semibold">Pricing Assumptions:</p>
+                          <ul className="space-y-1 text-xs list-disc ml-4">
+                            <li>Default pricing only (excludes hub-specific rates)</li>
+                            <li>Monthly estimates based on publication frequency</li>
+                            <li>Website: Flat rate/month or CPM × impressions</li>
+                            <li>Newsletter: Per-send × frequency (daily/weekly/monthly)</li>
+                            <li>Print: Frequency-based rates normalized to monthly</li>
+                            <li>Podcast/Radio/Streaming: Episode/spot frequency × monthly</li>
+                          </ul>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardTitle>
                 <CardDescription>Base pricing (without hub-specific rates)</CardDescription>
               </CardHeader>
@@ -285,17 +306,6 @@ export const AdminDashboard = () => {
                     <p className="font-medium">
                       📊 {stats?.pricingInsights?.inventoryCount ?? 0} inventory items with default pricing
                     </p>
-                  </div>
-                  <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
-                    <p className="font-medium mb-1">💡 Pricing Assumptions:</p>
-                    <ul className="space-y-0.5 ml-4 list-disc">
-                      <li>Default pricing only (excludes hub-specific rates)</li>
-                      <li>Monthly estimates based on publication frequency</li>
-                      <li>Website: Flat rate/month or CPM × impressions</li>
-                      <li>Newsletter: Per-send × frequency (daily/weekly/monthly)</li>
-                      <li>Print: Frequency-based rates normalized to monthly</li>
-                      <li>Podcast/Radio/Streaming: Episode/spot frequency × monthly</li>
-                    </ul>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Website Ads</span>
