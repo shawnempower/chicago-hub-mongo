@@ -274,36 +274,34 @@ export const AdminDashboard = () => {
             {/* Pricing Insights */}
             <Card>
               <CardHeader>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="cursor-help">
-                        <CardTitle className="flex items-center gap-2">
-                          <DollarSign className="h-5 w-5" />
-                          Default Pricing
-                          <div className="flex items-center gap-1 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors">
-                            <Info className="h-4 w-4 text-blue-600" />
-                            <span className="text-xs text-blue-600 font-normal">How is this calculated?</span>
-                          </div>
-                        </CardTitle>
-                        <CardDescription>Base pricing (without hub-specific rates)</CardDescription>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-sm">
-                      <div className="space-y-2">
-                        <p className="font-semibold">Pricing Assumptions:</p>
-                        <ul className="space-y-1 text-xs list-disc ml-4">
-                          <li>Default pricing only (excludes hub-specific rates)</li>
-                          <li>Monthly estimates based on publication frequency</li>
-                          <li>Website: Flat rate/month or CPM × impressions</li>
-                          <li>Newsletter: Per-send × frequency (daily/weekly/monthly)</li>
-                          <li>Print: Frequency-based rates normalized to monthly</li>
-                          <li>Podcast/Radio/Streaming: Episode/spot frequency × monthly</li>
-                        </ul>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Default Pricing
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors cursor-help">
+                          <Info className="h-4 w-4 text-blue-600" />
+                          <span className="text-xs text-blue-600 font-normal">How is this calculated?</span>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-sm" sideOffset={5}>
+                        <div className="space-y-2">
+                          <p className="font-semibold">Pricing Assumptions:</p>
+                          <ul className="space-y-1 text-xs list-disc ml-4">
+                            <li>Default pricing only (excludes hub-specific rates)</li>
+                            <li>Monthly estimates based on publication frequency</li>
+                            <li>Website: Flat rate/month or CPM × impressions</li>
+                            <li>Newsletter: Per-send × frequency (daily/weekly/monthly)</li>
+                            <li>Print: Frequency-based rates normalized to monthly</li>
+                            <li>Podcast/Radio/Streaming: Episode/spot frequency × monthly</li>
+                          </ul>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardTitle>
+                <CardDescription>Base pricing (without hub-specific rates)</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
