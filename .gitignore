@@ -38,3 +38,6 @@ dist-ssr
 *.key
 LOCAL_ENV_VALUES.txt
 .cloudfront-setup/
+
+# Data files (imported into MongoDB)
+geography.csv

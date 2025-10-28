@@ -14,6 +14,7 @@
     "dev:full": "concurrently \"npm run server:dev\" \"npm run dev\"",
     "make-admin": "tsx src/scripts/makeUserAdmin.ts",
     "import:surveys": "tsx src/scripts/importSurveys.ts json_files/surveys",
+    "import:areas": "tsx src/scripts/importAreas.ts",
     "migrate:storefront": "tsx src/scripts/migrateStorefrontSchema.ts",
     "migrate:pricing": "node scripts/migrate-pricing.cjs",
     "migrate:pricing:live": "node scripts/migrate-pricing.cjs --live",

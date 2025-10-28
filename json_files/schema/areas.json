@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Areas Collection Schema",
+  "description": "Geographic hierarchy schema for US Designated Market Areas (DMAs), counties, and zip codes",
+  "type": "object",
+  "required": ["dma", "counties", "allZipCodes", "metadata"],
+  "properties": {
+    "_id": {
+      "type": ["string", "object"],
+      "description": "MongoDB ObjectId"
+    },
+    "dma": {
+      "type": "object",
+      "required": ["name", "normalized"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Official Designated Market Area name (e.g., 'CHICAGO, IL')",
+          "minLength": 1,
+          "examples": ["CHICAGO, IL", "NEW YORK, NY", "LOS ANGELES, CA"]
+        },
+        "normalized": {
+          "type": "string",
+          "description": "URL-friendly normalized version of DMA name (lowercase, hyphenated)",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "examples": ["chicago-il", "new-york-ny", "los-angeles-ca"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "counties": {
+      "type": "array",
+      "description": "List of counties within this DMA",
+      "items": {
+        "type": "object",
+        "required": ["name", "normalized", "zipCodes"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Official county name",
+            "minLength": 1,
+            "examples": ["COOK", "LAKE", "DUPAGE"]
+          },
+          "normalized": {
+            "type": "string",
+            "description": "URL-friendly normalized version of county name",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "examples": ["cook", "lake", "dupage"]
+          },
+          "zipCodes": {
+            "type": "array",
+            "description": "List of ZIP codes within this county",
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9]{5}$",
+              "description": "5-digit ZIP code"
+            },
+            "uniqueItems": true,
+            "examples": [["60601", "60602", "60603"]]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "allZipCodes": {
+      "type": "array",
+      "description": "Flattened array of all ZIP codes in this DMA (for quick lookup)",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9]{5}$",
+        "description": "5-digit ZIP code"
+      },
+      "uniqueItems": true
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["totalCounties", "totalZipCodes", "createdAt", "updatedAt"],
+      "properties": {
+        "totalCounties": {
+          "type": "integer",
+          "description": "Total number of counties in this DMA",
+          "minimum": 0
+        },
+        "totalZipCodes": {
+          "type": "integer",
+          "description": "Total number of ZIP codes in this DMA",
+          "minimum": 0
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when this record was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when this record was last updated"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "dma": {
+        "name": "CHICAGO, IL",
+        "normalized": "chicago-il"
+      },
+      "counties": [
+        {
+          "name": "COOK",
+          "normalized": "cook",
+          "zipCodes": ["60601", "60602", "60603", "60604", "60605"]
+        },
+        {
+          "name": "LAKE",
+          "normalized": "lake",
+          "zipCodes": ["60030", "60031", "60035", "60040"]
+        }
+      ],
+      "allZipCodes": ["60030", "60031", "60035", "60040", "60601", "60602", "60603", "60604", "60605"],
+      "metadata": {
+        "totalCounties": 2,
+        "totalZipCodes": 9,
+        "createdAt": "2025-10-28T00:00:00.000Z",
+        "updatedAt": "2025-10-28T00:00:00.000Z"
+      }
+    }
+  ],
+  "definitions": {
+    "searchQueries": {
+      "description": "Common query patterns for the areas collection",
+      "examples": [
+        {
+          "description": "Find DMA by normalized name",
+          "query": { "dma.normalized": "chicago-il" }
+        },
+        {
+          "description": "Find DMA containing a specific ZIP code",
+          "query": { "allZipCodes": "60601" }
+        },
+        {
+          "description": "Find all DMAs with a specific county",
+          "query": { "counties.name": "COOK" }
+        },
+        {
+          "description": "Search DMAs by name (case-insensitive)",
+          "query": { "dma.name": { "$regex": "chicago", "$options": "i" } }
+        },
+        {
+          "description": "Find DMAs by county and DMA combination",
+          "query": { 
+            "dma.normalized": "chicago-il",
+            "counties.normalized": "cook"
+          }
+        }
+      ]
+    },
+    "indexes": {
+      "description": "Recommended indexes for optimal query performance",
+      "required": [
+        { "dma.name": 1 },
+        { "dma.normalized": 1 },
+        { "allZipCodes": 1 },
+        { "counties.name": 1 },
+        { "dma.normalized": 1, "counties.normalized": 1 }
+      ]
+    }
+  }
+}
+
