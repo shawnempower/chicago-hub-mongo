@@ -122,6 +122,7 @@ export const DashboardInventoryManager = () => {
   const [editingSubIndex, setEditingSubIndex] = useState<number>(-1); // for newsletter ads within newsletters
   const [editingParentIndex, setEditingParentIndex] = useState<number>(-1); // for event parent index
   const [editingItemIndex, setEditingItemIndex] = useState<number>(-1); // for event sponsorship index
+  const [isAdding, setIsAdding] = useState<boolean>(false); // Track if we're adding new (vs editing existing)
 
   // Delete confirmation dialog states
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -726,13 +727,14 @@ export const DashboardInventoryManager = () => {
   };
 
   // Edit dialog handlers
-  const openEditDialog = (item: any, type: 'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast' | 'radio' | 'streaming' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'social-media-ad' | 'print-ad', index: number, subIndex: number = -1) => {
+  const openEditDialog = (item: any, type: 'website' | 'newsletter' | 'print' | 'event' | 'package' | 'social-media' | 'newsletter-container' | 'event-container' | 'website-container' | 'print-container' | 'podcast' | 'radio' | 'streaming' | 'podcast-container' | 'radio-container' | 'streaming-container' | 'podcast-ad' | 'radio-ad' | 'streaming-ad' | 'social-media-ad' | 'print-ad', index: number, subIndex: number = -1, adding: boolean = false) => {
     // Use deep copy to preserve nested objects and arrays like advertisingOpportunities
     const itemCopy = JSON.parse(JSON.stringify(item));
     console.log('📝 Opening edit dialog:', {
       type,
       index,
       subIndex,
+      adding,
       originalItem: item,
       itemCopy: itemCopy,
       hasAdvertisingOpportunities: itemCopy.advertisingOpportunities?.length > 0,
@@ -742,11 +744,13 @@ export const DashboardInventoryManager = () => {
     setEditingType(type);
     setEditingIndex(index);
     setEditingSubIndex(subIndex);
+    setIsAdding(adding);
   };
 
   const closeEditDialog = () => {
     setEditingItem(null);
     setEditingType(null);
+    setIsAdding(false);
     setEditingIndex(-1);
     setEditingSubIndex(-1);
     setEditingParentIndex(-1);
@@ -760,7 +764,8 @@ export const DashboardInventoryManager = () => {
     const isContainerType = editingType?.includes('-container');
     // For events, we use editingParentIndex and editingItemIndex instead of editingIndex
     const isEventSponsorship = editingType === 'event';
-    if (!isContainerType && !isEventSponsorship && editingIndex < 0) return;
+    // Allow editingIndex < 0 when adding new items
+    if (!isContainerType && !isEventSponsorship && !isAdding && editingIndex < 0) return;
 
     // Clean up hub pricing - remove any invalid entries
     if (editingItem.hubPricing && Array.isArray(editingItem.hubPricing)) {
@@ -812,16 +817,39 @@ export const DashboardInventoryManager = () => {
 
       switch (editingType) {
         case 'website':
-          if (updatedPublication.distributionChannels?.website?.advertisingOpportunities) {
-            updatedPublication.distributionChannels.website.advertisingOpportunities[editingIndex] = editingItem;
+          if (isAdding) {
+            // Adding new opportunity
+            if (!updatedPublication.distributionChannels.website) {
+              updatedPublication.distributionChannels.website = {};
+            }
+            if (!updatedPublication.distributionChannels.website.advertisingOpportunities) {
+              updatedPublication.distributionChannels.website.advertisingOpportunities = [];
+            }
+            updatedPublication.distributionChannels.website.advertisingOpportunities.push(editingItem);
+          } else {
+            // Editing existing opportunity
+            if (updatedPublication.distributionChannels?.website?.advertisingOpportunities) {
+              updatedPublication.distributionChannels.website.advertisingOpportunities[editingIndex] = editingItem;
+            }
           }
           break;
 
         case 'newsletter':
-          if (updatedPublication.distributionChannels?.newsletters && 
-              editingSubIndex >= 0 && 
-              updatedPublication.distributionChannels.newsletters[editingIndex]?.advertisingOpportunities) {
-            updatedPublication.distributionChannels.newsletters[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+          if (isAdding) {
+            // Adding new newsletter ad
+            if (updatedPublication.distributionChannels?.newsletters?.[editingIndex]) {
+              if (!updatedPublication.distributionChannels.newsletters[editingIndex].advertisingOpportunities) {
+                updatedPublication.distributionChannels.newsletters[editingIndex].advertisingOpportunities = [];
+              }
+              updatedPublication.distributionChannels.newsletters[editingIndex].advertisingOpportunities.push(editingItem);
+            }
+          } else {
+            // Editing existing newsletter ad
+            if (updatedPublication.distributionChannels?.newsletters && 
+                editingSubIndex >= 0 && 
+                updatedPublication.distributionChannels.newsletters[editingIndex]?.advertisingOpportunities) {
+              updatedPublication.distributionChannels.newsletters[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+            }
           }
           break;
 
@@ -829,68 +857,133 @@ export const DashboardInventoryManager = () => {
           console.log('💾 Saving print-ad:', {
             editingIndex,
             editingSubIndex,
+            isAdding,
             editingItem,
             hasPrint: !!updatedPublication.distributionChannels?.print,
             isArray: Array.isArray(updatedPublication.distributionChannels?.print),
             printType: typeof updatedPublication.distributionChannels?.print
           });
           
-          if (updatedPublication.distributionChannels?.print && editingSubIndex >= 0) {
+          if (updatedPublication.distributionChannels?.print) {
             // Handle both array format (new) and single object format (legacy)
             if (Array.isArray(updatedPublication.distributionChannels.print)) {
               // Array format - multiple print publications
-              if (updatedPublication.distributionChannels.print[editingIndex]?.advertisingOpportunities) {
-                updatedPublication.distributionChannels.print[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
-                console.log('✅ Print ad saved successfully (array format)');
+              if (isAdding) {
+                // Adding new print ad
+                if (!updatedPublication.distributionChannels.print[editingIndex].advertisingOpportunities) {
+                  updatedPublication.distributionChannels.print[editingIndex].advertisingOpportunities = [];
+                }
+                updatedPublication.distributionChannels.print[editingIndex].advertisingOpportunities.push(editingItem);
+                console.log('✅ Print ad added successfully (array format)');
+              } else {
+                // Editing existing print ad
+                if (editingSubIndex >= 0 && updatedPublication.distributionChannels.print[editingIndex]?.advertisingOpportunities) {
+                  updatedPublication.distributionChannels.print[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+                  console.log('✅ Print ad saved successfully (array format)');
+                }
               }
             } else if (typeof updatedPublication.distributionChannels.print === 'object') {
               // Single object format - one print publication
-              if (editingIndex === 0 && updatedPublication.distributionChannels.print.advertisingOpportunities) {
-                updatedPublication.distributionChannels.print.advertisingOpportunities[editingSubIndex] = editingItem;
-                console.log('✅ Print ad saved successfully (object format)');
+              if (isAdding) {
+                // Adding new print ad
+                if (!updatedPublication.distributionChannels.print.advertisingOpportunities) {
+                  updatedPublication.distributionChannels.print.advertisingOpportunities = [];
+                }
+                updatedPublication.distributionChannels.print.advertisingOpportunities.push(editingItem);
+                console.log('✅ Print ad added successfully (object format)');
+              } else {
+                // Editing existing print ad
+                if (editingIndex === 0 && editingSubIndex >= 0 && updatedPublication.distributionChannels.print.advertisingOpportunities) {
+                  updatedPublication.distributionChannels.print.advertisingOpportunities[editingSubIndex] = editingItem;
+                  console.log('✅ Print ad saved successfully (object format)');
+                }
               }
             }
           }
           break;
 
         case 'podcast-ad':
-          if (updatedPublication.distributionChannels?.podcasts && 
-              editingSubIndex >= 0 &&
-              updatedPublication.distributionChannels.podcasts[editingIndex]?.advertisingOpportunities) {
-            updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.podcasts) {
+            if (isAdding) {
+              // Adding new podcast ad
+              if (!updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities) {
+                updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities = [];
+              }
+              updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities.push(editingItem);
+            } else {
+              // Editing existing podcast ad
+              if (editingSubIndex >= 0 && updatedPublication.distributionChannels.podcasts[editingIndex]?.advertisingOpportunities) {
+                updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+              }
+            }
           }
           break;
 
         case 'radio-ad':
-          if (updatedPublication.distributionChannels?.radioStations && 
-              editingSubIndex >= 0 &&
-              updatedPublication.distributionChannels.radioStations[editingIndex]?.advertisingOpportunities) {
-            updatedPublication.distributionChannels.radioStations[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.radioStations) {
+            if (isAdding) {
+              // Adding new radio ad
+              if (!updatedPublication.distributionChannels.radioStations[editingIndex].advertisingOpportunities) {
+                updatedPublication.distributionChannels.radioStations[editingIndex].advertisingOpportunities = [];
+              }
+              updatedPublication.distributionChannels.radioStations[editingIndex].advertisingOpportunities.push(editingItem);
+            } else {
+              // Editing existing radio ad
+              if (editingSubIndex >= 0 && updatedPublication.distributionChannels.radioStations[editingIndex]?.advertisingOpportunities) {
+                updatedPublication.distributionChannels.radioStations[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+              }
+            }
           }
           break;
 
         case 'streaming-ad':
-          if (updatedPublication.distributionChannels?.streamingVideo && 
-              editingSubIndex >= 0 &&
-              updatedPublication.distributionChannels.streamingVideo[editingIndex]?.advertisingOpportunities) {
-            updatedPublication.distributionChannels.streamingVideo[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.streamingVideo) {
+            if (isAdding) {
+              // Adding new streaming ad
+              if (!updatedPublication.distributionChannels.streamingVideo[editingIndex].advertisingOpportunities) {
+                updatedPublication.distributionChannels.streamingVideo[editingIndex].advertisingOpportunities = [];
+              }
+              updatedPublication.distributionChannels.streamingVideo[editingIndex].advertisingOpportunities.push(editingItem);
+            } else {
+              // Editing existing streaming ad
+              if (editingSubIndex >= 0 && updatedPublication.distributionChannels.streamingVideo[editingIndex]?.advertisingOpportunities) {
+                updatedPublication.distributionChannels.streamingVideo[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+              }
+            }
           }
           break;
 
         case 'social-media-ad':
-          if (updatedPublication.distributionChannels?.socialMedia && 
-              editingSubIndex >= 0 &&
-              updatedPublication.distributionChannels.socialMedia[editingIndex]?.advertisingOpportunities) {
-            updatedPublication.distributionChannels.socialMedia[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.socialMedia) {
+            if (isAdding) {
+              // Adding new social media ad
+              if (!updatedPublication.distributionChannels.socialMedia[editingIndex].advertisingOpportunities) {
+                updatedPublication.distributionChannels.socialMedia[editingIndex].advertisingOpportunities = [];
+              }
+              updatedPublication.distributionChannels.socialMedia[editingIndex].advertisingOpportunities.push(editingItem);
+            } else {
+              // Editing existing social media ad
+              if (editingSubIndex >= 0 && updatedPublication.distributionChannels.socialMedia[editingIndex]?.advertisingOpportunities) {
+                updatedPublication.distributionChannels.socialMedia[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+              }
+            }
           }
           break;
 
         case 'event':
-          if (updatedPublication.distributionChannels?.events && 
-              editingParentIndex >= 0 &&
-              editingItemIndex >= 0 &&
-              updatedPublication.distributionChannels.events[editingParentIndex]?.advertisingOpportunities) {
-            updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities[editingItemIndex] = editingItem;
+          if (updatedPublication.distributionChannels?.events && editingParentIndex >= 0) {
+            if (isAdding) {
+              // Adding new event sponsorship
+              if (!updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities) {
+                updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities = [];
+              }
+              updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities.push(editingItem);
+            } else {
+              // Editing existing event sponsorship
+              if (editingItemIndex >= 0 && updatedPublication.distributionChannels.events[editingParentIndex]?.advertisingOpportunities) {
+                updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities[editingItemIndex] = editingItem;
+              }
+            }
           }
           break;
 
@@ -1034,9 +1127,11 @@ export const DashboardInventoryManager = () => {
         }
       }
       
-      // Show success message (toast already shown in handleUpdatePublication, so we can skip this)
-      // Keep the dialog open - don't call closeEditDialog()
-      // This allows the user to continue editing without having to reopen the modal
+      // If adding a new item, close the modal automatically
+      // If editing an existing item, keep it open for additional changes
+      if (isAdding) {
+        closeEditDialog();
+      }
     } catch (error) {
       console.error('Error saving edited item:', error);
       toast({
@@ -1131,96 +1226,45 @@ export const DashboardInventoryManager = () => {
   const addWebsiteOpportunity = async () => {
     if (!currentPublication) return;
     
+    // Create template for new opportunity
     const newOpportunity = {
-      name: 'New Website Ad',
+      name: '',
       adFormat: '300x250 banner',
-      location: 'Homepage',
+      location: '',
       pricing: {
-        flatRate: 100,
+        flatRate: 0,
         pricingModel: 'flat' as const,
-        minimumCommitment: '1 week'
+        minimumCommitment: '1 month'
       },
       specifications: {
         format: 'JPG, PNG, GIF',
         animationAllowed: true,
         thirdPartyTags: true
       },
-      monthlyImpressions: 1000,
+      monthlyImpressions: 0,
       available: true
     };
-
-    const updatedOpportunities = [
-      ...(currentPublication.distributionChannels?.website?.advertisingOpportunities || []),
-      newOpportunity
-    ];
-
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          website: {
-            ...currentPublication.distributionChannels?.website,
-            advertisingOpportunities: updatedOpportunities
-          }
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Website advertising opportunity added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding website opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add website advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    
+    // Open modal for user to fill in details
+    openEditDialog(newOpportunity, 'website', -1, -1, true);
   };
 
   const addNewsletterOpportunity = async (newsletterIndex: number) => {
     if (!currentPublication?.distributionChannels?.newsletters?.[newsletterIndex]) return;
     
+    // Create template for new opportunity
     const newOpportunity = {
-      name: 'New Newsletter Ad',
-      position: 'inline',
-      dimensions: '300x250',
+      name: '',
+      position: 'inline' as const,
+      dimensions: '',
       pricing: {
-        flatRate: 50,
-        pricingModel: 'per_send'
+        perSend: 0,
+        monthly: 0
       }
     };
 
-    const updatedNewsletters = [...currentPublication.distributionChannels.newsletters];
-    const updatedOpportunities = [
-      ...(updatedNewsletters[newsletterIndex].advertisingOpportunities || []),
-      newOpportunity
-    ];
-    
-    updatedNewsletters[newsletterIndex] = {
-      ...updatedNewsletters[newsletterIndex],
-      advertisingOpportunities: updatedOpportunities
-    };
-
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          newsletters: updatedNewsletters
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Newsletter advertising opportunity added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding newsletter opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add newsletter advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    // Open modal for user to fill in details
+    openEditDialog(newOpportunity, 'newsletter', newsletterIndex, -1, true);
   };
 
   const removeNewsletterOpportunity = async (newsletterIndex: number, adIndex: number) => {
@@ -1312,48 +1356,26 @@ export const DashboardInventoryManager = () => {
   const addPrintOpportunity = async (printIndex: number) => {
     if (!currentPublication?.distributionChannels?.print) return;
     
+    // Create template for new opportunity
     const newOpportunity = {
-      name: 'New Print Ad',
-      adFormat: 'full page',
+      name: '',
+      adFormat: 'full page' as const,
+      dimensions: '',
+      color: 'color' as const,
+      location: '',
       pricing: {
-        flatRate: 500,
-        pricingModel: 'per_ad'
+        flatRate: 0,
+        pricingModel: 'flat' as const
+      },
+      specifications: {
+        format: 'PDF',
+        resolution: '300 DPI',
+        bleed: '0.125 inch'
       }
     };
 
-    const updatedPrint = Array.isArray(currentPublication.distributionChannels.print) 
-      ? [...currentPublication.distributionChannels.print]
-      : [currentPublication.distributionChannels.print];
-      
-    const updatedOpportunities = [
-      ...(updatedPrint[printIndex].advertisingOpportunities || []),
-      newOpportunity
-    ];
-    
-    updatedPrint[printIndex] = {
-      ...updatedPrint[printIndex],
-      advertisingOpportunities: updatedOpportunities
-    };
-
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          print: updatedPrint
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Print advertising opportunity added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding print opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add print advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    // Open modal for user to fill in details
+    openEditDialog(newOpportunity, 'print-ad', printIndex, -1, true);
   };
 
   const removePrintOpportunity = async (printIndex: number, adIndex: number) => {
@@ -1524,45 +1546,22 @@ export const DashboardInventoryManager = () => {
   const addEventOpportunity = async (eventIndex: number) => {
     if (!currentPublication?.distributionChannels?.events?.[eventIndex]) return;
     
+    // Create template for new opportunity
     const newOpportunity = {
-      level: 'sponsor',
-      benefits: ['Logo placement', 'Event listing'],
+      level: 'sponsor' as const,
+      benefits: [],
       pricing: {
-        flatRate: 500,
+        flatRate: 0,
         pricingModel: 'flat' as const
       }
     };
 
-    const updatedEvents = [...(currentPublication.distributionChannels.events || [])];
-    const updatedOpportunities = [
-      ...(updatedEvents[eventIndex].advertisingOpportunities || []),
-      newOpportunity
-    ];
-    
-    updatedEvents[eventIndex] = {
-      ...updatedEvents[eventIndex],
-      advertisingOpportunities: updatedOpportunities
-    };
-
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          events: updatedEvents
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Sponsorship opportunity added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding event opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add sponsorship opportunity",
-        variant: "destructive"
-      });
-    }
+    // Open modal for user to fill in details (events use different state pattern)
+    setEditingType('event');
+    setEditingParentIndex(eventIndex);
+    setEditingItemIndex(-1); // -1 indicates adding new
+    setEditingItem(newOpportunity);
+    setIsAdding(true);
   };
 
   const removeEventOpportunity = async (eventIndex: number, oppIndex: number) => {
@@ -1607,46 +1606,19 @@ export const DashboardInventoryManager = () => {
   const addSocialMediaOpportunity = async (socialIndex: number) => {
     if (!currentPublication?.distributionChannels?.socialMedia?.[socialIndex]) return;
     
+    // Create template for new opportunity
     const newOpportunity = {
-      name: 'New Social Media Ad',
-      adType: 'sponsored-post',
+      name: '',
+      adType: 'sponsored-post' as const,
       duration: '24h',
       pricing: {
-        flatRate: 100,
-        pricingModel: 'per_post'
+        flatRate: 0,
+        pricingModel: 'flat' as const
       }
     };
 
-    const updatedSocialMedia = [...currentPublication.distributionChannels.socialMedia];
-    const updatedOpportunities = [
-      ...(updatedSocialMedia[socialIndex].advertisingOpportunities || []),
-      newOpportunity
-    ];
-    
-    updatedSocialMedia[socialIndex] = {
-      ...updatedSocialMedia[socialIndex],
-      advertisingOpportunities: updatedOpportunities
-    };
-
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          socialMedia: updatedSocialMedia
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Social media advertising opportunity added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding social media opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add social media advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    // Open modal for user to fill in details
+    openEditDialog(newOpportunity, 'social-media-ad', socialIndex, -1, true);
   };
 
   const removeSocialMediaOpportunity = async (socialIndex: number, adIndex: number) => {
@@ -2077,46 +2049,19 @@ export const DashboardInventoryManager = () => {
   const addPodcastOpportunity = async (podcastIndex: number) => {
     if (!currentPublication?.distributionChannels?.podcasts?.[podcastIndex]) return;
     
+    // Create template for new opportunity
     const newOpportunity = {
-      name: 'New Podcast Ad',
-      position: 'pre-roll',
+      name: '',
+      position: 'pre-roll' as const,
       duration: '30 seconds',
       pricing: {
-        flatRate: 100,
-        pricingModel: 'per_ad'
+        flatRate: 0,
+        pricingModel: 'flat' as const
       }
     };
 
-    const updatedPodcasts = [...currentPublication.distributionChannels.podcasts];
-    const updatedOpportunities = [
-      ...(updatedPodcasts[podcastIndex].advertisingOpportunities || []),
-      newOpportunity
-    ];
-    
-    updatedPodcasts[podcastIndex] = {
-      ...updatedPodcasts[podcastIndex],
-      advertisingOpportunities: updatedOpportunities
-    };
-
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          podcasts: updatedPodcasts
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Podcast advertising opportunity added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding podcast opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add podcast advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    // Open modal for user to fill in details
+    openEditDialog(newOpportunity, 'podcast-ad', podcastIndex, -1, true);
   };
 
   const removePodcastOpportunity = async (podcastIndex: number, adIndex: number) => {
@@ -2204,46 +2149,19 @@ export const DashboardInventoryManager = () => {
   const addRadioOpportunity = async (stationIndex: number) => {
     if (!currentPublication?.distributionChannels?.radioStations?.[stationIndex]) return;
     
+    // Create template for new opportunity
     const newOpportunity = {
-      name: 'New Radio Ad',
-      timeSlot: 'drive-time',
+      name: '',
+      timeSlot: 'drive-time' as const,
       duration: '30 seconds',
       pricing: {
-        flatRate: 150,
-        pricingModel: 'per_spot'
+        flatRate: 0,
+        pricingModel: 'flat' as const
       }
     };
 
-    const updatedStations = [...currentPublication.distributionChannels.radioStations];
-    const updatedOpportunities = [
-      ...(updatedStations[stationIndex].advertisingOpportunities || []),
-      newOpportunity
-    ];
-    
-    updatedStations[stationIndex] = {
-      ...updatedStations[stationIndex],
-      advertisingOpportunities: updatedOpportunities
-    };
-
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          radioStations: updatedStations
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Radio advertising opportunity added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding radio opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add radio advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    // Open modal for user to fill in details
+    openEditDialog(newOpportunity, 'radio-ad', stationIndex, -1, true);
   };
 
   const removeRadioOpportunity = async (stationIndex: number, adIndex: number) => {
@@ -2332,46 +2250,19 @@ export const DashboardInventoryManager = () => {
   const addStreamingOpportunity = async (channelIndex: number) => {
     if (!currentPublication?.distributionChannels?.streamingVideo?.[channelIndex]) return;
     
+    // Create template for new opportunity
     const newOpportunity = {
-      name: 'New Streaming Ad',
-      position: 'pre-roll',
+      name: '',
+      position: 'pre-roll' as const,
       duration: '15 seconds',
       pricing: {
-        flatRate: 25,
-        pricingModel: 'cpv'
+        flatRate: 0,
+        pricingModel: 'flat' as const
       }
     };
 
-    const updatedChannels = [...currentPublication.distributionChannels.streamingVideo];
-    const updatedOpportunities = [
-      ...(updatedChannels[channelIndex].advertisingOpportunities || []),
-      newOpportunity
-    ];
-    
-    updatedChannels[channelIndex] = {
-      ...updatedChannels[channelIndex],
-      advertisingOpportunities: updatedOpportunities
-    };
-
-    try {
-      await handleUpdatePublication({
-        distributionChannels: {
-          ...currentPublication.distributionChannels,
-          streamingVideo: updatedChannels
-        }
-      });
-      toast({
-        title: "Success",
-        description: "Streaming advertising opportunity added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding streaming opportunity:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add streaming advertising opportunity",
-        variant: "destructive"
-      });
-    }
+    // Open modal for user to fill in details
+    openEditDialog(newOpportunity, 'streaming-ad', channelIndex, -1, true);
   };
 
   const removeStreamingOpportunity = async (channelIndex: number, adIndex: number) => {
@@ -2812,7 +2703,7 @@ export const DashboardInventoryManager = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentPublication.distributionChannels?.website?.advertisingOpportunities?.map((opportunity: any, index: number) => (
                 <div key={index} className="relative">
-                  <div className="border border-gray-200 rounded-lg shadow-sm p-4 bg-white">
+                  <div className="group border border-gray-200 rounded-lg shadow-sm p-4 bg-white transition-shadow duration-200 hover:shadow-md">
                     {/* Title and Badges */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -2825,7 +2716,7 @@ export const DashboardInventoryManager = () => {
                               ? (dims.length > 2 ? `${dims.length} sizes` : dims.join(', '))
                               : dims;
                             return (
-                              <Badge variant="outline" className="text-xs font-normal">
+                              <Badge variant="outline" className="text-xs">
                                 {displayText}
                               </Badge>
                             );
@@ -2837,15 +2728,20 @@ export const DashboardInventoryManager = () => {
                               ? `${sizes.length} sizes` 
                               : sizes.join(', ');
                             return (
-                              <Badge variant="outline" className="text-xs font-normal">
+                              <Badge variant="outline" className="text-xs">
                                 {displayText}
                               </Badge>
                             );
                           }
                           return null;
                         })()}
+                        {opportunity.adFormat && (
+                          <Badge variant="secondary" className="text-xs">
+                            {opportunity.adFormat}
+                          </Badge>
+                        )}
                       </div>
-                      <div className="flex gap-1 flex-shrink-0">
+                      <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -3030,17 +2926,17 @@ export const DashboardInventoryManager = () => {
                       {podcast.advertisingOpportunities && podcast.advertisingOpportunities.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {podcast.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                            <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
+                            <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                                   {ad.adFormat && (
-                                    <Badge variant="outline" className="text-xs font-normal">
+                                    <Badge variant="secondary" className="text-xs">
                                       {ad.adFormat}
                                     </Badge>
                                   )}
                                 </div>
-                                <div className="flex gap-1 flex-shrink-0">
+                                <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
@@ -3206,17 +3102,17 @@ export const DashboardInventoryManager = () => {
                       {station.advertisingOpportunities && station.advertisingOpportunities.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {station.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                            <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
+                            <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                                   {ad.adFormat && (
-                                    <Badge variant="outline" className="text-xs font-normal">
+                                    <Badge variant="secondary" className="text-xs">
                                       {ad.adFormat}
                                     </Badge>
                                   )}
                                 </div>
-                                <div className="flex gap-1 flex-shrink-0">
+                                <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
@@ -3390,17 +3286,17 @@ export const DashboardInventoryManager = () => {
                       {channel.advertisingOpportunities && channel.advertisingOpportunities.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {channel.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                            <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
+                            <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                                   {ad.adFormat && (
-                                    <Badge variant="outline" className="text-xs font-normal">
+                                    <Badge variant="secondary" className="text-xs">
                                       {ad.adFormat}
                                     </Badge>
                                   )}
                                 </div>
-                                <div className="flex gap-1 flex-shrink-0">
+                                <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
@@ -3583,17 +3479,17 @@ export const DashboardInventoryManager = () => {
                         {publication.advertisingOpportunities && publication.advertisingOpportunities.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {publication.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                              <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
+                              <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                                 <div className="flex items-center justify-between mb-3">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                                     {ad.adFormat && (
-                                      <Badge variant="outline" className="text-xs font-normal">
+                                      <Badge variant="secondary" className="text-xs">
                                         {ad.adFormat}
                                       </Badge>
                                     )}
                                   </div>
-                                  <div className="flex gap-1 flex-shrink-0">
+                                  <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
@@ -3935,7 +3831,7 @@ export const DashboardInventoryManager = () => {
                     {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {newsletter.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                        <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
+                        <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
@@ -3963,12 +3859,12 @@ export const DashboardInventoryManager = () => {
                                 return null;
                               })()}
                               {ad.position && (
-                                <Badge variant="secondary" className="text-xs font-normal">
+                                <Badge variant="secondary" className="text-xs">
                                   {ad.position}
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex gap-1 flex-shrink-0">
+                            <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -4156,17 +4052,17 @@ export const DashboardInventoryManager = () => {
                   {profile.advertisingOpportunities && profile.advertisingOpportunities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {profile.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                        <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
+                        <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                               {ad.adFormat && (
-                                <Badge variant="outline" className="text-xs font-normal">
+                                <Badge variant="secondary" className="text-xs">
                                   {ad.adFormat}
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex gap-1 flex-shrink-0">
+                            <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -4339,17 +4235,17 @@ export const DashboardInventoryManager = () => {
                   {station.advertisingOpportunities && station.advertisingOpportunities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {station.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                        <div key={adIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
+                        <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
                               {ad.adFormat && (
-                                <Badge variant="outline" className="text-xs font-normal">
+                                <Badge variant="secondary" className="text-xs">
                                   {ad.adFormat}
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex gap-1 flex-shrink-0">
+                            <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                             <Button 
                               variant="ghost" 
                               size="sm"

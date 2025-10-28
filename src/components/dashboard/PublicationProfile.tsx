@@ -33,7 +33,10 @@ import {
   Twitter,
   Linkedin,
   Youtube,
-  MessageCircle
+  MessageCircle,
+  Phone,
+  User,
+  Briefcase
 } from 'lucide-react';
 import { SchemaField, SchemaSection, SchemaFieldLegend } from './SchemaField';
 import { transformers } from '@/config/publicationFieldMapping';
@@ -112,9 +115,23 @@ export const PublicationProfile: React.FC = () => {
     // If there are errors, show toast and set field errors
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      
+      // Create a detailed error message
+      const errorCount = Object.keys(errors).length;
+      const errorList = Object.entries(errors)
+        .slice(0, 5) // Show first 5 errors
+        .map(([field, error]) => {
+          // Clean up field path for display
+          const fieldName = field.split('.').pop()?.replace(/([A-Z])/g, ' $1').trim() || field;
+          return `• ${fieldName}: ${error}`;
+        })
+        .join('\n');
+      
+      const moreErrors = errorCount > 5 ? `\n...and ${errorCount - 5} more errors` : '';
+      
       toast({
-        title: "Validation Error",
-        description: "Please fix the errors in the form before saving.",
+        title: `Validation Error (${errorCount} field${errorCount > 1 ? 's' : ''})`,
+        description: errorList + moreErrors,
         variant: "destructive"
       });
       return;
@@ -170,8 +187,8 @@ export const PublicationProfile: React.FC = () => {
 
   // Validation helpers
   const validateField = (fieldPath: string, value: any): string | undefined => {
-    // Email fields
-    if (fieldPath.includes('.email')) {
+    // Email fields (but exclude emailServiceProvider which is just a provider name)
+    if (fieldPath.includes('.email') && !fieldPath.includes('emailServiceProvider')) {
       const result = validateEmail(value);
       return result.error;
     }
@@ -290,7 +307,7 @@ export const PublicationProfile: React.FC = () => {
 
         {/* ESSENTIAL INFORMATION */}
         <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EEECE5' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Essential Information</h2>
           </div>
           <CardContent className="space-y-4">
@@ -316,7 +333,7 @@ export const PublicationProfile: React.FC = () => {
               </SchemaField>
 
               <SchemaField mappingStatus="full" schemaPath="basicInfo.primaryServiceArea" showSchemaPath={showSchemaDebug}>
-                <Label>Market <span className="text-red-500">*</span></Label>
+                <Label>Geographic Market <span className="text-red-500">*</span></Label>
                 <Input value={getFieldValue('basicInfo.primaryServiceArea')} onChange={(e) => updateField('basicInfo.primaryServiceArea', e.target.value)} placeholder="City, State" />
               </SchemaField>
 
@@ -348,199 +365,490 @@ export const PublicationProfile: React.FC = () => {
             </SchemaField>
 
             <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">Primary Contact</h4>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.name" showSchemaPath={showSchemaDebug}>
-                  <Label>Name</Label>
-                  <Input value={getFieldValue('contactInfo.primaryContact.name')} onChange={(e) => updateField('contactInfo.primaryContact.name', e.target.value)} />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.title" showSchemaPath={showSchemaDebug}>
-                  <Label>Title</Label>
-                  <Input value={getFieldValue('contactInfo.primaryContact.title')} onChange={(e) => updateField('contactInfo.primaryContact.title', e.target.value)} />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.email" showSchemaPath={showSchemaDebug}>
-                  <Label>Email <span className="text-red-500">*</span></Label>
-                  <Input 
-                    type="email" 
-                    value={getFieldValue('contactInfo.primaryContact.email')} 
-                    onChange={(e) => updateFieldWithValidation('contactInfo.primaryContact.email', e.target.value)} 
-                    className={getValidationClass(!!fieldErrors['contactInfo.primaryContact.email'])}
-                    onBlur={(e) => updateFieldWithValidation('contactInfo.primaryContact.email', e.target.value)}
-                  />
-                  <FieldError error={fieldErrors['contactInfo.primaryContact.email']} />
-                </SchemaField>
-                <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.phone" showSchemaPath={showSchemaDebug}>
-                  <Label>Phone</Label>
-                  <Input 
-                    type="tel" 
-                    value={getFieldValue('contactInfo.primaryContact.phone')} 
-                    onChange={(e) => updatePhoneField('contactInfo.primaryContact.phone', e.target.value)} 
-                    placeholder="(555) 555-5555" 
-                    className={getValidationClass(!!fieldErrors['contactInfo.primaryContact.phone'])}
-                    onBlur={(e) => updatePhoneField('contactInfo.primaryContact.phone', e.target.value)}
-                  />
-                  <FieldError error={fieldErrors['contactInfo.primaryContact.phone']} />
-                </SchemaField>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-sm">Contacts</h4>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Find first empty contact type and initialize it
+                    const contactTypes = ['salesContact', 'editorialContact', 'generalManager', 'advertisingDirector'];
+                    const emptyType = contactTypes.find(type => {
+                      const contact = formData.contactInfo?.[type as keyof typeof formData.contactInfo];
+                      return !contact;
+                    });
+                    if (emptyType) {
+                      // Initialize with empty object to show the card
+                      updateField(`contactInfo.${emptyType}`, { name: '', title: '', email: '', phone: '' });
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add Contact
+                </button>
               </div>
-              <div className="mt-3">
-                <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.preferredContact" showSchemaPath={showSchemaDebug}>
-                  <Label>Preferred Contact Method</Label>
-                  <Select value={getFieldValue('contactInfo.primaryContact.preferredContact')} onValueChange={(val) => updateField('contactInfo.primaryContact.preferredContact', val)}>
-                    <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="phone">Phone</SelectItem>
-                      <SelectItem value="text">Text</SelectItem>
-                      <SelectItem value="linkedin">LinkedIn</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </SchemaField>
-              </div>
-            </div>
-
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">Additional Contacts</h4>
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 
-                {/* Sales Contact */}
-                <div>
-                  <h5 className="text-sm font-medium mb-2 text-muted-foreground">Sales Contact</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Primary Contact Card */}
+                <div className="bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition-shadow">
+                  <div className="space-y-2">
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.name" showSchemaPath={showSchemaDebug}>
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Name</Label>
+                        <Input 
+                          value={getFieldValue('contactInfo.primaryContact.name')} 
+                          onChange={(e) => updateField('contactInfo.primaryContact.name', e.target.value)}
+                          className="rounded-md flex-1 h-8 text-xs"
+                          placeholder="Contact Name"
+                        />
+                      </div>
+                    </SchemaField>
+                    
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.title" showSchemaPath={showSchemaDebug}>
+                      <div className="flex items-center gap-1.5">
+                        <Briefcase className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Title</Label>
+                        <Input 
+                          value="Primary Contact"
+                          className="rounded-md flex-1 h-8 text-xs bg-gray-100 cursor-not-allowed"
+                          placeholder="Primary Contact"
+                          disabled
+                        />
+                      </div>
+                    </SchemaField>
+                    
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.email" showSchemaPath={showSchemaDebug}>
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Email <span className="text-red-500">*</span></Label>
+                        <div className="flex-1">
+                          <Input 
+                            type="email" 
+                            value={getFieldValue('contactInfo.primaryContact.email')} 
+                            onChange={(e) => updateFieldWithValidation('contactInfo.primaryContact.email', e.target.value)} 
+                            className={`rounded-md h-8 text-xs ${getValidationClass(!!fieldErrors['contactInfo.primaryContact.email'])}`}
+                            onBlur={(e) => updateFieldWithValidation('contactInfo.primaryContact.email', e.target.value)}
+                            placeholder="email@example.com"
+                          />
+                          <FieldError error={fieldErrors['contactInfo.primaryContact.email']} />
+                        </div>
+                      </div>
+                    </SchemaField>
+                    
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.phone" showSchemaPath={showSchemaDebug}>
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Phone</Label>
+                        <div className="flex-1">
+                          <Input 
+                            type="tel" 
+                            value={getFieldValue('contactInfo.primaryContact.phone')} 
+                            onChange={(e) => updatePhoneField('contactInfo.primaryContact.phone', e.target.value)} 
+                            className={`rounded-md h-8 text-xs ${getValidationClass(!!fieldErrors['contactInfo.primaryContact.phone'])}`}
+                            onBlur={(e) => updatePhoneField('contactInfo.primaryContact.phone', e.target.value)}
+                            placeholder="(555) 555-5555"
+                          />
+                          <FieldError error={fieldErrors['contactInfo.primaryContact.phone']} />
+                        </div>
+                      </div>
+                    </SchemaField>
+                  </div>
+                </div>
+
+                {/* Sales Contact Card - Only show if initialized */}
+                {(() => {
+                  const salesContact = formData.contactInfo?.salesContact;
+                  return salesContact !== undefined && salesContact !== null;
+                })() && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 p-0 z-10 shadow-sm"
+                      onClick={() => {
+                        setFormData(prevData => {
+                          const newData = deepClone(prevData);
+                          if (newData.contactInfo?.salesContact) {
+                            delete newData.contactInfo.salesContact;
+                          }
+                          return newData;
+                        });
+                      }}
+                      title="Delete contact"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  <div className="space-y-2 pr-10">
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.salesContact.name" showSchemaPath={showSchemaDebug}>
-                      <Label>Name</Label>
-                      <Input value={getFieldValue('contactInfo.salesContact.name')} onChange={(e) => updateField('contactInfo.salesContact.name', e.target.value)} />
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Name</Label>
+                        <Input 
+                          value={getFieldValue('contactInfo.salesContact.name')} 
+                          onChange={(e) => updateField('contactInfo.salesContact.name', e.target.value)}
+                          className="rounded-md flex-1 h-8 text-xs"
+                          placeholder="Contact Name"
+                        />
+                      </div>
                     </SchemaField>
+                    
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.salesContact.title" showSchemaPath={showSchemaDebug}>
-                      <Label>Title</Label>
-                      <Input value={getFieldValue('contactInfo.salesContact.title')} onChange={(e) => updateField('contactInfo.salesContact.title', e.target.value)} />
+                      <div className="flex items-center gap-1.5">
+                        <Briefcase className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Title</Label>
+                        <Select 
+                          value={getFieldValue('contactInfo.salesContact.title')} 
+                          onValueChange={(value) => updateField('contactInfo.salesContact.title', value)}
+                        >
+                          <SelectTrigger className="rounded-md flex-1 h-8 text-xs">
+                            <SelectValue placeholder="Select title" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Sales Contact">Sales Contact</SelectItem>
+                            <SelectItem value="Sales Manager">Sales Manager</SelectItem>
+                            <SelectItem value="Account Executive">Account Executive</SelectItem>
+                            <SelectItem value="Sales Director">Sales Director</SelectItem>
+                            <SelectItem value="Business Development">Business Development</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </SchemaField>
+                    
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.salesContact.email" showSchemaPath={showSchemaDebug}>
-                      <Label>Email</Label>
-                      <Input 
-                        type="email" 
-                        value={getFieldValue('contactInfo.salesContact.email')} 
-                        onChange={(e) => updateFieldWithValidation('contactInfo.salesContact.email', e.target.value)} 
-                        className={getValidationClass(!!fieldErrors['contactInfo.salesContact.email'])}
-                        onBlur={(e) => updateFieldWithValidation('contactInfo.salesContact.email', e.target.value)}
-                      />
-                      <FieldError error={fieldErrors['contactInfo.salesContact.email']} />
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Email</Label>
+                        <div className="flex-1">
+                          <Input 
+                            type="email" 
+                            value={getFieldValue('contactInfo.salesContact.email')} 
+                            onChange={(e) => updateFieldWithValidation('contactInfo.salesContact.email', e.target.value)} 
+                            className={`rounded-md h-8 text-xs ${getValidationClass(!!fieldErrors['contactInfo.salesContact.email'])}`}
+                            onBlur={(e) => updateFieldWithValidation('contactInfo.salesContact.email', e.target.value)}
+                            placeholder="email@example.com"
+                          />
+                          <FieldError error={fieldErrors['contactInfo.salesContact.email']} />
+                        </div>
+                      </div>
                     </SchemaField>
+                    
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.salesContact.phone" showSchemaPath={showSchemaDebug}>
-                      <Label>Phone</Label>
-                      <Input 
-                        type="tel" 
-                        value={getFieldValue('contactInfo.salesContact.phone')} 
-                        onChange={(e) => updatePhoneField('contactInfo.salesContact.phone', e.target.value)} 
-                        className={getValidationClass(!!fieldErrors['contactInfo.salesContact.phone'])}
-                        onBlur={(e) => updatePhoneField('contactInfo.salesContact.phone', e.target.value)}
-                      />
-                      <FieldError error={fieldErrors['contactInfo.salesContact.phone']} />
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Phone</Label>
+                        <div className="flex-1">
+                          <Input 
+                            type="tel" 
+                            value={getFieldValue('contactInfo.salesContact.phone')} 
+                            onChange={(e) => updatePhoneField('contactInfo.salesContact.phone', e.target.value)} 
+                            className={`rounded-md h-8 text-xs ${getValidationClass(!!fieldErrors['contactInfo.salesContact.phone'])}`}
+                            onBlur={(e) => updatePhoneField('contactInfo.salesContact.phone', e.target.value)}
+                            placeholder="(555) 555-5555"
+                          />
+                          <FieldError error={fieldErrors['contactInfo.salesContact.phone']} />
+                        </div>
+                      </div>
                     </SchemaField>
                   </div>
-                </div>
+                  </div>
+                )}
 
-                {/* Editorial Contact */}
-                <div>
-                  <h5 className="text-sm font-medium mb-2 text-muted-foreground">Editorial Contact</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Editorial Contact Card - Only show if initialized */}
+                {(() => {
+                  const editorialContact = formData.contactInfo?.editorialContact;
+                  return editorialContact !== undefined && editorialContact !== null;
+                })() && (
+                <div className="bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 p-0 z-10 shadow-sm"
+                    onClick={() => {
+                      setFormData(prevData => {
+                        const newData = deepClone(prevData);
+                        if (newData.contactInfo?.editorialContact) {
+                          delete newData.contactInfo.editorialContact;
+                        }
+                        return newData;
+                      });
+                    }}
+                    title="Delete contact"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <div className="space-y-2 pr-10">
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.editorialContact.name" showSchemaPath={showSchemaDebug}>
-                      <Label>Name</Label>
-                      <Input value={getFieldValue('contactInfo.editorialContact.name')} onChange={(e) => updateField('contactInfo.editorialContact.name', e.target.value)} />
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Name</Label>
+                        <Input 
+                          value={getFieldValue('contactInfo.editorialContact.name')} 
+                          onChange={(e) => updateField('contactInfo.editorialContact.name', e.target.value)}
+                          className="rounded-md flex-1 h-8 text-xs"
+                          placeholder="Contact Name"
+                        />
+                      </div>
                     </SchemaField>
+                    
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.editorialContact.title" showSchemaPath={showSchemaDebug}>
-                      <Label>Title</Label>
-                      <Input value={getFieldValue('contactInfo.editorialContact.title')} onChange={(e) => updateField('contactInfo.editorialContact.title', e.target.value)} />
+                      <div className="flex items-center gap-1.5">
+                        <Briefcase className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Title</Label>
+                        <Select 
+                          value={getFieldValue('contactInfo.editorialContact.title')} 
+                          onValueChange={(value) => updateField('contactInfo.editorialContact.title', value)}
+                        >
+                          <SelectTrigger className="rounded-md flex-1 h-8 text-xs">
+                            <SelectValue placeholder="Select title" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Editorial Contact">Editorial Contact</SelectItem>
+                            <SelectItem value="Editor-in-Chief">Editor-in-Chief</SelectItem>
+                            <SelectItem value="Managing Editor">Managing Editor</SelectItem>
+                            <SelectItem value="Senior Editor">Senior Editor</SelectItem>
+                            <SelectItem value="Editorial Director">Editorial Director</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </SchemaField>
+                    
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.editorialContact.email" showSchemaPath={showSchemaDebug}>
-                      <Label>Email</Label>
-                      <Input 
-                        type="email" 
-                        value={getFieldValue('contactInfo.editorialContact.email')} 
-                        onChange={(e) => updateFieldWithValidation('contactInfo.editorialContact.email', e.target.value)} 
-                        className={getValidationClass(!!fieldErrors['contactInfo.editorialContact.email'])}
-                        onBlur={(e) => updateFieldWithValidation('contactInfo.editorialContact.email', e.target.value)}
-                      />
-                      <FieldError error={fieldErrors['contactInfo.editorialContact.email']} />
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Email</Label>
+                        <div className="flex-1">
+                          <Input 
+                            type="email" 
+                            value={getFieldValue('contactInfo.editorialContact.email')} 
+                            onChange={(e) => updateFieldWithValidation('contactInfo.editorialContact.email', e.target.value)} 
+                            className={`rounded-md h-8 text-xs ${getValidationClass(!!fieldErrors['contactInfo.editorialContact.email'])}`}
+                            onBlur={(e) => updateFieldWithValidation('contactInfo.editorialContact.email', e.target.value)}
+                            placeholder="email@example.com"
+                          />
+                          <FieldError error={fieldErrors['contactInfo.editorialContact.email']} />
+                        </div>
+                      </div>
                     </SchemaField>
+                    
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.editorialContact.phone" showSchemaPath={showSchemaDebug}>
-                      <Label>Phone</Label>
-                      <Input 
-                        type="tel" 
-                        value={getFieldValue('contactInfo.editorialContact.phone')} 
-                        onChange={(e) => updatePhoneField('contactInfo.editorialContact.phone', e.target.value)} 
-                        className={getValidationClass(!!fieldErrors['contactInfo.editorialContact.phone'])}
-                        onBlur={(e) => updatePhoneField('contactInfo.editorialContact.phone', e.target.value)}
-                      />
-                      <FieldError error={fieldErrors['contactInfo.editorialContact.phone']} />
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Phone</Label>
+                        <div className="flex-1">
+                          <Input 
+                            type="tel" 
+                            value={getFieldValue('contactInfo.editorialContact.phone')} 
+                            onChange={(e) => updatePhoneField('contactInfo.editorialContact.phone', e.target.value)} 
+                            className={`rounded-md h-8 text-xs ${getValidationClass(!!fieldErrors['contactInfo.editorialContact.phone'])}`}
+                            onBlur={(e) => updatePhoneField('contactInfo.editorialContact.phone', e.target.value)}
+                            placeholder="(555) 555-5555"
+                          />
+                          <FieldError error={fieldErrors['contactInfo.editorialContact.phone']} />
+                        </div>
+                      </div>
                     </SchemaField>
                   </div>
                 </div>
+                )}
 
-                {/* General Manager */}
-                <div>
-                  <h5 className="text-sm font-medium mb-2 text-muted-foreground">General Manager</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* General Manager Card - Only show if initialized */}
+                {(() => {
+                  const generalManager = formData.contactInfo?.generalManager;
+                  return generalManager !== undefined && generalManager !== null;
+                })() && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 p-0 z-10 shadow-sm"
+                      onClick={() => {
+                        setFormData(prevData => {
+                          const newData = deepClone(prevData);
+                          if (newData.contactInfo?.generalManager) {
+                            delete newData.contactInfo.generalManager;
+                          }
+                          return newData;
+                        });
+                      }}
+                      title="Delete contact"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  <div className="space-y-2 pr-10">
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.generalManager.name" showSchemaPath={showSchemaDebug}>
-                      <Label>Name</Label>
-                      <Input value={getFieldValue('contactInfo.generalManager.name')} onChange={(e) => updateField('contactInfo.generalManager.name', e.target.value)} />
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Name</Label>
+                        <Input 
+                          value={getFieldValue('contactInfo.generalManager.name')} 
+                          onChange={(e) => updateField('contactInfo.generalManager.name', e.target.value)}
+                          className="rounded-md flex-1 h-8 text-xs"
+                          placeholder="Contact Name"
+                        />
+                      </div>
                     </SchemaField>
+                    
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.generalManager.title" showSchemaPath={showSchemaDebug}>
+                      <div className="flex items-center gap-1.5">
+                        <Briefcase className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Title</Label>
+                        <Select 
+                          value={getFieldValue('contactInfo.generalManager.title')} 
+                          onValueChange={(value) => updateField('contactInfo.generalManager.title', value)}
+                        >
+                          <SelectTrigger className="rounded-md flex-1 h-8 text-xs">
+                            <SelectValue placeholder="Select title" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="General Manager">General Manager</SelectItem>
+                            <SelectItem value="Operations Manager">Operations Manager</SelectItem>
+                            <SelectItem value="Managing Director">Managing Director</SelectItem>
+                            <SelectItem value="Publisher">Publisher</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </SchemaField>
+                    
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.generalManager.email" showSchemaPath={showSchemaDebug}>
-                      <Label>Email</Label>
-                      <Input 
-                        type="email" 
-                        value={getFieldValue('contactInfo.generalManager.email')} 
-                        onChange={(e) => updateFieldWithValidation('contactInfo.generalManager.email', e.target.value)} 
-                        className={getValidationClass(!!fieldErrors['contactInfo.generalManager.email'])}
-                        onBlur={(e) => updateFieldWithValidation('contactInfo.generalManager.email', e.target.value)}
-                      />
-                      <FieldError error={fieldErrors['contactInfo.generalManager.email']} />
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Email</Label>
+                        <div className="flex-1">
+                          <Input 
+                            type="email" 
+                            value={getFieldValue('contactInfo.generalManager.email')} 
+                            onChange={(e) => updateFieldWithValidation('contactInfo.generalManager.email', e.target.value)} 
+                            className={`rounded-md h-8 text-xs ${getValidationClass(!!fieldErrors['contactInfo.generalManager.email'])}`}
+                            onBlur={(e) => updateFieldWithValidation('contactInfo.generalManager.email', e.target.value)}
+                            placeholder="email@example.com"
+                          />
+                          <FieldError error={fieldErrors['contactInfo.generalManager.email']} />
+                        </div>
+                      </div>
                     </SchemaField>
+                    
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.generalManager.phone" showSchemaPath={showSchemaDebug}>
-                      <Label>Phone</Label>
-                      <Input 
-                        type="tel" 
-                        value={getFieldValue('contactInfo.generalManager.phone')} 
-                        onChange={(e) => updatePhoneField('contactInfo.generalManager.phone', e.target.value)} 
-                        className={getValidationClass(!!fieldErrors['contactInfo.generalManager.phone'])}
-                        onBlur={(e) => updatePhoneField('contactInfo.generalManager.phone', e.target.value)}
-                      />
-                      <FieldError error={fieldErrors['contactInfo.generalManager.phone']} />
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Phone</Label>
+                        <div className="flex-1">
+                          <Input 
+                            type="tel" 
+                            value={getFieldValue('contactInfo.generalManager.phone')} 
+                            onChange={(e) => updatePhoneField('contactInfo.generalManager.phone', e.target.value)} 
+                            className={`rounded-md h-8 text-xs ${getValidationClass(!!fieldErrors['contactInfo.generalManager.phone'])}`}
+                            onBlur={(e) => updatePhoneField('contactInfo.generalManager.phone', e.target.value)}
+                            placeholder="(555) 555-5555"
+                          />
+                          <FieldError error={fieldErrors['contactInfo.generalManager.phone']} />
+                        </div>
+                      </div>
                     </SchemaField>
                   </div>
-                </div>
+                  </div>
+                )}
 
-                {/* Advertising Director */}
-                <div>
-                  <h5 className="text-sm font-medium mb-2 text-muted-foreground">Advertising Director</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Advertising Director Card - Only show if initialized */}
+                {(() => {
+                  const advertisingDirector = formData.contactInfo?.advertisingDirector;
+                  return advertisingDirector !== undefined && advertisingDirector !== null;
+                })() && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 p-0 z-10 shadow-sm"
+                      onClick={() => {
+                        setFormData(prevData => {
+                          const newData = deepClone(prevData);
+                          if (newData.contactInfo?.advertisingDirector) {
+                            delete newData.contactInfo.advertisingDirector;
+                          }
+                          return newData;
+                        });
+                      }}
+                      title="Delete contact"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  <div className="space-y-2 pr-10">
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.advertisingDirector.name" showSchemaPath={showSchemaDebug}>
-                      <Label>Name</Label>
-                      <Input value={getFieldValue('contactInfo.advertisingDirector.name')} onChange={(e) => updateField('contactInfo.advertisingDirector.name', e.target.value)} />
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Name</Label>
+                        <Input 
+                          value={getFieldValue('contactInfo.advertisingDirector.name')} 
+                          onChange={(e) => updateField('contactInfo.advertisingDirector.name', e.target.value)}
+                          className="rounded-md flex-1 h-8 text-xs"
+                          placeholder="Contact Name"
+                        />
+                      </div>
                     </SchemaField>
+                    
+                    <SchemaField mappingStatus="full" schemaPath="contactInfo.advertisingDirector.title" showSchemaPath={showSchemaDebug}>
+                      <div className="flex items-center gap-1.5">
+                        <Briefcase className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Title</Label>
+                        <Select 
+                          value={getFieldValue('contactInfo.advertisingDirector.title')} 
+                          onValueChange={(value) => updateField('contactInfo.advertisingDirector.title', value)}
+                        >
+                          <SelectTrigger className="rounded-md flex-1 h-8 text-xs">
+                            <SelectValue placeholder="Select title" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Advertising Director">Advertising Director</SelectItem>
+                            <SelectItem value="Ad Sales Manager">Ad Sales Manager</SelectItem>
+                            <SelectItem value="Marketing Director">Marketing Director</SelectItem>
+                            <SelectItem value="Revenue Director">Revenue Director</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </SchemaField>
+                    
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.advertisingDirector.email" showSchemaPath={showSchemaDebug}>
-                      <Label>Email</Label>
-                      <Input 
-                        type="email" 
-                        value={getFieldValue('contactInfo.advertisingDirector.email')} 
-                        onChange={(e) => updateFieldWithValidation('contactInfo.advertisingDirector.email', e.target.value)} 
-                        className={getValidationClass(!!fieldErrors['contactInfo.advertisingDirector.email'])}
-                        onBlur={(e) => updateFieldWithValidation('contactInfo.advertisingDirector.email', e.target.value)}
-                      />
-                      <FieldError error={fieldErrors['contactInfo.advertisingDirector.email']} />
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Email</Label>
+                        <div className="flex-1">
+                          <Input 
+                            type="email" 
+                            value={getFieldValue('contactInfo.advertisingDirector.email')} 
+                            onChange={(e) => updateFieldWithValidation('contactInfo.advertisingDirector.email', e.target.value)} 
+                            className={`rounded-md h-8 text-xs ${getValidationClass(!!fieldErrors['contactInfo.advertisingDirector.email'])}`}
+                            onBlur={(e) => updateFieldWithValidation('contactInfo.advertisingDirector.email', e.target.value)}
+                            placeholder="email@example.com"
+                          />
+                          <FieldError error={fieldErrors['contactInfo.advertisingDirector.email']} />
+                        </div>
+                      </div>
                     </SchemaField>
+                    
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.advertisingDirector.phone" showSchemaPath={showSchemaDebug}>
-                      <Label>Phone</Label>
-                      <Input 
-                        type="tel" 
-                        value={getFieldValue('contactInfo.advertisingDirector.phone')} 
-                        onChange={(e) => updatePhoneField('contactInfo.advertisingDirector.phone', e.target.value)} 
-                        className={getValidationClass(!!fieldErrors['contactInfo.advertisingDirector.phone'])}
-                        onBlur={(e) => updatePhoneField('contactInfo.advertisingDirector.phone', e.target.value)}
-                      />
-                      <FieldError error={fieldErrors['contactInfo.advertisingDirector.phone']} />
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <Label className="text-xs text-gray-700 min-w-[50px]">Phone</Label>
+                        <div className="flex-1">
+                          <Input 
+                            type="tel" 
+                            value={getFieldValue('contactInfo.advertisingDirector.phone')} 
+                            onChange={(e) => updatePhoneField('contactInfo.advertisingDirector.phone', e.target.value)} 
+                            className={`rounded-md h-8 text-xs ${getValidationClass(!!fieldErrors['contactInfo.advertisingDirector.phone'])}`}
+                            onBlur={(e) => updatePhoneField('contactInfo.advertisingDirector.phone', e.target.value)}
+                            placeholder="(555) 555-5555"
+                          />
+                          <FieldError error={fieldErrors['contactInfo.advertisingDirector.phone']} />
+                        </div>
+                      </div>
                     </SchemaField>
                   </div>
-                </div>
+                  </div>
+                )}
 
               </div>
             </div>
@@ -549,7 +857,7 @@ export const PublicationProfile: React.FC = () => {
 
         {/* BUSINESS INFORMATION */}
         <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EEECE5' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Business Information</h2>
           </div>
           <CardContent className="space-y-4">
@@ -608,28 +916,9 @@ export const PublicationProfile: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* GEOGRAPHIC MARKETS */}
-        <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
-            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Geographic Markets</h2>
-          </div>
-          <CardContent className="space-y-4">
-            <SchemaField mappingStatus="full" schemaPath="basicInfo.primaryServiceArea" showSchemaPath={showSchemaDebug}>
-              <Label>Primary Coverage <span className="text-red-500">*</span></Label>
-              <Input value={getFieldValue('basicInfo.primaryServiceArea')} onChange={(e) => updateField('basicInfo.primaryServiceArea', e.target.value)} placeholder="Neighborhood, city, region, or metro" />
-            </SchemaField>
-
-            <SchemaField mappingStatus="full" schemaPath="basicInfo.secondaryMarkets" showSchemaPath={showSchemaDebug}>
-              <Label>Secondary Coverage</Label>
-              <Input value={transformers.arrayToString(getFieldValue('basicInfo.secondaryMarkets'))} onChange={(e) => updateField('basicInfo.secondaryMarkets', transformers.stringToArray(e.target.value))} placeholder="Comma-separated if multiple" />
-            </SchemaField>
-          </CardContent>
-        </Card>
-
-
         {/* AUDIENCE DEMOGRAPHICS */}
         <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EEECE5' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Audience Demographics</h2>
           </div>
           <CardContent className="space-y-6">
@@ -715,14 +1004,6 @@ export const PublicationProfile: React.FC = () => {
 
             {/* Location and Interests */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t">
-              <SchemaField mappingStatus="full" schemaPath="audienceDemographics.location" showSchemaPath={showSchemaDebug}>
-                <Label>Primary Geographic Audience</Label>
-                <Input 
-                  value={getFieldValue('audienceDemographics.location')} 
-                  onChange={(e) => updateField('audienceDemographics.location', e.target.value)} 
-                  placeholder="e.g. Chicago metropolitan area" 
-                />
-              </SchemaField>
               
               <SchemaField mappingStatus="full" schemaPath="audienceDemographics.interests" showSchemaPath={showSchemaDebug}>
                 <Label>Primary Audience Interests</Label>
@@ -752,7 +1033,7 @@ export const PublicationProfile: React.FC = () => {
 
         {/* POSITIONING & UNIQUE VALUE */}
         <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EEECE5' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Positioning & Unique Value</h2>
           </div>
           <CardContent className="space-y-4">
@@ -790,7 +1071,7 @@ export const PublicationProfile: React.FC = () => {
 
         {/* NOTES */}
         <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EDEAE1' }}>
+          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EEECE5' }}>
             <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Notes</h2>
           </div>
           <CardContent>
@@ -860,11 +1141,9 @@ export const PublicationProfile: React.FC = () => {
       </div>
 
       {/* ESSENTIAL INFORMATION */}
-      <Card>
-        <div className="py-3 px-6 mb-6" style={{ backgroundColor: '#EDEAE1' }}>
-          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Essential Information</h2>
-        </div>
-        <CardContent className="space-y-4">
+      <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
+        <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Essential Information</h2>
+        <div className="bg-white rounded-xl p-6 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Publication</p>
@@ -875,7 +1154,7 @@ export const PublicationProfile: React.FC = () => {
               <p className="mt-1">{get('basicInfo.publicationType') || 'Not specified'}</p>
             </div>
                   <div>
-              <p className="text-sm font-medium text-muted-foreground">Market</p>
+              <p className="text-sm font-medium text-muted-foreground">Geographic Market</p>
               <p className="mt-1">{get('basicInfo.primaryServiceArea') || 'Not specified'}</p>
                             </div>
             <div>
@@ -915,45 +1194,184 @@ export const PublicationProfile: React.FC = () => {
             if (!hasAnyContactData) return null;
             
             return (
-              <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {hasPrimaryData && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Primary Contact</p>
-                    <p>{primaryContact.name || 'Not specified'} | {primaryContact.email || 'Not specified'} | {primaryContact.phone || 'Not specified'}</p>
-                    {primaryContact.title && <p className="text-sm text-muted-foreground">{primaryContact.title}</p>}
-                    {primaryContact.preferredContact && <p className="text-sm text-muted-foreground">Prefers: {primaryContact.preferredContact}</p>}
-                  </div>
-                )}
-                {hasSalesData && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Sales Contact</p>
-                    <p>{salesContact.name || 'Not specified'} | {salesContact.email || 'Not specified'} | {salesContact.phone || 'Not specified'}</p>
-                    {salesContact.title && <p className="text-sm text-muted-foreground">{salesContact.title}</p>}
-                  </div>
-                )}
-                {hasEditorialData && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Editorial Contact</p>
-                    <p>{editorialContact.name || 'Not specified'} | {editorialContact.email || 'Not specified'} | {editorialContact.phone || 'Not specified'}</p>
-                    {editorialContact.title && <p className="text-sm text-muted-foreground">{editorialContact.title}</p>}
-                  </div>
-                )}
-                {hasGeneralManagerData && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">General Manager</p>
-                    <p>{generalManager.name || 'Not specified'} | {generalManager.email || 'Not specified'} | {generalManager.phone || 'Not specified'}</p>
-                  </div>
-                )}
-                {hasAdvertisingDirectorData && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Advertising Director</p>
-                    <p>{advertisingDirector.name || 'Not specified'} | {advertisingDirector.email || 'Not specified'} | {advertisingDirector.phone || 'Not specified'}</p>
-                  </div>
-                )}
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3 text-sm">Contacts</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {hasPrimaryData && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                      <div className="space-y-1.5">
+                        {primaryContact.name && (
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Name</span>
+                            <p className="text-xs font-medium">{primaryContact.name}</p>
+                          </div>
+                        )}
+                        {primaryContact.title && (
+                          <div className="flex items-center gap-1.5">
+                            <Briefcase className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Title</span>
+                            <p className="text-xs">{primaryContact.title}</p>
+                          </div>
+                        )}
+                        {primaryContact.email && (
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Email</span>
+                            <p className="text-xs">{primaryContact.email}</p>
+                          </div>
+                        )}
+                        {primaryContact.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Phone</span>
+                            <p className="text-xs">{primaryContact.phone}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {hasSalesData && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                      <div className="space-y-1.5">
+                        {salesContact.name && (
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Name</span>
+                            <p className="text-xs font-medium">{salesContact.name}</p>
+                          </div>
+                        )}
+                        {salesContact.title && (
+                          <div className="flex items-center gap-1.5">
+                            <Briefcase className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Title</span>
+                            <p className="text-xs">{salesContact.title}</p>
+                          </div>
+                        )}
+                        {salesContact.email && (
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Email</span>
+                            <p className="text-xs">{salesContact.email}</p>
+                          </div>
+                        )}
+                        {salesContact.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Phone</span>
+                            <p className="text-xs">{salesContact.phone}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {hasEditorialData && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                      <div className="space-y-1.5">
+                        {editorialContact.name && (
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Name</span>
+                            <p className="text-xs font-medium">{editorialContact.name}</p>
+                          </div>
+                        )}
+                        {editorialContact.title && (
+                          <div className="flex items-center gap-1.5">
+                            <Briefcase className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Title</span>
+                            <p className="text-xs">{editorialContact.title}</p>
+                          </div>
+                        )}
+                        {editorialContact.email && (
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Email</span>
+                            <p className="text-xs">{editorialContact.email}</p>
+                          </div>
+                        )}
+                        {editorialContact.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Phone</span>
+                            <p className="text-xs">{editorialContact.phone}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {hasGeneralManagerData && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                      <div className="space-y-1.5">
+                        {generalManager.name && (
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Name</span>
+                            <p className="text-xs font-medium">{generalManager.name}</p>
+                          </div>
+                        )}
+                        {generalManager.title && (
+                          <div className="flex items-center gap-1.5">
+                            <Briefcase className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Title</span>
+                            <p className="text-xs">{generalManager.title}</p>
+                          </div>
+                        )}
+                        {generalManager.email && (
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Email</span>
+                            <p className="text-xs">{generalManager.email}</p>
+                          </div>
+                        )}
+                        {generalManager.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Phone</span>
+                            <p className="text-xs">{generalManager.phone}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {hasAdvertisingDirectorData && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                      <div className="space-y-1.5">
+                        {advertisingDirector.name && (
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Name</span>
+                            <p className="text-xs font-medium">{advertisingDirector.name}</p>
+                          </div>
+                        )}
+                        {advertisingDirector.title && (
+                          <div className="flex items-center gap-1.5">
+                            <Briefcase className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Title</span>
+                            <p className="text-xs">{advertisingDirector.title}</p>
+                          </div>
+                        )}
+                        {advertisingDirector.email && (
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Email</span>
+                            <p className="text-xs">{advertisingDirector.email}</p>
+                          </div>
+                        )}
+                        {advertisingDirector.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 min-w-[50px]">Phone</span>
+                            <p className="text-xs">{advertisingDirector.phone}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })()}
-        </CardContent>
+        </div>
       </Card>
 
       {/* BUSINESS INFORMATION - Only show if there's data */}
@@ -970,11 +1388,9 @@ export const PublicationProfile: React.FC = () => {
         if (!hasBusinessData) return null;
         
         return (
-          <Card>
-            <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-              <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Business Information</h2>
-            </div>
-            <CardContent className="space-y-3">
+          <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
+            <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Business Information</h2>
+            <div className="bg-white rounded-xl p-6 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {businessInfo.legalEntity && (
                   <div>
@@ -1007,48 +1423,15 @@ export const PublicationProfile: React.FC = () => {
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        );
-      })()}
-
-      {/* GEOGRAPHIC MARKETS - Only show if there's data */}
-      {(() => {
-        const primaryArea = get('basicInfo.primaryServiceArea');
-        const secondaryMarkets = get('basicInfo.secondaryMarkets');
-        const hasSecondaryData = secondaryMarkets && Array.isArray(secondaryMarkets) && secondaryMarkets.length > 0;
-        
-        if (!primaryArea && !hasSecondaryData) return null;
-        
-        return (
-          <Card>
-            <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-              <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Geographic Markets</h2>
             </div>
-            <CardContent className="space-y-3">
-              {primaryArea && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Primary Coverage</p>
-                  <p className="mt-1">{primaryArea}</p>
-                </div>
-              )}
-              {hasSecondaryData && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Secondary Coverage</p>
-                  <p className="mt-1">{transformers.arrayToString(secondaryMarkets)}</p>
-                </div>
-              )}
-            </CardContent>
           </Card>
         );
       })()}
 
       {/* KEY METRICS - Dynamic based on active channels with inventory */}
-      <Card>
-        <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Key Metrics</h2>
-        </div>
-        <CardContent className="space-y-4">
+      <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
+        <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Key Metrics</h2>
+        <div className="bg-white rounded-xl p-6 space-y-4">
           {(() => {
             const activeChannels = getActiveChannelMetrics(selectedPublication);
             
@@ -1066,7 +1449,7 @@ export const PublicationProfile: React.FC = () => {
               <ChannelMetricCard key={channel.key} channel={channel} />
             ));
           })()}
-        </CardContent>
+        </div>
       </Card>
 
       {/* AUDIENCE DEMOGRAPHICS - Only show if there's data */}
@@ -1075,25 +1458,20 @@ export const PublicationProfile: React.FC = () => {
         const income = get('audienceDemographics.householdIncome');
         const gender = get('audienceDemographics.gender');
         const education = get('audienceDemographics.education');
-        const location = get('audienceDemographics.location');
         
         // Check if any demographic data exists
         const hasAgeData = ageGroups && Object.values(ageGroups).some((val: any) => val > 0);
         const hasIncomeData = income && Object.values(income).some((val: any) => val > 0);
         const hasGenderData = gender && (gender.male > 0 || gender.female > 0 || gender.other > 0);
         const hasEducationData = education && Object.values(education).some((val: any) => val > 0);
-        const hasLocationData = location && location !== 'Not specified';
-        
-        const hasDemographicData = hasAgeData || hasIncomeData || hasGenderData || hasEducationData || hasLocationData;
+        const hasDemographicData = hasAgeData || hasIncomeData || hasGenderData || hasEducationData;
         
         if (!hasDemographicData) return null;
         
         return (
-          <Card>
-            <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-              <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Audience Demographics</h2>
-            </div>
-            <CardContent className="space-y-6">
+          <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
+            <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Audience Demographics</h2>
+            <div className="bg-white rounded-xl p-6 space-y-6">
               {/* Age Groups & Household Income - Side by Side on Desktop */}
               {(hasAgeData || hasIncomeData) && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:divide-x lg:divide-gray-200">
@@ -1158,25 +1536,15 @@ export const PublicationProfile: React.FC = () => {
                   />
                 </div>
               )}
-
-              {/* Geography */}
-              {hasLocationData && (
-                <div className="pt-6 border-t">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Primary Geographic Audience</p>
-                  <p className="text-sm text-gray-900">{location}</p>
-                </div>
-              )}
-            </CardContent>
+            </div>
           </Card>
         );
       })()}
 
       {/* POSITIONING & UNIQUE VALUE */}
-      <Card>
-        <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Positioning & Unique Value</h2>
-        </div>
-        <CardContent className="space-y-4">
+      <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
+        <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Positioning & Unique Value</h2>
+        <div className="bg-white rounded-xl p-6 space-y-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Market Position</p>
             <p className="mt-1">{get('competitiveInfo.uniqueValueProposition') || 'Not specified'}</p>
@@ -1193,15 +1561,13 @@ export const PublicationProfile: React.FC = () => {
               <p className="text-gray-400 italic">No differentiators listed</p>
                 )}
               </div>
-        </CardContent>
+        </div>
       </Card>
 
       {/* CHANNELS OFFERED */}
-      <Card>
-        <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Channels Offered</h2>
-        </div>
-        <CardContent>
+      <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
+        <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Channels Offered</h2>
+        <div className="bg-white rounded-xl p-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {[
               { label: 'Website Advertising', path: 'distributionChannels.website' },
@@ -1224,17 +1590,15 @@ export const PublicationProfile: React.FC = () => {
               );
             })}
               </div>
-            </CardContent>
+            </div>
           </Card>
 
       {/* NOTES */}
-      <Card>
-        <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#E6E4DC' }}>
-          <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Notes</h2>
-        </div>
-        <CardContent>
+      <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
+        <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Notes</h2>
+        <div className="bg-white rounded-xl p-6">
           <p className="whitespace-pre-wrap">{get('internalNotes.operationalNotes') || 'No notes available'}</p>
-        </CardContent>
+        </div>
       </Card>
 
       <div className="text-center text-sm text-muted-foreground pb-4 border-t pt-4">
