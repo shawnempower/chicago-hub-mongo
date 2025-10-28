@@ -2,6 +2,7 @@ import React, { useState, Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { LeadManagement } from './LeadManagement';
 import { PackageManagement } from './PackageManagement';
 import { AssistantManagement } from './AssistantManagement';
@@ -231,6 +232,13 @@ export const AdminDashboard = () => {
                     <p className="text-xs text-muted-foreground">Newsletter Subscribers</p>
                   </div>
                   <div className="text-center">
+                    <div className="text-2xl font-bold text-amber-600">
+                      {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 
+                        (stats?.audienceMetrics?.totalPrintCirculation ?? 0).toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Print Circulation</p>
+                  </div>
+                  <div className="text-center">
                     <div className="text-2xl font-bold text-purple-600">
                       {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 
                         (stats?.audienceMetrics?.totalSocialFollowers ?? 0).toLocaleString()}
@@ -267,9 +275,9 @@ export const AdminDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5" />
-                  Pricing Insights
+                  Default Pricing
                 </CardTitle>
-                <CardDescription>Estimated monthly revenue potential per ad unit</CardDescription>
+                <CardDescription>Base pricing (without hub-specific rates)</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -338,6 +346,113 @@ export const AdminDashboard = () => {
                       Combined potential of all inventory
                     </p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Hub Pricing */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Hub Pricing
+                </CardTitle>
+                <CardDescription>Program-specific pricing by hub</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="mb-3">
+                    <Label className="text-sm mb-2 block">Select Hub</Label>
+                    <Select value={selectedHub} onValueChange={setSelectedHub}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a hub" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Hubs</SelectItem>
+                        {stats?.hubPricingInsights && Object.keys(stats.hubPricingInsights).map(hubId => (
+                          <SelectItem key={hubId} value={hubId}>
+                            {hubId.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedHub === 'all' ? (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      {Object.keys(stats?.hubPricingInsights || {}).length === 0 ? (
+                        <p>No hub-specific pricing configured yet</p>
+                      ) : (
+                        <p>Select a hub to view pricing details</p>
+                      )}
+                    </div>
+                  ) : stats?.hubPricingInsights?.[selectedHub] ? (
+                    <>
+                      <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
+                        <p className="font-medium">
+                          📊 {stats.hubPricingInsights[selectedHub].inventoryCount} inventory items with hub pricing
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Website Ads</span>
+                        <span className="font-semibold">
+                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                            `$${stats.hubPricingInsights[selectedHub].averageWebsiteAdPrice.toLocaleString()}/mo`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Newsletter Ads</span>
+                        <span className="font-semibold">
+                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                            `$${stats.hubPricingInsights[selectedHub].averageNewsletterAdPrice.toLocaleString()}/mo`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Print Ads</span>
+                        <span className="font-semibold">
+                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                            `$${stats.hubPricingInsights[selectedHub].averagePrintAdPrice.toLocaleString()}/mo`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Podcast Ads</span>
+                        <span className="font-semibold">
+                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                            `$${stats.hubPricingInsights[selectedHub].averagePodcastAdPrice.toLocaleString()}/mo`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Streaming Ads</span>
+                        <span className="font-semibold">
+                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                            `$${stats.hubPricingInsights[selectedHub].averageStreamingAdPrice.toLocaleString()}/mo`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Radio Ads</span>
+                        <span className="font-semibold">
+                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                            `$${stats.hubPricingInsights[selectedHub].averageRadioAdPrice.toLocaleString()}/mo`}
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Total Hub Value</span>
+                          <span className="font-bold text-green-600">
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                              `$${stats.hubPricingInsights[selectedHub].totalInventoryValue.toLocaleString()}/mo`}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Monthly potential for this hub
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      <p>No data available for selected hub</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
