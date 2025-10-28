@@ -118,7 +118,7 @@ export const AdminDashboard = () => {
           </div>
 
           {/* Marketplace Insights Section */}
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             {/* Inventory Breakdown */}
             <Card>
               <CardHeader>
