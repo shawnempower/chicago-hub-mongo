@@ -155,6 +155,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                         value={`${publication.basicInfo.publicationName} ${publication.basicInfo.websiteUrl || ''}`}
                         onSelect={() => {
                           setSelectedPublication(publication);
+                          setSearch('');
                           setOpen(false);
                         }}
                         className="px-2"
@@ -236,6 +237,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                       value={`${publication.basicInfo.publicationName} ${publication.basicInfo.websiteUrl || ''}`}
                       onSelect={() => {
                         setSelectedPublication(publication);
+                        setSearch('');
                         setOpen(false);
                       }}
                       className="px-2"
