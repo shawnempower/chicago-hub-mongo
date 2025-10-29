@@ -4495,9 +4495,9 @@ export const DashboardInventoryManager = () => {
                         label: 'Frequency',
                         type: 'text',
                         showWhen: ['per_send'],
-                        placeholder: 'e.g., Weekly, Monthly, One time',
-                        pattern: '^(?:One time|one time|Weekly|weekly|Monthly|monthly|Daily|daily|Bi-weekly|bi-weekly)$',
-                        patternMessage: 'Enter a frequency like "Weekly", "Monthly", "Daily", "Bi-weekly", or "One time"'
+                        placeholder: 'e.g., 1x, 2x, 3x, etc',
+                        pattern: '^\\d+x$',
+                        patternMessage: 'Enter a frequency like "1x", "2x", "12x", etc.'
                       }
                     ]}
                     allowMultipleDefaultPricing={true}
@@ -4601,9 +4601,9 @@ export const DashboardInventoryManager = () => {
                         label: 'Frequency',
                         type: 'text',
                         showWhen: ['per_ad', 'per_line'],
-                        placeholder: 'e.g., 4x, 12x, One time',
-                        pattern: '^(?:\\d+x|One time|one time)$',
-                        patternMessage: 'Enter a frequency like "4x", "12x", or "One time"'
+                        placeholder: 'e.g., 1x, 2x, 3x, etc',
+                        pattern: '^\\d+x$',
+                        patternMessage: 'Enter a frequency like "1x", "2x", "12x", etc.'
                       }
                     ]}
                     allowMultipleDefaultPricing={true}
@@ -4753,9 +4753,9 @@ export const DashboardInventoryManager = () => {
                         label: 'Frequency',
                         type: 'text',
                         showWhen: ['cpd', 'cpm', 'per_episode'],
-                        placeholder: 'e.g., 10x, 20x, One time',
-                        pattern: '^(?:\\d+x|One time|one time)$',
-                        patternMessage: 'Enter a frequency like "10x", "20x", or "One time"'
+                        placeholder: 'e.g., 1x, 2x, 3x, etc',
+                        pattern: '^\\d+x$',
+                        patternMessage: 'Enter a frequency like "1x", "2x", "12x", etc.'
                       }
                     ]}
                     allowMultipleDefaultPricing={true}
@@ -4863,9 +4863,9 @@ export const DashboardInventoryManager = () => {
                         label: 'Frequency',
                         type: 'text',
                         showWhen: ['per_spot'],
-                        placeholder: 'e.g., Weekly, Monthly, One time',
-                        pattern: '^(?:One time|one time|Weekly|weekly|Monthly|monthly|Daily|daily)$',
-                        patternMessage: 'Enter a frequency like "Weekly", "Monthly", "Daily", or "One time"'
+                        placeholder: 'e.g., 1x, 2x, 3x, etc',
+                        pattern: '^\\d+x$',
+                        patternMessage: 'Enter a frequency like "1x", "2x", "12x", etc.'
                       }
                     ]}
                     allowMultipleDefaultPricing={true}

@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { FrequencyInput } from './FrequencyInput';
 
 export interface HubPrice {
   hubId: string;
@@ -79,6 +80,36 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
   const defaultPricingArray: DefaultPrice[] = Array.isArray(defaultPricing) 
     ? defaultPricing 
     : [{ pricing: defaultPricing }];
+
+  /**
+   * Calculate total price based on flatRate × frequency multiplier
+   * Example: $300 × 4x = $1200
+   */
+  const calculateTotal = (pricing: { [key: string]: number | string }): number | null => {
+    const flatRate = pricing.flatRate as number;
+    const frequency = pricing.frequency as string;
+    const pricingModel = pricing.pricingModel as string;
+
+    // Don't calculate for contact pricing
+    if (pricingModel === 'contact' || !flatRate) {
+      return null;
+    }
+
+    // If no frequency, just return the base price
+    if (!frequency) {
+      return flatRate;
+    }
+
+    // Extract multiplier from frequency (e.g., "4x" -> 4, "12x" -> 12)
+    const match = frequency.match(/^(\d+)x$/);
+    if (match) {
+      const multiplier = parseInt(match[1], 10);
+      return flatRate * multiplier;
+    }
+
+    // If frequency doesn't match pattern, just return base price
+    return flatRate;
+  };
 
   const addDefaultPricing = () => {
     // Initialize with the default pricing model that will be shown in the Select dropdown
@@ -244,6 +275,26 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                 
                 if (!shouldShow) return null;
                 
+                // Use FrequencyInput for frequency fields
+                if (condField.type === 'text' && condField.key === 'frequency') {
+                  return (
+                    <FrequencyInput
+                      key={condField.key}
+                      value={defaultPrice.pricing[condField.key] as string || ''}
+                      onChange={(value) =>
+                        updateDefaultPricing(defaultIndex, {
+                          ...defaultPrice.pricing,
+                          [condField.key]: value,
+                        })
+                      }
+                      label={condField.label}
+                      className="w-52 flex-shrink-0"
+                      showQuickOptions={false}
+                      compact={true}
+                    />
+                  );
+                }
+                
                 if (condField.type === 'text') {
                   return (
                     <div key={condField.key} className="w-52 flex-shrink-0">
@@ -291,6 +342,24 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                   </div>
                 );
               })}
+
+              {/* Total Price Display */}
+              {(() => {
+                const total = calculateTotal(defaultPrice.pricing);
+                if (total !== null && total > 0) {
+                  return (
+                    <div className="w-32 flex-shrink-0">
+                      <Label className="text-xs mb-1 block">Total</Label>
+                      <div className="h-10 px-3 flex items-center bg-green-50 border border-green-200 rounded-md">
+                        <span className="text-sm font-semibold text-green-700">
+                          ${total.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
               {/* Delete button - disabled for first row if multiple allowed, always disabled if only one allowed */}
               <div className="flex items-end">
@@ -429,6 +498,28 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                     
                     if (!shouldShow) return null;
                     
+                    // Use FrequencyInput for frequency fields
+                    if (condField.type === 'text' && condField.key === 'frequency') {
+                      return (
+                        <FrequencyInput
+                          key={condField.key}
+                          value={hubPrice.pricing[condField.key] as string || ''}
+                          onChange={(value) =>
+                            updateHubPricing(index, {
+                              pricing: {
+                                ...hubPrice.pricing,
+                                [condField.key]: value,
+                              },
+                            })
+                          }
+                          label={condField.label}
+                          className="w-52 flex-shrink-0"
+                          showQuickOptions={false}
+                          compact={true}
+                        />
+                      );
+                    }
+                    
                     if (condField.type === 'text') {
                       return (
                         <div key={condField.key} className="w-52 flex-shrink-0">
@@ -480,6 +571,24 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                       </div>
                     );
                   })}
+
+                  {/* Total Price Display */}
+                  {(() => {
+                    const total = calculateTotal(hubPrice.pricing);
+                    if (total !== null && total > 0) {
+                      return (
+                        <div className="w-32 flex-shrink-0">
+                          <Label className="text-xs mb-2 block">Total</Label>
+                          <div className="h-10 px-3 flex items-center bg-green-50 border border-green-200 rounded-md">
+                            <span className="text-sm font-semibold text-green-700">
+                              ${total.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                   {/* Delete button - icon only with light red background */}
                   <div className="flex items-end">
