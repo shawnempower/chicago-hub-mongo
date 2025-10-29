@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { usePublication } from '@/contexts/PublicationContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -41,7 +41,9 @@ interface PublicationSelectorProps {
 export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compact = false }) => {
   const { selectedPublication, setSelectedPublication, availablePublications, loading, error } = usePublication();
   const [searchTerm, setSearchTerm] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
   const [, forceRender] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Handle keyboard events in search input to prevent Select from intercepting them
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -55,6 +57,13 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
     }
   };
 
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      setTimeout(() => searchInputRef.current?.focus(), 10);
+    }
+  }, [isOpen]);
+
   // Only prefetch brand color for the currently selected publication (lazy loading)
   // Colors for other publications will load on-demand when rendering their avatars
   useEffect(() => {
@@ -63,17 +72,21 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
         forceRender(prev => prev + 1);
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPublication?.publicationId]);
 
-  // Filter publications based on search term
-  const filteredPublications = availablePublications.filter((publication) => {
-    if (!searchTerm) return true;
+  // Filter publications based on search term - memoized for performance
+  const filteredPublications = useMemo(() => {
+    if (!searchTerm) return availablePublications;
+    
     const searchLower = searchTerm.toLowerCase();
-    return (
-      publication.basicInfo.publicationName?.toLowerCase().includes(searchLower) ||
-      publication.basicInfo.websiteUrl?.toLowerCase().includes(searchLower)
-    );
-  });
+    return availablePublications.filter((publication) => {
+      return (
+        publication.basicInfo.publicationName?.toLowerCase().includes(searchLower) ||
+        publication.basicInfo.websiteUrl?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [searchTerm, availablePublications]);
 
 
   if (loading) {
@@ -124,7 +137,9 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
             );
             setSelectedPublication(publication || null);
           }}
+          open={isOpen}
           onOpenChange={(open) => {
+            setIsOpen(open);
             if (!open) setSearchTerm('');
           }}
         >
@@ -146,15 +161,17 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
             </div>
           </SelectTrigger>
           <SelectContent>
-            <div className="p-2 border-b sticky top-0 bg-white">
+            <div className="p-2 border-b sticky top-0 bg-white z-10">
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
+                  ref={searchInputRef}
                   placeholder="Search publications..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-7 h-7 text-xs bg-white"
                   onKeyDown={handleSearchKeyDown}
+                  autoComplete="off"
                 />
               </div>
             </div>
@@ -212,7 +229,9 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
           );
           setSelectedPublication(publication || null);
         }}
+        open={isOpen}
         onOpenChange={(open) => {
+          setIsOpen(open);
           if (!open) setSearchTerm('');
         }}
       >
@@ -234,15 +253,17 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
           </div>
         </SelectTrigger>
         <SelectContent>
-          <div className="p-2 border-b sticky top-0 bg-white">
+          <div className="p-2 border-b sticky top-0 bg-white z-10">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                ref={searchInputRef}
                 placeholder="Search publications..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8 h-8 text-sm bg-white"
                 onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
               />
             </div>
           </div>
