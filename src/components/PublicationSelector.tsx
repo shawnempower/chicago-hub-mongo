@@ -60,7 +60,13 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
     return (
       publication.basicInfo.publicationName?.toLowerCase().includes(searchLower) ||
       publication.basicInfo.publicationType?.toLowerCase().includes(searchLower) ||
-      publication.basicInfo.geographicCoverage?.toLowerCase().includes(searchLower)
+      publication.basicInfo.geographicCoverage?.toLowerCase().includes(searchLower) ||
+      publication.basicInfo.contentType?.toLowerCase().includes(searchLower) ||
+      publication.basicInfo.primaryServiceArea?.toLowerCase().includes(searchLower) ||
+      publication.basicInfo.headquarters?.toLowerCase().includes(searchLower) ||
+      publication.basicInfo.secondaryMarkets?.some(market => 
+        market.toLowerCase().includes(searchLower)
+      )
     );
   });
 
