@@ -43,6 +43,7 @@ interface PublicationSelectorProps {
 export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compact = false }) => {
   const { selectedPublication, setSelectedPublication, availablePublications, loading, error } = usePublication();
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const [, forceRender] = useState(0);
 
   // Only prefetch brand color for the currently selected publication (lazy loading)
@@ -54,6 +55,16 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPublication?.publicationId]);
+
+  // Filter publications based on search
+  const filteredPublications = useMemo(() => {
+    if (!search) return availablePublications;
+    const searchLower = search.toLowerCase();
+    return availablePublications.filter((pub) => 
+      pub.basicInfo.publicationName?.toLowerCase().includes(searchLower) ||
+      pub.basicInfo.websiteUrl?.toLowerCase().includes(searchLower)
+    );
+  }, [search, availablePublications]);
 
   if (loading) {
     return (
@@ -95,7 +106,10 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
         <div className="w-px h-full bg-border" />
         
         {/* Dropdown Section */}
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={(isOpen) => {
+          setOpen(isOpen);
+          if (!isOpen) setSearch('');
+        }}>
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
@@ -120,12 +134,16 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[300px] p-0" align="start">
-            <Command>
-              <CommandInput placeholder="Search publications..." />
+            <Command shouldFilter={false}>
+              <CommandInput 
+                placeholder="Search publications..." 
+                value={search}
+                onValueChange={setSearch}
+              />
               <CommandList>
                 <CommandEmpty>No publication found.</CommandEmpty>
                 <CommandGroup>
-                  {availablePublications.map((publication) => {
+                  {filteredPublications.map((publication) => {
                     const isSelected = selectedPublication?.publicationId === publication.publicationId;
                     const avatarColor = isSelected 
                       ? getPublicationBrandColor(publication.publicationId)
@@ -173,7 +191,10 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
       <span className="text-[1.09375rem] font-medium text-muted-foreground whitespace-nowrap font-serif">
         Active Publication
       </span>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) setSearch('');
+      }}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -198,12 +219,16 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Search publications..." />
+          <Command shouldFilter={false}>
+            <CommandInput 
+              placeholder="Search publications..." 
+              value={search}
+              onValueChange={setSearch}
+            />
             <CommandList>
               <CommandEmpty>No publication found.</CommandEmpty>
               <CommandGroup>
-                {availablePublications.map((publication) => {
+                {filteredPublications.map((publication) => {
                   const isSelected = selectedPublication?.publicationId === publication.publicationId;
                   const avatarColor = isSelected 
                     ? getPublicationBrandColor(publication.publicationId)
