@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { usePublication } from '@/contexts/PublicationContext';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Building2, Search } from 'lucide-react';
+import { Building2, Check, ChevronsUpDown } from 'lucide-react';
 import { getPublicationBrandColor, prefetchBrandColors } from '@/config/publicationBrandColors';
+import { cn } from '@/lib/utils';
 
 // Color system for tags with light backgrounds and darker text
 const getTagColors = (value: string): { bg: string; text: string } => {
@@ -40,23 +42,10 @@ interface PublicationSelectorProps {
 
 export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compact = false }) => {
   const { selectedPublication, setSelectedPublication, availablePublications, loading, error } = usePublication();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [open, setOpen] = useState(false);
   const [, forceRender] = useState(0);
 
-  // Handle keyboard events in search input to prevent Select from intercepting them
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Prevent Select component from handling these keys
-    e.stopPropagation();
-    
-    // Allow Escape to close the dropdown
-    if (e.key === 'Escape') {
-      setSearchTerm('');
-      return;
-    }
-  };
-
   // Only prefetch brand color for the currently selected publication (lazy loading)
-  // Colors for other publications will load on-demand when rendering their avatars
   useEffect(() => {
     if (selectedPublication) {
       prefetchBrandColors([selectedPublication.publicationId]).then(() => {
@@ -65,20 +54,6 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPublication?.publicationId]);
-
-  // Filter publications based on search term - memoized for performance
-  const filteredPublications = useMemo(() => {
-    if (!searchTerm) return availablePublications;
-    
-    const searchLower = searchTerm.toLowerCase();
-    return availablePublications.filter((publication) => {
-      return (
-        publication.basicInfo.publicationName?.toLowerCase().includes(searchLower) ||
-        publication.basicInfo.websiteUrl?.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [searchTerm, availablePublications]);
-
 
   if (loading) {
     return (
@@ -108,7 +83,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
   }
 
   if (compact) {
-    // Compact version for navbar - merged design
+    // Compact version for navbar
     return (
       <div className="flex items-center border border-border rounded-lg overflow-hidden h-9">
         {/* Label Section */}
@@ -120,90 +95,74 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
         <div className="w-px h-full bg-border" />
         
         {/* Dropdown Section */}
-        <Select 
-          value={selectedPublication?._id || selectedPublication?.publicationId.toString() || ""} 
-          onValueChange={(value) => {
-            const publication = availablePublications.find(
-              p => p._id === value || p.publicationId.toString() === value
-            );
-            setSelectedPublication(publication || null);
-          }}
-          onOpenChange={(open) => {
-            if (!open) setSearchTerm('');
-          }}
-        >
-          <SelectTrigger className="w-auto min-w-[160px] h-full text-xs bg-white border-0 rounded-none shadow-none focus:ring-0">
-            <div className="flex items-center gap-1.5">
-              <div 
-                className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-semibold"
-                style={{ 
-                  backgroundColor: selectedPublication ? 
-                    getPublicationBrandColor(selectedPublication.publicationId) : 
-                    '#0066cc' 
-                }}
-              >
-                {selectedPublication?.basicInfo.publicationName?.charAt(0) || '?'}
-              </div>
-              <SelectValue placeholder="Select">
-                {selectedPublication?.basicInfo.publicationName || 'Select'}
-              </SelectValue>
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <div 
-              className="p-2 border-b sticky top-0 bg-white z-10"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              role="combobox"
+              aria-expanded={open}
+              className="w-auto min-w-[160px] h-full text-xs bg-white border-0 rounded-none shadow-none focus:ring-0 hover:bg-gray-50 justify-between"
             >
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                <Input
-                  placeholder="Search publications..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-7 h-7 text-xs bg-white"
-                  onKeyDown={handleSearchKeyDown}
-                  autoComplete="off"
-                  autoFocus
-                />
+              <div className="flex items-center gap-1.5">
+                <div 
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-semibold"
+                  style={{ 
+                    backgroundColor: selectedPublication ? 
+                      getPublicationBrandColor(selectedPublication.publicationId) : 
+                      '#0066cc' 
+                  }}
+                >
+                  {selectedPublication?.basicInfo.publicationName?.charAt(0) || '?'}
+                </div>
+                <span className="truncate">{selectedPublication?.basicInfo.publicationName || 'Select'}</span>
               </div>
-            </div>
-            {filteredPublications.length > 0 ? (
-              filteredPublications.map((publication) => {
-                // Only use brand color for selected publication, use default for others to avoid 20+ API calls
-                const isSelected = selectedPublication?.publicationId === publication.publicationId;
-                const avatarColor = isSelected 
-                  ? getPublicationBrandColor(publication.publicationId)
-                  : '#0066cc'; // Default color for non-selected publications
-                
-                return (
-                  <SelectItem 
-                    key={publication._id || publication.publicationId} 
-                    value={publication._id || publication.publicationId.toString()}
-                  >
-                    <div className="flex items-center gap-2 py-1">
-                      <div 
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold"
-                        style={{ 
-                          backgroundColor: avatarColor
+              <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Search publications..." />
+              <CommandList>
+                <CommandEmpty>No publication found.</CommandEmpty>
+                <CommandGroup>
+                  {availablePublications.map((publication) => {
+                    const isSelected = selectedPublication?.publicationId === publication.publicationId;
+                    const avatarColor = isSelected 
+                      ? getPublicationBrandColor(publication.publicationId)
+                      : '#0066cc';
+                    
+                    return (
+                      <CommandItem
+                        key={publication._id || publication.publicationId}
+                        value={`${publication.basicInfo.publicationName} ${publication.basicInfo.websiteUrl || ''}`}
+                        onSelect={() => {
+                          setSelectedPublication(publication);
+                          setOpen(false);
                         }}
                       >
-                        {publication.basicInfo.publicationName.charAt(0)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{publication.basicInfo.publicationName}</div>
-                      </div>
-                    </div>
-                  </SelectItem>
-                );
-              })
-            ) : (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No publications found
-              </div>
-            )}
-          </SelectContent>
-        </Select>
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            isSelected ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <div className="flex items-center gap-2 flex-1">
+                          <div 
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+                            style={{ backgroundColor: avatarColor }}
+                          >
+                            {publication.basicInfo.publicationName.charAt(0)}
+                          </div>
+                          <span className="truncate">{publication.basicInfo.publicationName}</span>
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
     );
   }
@@ -214,108 +173,94 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
       <span className="text-[1.09375rem] font-medium text-muted-foreground whitespace-nowrap font-serif">
         Active Publication
       </span>
-      <Select 
-        value={selectedPublication?._id || selectedPublication?.publicationId.toString() || ""} 
-        onValueChange={(value) => {
-          const publication = availablePublications.find(
-            p => p._id === value || p.publicationId.toString() === value
-          );
-          setSelectedPublication(publication || null);
-        }}
-        onOpenChange={(open) => {
-          if (!open) setSearchTerm('');
-        }}
-      >
-        <SelectTrigger className="w-auto min-w-[200px] bg-background border-border">
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold"
-              style={{ 
-                backgroundColor: selectedPublication ? 
-                  getPublicationBrandColor(selectedPublication.publicationId) : 
-                  '#0066cc' 
-              }}
-            >
-              {selectedPublication?.basicInfo.publicationName?.charAt(0) || '?'}
-            </div>
-            <SelectValue placeholder="Select publication">
-              {selectedPublication?.basicInfo.publicationName || 'Select publication'}
-            </SelectValue>
-          </div>
-        </SelectTrigger>
-        <SelectContent>
-          <div 
-            className="p-2 border-b sticky top-0 bg-white z-10"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-auto min-w-[200px] justify-between"
           >
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search publications..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 h-8 text-sm bg-white"
-                onKeyDown={handleSearchKeyDown}
-                autoComplete="off"
-                autoFocus
-              />
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold"
+                style={{ 
+                  backgroundColor: selectedPublication ? 
+                    getPublicationBrandColor(selectedPublication.publicationId) : 
+                    '#0066cc' 
+                }}
+              >
+                {selectedPublication?.basicInfo.publicationName?.charAt(0) || '?'}
+              </div>
+              <span className="truncate">{selectedPublication?.basicInfo.publicationName || 'Select publication'}</span>
             </div>
-          </div>
-          {filteredPublications.length > 0 ? (
-            filteredPublications.map((publication) => {
-              // Only use brand color for selected publication, use default for others to avoid 20+ API calls
-              const isSelected = selectedPublication?.publicationId === publication.publicationId;
-              const avatarColor = isSelected 
-                ? getPublicationBrandColor(publication.publicationId)
-                : '#0066cc'; // Default color for non-selected publications
-              
-              return (
-                <SelectItem 
-                  key={publication._id || publication.publicationId} 
-                  value={publication._id || publication.publicationId.toString()}
-                >
-                  <div className="flex items-center gap-3 py-1">
-                    <div 
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold"
-                      style={{ 
-                        backgroundColor: avatarColor
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[400px] p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search publications..." />
+            <CommandList>
+              <CommandEmpty>No publication found.</CommandEmpty>
+              <CommandGroup>
+                {availablePublications.map((publication) => {
+                  const isSelected = selectedPublication?.publicationId === publication.publicationId;
+                  const avatarColor = isSelected 
+                    ? getPublicationBrandColor(publication.publicationId)
+                    : '#0066cc';
+                  
+                  return (
+                    <CommandItem
+                      key={publication._id || publication.publicationId}
+                      value={`${publication.basicInfo.publicationName} ${publication.basicInfo.websiteUrl || ''}`}
+                      onSelect={() => {
+                        setSelectedPublication(publication);
+                        setOpen(false);
                       }}
                     >
-                      {publication.basicInfo.publicationName.charAt(0)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium">{publication.basicInfo.publicationName}</div>
-                    <div className="text-xs flex items-center gap-2">
-                      {publication.basicInfo.publicationType && (
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs border-0 ${getTagColors(publication.basicInfo.publicationType).bg} ${getTagColors(publication.basicInfo.publicationType).text}`}
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          isSelected ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+                          style={{ backgroundColor: avatarColor }}
                         >
-                          {capitalizeWords(publication.basicInfo.publicationType)}
-                        </Badge>
-                      )}
-                      {publication.basicInfo.geographicCoverage && (
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs border-0 ${getTagColors(publication.basicInfo.geographicCoverage).bg} ${getTagColors(publication.basicInfo.geographicCoverage).text}`}
-                        >
-                          {capitalizeWords(publication.basicInfo.geographicCoverage)}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </SelectItem>
-              );
-            })
-          ) : (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              No publications found
-            </div>
-          )}
-        </SelectContent>
-      </Select>
+                          {publication.basicInfo.publicationName.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{publication.basicInfo.publicationName}</div>
+                          <div className="text-xs flex items-center gap-2 flex-wrap">
+                            {publication.basicInfo.publicationType && (
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs border-0 ${getTagColors(publication.basicInfo.publicationType).bg} ${getTagColors(publication.basicInfo.publicationType).text}`}
+                              >
+                                {capitalizeWords(publication.basicInfo.publicationType)}
+                              </Badge>
+                            )}
+                            {publication.basicInfo.geographicCoverage && (
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs border-0 ${getTagColors(publication.basicInfo.geographicCoverage).bg} ${getTagColors(publication.basicInfo.geographicCoverage).text}`}
+                              >
+                                {capitalizeWords(publication.basicInfo.geographicCoverage)}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 };
