@@ -45,6 +45,7 @@ import { DemographicSliders, GenderSlider, DemographicSlidersReadOnly, GenderSli
 import { getActiveChannelMetrics } from '@/utils/channelMetrics';
 import { ChannelMetricCard } from './ChannelMetricCard';
 import { FieldError } from '@/components/ui/field-error';
+import { ServiceAreaSelectorSimple, ServiceAreaDisplaySimple } from './ServiceAreaSelectorSimple';
 import { 
   validateEmail, 
   validatePhone, 
@@ -332,11 +333,6 @@ export const PublicationProfile: React.FC = () => {
                 </Select>
               </SchemaField>
 
-              <SchemaField mappingStatus="full" schemaPath="basicInfo.primaryServiceArea" showSchemaPath={showSchemaDebug}>
-                <Label>Geographic Market <span className="text-red-500">*</span></Label>
-                <Input value={getFieldValue('basicInfo.primaryServiceArea')} onChange={(e) => updateField('basicInfo.primaryServiceArea', e.target.value)} placeholder="City, State" />
-              </SchemaField>
-
               <SchemaField mappingStatus="full" schemaPath="basicInfo.founded" showSchemaPath={showSchemaDebug}>
                 <Label>Founded</Label>
                 <Input 
@@ -349,20 +345,30 @@ export const PublicationProfile: React.FC = () => {
                 />
                 <FieldError error={fieldErrors['basicInfo.founded']} />
               </SchemaField>
+
+              <SchemaField mappingStatus="full" schemaPath="basicInfo.websiteUrl" showSchemaPath={showSchemaDebug}>
+                <Label>Website <span className="text-red-500">*</span></Label>
+                <Input 
+                  type="url" 
+                  value={getFieldValue('basicInfo.websiteUrl')} 
+                  onChange={(e) => updateFieldWithValidation('basicInfo.websiteUrl', e.target.value)} 
+                  placeholder="https://" 
+                  className={getValidationClass(!!fieldErrors['basicInfo.websiteUrl'])}
+                  onBlur={(e) => updateFieldWithValidation('basicInfo.websiteUrl', e.target.value)}
+                />
+                <FieldError error={fieldErrors['basicInfo.websiteUrl']} />
+              </SchemaField>
             </div>
-            
-            <SchemaField mappingStatus="full" schemaPath="basicInfo.websiteUrl" showSchemaPath={showSchemaDebug}>
-              <Label>Website <span className="text-red-500">*</span></Label>
-              <Input 
-                type="url" 
-                value={getFieldValue('basicInfo.websiteUrl')} 
-                onChange={(e) => updateFieldWithValidation('basicInfo.websiteUrl', e.target.value)} 
-                placeholder="https://" 
-                className={getValidationClass(!!fieldErrors['basicInfo.websiteUrl'])}
-                onBlur={(e) => updateFieldWithValidation('basicInfo.websiteUrl', e.target.value)}
+
+            {/* Service Areas Section */}
+            <div className="border-t pt-4 mt-4">
+              <ServiceAreaSelectorSimple
+                serviceAreas={getFieldValue('basicInfo.serviceAreas') || []}
+                onChange={(areas) => {
+                  updateField('basicInfo.serviceAreas', areas);
+                }}
               />
-              <FieldError error={fieldErrors['basicInfo.websiteUrl']} />
-            </SchemaField>
+            </div>
 
             <div className="border-t pt-4">
               <div className="flex items-center justify-between mb-3">
@@ -1153,26 +1159,28 @@ export const PublicationProfile: React.FC = () => {
               <p className="text-sm font-medium text-muted-foreground">Type</p>
               <p className="mt-1">{get('basicInfo.publicationType') || 'Not specified'}</p>
             </div>
-                  <div>
-              <p className="text-sm font-medium text-muted-foreground">Geographic Market</p>
-              <p className="mt-1">{get('basicInfo.primaryServiceArea') || 'Not specified'}</p>
-                            </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Founded</p>
               <p className="mt-1">{get('basicInfo.founded') || 'Not specified'}</p>
-                          </div>
-                        </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Website</p>
+              <p className="mt-1">
+                {get('basicInfo.websiteUrl') ? (
+                  <a href={get('basicInfo.websiteUrl')} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1">
+                    {get('basicInfo.websiteUrl')}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : 'Not specified'}
+              </p>
+            </div>
+          </div>
 
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Website</p>
-            <p className="mt-1">
-              {get('basicInfo.websiteUrl') ? (
-                <a href={get('basicInfo.websiteUrl')} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1">
-                  {get('basicInfo.websiteUrl')}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              ) : 'Not specified'}
-            </p>
+          {/* Service Areas Section */}
+          <div className="border-t pt-4">
+            <ServiceAreaDisplaySimple
+              serviceAreas={get('basicInfo.serviceAreas') || []}
+            />
           </div>
 
           {(() => {

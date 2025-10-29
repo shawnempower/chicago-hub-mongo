@@ -35,7 +35,8 @@ import {
   publicationsService,
   publicationFilesService,
   storefrontConfigurationsService,
-  surveySubmissionsService
+  surveySubmissionsService,
+  areasService
 } from '../src/integrations/mongodb/allServices';
 import { authService, initializeAuthService } from '../src/integrations/mongodb/authService';
 import { getDatabase } from '../src/integrations/mongodb/client';
@@ -148,6 +149,70 @@ app.get('/chicago-hub/health', (req, res) => {
 // Test route to verify API is working
 app.get('/api/test', (req, res) => {
   res.json({ message: 'API routes are working!' });
+});
+
+// Areas search route (for geographic market selector)
+app.get('/api/areas/search', async (req, res) => {
+  try {
+    const query = req.query.q as string;
+    
+    if (!query || query.length < 2) {
+      return res.json([]);
+    }
+
+    // Search by DMA, County, or Zip Code
+    const results: any[] = [];
+
+    // Search by DMA name
+    const dmaResults = await areasService.autocompleteDMA(query, 5);
+    dmaResults.forEach(dma => {
+      results.push({
+        type: 'dma',
+        displayName: `${dma.name} - Entire DMA`,
+        normalizedName: dma.normalized,
+        dmaNameOnly: dma.name, // Keep original name for storage
+        contextText: 'Full market coverage'
+      });
+    });
+
+    // Search by County
+    const countyResults = await areasService.findDMAsByCounty(query);
+    countyResults.forEach(result => {
+      if (result.matchedCounty && result.counties && result.counties.length > 0) {
+        const county = result.counties[0];
+        results.push({
+          type: 'county',
+          displayName: `${result.matchedCounty} County - ${result.dma.name}`,
+          normalizedName: county.normalized,
+          countyNameOnly: result.matchedCounty, // Keep clean county name
+          parentDmaName: result.dma.name,
+          parentDmaNormalized: result.dma.normalized,
+          contextText: 'Partial coverage (county only)'
+        });
+      }
+    });
+
+    // Search by Zip Code (if it looks like a zip)
+    if (/^\d{1,5}$/.test(query)) {
+      const zipCode = query.padStart(5, '0');
+      const zipResult = await areasService.findDMAByZipCode(zipCode);
+      if (zipResult) {
+        results.push({
+          type: 'zipcode',
+          displayName: `${zipCode} - ${zipResult.dma.name}`,
+          normalizedName: zipCode,
+          parentDmaName: zipResult.dma.name,
+          parentDmaNormalized: zipResult.dma.normalized,
+          contextText: 'Partial coverage (zip code only)'
+        });
+      }
+    }
+
+    res.json(results.slice(0, 10)); // Limit to 10 results
+  } catch (error) {
+    console.error('Error searching areas:', error);
+    res.status(500).json({ error: 'Failed to search areas' });
+  }
 });
 
 // Auth routes

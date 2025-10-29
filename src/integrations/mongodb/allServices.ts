@@ -30,6 +30,7 @@ import {
   SurveySubmissionUpdate,
   COLLECTIONS
 } from './schemas';
+import { AreasService } from './areasService';
 
 // ===== AD PACKAGES SERVICE =====
 export class AdPackagesService {
@@ -1842,6 +1843,7 @@ export let publicationsService: PublicationsService;
 export let publicationFilesService: PublicationFilesService;
 export let storefrontConfigurationsService: StorefrontConfigurationsService;
 export let surveySubmissionsService: SurveySubmissionsService;
+export let areasService: AreasService;
 
 // Initialize all services - call this after environment variables are loaded
 export const initializeServices = () => {
@@ -1860,4 +1862,5 @@ export const initializeServices = () => {
   publicationFilesService = new PublicationFilesService();
   storefrontConfigurationsService = new StorefrontConfigurationsService();
   surveySubmissionsService = new SurveySubmissionsService();
+  areasService = new AreasService();
 };
