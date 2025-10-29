@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Header } from "@/components/Header";
-import { AssistantModal } from "@/components/AssistantModal";
 import SurveyForm from "@/components/SurveyForm";
 
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
@@ -28,28 +27,12 @@ import {
 
 // Main Dashboard Component
 export default function Dashboard() {
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isSurveyOpen, setIsSurveyOpen] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const { selectedPublication, loading: publicationLoading } = usePublication();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const currentTab = searchParams.get('tab') || 'dashboard';
-
-  useEffect(() => {
-    // Listen for custom events to open assistant
-    const handleOpenAssistant = () => setIsAssistantOpen(true);
-    window.addEventListener('openAssistant', handleOpenAssistant);
-    return () => window.removeEventListener('openAssistant', handleOpenAssistant);
-  }, []);
-
-  const handleAssistantClick = () => {
-    setIsAssistantOpen(true);
-  };
-
-  const handleAssistantClose = () => {
-    setIsAssistantOpen(false);
-  };
 
   const handleTabChange = (value: string) => {
     navigate(`/dashboard?tab=${value}`);
@@ -102,7 +85,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header 
-        onAssistantClick={handleAssistantClick} 
+        onAssistantClick={() => {}} // Assistant is now a floating widget
         onSurveyClick={() => setIsSurveyOpen(true)} 
         showDashboardNav={true}
       />
@@ -155,11 +138,6 @@ export default function Dashboard() {
           </div>
         )}
       </main>
-
-      <AssistantModal 
-        isOpen={isAssistantOpen}
-        onClose={handleAssistantClose}
-      />
       
       <SurveyForm open={isSurveyOpen} onOpenChange={setIsSurveyOpen} />
     </div>

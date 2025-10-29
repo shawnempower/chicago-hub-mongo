@@ -1,5 +1,5 @@
-import { Globe, Mail, Printer, Users, Calendar, Mic, Radio, Video, Tv } from 'lucide-react';
 import { PublicationFrontend } from '../types/publication';
+import { CHANNEL_COLORS } from '../constants/channelColors';
 
 export interface ChannelMetricValue {
   label: string;
@@ -22,10 +22,10 @@ export interface ChannelMetricsConfig {
 export const CHANNEL_METRICS_CONFIG: Record<string, ChannelMetricsConfig> = {
   website: {
     label: 'Digital',
-    icon: Globe,
-    color: 'blue',
-    bgColor: 'bg-blue-500',
-    textColor: 'text-blue-600',
+    icon: CHANNEL_COLORS.website.icon,
+    color: CHANNEL_COLORS.website.color,
+    bgColor: CHANNEL_COLORS.website.bgColor,
+    textColor: CHANNEL_COLORS.website.textColor,
     priority: 1,
     extractMetrics: (data) => {
       const metrics: ChannelMetricValue[] = [];
@@ -63,11 +63,11 @@ export const CHANNEL_METRICS_CONFIG: Record<string, ChannelMetricsConfig> = {
   },
   
   print: {
-    label: 'Print',
-    icon: Printer,
-    color: 'slate',
-    bgColor: 'bg-slate-600',
-    textColor: 'text-slate-700',
+    label: CHANNEL_COLORS.print.label,
+    icon: CHANNEL_COLORS.print.icon,
+    color: CHANNEL_COLORS.print.color,
+    bgColor: CHANNEL_COLORS.print.bgColor,
+    textColor: CHANNEL_COLORS.print.textColor,
     priority: 2,
     extractMetrics: (printArray) => {
       const metrics: ChannelMetricValue[] = [];
@@ -119,10 +119,10 @@ export const CHANNEL_METRICS_CONFIG: Record<string, ChannelMetricsConfig> = {
   
   newsletters: {
     label: 'Email & Newsletters',
-    icon: Mail,
-    color: 'indigo',
-    bgColor: 'bg-indigo-500',
-    textColor: 'text-indigo-600',
+    icon: CHANNEL_COLORS.newsletter.icon,
+    color: CHANNEL_COLORS.newsletter.color,
+    bgColor: CHANNEL_COLORS.newsletter.bgColor,
+    textColor: CHANNEL_COLORS.newsletter.textColor,
     priority: 3,
     extractMetrics: (newslettersArray) => {
       const metrics: ChannelMetricValue[] = [];
@@ -173,11 +173,11 @@ export const CHANNEL_METRICS_CONFIG: Record<string, ChannelMetricsConfig> = {
   },
   
   socialMedia: {
-    label: 'Social Media',
-    icon: Users,
-    color: 'purple',
-    bgColor: 'bg-purple-500',
-    textColor: 'text-purple-600',
+    label: CHANNEL_COLORS.socialMedia.label,
+    icon: CHANNEL_COLORS.socialMedia.icon,
+    color: CHANNEL_COLORS.socialMedia.color,
+    bgColor: CHANNEL_COLORS.socialMedia.bgColor,
+    textColor: CHANNEL_COLORS.socialMedia.textColor,
     priority: 4,
     extractMetrics: (socialArray) => {
       const metrics: ChannelMetricValue[] = [];
@@ -226,11 +226,11 @@ export const CHANNEL_METRICS_CONFIG: Record<string, ChannelMetricsConfig> = {
   },
   
   podcasts: {
-    label: 'Podcasts',
-    icon: Mic,
-    color: 'rose',
-    bgColor: 'bg-rose-500',
-    textColor: 'text-rose-600',
+    label: CHANNEL_COLORS.podcasts.label,
+    icon: CHANNEL_COLORS.podcasts.icon,
+    color: CHANNEL_COLORS.podcasts.color,
+    bgColor: CHANNEL_COLORS.podcasts.bgColor,
+    textColor: CHANNEL_COLORS.podcasts.textColor,
     priority: 5,
     extractMetrics: (podcastsArray) => {
       const metrics: ChannelMetricValue[] = [];
@@ -281,11 +281,11 @@ export const CHANNEL_METRICS_CONFIG: Record<string, ChannelMetricsConfig> = {
   },
   
   radioStations: {
-    label: 'Radio',
-    icon: Radio,
-    color: 'amber',
-    bgColor: 'bg-amber-500',
-    textColor: 'text-amber-600',
+    label: CHANNEL_COLORS.radioStations.label,
+    icon: CHANNEL_COLORS.radioStations.icon,
+    color: CHANNEL_COLORS.radioStations.color,
+    bgColor: CHANNEL_COLORS.radioStations.bgColor,
+    textColor: CHANNEL_COLORS.radioStations.textColor,
     priority: 6,
     extractMetrics: (radioArray) => {
       const metrics: ChannelMetricValue[] = [];
@@ -332,11 +332,11 @@ export const CHANNEL_METRICS_CONFIG: Record<string, ChannelMetricsConfig> = {
   },
   
   streamingVideo: {
-    label: 'Streaming Video',
-    icon: Video,
-    color: 'red',
-    bgColor: 'bg-red-500',
-    textColor: 'text-red-600',
+    label: CHANNEL_COLORS.streamingVideo.label,
+    icon: CHANNEL_COLORS.streamingVideo.icon,
+    color: CHANNEL_COLORS.streamingVideo.color,
+    bgColor: CHANNEL_COLORS.streamingVideo.bgColor,
+    textColor: CHANNEL_COLORS.streamingVideo.textColor,
     priority: 7,
     extractMetrics: (streamingArray) => {
       const metrics: ChannelMetricValue[] = [];
@@ -383,11 +383,11 @@ export const CHANNEL_METRICS_CONFIG: Record<string, ChannelMetricsConfig> = {
   },
   
   television: {
-    label: 'Television',
-    icon: Tv,
-    color: 'cyan',
-    bgColor: 'bg-cyan-500',
-    textColor: 'text-cyan-600',
+    label: CHANNEL_COLORS.television.label,
+    icon: CHANNEL_COLORS.television.icon,
+    color: CHANNEL_COLORS.television.color,
+    bgColor: CHANNEL_COLORS.television.bgColor,
+    textColor: CHANNEL_COLORS.television.textColor,
     priority: 8,
     extractMetrics: (tvArray) => {
       const metrics: ChannelMetricValue[] = [];
@@ -434,11 +434,11 @@ export const CHANNEL_METRICS_CONFIG: Record<string, ChannelMetricsConfig> = {
   },
   
   events: {
-    label: 'Events',
-    icon: Calendar,
-    color: 'green',
-    bgColor: 'bg-green-500',
-    textColor: 'text-green-600',
+    label: CHANNEL_COLORS.events.label,
+    icon: CHANNEL_COLORS.events.icon,
+    color: CHANNEL_COLORS.events.color,
+    bgColor: CHANNEL_COLORS.events.bgColor,
+    textColor: CHANNEL_COLORS.events.textColor,
     priority: 9,
     extractMetrics: (eventsArray) => {
       const metrics: ChannelMetricValue[] = [];

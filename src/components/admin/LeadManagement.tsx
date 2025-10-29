@@ -127,11 +127,14 @@ export const LeadManagement = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Lead Management</h2>
-        <p className="text-muted-foreground">Manage and track advertising inquiries</p>
+        <p className="text-muted-foreground font-serif">
+          Lead Management
+        </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <Card className="bg-white">
+        <CardContent className="pt-6">
+          <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">All Leads ({leads.length})</h3>
           {leads.map((lead) => (
@@ -240,7 +243,9 @@ export const LeadManagement = () => {
             </Card>
           </div>
         )}
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

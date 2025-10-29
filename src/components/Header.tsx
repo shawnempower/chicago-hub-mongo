@@ -1,14 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/CustomAuthContext";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, ChevronDown } from "lucide-react";
+import { User, ChevronDown, Globe, BookOpen } from "lucide-react";
 import empowerLogo from "@/assets/empower-logo.png";
 import { PublicationSelector } from "@/components/PublicationSelector";
-import { usePublication } from "@/contexts/PublicationContext";
-import { getPublicationBrandColor } from "@/config/publicationBrandColors";
-import { useState, useEffect } from "react";
+import { HubSelector } from "@/components/HubSelector";
 
 interface HeaderProps {
   onAssistantClick: () => void;
@@ -18,26 +16,13 @@ interface HeaderProps {
 
 export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = false }: HeaderProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminAuth();
-  const { selectedPublication } = usePublication();
-  const [, forceRender] = useState(0);
   
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
   
-  // Get brand color for assistant button from storefront configuration
-  const assistantButtonColor = selectedPublication 
-    ? getPublicationBrandColor(selectedPublication.publicationId)
-    : '#0066cc';
-  
-  // Force re-render when publication changes to pick up newly loaded colors
-  useEffect(() => {
-    if (selectedPublication?.publicationId) {
-      // Small delay to allow color to be fetched
-      const timer = setTimeout(() => forceRender(prev => prev + 1), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedPublication?.publicationId]);
+  const isHubCentral = location.pathname === '/hubcentral';
   
   return (
     <header className="sticky top-0 z-40 backdrop-blur-[20px] border-b border-border" style={{ backgroundColor: 'hsl(42 30% 95% / 0.3)' }}>
@@ -52,9 +37,35 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
           </Link>
           
           {showDashboardNav ? (
-            /* Compact Publication Selector for Dashboard */
-            <div className="hidden md:block">
-              <PublicationSelector compact={true} />
+            /* Dashboard Navigation with Hubs/Publications Button and Selector */
+            <div className="hidden md:flex items-center gap-3">
+              {isHubCentral ? (
+                /* Publications Button and Hub Selector when on Hub Central */
+                <>
+                  <Button
+                    onClick={() => navigate('/dashboard')}
+                    variant="outline"
+                    className="h-9 px-3 text-sm font-medium"
+                  >
+                    <BookOpen className="h-4 w-4 mr-1" />
+                    Publications
+                  </Button>
+                  <HubSelector />
+                </>
+              ) : (
+                /* Hubs Button and Publication Selector when NOT on Hub Central */
+                <>
+                  <Button
+                    onClick={() => navigate('/hubcentral')}
+                    variant="outline"
+                    className="h-9 px-3 text-sm font-medium"
+                  >
+                    <Globe className="h-4 w-4 mr-1" />
+                    Hubs
+                  </Button>
+                  <PublicationSelector compact={true} />
+                </>
+              )}
             </div>
           ) : (
             /* Regular navigation for landing page */
@@ -105,14 +116,6 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
               Apply to Network
             </Button>
           )}
-          <Button 
-            onClick={onAssistantClick}
-            className="relative text-white font-medium shadow-md transition-all duration-200 hover:opacity-90"
-            style={{ backgroundColor: assistantButtonColor }}
-          >
-            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: assistantButtonColor, filter: 'brightness(1.2)' }}></div>
-            Assistant
-          </Button>
           
           {user ? (
             <DropdownMenu>

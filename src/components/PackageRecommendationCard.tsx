@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, ExternalLink } from "lucide-react";
 import { useSavedPackages } from "@/hooks/useSavedPackages";
+import { CHANNEL_COLORS, CHANNEL_KEY_MAPPING } from "@/constants/channelColors";
 
 interface PackageRecommendation {
   id: number;
@@ -35,18 +36,15 @@ export function PackageRecommendationCard({ recommendation, onViewPackage }: Pac
     all: "bg-gray-100 text-gray-800"
   };
 
-  const channelColors: { [key: string]: string } = {
-    radio: "bg-purple-100 text-purple-800",
-    newsletter: "bg-blue-100 text-blue-800",
-    print: "bg-green-100 text-green-800",
-    digital: "bg-orange-100 text-orange-800",
-    tv: "bg-red-100 text-red-800",
-    podcast: "bg-indigo-100 text-indigo-800",
-    social: "bg-pink-100 text-pink-800",
-    events: "bg-yellow-100 text-yellow-800",
-    flexible: "bg-gray-100 text-gray-800",
-    mixed: "bg-gray-100 text-gray-800",
-    all: "bg-gray-100 text-gray-800"
+  // Helper function to get channel badge color using centralized configuration
+  const getChannelColor = (channel: string): string => {
+    const mappedKey = CHANNEL_KEY_MAPPING[channel.toLowerCase()];
+    if (mappedKey && CHANNEL_COLORS[mappedKey]) {
+      return CHANNEL_COLORS[mappedKey].badgeColor;
+    }
+    // Fallback for unmapped channels
+    if (channel === 'flexible') return 'bg-gray-100 text-gray-800';
+    return 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -111,7 +109,7 @@ export function PackageRecommendationCard({ recommendation, onViewPackage }: Pac
           <Badge 
             key={channel} 
             variant="outline" 
-            className={`text-xs ${channelColors[channel] || 'bg-gray-100 text-gray-800'}`}
+            className={`text-xs ${getChannelColor(channel)}`}
           >
             {channel}
           </Badge>

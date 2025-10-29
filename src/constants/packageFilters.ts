@@ -1,4 +1,5 @@
 // Package filter constants - these remain static as they're UI configuration
+import { CHANNEL_COLORS } from './channelColors';
 
 export const audienceTypes = [
   { id: "diverse", label: "Diverse", color: "bg-blue-100 text-blue-800" },
@@ -13,16 +14,16 @@ export const audienceTypes = [
 ];
 
 export const channelTypes = [
-  { id: "radio", label: "Radio", color: "bg-purple-100 text-purple-800" },
-  { id: "newsletter", label: "Newsletter", color: "bg-blue-100 text-blue-800" },
-  { id: "print", label: "Print", color: "bg-green-100 text-green-800" },
-  { id: "digital", label: "Digital", color: "bg-orange-100 text-orange-800" },
-  { id: "tv", label: "TV", color: "bg-red-100 text-red-800" },
-  { id: "podcast", label: "Podcast", color: "bg-indigo-100 text-indigo-800" },
-  { id: "social", label: "Social", color: "bg-pink-100 text-pink-800" },
-  { id: "events", label: "Events", color: "bg-yellow-100 text-yellow-800" },
+  { id: "radio", label: "Radio", color: CHANNEL_COLORS.radioStations.badgeColor },
+  { id: "newsletter", label: "Newsletter", color: CHANNEL_COLORS.newsletter.badgeColor },
+  { id: "print", label: "Print", color: CHANNEL_COLORS.print.badgeColor },
+  { id: "digital", label: "Digital", color: CHANNEL_COLORS.website.badgeColor },
+  { id: "tv", label: "TV", color: CHANNEL_COLORS.television.badgeColor },
+  { id: "podcast", label: "Podcast", color: CHANNEL_COLORS.podcasts.badgeColor },
+  { id: "social", label: "Social", color: CHANNEL_COLORS.socialMedia.badgeColor },
+  { id: "events", label: "Events", color: CHANNEL_COLORS.events.badgeColor },
   { id: "flexible", label: "Flexible", color: "bg-gray-100 text-gray-800" },
-  { id: "mixed", label: "Mixed", color: "bg-gray-100 text-gray-800" },
+  { id: "mixed", label: "Mixed", color: CHANNEL_COLORS.crossChannel.badgeColor },
   { id: "all", label: "All", color: "bg-gray-100 text-gray-800" }
 ];
 
