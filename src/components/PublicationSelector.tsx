@@ -157,13 +157,8 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                           setSelectedPublication(publication);
                           setOpen(false);
                         }}
+                        className="px-2"
                       >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            isSelected ? "opacity-100" : "opacity-0"
-                          )}
-                        />
                         <div className="flex items-center gap-2 flex-1">
                           <div 
                             className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
@@ -172,6 +167,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                             {publication.basicInfo.publicationName.charAt(0)}
                           </div>
                           <span className="truncate">{publication.basicInfo.publicationName}</span>
+                          {isSelected && <Check className="ml-auto h-4 w-4 flex-shrink-0" />}
                         </div>
                       </CommandItem>
                     );
@@ -242,13 +238,8 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                         setSelectedPublication(publication);
                         setOpen(false);
                       }}
+                      className="px-2"
                     >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          isSelected ? "opacity-100" : "opacity-0"
-                        )}
-                      />
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div 
                           className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
@@ -277,6 +268,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                             )}
                           </div>
                         </div>
+                        {isSelected && <Check className="ml-2 h-4 w-4 flex-shrink-0" />}
                       </div>
                     </CommandItem>
                   );
