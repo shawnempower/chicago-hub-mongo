@@ -43,6 +43,18 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
   const [searchTerm, setSearchTerm] = useState('');
   const [, forceRender] = useState(0);
 
+  // Handle keyboard events in search input to prevent Select from intercepting them
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Prevent Select component from handling these keys
+    e.stopPropagation();
+    
+    // Allow Escape to close the dropdown
+    if (e.key === 'Escape') {
+      setSearchTerm('');
+      return;
+    }
+  };
+
   // Only prefetch brand color for the currently selected publication (lazy loading)
   // Colors for other publications will load on-demand when rendering their avatars
   useEffect(() => {
@@ -59,14 +71,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
     const searchLower = searchTerm.toLowerCase();
     return (
       publication.basicInfo.publicationName?.toLowerCase().includes(searchLower) ||
-      publication.basicInfo.publicationType?.toLowerCase().includes(searchLower) ||
-      publication.basicInfo.geographicCoverage?.toLowerCase().includes(searchLower) ||
-      publication.basicInfo.contentType?.toLowerCase().includes(searchLower) ||
-      publication.basicInfo.primaryServiceArea?.toLowerCase().includes(searchLower) ||
-      publication.basicInfo.headquarters?.toLowerCase().includes(searchLower) ||
-      publication.basicInfo.secondaryMarkets?.some(market => 
-        market.toLowerCase().includes(searchLower)
-      )
+      publication.basicInfo.websiteUrl?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -149,7 +154,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-7 h-7 text-xs bg-white"
-                  onKeyDown={(e) => e.stopPropagation()}
+                  onKeyDown={handleSearchKeyDown}
                 />
               </div>
             </div>
@@ -237,7 +242,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8 h-8 text-sm bg-white"
-                onKeyDown={(e) => e.stopPropagation()}
+                onKeyDown={handleSearchKeyDown}
               />
             </div>
           </div>
