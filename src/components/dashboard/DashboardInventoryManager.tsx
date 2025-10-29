@@ -972,16 +972,25 @@ export const DashboardInventoryManager = () => {
 
         case 'event':
           if (updatedPublication.distributionChannels?.events && editingParentIndex >= 0) {
+            // Convert benefits from string to array before saving
+            const itemToSave = { ...editingItem };
+            if (typeof itemToSave.benefits === 'string') {
+              itemToSave.benefits = itemToSave.benefits
+                .split(',')
+                .map(b => b.trim())
+                .filter(Boolean);
+            }
+            
             if (isAdding) {
               // Adding new event sponsorship
               if (!updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities) {
                 updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities = [];
               }
-              updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities.push(editingItem);
+              updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities.push(itemToSave);
             } else {
               // Editing existing event sponsorship
               if (editingItemIndex >= 0 && updatedPublication.distributionChannels.events[editingParentIndex]?.advertisingOpportunities) {
-                updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities[editingItemIndex] = editingItem;
+                updatedPublication.distributionChannels.events[editingParentIndex].advertisingOpportunities[editingItemIndex] = itemToSave;
               }
             }
           }
@@ -5053,6 +5062,7 @@ export const DashboardInventoryManager = () => {
                           <SelectItem value="weekly">Weekly</SelectItem>
                           <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
                           <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="seasonally">Seasonally</SelectItem>
                           <SelectItem value="irregular">Irregular</SelectItem>
                           <SelectItem value="on-demand">On Demand</SelectItem>
                         </SelectContent>
@@ -5079,10 +5089,14 @@ export const DashboardInventoryManager = () => {
                     <Label htmlFor="benefits">Benefits (comma-separated)</Label>
                     <Textarea
                       id="benefits"
-                      value={editingItem.benefits?.join(', ') || ''}
+                      value={
+                        typeof editingItem.benefits === 'string'
+                          ? editingItem.benefits
+                          : editingItem.benefits?.join(', ') || ''
+                      }
                       onChange={(e) => setEditingItem({
                         ...editingItem,
-                        benefits: e.target.value.split(',').map(b => b.trim()).filter(Boolean)
+                        benefits: e.target.value  // Store as string during editing
                       })}
                       placeholder="Logo placement, Speaking opportunity, VIP access"
                       rows={3}

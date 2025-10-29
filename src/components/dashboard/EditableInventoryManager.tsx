@@ -1334,6 +1334,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <SelectItem value="weekly">Weekly</SelectItem>
                           <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
                           <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="seasonally">Seasonally</SelectItem>
                           <SelectItem value="irregular">Irregular</SelectItem>
                           <SelectItem value="on-demand">On Demand</SelectItem>
                         </SelectContent>

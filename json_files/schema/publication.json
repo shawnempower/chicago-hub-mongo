@@ -680,7 +680,7 @@
               },
               "frequency": {
                 "type": "string",
-                "enum": ["daily", "weekly", "bi-weekly", "monthly", "irregular", "on-demand"]
+                "enum": ["daily", "weekly", "bi-weekly", "monthly", "seasonally", "irregular", "on-demand"]
               },
               "sendDay": {
                 "type": "string",

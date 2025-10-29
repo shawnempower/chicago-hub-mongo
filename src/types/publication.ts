@@ -157,7 +157,7 @@ export interface PublicationFrontend {
     newsletters?: Array<{
       name?: string;
       subject?: string;
-      frequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'irregular';
+      frequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'seasonally' | 'irregular';
       sendDay?: string;
       sendTime?: string;
       subscribers?: number;

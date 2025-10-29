@@ -1,0 +1,860 @@
+{
+    "publicationId": 4005,
+    "basicInfo": {
+      "publicationName": "True Star Media",
+      "websiteUrl": "https://truestarmedia.org",
+      "founded": 2004,
+      "publicationType": "other",
+      "contentType": "mixed",
+      "headquarters": "4655 S King Dr Ste 204, Chicago, IL 60653",
+      "geographicCoverage": "local",
+      "primaryServiceArea": "Chicago, IL - Bronzeville community",
+      "secondaryMarkets": [
+        "Chicago South Side",
+        "Chicago West Side"
+      ],
+      "serviceAreas": [
+        {
+          "dmaName": "CHICAGO, IL",
+          "dmaNormalized": "chicago-il",
+          "isPrimary": true,
+          "counties": [
+            {
+              "name": "COOK",
+              "normalized": "cook"
+            }
+          ],
+          "coveragePercentage": 85
+        }
+      ],
+      "numberOfPublications": 1
+    },
+    "contactInfo": {
+      "mainPhone": "(312) 588-0100",
+      "businessHours": "Monday-Friday 10am-5pm",
+      "primaryContact": {
+        "name": "DeAnna McLeary-Sherman",
+        "title": "Executive Director & Co-Founder",
+        "email": "deanna@truestarmedia.org",
+        "phone": "(312) 588-0100",
+        "preferredContact": "email"
+      },
+      "salesContact": {
+        "name": "DeAnna McLeary-Sherman",
+        "title": "Executive Director & Co-Founder",
+        "email": "deanna@truestarmedia.org",
+        "phone": "(312) 588-0100",
+        "preferredContact": "email"
+      },
+      "editorialContact": {
+        "name": "Na-Tae' Thompson",
+        "title": "Executive Director & Co-Founder",
+        "email": "info@truestarmedia.org",
+        "phone": "(312) 588-0100"
+      },
+      "generalManager": {
+        "name": "Michael Issac",
+        "email": "info@truestarmedia.org",
+        "phone": "(312) 588-0100"
+      }
+    },
+    "distributionChannels": {
+      "website": {
+        "url": "https://truestarmedia.org",
+        "cmsplatform": "WordPress",
+        "metrics": {
+          "monthlyVisitors": 25000,
+          "monthlyPageViews": 75000,
+          "averageSessionDuration": 3.2,
+          "pagesPerSession": 2.8,
+          "bounceRate": 45,
+          "mobilePercentage": 75
+        },
+        "advertisingOpportunities": [
+          {
+            "name": "Large Display Ad",
+            "adFormat": "banner",
+            "format": {
+              "dimensions": "300x600"
+            },
+            "location": "Sidebar/prominent placement",
+            "pricing": {
+              "flatRate": 375,
+              "pricingModel": "per_week"
+            },
+            "monthlyImpressions": 25000,
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago-hub",
+                "hubName": "Chicago Hub",
+                "pricing": {
+                  "flatRate": 244,
+                  "pricingModel": "per_week"
+                },
+                "discount": 35,
+                "available": true
+              },
+              {
+                "hubId": "national-hub",
+                "hubName": "National Hub",
+                "pricing": {
+                  "flatRate": 244,
+                  "pricingModel": "per_week"
+                },
+                "discount": 35,
+                "available": true
+              }
+            ]
+          },
+          {
+            "name": "Leaderboard Banner",
+            "adFormat": "banner",
+            "format": {
+              "dimensions": "728x90"
+            },
+            "location": "Header",
+            "pricing": {
+              "flatRate": 250,
+              "pricingModel": "per_week"
+            },
+            "monthlyImpressions": 25000,
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago-hub",
+                "hubName": "Chicago Hub",
+                "pricing": {
+                  "flatRate": 163,
+                  "pricingModel": "per_week"
+                },
+                "discount": 35,
+                "available": true
+              },
+              {
+                "hubId": "national-hub",
+                "hubName": "National Hub",
+                "pricing": {
+                  "flatRate": 163,
+                  "pricingModel": "per_week"
+                },
+                "discount": 35,
+                "available": true
+              }
+            ]
+          },
+          {
+            "name": "Website Takeover",
+            "adFormat": "takeover",
+            "format": {
+              "dimensions": "full-page"
+            },
+            "location": "Homepage domination",
+            "pricing": {
+              "flatRate": 2000,
+              "pricingModel": "per_day"
+            },
+            "monthlyImpressions": 25000,
+            "available": true,
+            "hubPricing": [
+              {
+                "hubId": "chicago-hub",
+                "hubName": "Chicago Hub",
+                "pricing": {
+                  "flatRate": 1300,
+                  "pricingModel": "per_day"
+                },
+                "discount": 35,
+                "available": true
+              }
+            ]
+          }
+        ],
+        "generalTerms": {
+          "leadTime": "5 business days",
+          "materialDeadline": "5 business days before run date",
+          "paymentTerms": "Net 30",
+          "cancellationPolicy": "Contact for details",
+          "agencyCommission": 15,
+          "additionalTerms": "All content subject to youth team approval"
+        }
+      },
+      "socialMedia": [
+        {
+          "platform": "instagram",
+          "handle": "@truestarmedia",
+          "url": "https://instagram.com/truestarmedia",
+          "verified": false,
+          "metrics": {
+            "followers": 25500,
+            "engagementRate": 8.5,
+            "averageReach": 15000,
+            "averageImpressions": 20000
+          },
+          "lastUpdated": "2025-10-29",
+          "advertisingOpportunities": [
+            {
+              "name": "Instagram Post/Reel",
+              "adFormat": "sponsored_post",
+              "postType": "reel",
+              "pricing": {
+                "flatRate": 400,
+                "pricingModel": "per_post"
+              },
+              "specifications": {
+                "format": "MP4, JPG",
+                "aspectRatio": "9:16, 1:1"
+              },
+              "available": true,
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 400,
+                    "pricingModel": "per_post"
+                  },
+                  "available": true
+                }
+              ]
+            },
+            {
+              "name": "Instagram Story",
+              "adFormat": "story_ad",
+              "postType": "story",
+              "pricing": {
+                "flatRate": 250,
+                "pricingModel": "per_story"
+              },
+              "specifications": {
+                "format": "MP4, JPG",
+                "aspectRatio": "9:16"
+              },
+              "available": true,
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 250,
+                    "pricingModel": "per_story"
+                  },
+                  "available": true
+                }
+              ]
+            }
+          ],
+          "generalTerms": {
+            "leadTime": "5 business days",
+            "materialDeadline": "5 business days for youth content creation",
+            "paymentTerms": "Net 30",
+            "contentApproval": "Required - youth team review",
+            "additionalTerms": "All content created by trained youth creators"
+          }
+        },
+        {
+          "platform": "facebook",
+          "handle": "@truestarmedia",
+          "url": "https://facebook.com/truestarmedia",
+          "verified": false,
+          "metrics": {
+            "followers": 13400,
+            "engagementRate": 6.2,
+            "averageReach": 8000,
+            "averageImpressions": 12000
+          },
+          "lastUpdated": "2025-10-29",
+          "advertisingOpportunities": [
+            {
+              "name": "Facebook Post",
+              "adFormat": "sponsored_post",
+              "postType": "image",
+              "pricing": {
+                "flatRate": 250,
+                "pricingModel": "per_post"
+              },
+              "specifications": {
+                "format": "JPG, PNG, MP4",
+                "aspectRatio": "1:1, 16:9"
+              },
+              "available": true,
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 250,
+                    "pricingModel": "per_post"
+                  },
+                  "available": true
+                }
+              ]
+            }
+          ],
+          "generalTerms": {
+            "leadTime": "5 business days",
+            "materialDeadline": "5 business days for youth content creation",
+            "paymentTerms": "Net 30",
+            "contentApproval": "Required - youth team review"
+          }
+        },
+        {
+          "platform": "tiktok",
+          "handle": "@truestarmedia",
+          "url": "https://tiktok.com/@truestarmedia",
+          "verified": false,
+          "metrics": {
+            "followers": 3000,
+            "engagementRate": 12.5,
+            "averageReach": 5000,
+            "averageImpressions": 8000
+          },
+          "lastUpdated": "2025-10-29",
+          "advertisingOpportunities": [
+            {
+              "name": "TikTok Video",
+              "adFormat": "sponsored_post",
+              "postType": "video",
+              "pricing": {
+                "flatRate": 150,
+                "pricingModel": "per_post"
+              },
+              "specifications": {
+                "format": "MP4",
+                "aspectRatio": "9:16"
+              },
+              "available": true,
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 150,
+                    "pricingModel": "per_post"
+                  },
+                  "available": true
+                }
+              ]
+            }
+          ],
+          "generalTerms": {
+            "leadTime": "5 business days",
+            "materialDeadline": "5 business days for youth content creation",
+            "paymentTerms": "Net 30",
+            "contentApproval": "Required - youth team review"
+          }
+        }
+      ],
+      "newsletters": [
+        {
+          "name": "True Star Newsletter",
+          "subject": "Youth voices and community news",
+          "frequency": "weekly",
+          "sendDay": "Various",
+          "sendTime": "Morning",
+          "subscribers": 5500,
+          "openRate": 25,
+          "clickThroughRate": 4.5,
+          "listGrowthRate": 8,
+          "advertisingOpportunities": [
+            {
+              "name": "Leaderboard Banner",
+              "position": "header",
+              "format": {
+                "dimensions": "729x90"
+              },
+              "pricing": {
+                "flatRate": 225,
+                "pricingModel": "per_send",
+                "frequency": "One time"
+              },
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 150,
+                    "pricingModel": "per_send",
+                    "frequency": "One time"
+                  },
+                  "discount": 33,
+                  "available": true
+                }
+              ]
+            },
+            {
+              "name": "Medium Rectangle",
+              "position": "inline",
+              "format": {
+                "dimensions": "300x250"
+              },
+              "pricing": {
+                "flatRate": 150,
+                "pricingModel": "per_send",
+                "frequency": "One time"
+              },
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 100,
+                    "pricingModel": "per_send",
+                    "frequency": "One time"
+                  },
+                  "discount": 33,
+                  "available": true
+                }
+              ]
+            },
+            {
+              "name": "Newsletter Takeover",
+              "position": "dedicated",
+              "format": {
+                "dimensions": "full-newsletter"
+              },
+              "pricing": {
+                "flatRate": 1000,
+                "pricingModel": "per_send",
+                "frequency": "One time"
+              },
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 650,
+                    "pricingModel": "per_send",
+                    "frequency": "One time"
+                  },
+                  "discount": 35,
+                  "available": true
+                }
+              ]
+            }
+          ],
+          "generalTerms": {
+            "leadTime": "3 business days",
+            "materialDeadline": "3 business days before send",
+            "paymentTerms": "Net 30",
+            "contentApproval": "Youth team review required",
+            "additionalTerms": "Educational/positive messaging preferred"
+          }
+        }
+      ],
+      "events": [
+        {
+          "name": "True Star Rising",
+          "type": "Annual Fundraiser",
+          "frequency": "annually",
+          "averageAttendance": 2500,
+          "targetAudience": "Youth, families, educators, community leaders",
+          "location": "Chicago, IL",
+          "advertisingOpportunities": [
+            {
+              "level": "title",
+              "benefits": [
+                "Event naming rights",
+                "Speaking opportunity",
+                "Premium booth space",
+                "Logo on all materials",
+                "Social media promotion (10+ posts)",
+                "Email mentions",
+                "Youth interaction opportunities"
+              ],
+              "pricing": {
+                "flatRate": 10000,
+                "pricingModel": "flat"
+              },
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 7500,
+                    "pricingModel": "flat"
+                  },
+                  "discount": 25,
+                  "available": true
+                }
+              ]
+            },
+            {
+              "level": "supporting",
+              "benefits": [
+                "Logo placement",
+                "Social media mention",
+                "Networking opportunity",
+                "Small booth/table"
+              ],
+              "pricing": {
+                "flatRate": 500,
+                "pricingModel": "flat"
+              },
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 375,
+                    "pricingModel": "flat"
+                  },
+                  "discount": 25,
+                  "available": true
+                }
+              ]
+            }
+          ],
+          "generalTerms": {
+            "bookingDeadline": "6 weeks before event",
+            "paymentTerms": "Net 30, 50% deposit",
+            "cancellationPolicy": "Contact for refund terms",
+            "deliverables": "Logo placement, social promotion, booth space",
+            "additionalTerms": "Youth-focused messaging preferred"
+          }
+        },
+        {
+          "name": "Chi Town Hall",
+          "type": "Youth Summit",
+          "frequency": "annually",
+          "averageAttendance": 200,
+          "targetAudience": "Engaged youth",
+          "location": "Chicago, IL",
+          "advertisingOpportunities": [
+            {
+              "level": "supporting",
+              "benefits": [
+                "Logo placement",
+                "Program mention",
+                "Youth networking opportunity"
+              ],
+              "pricing": {
+                "flatRate": 0,
+                "pricingModel": "contact"
+              }
+            }
+          ],
+          "generalTerms": {
+            "bookingDeadline": "4 weeks before event",
+            "paymentTerms": "Net 30",
+            "cancellationPolicy": "Contact for details",
+            "deliverables": "Custom opportunities available"
+          }
+        }
+      ],
+      "podcasts": [
+        {
+          "podcastId": "truestar-visual-podcast",
+          "name": "True Star Visual Podcasts",
+          "description": "Youth-driven podcast featuring diverse perspectives and community voices",
+          "frequency": "weekly",
+          "averageDownloads": 2150,
+          "averageListeners": 1800,
+          "episodeCount": 50,
+          "platforms": [
+            "youtube_music",
+            "spotify",
+            "apple_podcasts"
+          ],
+          "advertisingOpportunities": [
+            {
+              "name": "30-Second Mid-Roll Package",
+              "adFormat": "mid-roll",
+              "duration": 30,
+              "pricing": {
+                "flatRate": 500,
+                "pricingModel": "per_ad",
+                "frequency": "10x"
+              },
+              "specifications": {
+                "format": "mp3",
+                "bitrate": "128kbps"
+              },
+              "available": true,
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 500,
+                    "pricingModel": "per_ad",
+                    "frequency": "10x"
+                  },
+                  "available": true
+                }
+              ]
+            },
+            {
+              "name": "Show Takeover/Sponsorship",
+              "adFormat": "sponsored_content",
+              "duration": 0,
+              "pricing": {
+                "flatRate": 1500,
+                "pricingModel": "per_episode",
+                "frequency": "One time"
+              },
+              "specifications": {
+                "format": "script"
+              },
+              "available": true,
+              "hubPricing": [
+                {
+                  "hubId": "chicago-hub",
+                  "hubName": "Chicago Hub",
+                  "pricing": {
+                    "flatRate": 1000,
+                    "pricingModel": "per_episode",
+                    "frequency": "One time"
+                  },
+                  "discount": 33,
+                  "available": true
+                }
+              ]
+            }
+          ],
+          "generalTerms": {
+            "bookingDeadline": "1 week before recording",
+            "materialDeadline": "2 weeks for production services",
+            "paymentTerms": "Net 30",
+            "cancellationPolicy": "Contact for details",
+            "productionServices": "Youth-led production available",
+            "additionalTerms": "Content must align with youth development mission"
+          }
+        }
+      ]
+    },
+    "audienceDemographics": {
+      "totalAudience": 75000,
+      "ageGroups": {
+        "18-24": 45,
+        "25-34": 25,
+        "35-44": 20,
+        "45-54": 8,
+        "55-64": 2,
+        "65+": 0
+      },
+      "gender": {
+        "male": 45,
+        "female": 53,
+        "other": 2
+      },
+      "householdIncome": {
+        "under35k": 35,
+        "35k-50k": 25,
+        "50k-75k": 20,
+        "75k-100k": 15,
+        "100k-150k": 3,
+        "over150k": 2
+      },
+      "education": {
+        "highSchool": 40,
+        "someCollege": 35,
+        "bachelors": 20,
+        "graduate": 5
+      },
+      "location": "Chicago, IL - primarily South and West sides",
+      "interests": [
+        "Social justice",
+        "Entertainment",
+        "Music",
+        "Career development",
+        "Community issues",
+        "Youth culture",
+        "Education",
+        "Arts and culture"
+      ],
+      "targetMarkets": [
+        "Black youth aged 14-24",
+        "Latinx youth aged 14-24",
+        "Parents and educators",
+        "Community leaders",
+        "Socially conscious consumers"
+      ]
+    },
+    "editorialInfo": {
+      "contentFocus": [
+        "Youth perspectives",
+        "Entertainment and pop culture",
+        "Social justice issues",
+        "Community news",
+        "Career development",
+        "Health and relationships",
+        "Sports"
+      ],
+      "contentPillars": [
+        "Youth empowerment",
+        "Authentic voices",
+        "Community engagement",
+        "Workforce development",
+        "Cultural celebration"
+      ],
+      "specialSections": [
+        "Two Minute Talks",
+        "From The 'Go podcast",
+        "Chi Town Hall coverage",
+        "Youth documentaries"
+      ],
+      "signatureFeatures": [
+        "Youth-produced content",
+        "Community event coverage",
+        "Educational programming",
+        "Social impact stories"
+      ],
+      "editorialTeam": {
+        "editorInChief": "DeAnna McLeary-Sherman",
+        "managingEditor": "Na-Tae' Thompson",
+        "keyWriters": [
+          "Youth content creators (rotating)"
+        ],
+        "contributingWriters": [
+          "250+ youth participants annually"
+        ]
+      }
+    },
+    "businessInfo": {
+      "legalEntity": "True Star Media",
+      "taxId": "20-5289962",
+      "ownershipType": "nonprofit",
+      "parentCompany": null,
+      "yearsInOperation": 21,
+      "numberOfEmployees": 10,
+      "averageMonthlyRevenue": 50000,
+      "revenueBreakdown": {
+        "digital": 40,
+        "print": 0,
+        "events": 30,
+        "podcasts": 10,
+        "radio": 0,
+        "streaming": 5,
+        "social": 15,
+        "other": 0
+      },
+      "topAdvertiserCategories": [
+        "Education",
+        "Youth services",
+        "Community organizations",
+        "Healthcare",
+        "Technology",
+        "Entertainment"
+      ],
+      "clientRetentionRate": 85
+    },
+    "crossChannelPackages": [
+      {
+        "name": "Website + Email Combo",
+        "packageName": "Digital Reach Package",
+        "includedChannels": [
+          "website",
+          "newsletter"
+        ],
+        "pricing": "$1,750/month standard, $1,150/month Chicago Hub",
+        "details": "Leaderboard on website + Newsletter banner (4x monthly)",
+        "duration": "Monthly",
+        "savings": 34
+      },
+      {
+        "name": "Full Digital Package",
+        "packageName": "Complete Youth Engagement",
+        "includedChannels": [
+          "website",
+          "newsletter",
+          "social"
+        ],
+        "pricing": "$4,500/month standard, $3,000/month Chicago Hub",
+        "details": "Website takeover (1 day/month) + All newsletter placements + 5 social posts per month",
+        "duration": "Quarterly commitment",
+        "savings": 33
+      }
+    ],
+    "technicalCapabilities": {
+      "cmsplatform": "WordPress",
+      "emailServiceProvider": "Mailchimp",
+      "adServer": "Google Ad Manager",
+      "analyticsTools": [
+        "Google Analytics",
+        "Facebook Insights",
+        "YouTube Analytics"
+      ],
+      "crmSystem": "Salesforce Nonprofit Cloud",
+      "paymentProcessing": [
+        "credit cards",
+        "ach",
+        "check"
+      ]
+    },
+    "competitiveInfo": {
+      "uniqueValueProposition": "Chicago's only youth-driven media platform combining authentic content creation with workforce development",
+      "keyDifferentiators": [
+        "100% youth-created content",
+        "Social impact mission",
+        "Deep community roots",
+        "Diverse young audience engagement",
+        "Workforce development component"
+      ],
+      "competitiveAdvantages": [
+        "Authentic youth voice",
+        "Community trust and credibility",
+        "Multi-channel digital presence",
+        "Strong social media engagement",
+        "Nonprofit status for partnerships"
+      ],
+      "marketShare": 15,
+      "mainCompetitors": [
+        "Chicago Sun-Times youth section",
+        "Block Club Chicago",
+        "South Side Weekly",
+        "Chicago Defender"
+      ]
+    },
+    "awards": [
+      {
+        "award": "MacArthur Foundation Grant",
+        "organization": "MacArthur Foundation",
+        "year": 2024,
+        "category": "Youth Development"
+      }
+    ],
+    "bookingPolicies": {
+      "minimumLeadTime": "5 business days for digital, 3 weeks for video production",
+      "cancellationPolicy": "Contact for specific terms",
+      "materialDeadline": "5 business days for digital, 3 business days for email",
+      "paymentTerms": "Net 30",
+      "agencyDiscount": 15,
+      "creditCardsAccepted": true
+    },
+    "metadata": {
+      "extractedFrom": [
+        "manual_entry",
+        "website"
+      ],
+      "confidence": 0.85,
+      "lastAnalyzed": "2025-10-29T00:00:00Z",
+      "lastUpdated": "2025-10-29T00:00:00Z",
+      "createdAt": "2025-10-29T00:00:00Z",
+      "nextReviewDate": "2025-12-01",
+      "dataCompleteness": 85,
+      "verificationStatus": "verified"
+    },
+    "internalNotes": {
+      "operationalNotes": "Unique nonprofit media organization with strong community ties. All content created by trained youth aged 14-24.",
+      "salesApproach": "Emphasize authentic youth voice and social impact. Strong alignment with education, youth development, and community-focused brands.",
+      "knownChallenges": [
+        "Limited inventory due to youth-focused approach",
+        "Seasonal availability around school schedules",
+        "Content approval process requires additional lead time"
+      ],
+      "growthOpportunities": [
+        "Expanding podcast advertising",
+        "Custom video production services",
+        "Corporate social responsibility partnerships",
+        "Educational sector partnerships"
+      ],
+      "preferredContactTime": "Weekdays 10am-5pm",
+      "responseTime": "24-48 hours",
+      "decisionMakers": [
+        "DeAnna McLeary-Sherman (Executive Director)",
+        "Na-Tae' Thompson (Executive Director)",
+        "Michael Issac (Chief Growth Officer)"
+      ]
+    }
+  }
