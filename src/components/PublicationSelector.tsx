@@ -150,7 +150,11 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
             </div>
           </SelectTrigger>
           <SelectContent>
-            <div className="p-2 border-b sticky top-0 bg-white z-10">
+            <div 
+              className="p-2 border-b sticky top-0 bg-white z-10"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
@@ -240,7 +244,11 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
           </div>
         </SelectTrigger>
         <SelectContent>
-          <div className="p-2 border-b sticky top-0 bg-white z-10">
+          <div 
+            className="p-2 border-b sticky top-0 bg-white z-10"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
