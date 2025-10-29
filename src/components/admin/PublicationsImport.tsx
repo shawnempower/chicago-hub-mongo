@@ -68,6 +68,25 @@ export const PublicationsImport = () => {
       "geographicCoverage": "local",
       "primaryServiceArea": "Chicago Metro",
       "secondaryMarkets": ["Suburbs", "Cook County"],
+      "serviceAreas": [
+        {
+          "dmaName": "CHICAGO, IL",
+          "dmaNormalized": "chicago-il",
+          "isPrimary": true,
+          "counties": [
+            {
+              "name": "COOK",
+              "normalized": "cook"
+            },
+            {
+              "name": "DUPAGE",
+              "normalized": "dupage"
+            }
+          ],
+          "coveragePercentage": 75,
+          "notes": "Primary coverage in Chicago metro area"
+        }
+      ],
       "numberOfPublications": 1
     },
     "contactInfo": {
