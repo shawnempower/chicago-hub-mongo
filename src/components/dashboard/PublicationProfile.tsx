@@ -218,11 +218,6 @@ export const PublicationProfile: React.FC = () => {
       return result.error;
     }
     
-    if (fieldPath === 'businessInfo.yearsInOperation') {
-      const result = validatePositiveInteger(value);
-      return result.error;
-    }
-    
     // Audience numbers
     if (fieldPath === 'audienceDemographics.totalAudience') {
       const result = validatePositiveInteger(value);
@@ -890,8 +885,6 @@ export const PublicationProfile: React.FC = () => {
                 <Input value={getFieldValue('businessInfo.parentCompany')} onChange={(e) => updateField('businessInfo.parentCompany', e.target.value)} />
               </SchemaField>
 
-
-
               <SchemaField mappingStatus="full" schemaPath="businessInfo.ownershipType" showSchemaPath={showSchemaDebug}>
                 <Label>Ownership Type</Label>
                 <Select value={getFieldValue('businessInfo.ownershipType')} onValueChange={(val) => updateField('businessInfo.ownershipType', val)}>
@@ -905,18 +898,6 @@ export const PublicationProfile: React.FC = () => {
                     <SelectItem value="family-owned">Family-owned</SelectItem>
                   </SelectContent>
                 </Select>
-              </SchemaField>
-
-              <SchemaField mappingStatus="full" schemaPath="businessInfo.yearsInOperation" showSchemaPath={showSchemaDebug}>
-                <Label>Years in Operation</Label>
-                <Input 
-                  type="number" 
-                  value={getFieldValue('businessInfo.yearsInOperation')} 
-                  onChange={(e) => updateFieldWithValidation('businessInfo.yearsInOperation', parseInt(e.target.value) || '')} 
-                  className={getValidationClass(!!fieldErrors['businessInfo.yearsInOperation'])}
-                  onBlur={(e) => updateFieldWithValidation('businessInfo.yearsInOperation', parseInt(e.target.value) || '')}
-                />
-                <FieldError error={fieldErrors['businessInfo.yearsInOperation']} />
               </SchemaField>
               </div>
           </CardContent>
@@ -1389,8 +1370,7 @@ export const PublicationProfile: React.FC = () => {
           businessInfo.legalEntity || 
           businessInfo.taxId || 
           businessInfo.parentCompany || 
-          businessInfo.ownershipType || 
-          businessInfo.yearsInOperation
+          businessInfo.ownershipType
         );
         
         if (!hasBusinessData) return null;
@@ -1422,12 +1402,6 @@ export const PublicationProfile: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Ownership Type</p>
                     <p className="mt-1">{businessInfo.ownershipType}</p>
-                  </div>
-                )}
-                {businessInfo.yearsInOperation && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Years in Operation</p>
-                    <p className="mt-1">{businessInfo.yearsInOperation}</p>
                   </div>
                 )}
               </div>

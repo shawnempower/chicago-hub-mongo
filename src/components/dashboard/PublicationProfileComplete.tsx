@@ -262,11 +262,6 @@ export const PublicationProfile: React.FC = () => {
                   </SelectContent>
                 </Select>
               </SchemaField>
-
-              <SchemaField mappingStatus="full" schemaPath="businessInfo.yearsInOperation" showSchemaPath={showSchemaDebug}>
-                <Label>Years in Operation</Label>
-                <Input type="number" value={getFieldValue('businessInfo.yearsInOperation')} onChange={(e) => updateField('businessInfo.yearsInOperation', parseInt(e.target.value) || '')} />
-              </SchemaField>
             </div>
           </CardContent>
         </Card>
@@ -549,10 +544,6 @@ export const PublicationProfile: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Ownership Type</p>
               <p className="mt-1">{get('businessInfo.ownershipType') || 'Not specified'}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Years in Operation</p>
-              <p className="mt-1">{get('businessInfo.yearsInOperation') || 'Not specified'}</p>
             </div>
           </div>
         </CardContent>
