@@ -155,11 +155,17 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
   const addHubPricing = () => {
     // Default to first hub (now allows duplicates)
     const defaultHub = AVAILABLE_HUBS[0];
+    
+    // Initialize with the default pricing model that will be shown in the Select dropdown
+    // This ensures what's displayed is what's actually saved
+    const defaultPricingModel = pricingModels?.[0]?.value;
 
     const newHubPrice: HubPrice = {
       hubId: defaultHub.id,
       hubName: defaultHub.name,
-      pricing: {},
+      pricing: {
+        ...(defaultPricingModel && { pricingModel: defaultPricingModel }),
+      },
       available: true,
     };
 
