@@ -38,6 +38,7 @@ import {
   surveySubmissionsService,
   areasService
 } from '../src/integrations/mongodb/allServices';
+import { hubPackagesService } from '../src/integrations/mongodb/hubPackageService';
 import { authService, initializeAuthService } from '../src/integrations/mongodb/authService';
 import { getDatabase } from '../src/integrations/mongodb/client';
 import { ObjectId } from 'mongodb';
@@ -1675,6 +1676,243 @@ app.delete('/api/admin/packages/:id', authenticateToken, async (req: any, res) =
   } catch (error) {
     console.error('Error deleting package:', error);
     res.status(500).json({ error: 'Failed to delete package' });
+  }
+});
+
+// ===== HUB PACKAGES API (NEW SYSTEM) =====
+
+// Get all hub packages (public)
+app.get('/api/hub-packages', async (req, res) => {
+  try {
+    const { 
+      active_only, 
+      featured, 
+      category, 
+      hub_id 
+    } = req.query;
+    
+    const filters: any = {};
+    if (active_only !== 'false') filters.isActive = true;
+    if (featured === 'true') filters.isFeatured = true;
+    if (category) filters.category = category as string;
+    if (hub_id) filters.hubId = hub_id as string;
+    
+    const packages = await hubPackagesService.getAll(filters);
+    res.json({ packages });
+  } catch (error) {
+    console.error('Error fetching hub packages:', error);
+    res.status(500).json({ error: 'Failed to fetch packages' });
+  }
+});
+
+// Get single hub package by ID (public)
+app.get('/api/hub-packages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const package_ = await hubPackagesService.getById(id);
+    
+    if (!package_) {
+      return res.status(404).json({ error: 'Package not found' });
+    }
+
+    // Increment view count
+    await hubPackagesService.incrementViewCount(id);
+
+    res.json({ package: package_ });
+  } catch (error) {
+    console.error('Error fetching hub package:', error);
+    res.status(500).json({ error: 'Failed to fetch package' });
+  }
+});
+
+// Search hub packages (public)
+app.get('/api/hub-packages/search/:query', async (req, res) => {
+  try {
+    const { query } = req.params;
+    const packages = await hubPackagesService.search(query);
+    res.json({ packages });
+  } catch (error) {
+    console.error('Error searching hub packages:', error);
+    res.status(500).json({ error: 'Failed to search packages' });
+  }
+});
+
+// Package inquiry (tracks interest)
+app.post('/api/hub-packages/:id/inquire', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    await hubPackagesService.incrementInquiryCount(id);
+    
+    // You can also create a lead inquiry here
+    // const leadData = { ...req.body, userId: req.user.id };
+    // await leadInquiriesService.create(leadData);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error recording package inquiry:', error);
+    res.status(500).json({ error: 'Failed to record inquiry' });
+  }
+});
+
+// ===== ADMIN-ONLY HUB PACKAGES ROUTES =====
+
+// Create new hub package (admin only)
+app.post('/api/admin/hub-packages', authenticateToken, async (req: any, res) => {
+  try {
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const packageData = req.body;
+    const package_ = await hubPackagesService.create(packageData, req.user.id);
+    res.status(201).json({ package: package_ });
+  } catch (error) {
+    console.error('Error creating hub package:', error);
+    res.status(500).json({ error: 'Failed to create package' });
+  }
+});
+
+// Update hub package (admin only)
+app.put('/api/admin/hub-packages/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    const updateData = req.body;
+    const package_ = await hubPackagesService.update(id, updateData, req.user.id);
+    
+    if (!package_) {
+      return res.status(404).json({ error: 'Package not found' });
+    }
+
+    res.json({ package: package_ });
+  } catch (error) {
+    console.error('Error updating hub package:', error);
+    res.status(500).json({ error: 'Failed to update package' });
+  }
+});
+
+// Delete hub package (admin only)
+app.delete('/api/admin/hub-packages/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    const { permanent } = req.query;
+    
+    const success = await hubPackagesService.delete(id, permanent === 'true');
+    
+    if (!success) {
+      return res.status(404).json({ error: 'Package not found' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting hub package:', error);
+    res.status(500).json({ error: 'Failed to delete package' });
+  }
+});
+
+// Restore soft-deleted package (admin only)
+app.post('/api/admin/hub-packages/:id/restore', authenticateToken, async (req: any, res) => {
+  try {
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    const success = await hubPackagesService.restore(id);
+    
+    res.json({ success });
+  } catch (error) {
+    console.error('Error restoring hub package:', error);
+    res.status(500).json({ error: 'Failed to restore package' });
+  }
+});
+
+// ===== PACKAGE DISCOVERY TOOLS (ADMIN) =====
+
+// Analyze available inventory across publications
+app.get('/api/admin/package-discovery/inventory', authenticateToken, async (req: any, res) => {
+  try {
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { geographic_area, min_visitors } = req.query;
+    
+    const filters: any = {};
+    if (geographic_area) filters.geographicArea = geographic_area as string;
+    if (min_visitors) filters.minMonthlyVisitors = parseInt(min_visitors as string);
+
+    const inventory = await hubPackagesService.analyzeAvailableInventory(filters);
+    res.json({ inventory });
+  } catch (error) {
+    console.error('Error analyzing inventory:', error);
+    res.status(500).json({ error: 'Failed to analyze inventory' });
+  }
+});
+
+// Generate package recommendations
+app.post('/api/admin/package-discovery/recommend', authenticateToken, async (req: any, res) => {
+  try {
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const criteria = req.body;
+    const recommendations = await hubPackagesService.generatePackageRecommendations(criteria);
+    res.json({ recommendations });
+  } catch (error) {
+    console.error('Error generating recommendations:', error);
+    res.status(500).json({ error: 'Failed to generate recommendations' });
+  }
+});
+
+// Seed starter packages
+app.post('/api/admin/hub-packages/seed-starters', authenticateToken, async (req: any, res) => {
+  try {
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // Import the starter packages data
+    const { STARTER_PACKAGES } = await import('../src/data/starterPackages');
+    
+    const results = [];
+    for (const packageData of STARTER_PACKAGES) {
+      try {
+        const createdPackage = await hubPackagesService.create(packageData, req.user.id);
+        results.push({ success: true, package: createdPackage });
+      } catch (error: any) {
+        // Check if it's a duplicate key error
+        if (error.message && error.message.includes('duplicate')) {
+          results.push({ success: false, packageId: packageData.packageId, error: 'Package already exists' });
+        } else {
+          results.push({ success: false, packageId: packageData.packageId, error: error.message });
+        }
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    res.json({ 
+      message: `Seeded ${successCount}/${STARTER_PACKAGES.length} starter packages`,
+      results 
+    });
+  } catch (error) {
+    console.error('Error seeding starter packages:', error);
+    res.status(500).json({ error: 'Failed to seed starter packages' });
   }
 });
 

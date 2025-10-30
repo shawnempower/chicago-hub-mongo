@@ -985,6 +985,7 @@ export const COLLECTIONS = {
   STOREFRONT_CONFIGURATIONS: 'storefront_configurations',
   SURVEY_SUBMISSIONS: 'survey_submissions',
   AD_PACKAGES: 'ad_packages',
+  HUB_PACKAGES: 'hub_packages', // New comprehensive hub-level package system
   ADVERTISING_INVENTORY: 'advertising_inventory',
   LEAD_INQUIRIES: 'lead_inquiries',
   USER_PROFILES: 'user_profiles',
@@ -1035,6 +1036,18 @@ export const INDEXES = {
     { mediaOutletId: 1 },
     { isActive: 1 },
     { createdAt: -1 }
+  ],
+  hub_packages: [
+    { packageId: 1 }, // unique
+    { 'hubInfo.hubId': 1 },
+    { 'basicInfo.category': 1 },
+    { 'availability.isActive': 1 },
+    { 'availability.isFeatured': 1 },
+    { 'metadata.approvalStatus': 1 },
+    { 'marketing.displayOrder': 1 },
+    { 'marketing.tags': 1 },
+    { deletedAt: 1 },
+    { 'metadata.createdAt': -1 }
   ],
   lead_inquiries: [
     { userId: 1 },

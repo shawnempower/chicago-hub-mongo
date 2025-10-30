@@ -41,3 +41,6 @@ LOCAL_ENV_VALUES.txt
 
 # Data files (imported into MongoDB)
 geography.csv
+
+# Export files
+exports/

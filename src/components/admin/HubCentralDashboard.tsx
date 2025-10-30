@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LeadManagement } from './LeadManagement';
-import { PackageManagement } from './PackageManagement';
+import { HubPackageManagement } from './HubPackageManagement';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
@@ -656,7 +656,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
     }
     
     if (activeTab === 'packages') {
-      return <PackageManagement />;
+      return <HubPackageManagement />;
     }
     
     return null;
