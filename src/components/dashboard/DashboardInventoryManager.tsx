@@ -123,6 +123,7 @@ export const DashboardInventoryManager = () => {
   const [editingParentIndex, setEditingParentIndex] = useState<number>(-1); // for event parent index
   const [editingItemIndex, setEditingItemIndex] = useState<number>(-1); // for event sponsorship index
   const [isAdding, setIsAdding] = useState<boolean>(false); // Track if we're adding new (vs editing existing)
+  const [customDurationMode, setCustomDurationMode] = useState<boolean>(false); // Track if duration is in custom mode
 
   // Delete confirmation dialog states
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -745,6 +746,12 @@ export const DashboardInventoryManager = () => {
     setEditingIndex(index);
     setEditingSubIndex(subIndex);
     setIsAdding(adding);
+    
+    // Set custom duration mode if duration is not a standard value
+    if (type === 'podcast-ad' || type === 'radio-ad') {
+      const duration = type === 'podcast-ad' ? itemCopy.duration : itemCopy.specifications?.duration;
+      setCustomDurationMode(!duration || ![15, 30, 60, 90, 120].includes(duration));
+    }
   };
 
   const closeEditDialog = () => {
@@ -755,6 +762,7 @@ export const DashboardInventoryManager = () => {
     setEditingSubIndex(-1);
     setEditingParentIndex(-1);
     setEditingItemIndex(-1);
+    setCustomDurationMode(false); // Reset custom duration mode
   };
 
   const saveEditedItem = async () => {
@@ -4696,12 +4704,21 @@ export const DashboardInventoryManager = () => {
                     <Label htmlFor="duration">Duration</Label>
                     <Select 
                       value={
-                        editingItem.duration && [15, 30, 60, 90, 120].includes(editingItem.duration)
-                          ? String(editingItem.duration)
-                          : 'custom'
+                        customDurationMode
+                          ? 'custom'
+                          : (editingItem.duration && [15, 30, 60, 90, 120].includes(editingItem.duration)
+                            ? String(editingItem.duration)
+                            : 'custom')
                       }
                       onValueChange={(value) => {
-                        if (value === 'custom') return;
+                        if (value === 'custom') {
+                          // Enter custom mode and clear duration
+                          setCustomDurationMode(true);
+                          setEditingItem({ ...editingItem, duration: undefined });
+                          return;
+                        }
+                        // Exit custom mode and set standard duration
+                        setCustomDurationMode(false);
                         const duration = parseInt(value);
                         setEditingItem({ ...editingItem, duration });
                       }}
@@ -4721,15 +4738,19 @@ export const DashboardInventoryManager = () => {
                   </div>
                   
                   {/* Custom duration input - shown for non-standard durations */}
-                  {(!editingItem.duration || ![15, 30, 60, 90, 120].includes(editingItem.duration)) && (
+                  {(customDurationMode || (!editingItem.duration || ![15, 30, 60, 90, 120].includes(editingItem.duration))) && (
                     <div>
                       <Label htmlFor="customDuration">Custom Duration (seconds)</Label>
                       <Input
                         id="customDuration"
                         type="number"
                         value={editingItem.duration || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || undefined })}
-                        placeholder="Enter seconds"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const numVal = val === '' ? undefined : parseInt(val, 10);
+                          setEditingItem({ ...editingItem, duration: isNaN(numVal) ? undefined : numVal });
+                        }}
+                        placeholder="Enter seconds (e.g., 45, 180, 600)"
                       />
                     </div>
                   )}
@@ -4797,12 +4818,27 @@ export const DashboardInventoryManager = () => {
                     <Label htmlFor="duration">Duration</Label>
                     <Select 
                       value={
-                        editingItem.specifications?.duration && [15, 30, 60, 90, 120].includes(editingItem.specifications.duration)
-                          ? String(editingItem.specifications.duration)
-                          : 'custom'
+                        customDurationMode
+                          ? 'custom'
+                          : (editingItem.specifications?.duration && [15, 30, 60, 90, 120].includes(editingItem.specifications.duration)
+                            ? String(editingItem.specifications.duration)
+                            : 'custom')
                       }
                       onValueChange={(value) => {
-                        if (value === 'custom') return;
+                        if (value === 'custom') {
+                          // Enter custom mode and clear duration
+                          setCustomDurationMode(true);
+                          setEditingItem({ 
+                            ...editingItem, 
+                            specifications: {
+                              ...editingItem.specifications,
+                              duration: undefined
+                            }
+                          });
+                          return;
+                        }
+                        // Exit custom mode and set standard duration
+                        setCustomDurationMode(false);
                         const duration = parseInt(value);
                         setEditingItem({ 
                           ...editingItem, 
@@ -4828,21 +4864,25 @@ export const DashboardInventoryManager = () => {
                   </div>
                   
                   {/* Custom duration input - shown for non-standard durations */}
-                  {(!editingItem.specifications?.duration || ![15, 30, 60, 90, 120].includes(editingItem.specifications.duration)) && (
+                  {(customDurationMode || (!editingItem.specifications?.duration || ![15, 30, 60, 90, 120].includes(editingItem.specifications.duration))) && (
                     <div>
                       <Label htmlFor="customDuration">Custom Duration (seconds)</Label>
                       <Input
                         id="customDuration"
                         type="number"
                         value={editingItem.specifications?.duration || ''}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          specifications: {
-                            ...editingItem.specifications,
-                            duration: parseInt(e.target.value) || undefined
-                          }
-                        })}
-                        placeholder="Enter seconds (e.g., 20, 1320)"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const numVal = val === '' ? undefined : parseInt(val, 10);
+                          setEditingItem({ 
+                            ...editingItem, 
+                            specifications: {
+                              ...editingItem.specifications,
+                              duration: isNaN(numVal) ? undefined : numVal
+                            }
+                          });
+                        }}
+                        placeholder="Enter seconds (e.g., 45, 180, 600, 1320)"
                       />
                     </div>
                   )}

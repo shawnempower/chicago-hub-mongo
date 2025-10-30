@@ -39,6 +39,8 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<PublicationFrontend>>({});
+  // Track which durations are in custom mode (by ad identifier)
+  const [customDurationMode, setCustomDurationMode] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (selectedPublication) {
@@ -2346,39 +2348,54 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         
                         <div>
                           <Label>Duration</Label>
-                          <Select 
-                            value={
-                              ad.duration && [15, 30, 60, 90, 120].includes(ad.duration)
-                                ? String(ad.duration)
-                                : 'custom'
-                            }
-                            onValueChange={(value) => {
-                              if (value === 'custom') return;
-                              const duration = parseInt(value);
-                              updatePodcastAd(podcastIndex, adIndex, 'duration', duration);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select duration..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="15">15 seconds (:15)</SelectItem>
-                              <SelectItem value="30">30 seconds (:30)</SelectItem>
-                              <SelectItem value="60">60 seconds (:60)</SelectItem>
-                              <SelectItem value="90">90 seconds (:90)</SelectItem>
-                              <SelectItem value="120">120 seconds (:120)</SelectItem>
-                              <SelectItem value="custom">Custom...</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {(!ad.duration || ![15, 30, 60, 90, 120].includes(ad.duration)) && (
-                            <Input
-                              type="number"
-                              className="mt-2"
-                              value={ad.duration || ''}
-                              onChange={(e) => updatePodcastAd(podcastIndex, adIndex, 'duration', parseInt(e.target.value) || undefined)}
-                              placeholder="Enter seconds"
-                            />
-                          )}
+                          <div className="space-y-2">
+                            <Select 
+                              value={
+                                customDurationMode[`podcast-${podcastIndex}-${adIndex}`] 
+                                  ? 'custom'
+                                  : (ad.duration && [15, 30, 60, 90, 120].includes(ad.duration)
+                                    ? String(ad.duration)
+                                    : 'custom')
+                              }
+                              onValueChange={(value) => {
+                                const key = `podcast-${podcastIndex}-${adIndex}`;
+                                if (value === 'custom') {
+                                  // Enter custom mode and clear duration
+                                  setCustomDurationMode({ ...customDurationMode, [key]: true });
+                                  updatePodcastAd(podcastIndex, adIndex, 'duration', undefined);
+                                  return;
+                                }
+                                // Exit custom mode and set standard duration
+                                setCustomDurationMode({ ...customDurationMode, [key]: false });
+                                const duration = parseInt(value);
+                                updatePodcastAd(podcastIndex, adIndex, 'duration', duration);
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select duration..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="15">15 seconds (:15)</SelectItem>
+                                <SelectItem value="30">30 seconds (:30)</SelectItem>
+                                <SelectItem value="60">60 seconds (:60)</SelectItem>
+                                <SelectItem value="90">90 seconds (:90)</SelectItem>
+                                <SelectItem value="120">120 seconds (:120)</SelectItem>
+                                <SelectItem value="custom">Custom...</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {(customDurationMode[`podcast-${podcastIndex}-${adIndex}`] || (!ad.duration || ![15, 30, 60, 90, 120].includes(ad.duration))) && (
+                              <Input
+                                type="number"
+                                value={ad.duration || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const numVal = val === '' ? undefined : parseInt(val, 10);
+                                  updatePodcastAd(podcastIndex, adIndex, 'duration', isNaN(numVal) ? undefined : numVal);
+                                }}
+                                placeholder="Enter seconds (e.g., 45, 180, 600)"
+                              />
+                            )}
+                          </div>
                         </div>
                         
                         <div>
@@ -2583,48 +2600,63 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         
                         <div>
                           <Label>Duration</Label>
-                          <Select 
-                            value={
-                              ad.specifications?.duration && [15, 30, 60, 90, 120].includes(ad.specifications.duration)
-                                ? String(ad.specifications.duration)
-                                : 'custom'
-                            }
-                            onValueChange={(value) => {
-                              if (value === 'custom') {
-                                // Don't change anything, let user enter custom value
-                                return;
+                          <div className="space-y-2">
+                            <Select 
+                              value={
+                                customDurationMode[`radio-${radioIndex}-${adIndex}`]
+                                  ? 'custom'
+                                  : (ad.specifications?.duration && [15, 30, 60, 90, 120].includes(ad.specifications.duration)
+                                    ? String(ad.specifications.duration)
+                                    : 'custom')
                               }
-                              const duration = parseInt(value);
-                              updateRadioAd(radioIndex, adIndex, 'specifications', {
-                                ...ad.specifications,
-                                duration
-                              });
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select duration..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="15">15 seconds (:15)</SelectItem>
-                              <SelectItem value="30">30 seconds (:30)</SelectItem>
-                              <SelectItem value="60">60 seconds (:60)</SelectItem>
-                              <SelectItem value="90">90 seconds (:90)</SelectItem>
-                              <SelectItem value="120">120 seconds (:120)</SelectItem>
-                              <SelectItem value="custom">Custom...</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {(!ad.specifications?.duration || ![15, 30, 60, 90, 120].includes(ad.specifications.duration)) && (
-                            <Input
-                              type="number"
-                              className="mt-2"
-                              value={ad.specifications?.duration || ''}
-                              onChange={(e) => updateRadioAd(radioIndex, adIndex, 'specifications', {
-                                ...ad.specifications,
-                                duration: parseInt(e.target.value) || undefined
-                              })}
-                              placeholder="Enter seconds"
-                            />
-                          )}
+                              onValueChange={(value) => {
+                                const key = `radio-${radioIndex}-${adIndex}`;
+                                if (value === 'custom') {
+                                  // Enter custom mode and clear duration
+                                  setCustomDurationMode({ ...customDurationMode, [key]: true });
+                                  updateRadioAd(radioIndex, adIndex, 'specifications', {
+                                    ...ad.specifications,
+                                    duration: undefined
+                                  });
+                                  return;
+                                }
+                                // Exit custom mode and set standard duration
+                                setCustomDurationMode({ ...customDurationMode, [key]: false });
+                                const duration = parseInt(value);
+                                updateRadioAd(radioIndex, adIndex, 'specifications', {
+                                  ...ad.specifications,
+                                  duration
+                                });
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select duration..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="15">15 seconds (:15)</SelectItem>
+                                <SelectItem value="30">30 seconds (:30)</SelectItem>
+                                <SelectItem value="60">60 seconds (:60)</SelectItem>
+                                <SelectItem value="90">90 seconds (:90)</SelectItem>
+                                <SelectItem value="120">120 seconds (:120)</SelectItem>
+                                <SelectItem value="custom">Custom...</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {(customDurationMode[`radio-${radioIndex}-${adIndex}`] || (!ad.specifications?.duration || ![15, 30, 60, 90, 120].includes(ad.specifications.duration))) && (
+                              <Input
+                                type="number"
+                                value={ad.specifications?.duration || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const numVal = val === '' ? undefined : parseInt(val, 10);
+                                  updateRadioAd(radioIndex, adIndex, 'specifications', {
+                                    ...ad.specifications,
+                                    duration: isNaN(numVal) ? undefined : numVal
+                                  });
+                                }}
+                                placeholder="Enter seconds (e.g., 45, 180, 600)"
+                              />
+                            )}
+                          </div>
                         </div>
                       </div>
                       
