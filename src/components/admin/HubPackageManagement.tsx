@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -42,13 +42,14 @@ export const HubPackageManagement = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'draft' | 'archived'>('all');
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<HubPackage | null>(null);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchPackages();
-  }, [filterStatus]);
+  }, [filterStatus, fetchPackages]);
 
-  const fetchPackages = async () => {
+  const fetchPackages = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -74,7 +75,7 @@ export const HubPackageManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus, toast]);
 
   const handleDelete = async (id: string, packageName: string) => {
     if (!confirm(`Are you sure you want to delete "${packageName}"?`)) return;
@@ -159,13 +160,14 @@ export const HubPackageManagement = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Hub Package Management</h1>
-          <p className="text-muted-foreground">Manage and monitor your hub-level advertising packages</p>
+          <p className="text-muted-foreground font-serif">
+            Package Management
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleSeedStarters} disabled={loading}>
             <Zap className="mr-2 h-4 w-4" />
-            Seed Starters
+            Seed
           </Button>
           <Button 
             variant="outline" 
@@ -177,11 +179,11 @@ export const HubPackageManagement = () => {
             }}
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            Package Discovery
+            Explore
           </Button>
           <Button onClick={() => setIsBuilderOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Create Package
+            Create
           </Button>
         </div>
       </div>
@@ -189,101 +191,114 @@ export const HubPackageManagement = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
+          <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
             <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.active} active, {stats.featured} featured
-            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+          <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
             <Eye className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalViews.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all packages
-            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Inquiries</CardTitle>
+          <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
             <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Inquiries</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalInquiries}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.totalViews > 0 
-                ? `${((stats.totalInquiries / stats.totalViews) * 100).toFixed(1)}% conversion`
-                : 'No views yet'
-              }
-            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Package Price</CardTitle>
+          <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Avg Package Price</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${stats.avgPrice.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              Per month
-            </p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Divider */}
+      <div className="border-t border-gray-200" />
+
       {/* Filters and Search */}
-      <div className="flex gap-4 items-center">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex justify-between items-center">
+        {/* Search - Left aligned */}
+        <div className={`relative transition-all duration-300 ${isSearchFocused ? 'w-96' : 'w-10 h-10'}`}>
+          <Search 
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" 
+          />
           <Input
-            placeholder="Search packages..."
+            placeholder={isSearchFocused ? "Search packages..." : ""}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
+            className={`bg-white transition-all duration-300 ${
+              isSearchFocused ? 'pl-10 pr-4 h-10 py-2' : 'p-0 cursor-pointer w-10 h-10'
+            }`}
           />
         </div>
+        
+        {/* Filters - Right aligned */}
         <div className="flex gap-2">
-          <Button 
-            variant={filterStatus === 'all' ? 'default' : 'outline'}
-            size="sm"
+          <button 
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              filterStatus === 'all' 
+                ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                : 'border border-transparent'
+            }`}
+            style={filterStatus !== 'all' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
             onClick={() => setFilterStatus('all')}
           >
             All
-          </Button>
-          <Button 
-            variant={filterStatus === 'active' ? 'default' : 'outline'}
-            size="sm"
+          </button>
+          <button 
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              filterStatus === 'active' 
+                ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                : 'border border-transparent'
+            }`}
+            style={filterStatus !== 'active' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
             onClick={() => setFilterStatus('active')}
           >
             Active
-          </Button>
-          <Button 
-            variant={filterStatus === 'draft' ? 'default' : 'outline'}
-            size="sm"
+          </button>
+          <button 
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              filterStatus === 'draft' 
+                ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                : 'border border-transparent'
+            }`}
+            style={filterStatus !== 'draft' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
             onClick={() => setFilterStatus('draft')}
           >
             Drafts
-          </Button>
-          <Button 
-            variant={filterStatus === 'archived' ? 'default' : 'outline'}
-            size="sm"
+          </button>
+          <button 
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              filterStatus === 'archived' 
+                ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                : 'border border-transparent'
+            }`}
+            style={filterStatus !== 'archived' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
             onClick={() => setFilterStatus('archived')}
           >
             Archived
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -322,23 +337,30 @@ export const HubPackageManagement = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredPackages.map((pkg) => (
-            <Card key={pkg._id?.toString()} className="hover:shadow-lg transition-shadow">
+            <Card 
+              key={pkg._id?.toString()} 
+              className="group hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => {
+                setEditingPackage(pkg);
+                setIsBuilderOpen(true);
+              }}
+            >
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{pkg.basicInfo.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{pkg.basicInfo.tagline}</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <CardTitle className="text-base">{pkg.basicInfo.name}</CardTitle>
+                    <div className="flex gap-1 flex-shrink-0">
+                      {pkg.availability.isFeatured && (
+                        <Badge variant="secondary" className="text-xs">Featured</Badge>
+                      )}
+                      {pkg.availability.isActive ? (
+                        <Badge className="text-xs bg-green-50 text-green-600 border border-green-300">Active</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">Inactive</Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    {pkg.availability.isFeatured && (
-                      <Badge variant="secondary" className="text-xs">Featured</Badge>
-                    )}
-                    {pkg.availability.isActive ? (
-                      <Badge variant="default" className="text-xs">Active</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">Inactive</Badge>
-                    )}
-                  </div>
+                  <p className="text-sm text-muted-foreground">{pkg.basicInfo.tagline}</p>
                 </div>
               </CardHeader>
               <CardContent>
@@ -368,54 +390,63 @@ export const HubPackageManagement = () => {
                     </div>
                   </div>
 
-                  {/* Analytics */}
-                  <div className="flex gap-4 text-sm border-t pt-3">
-                    <div className="flex items-center gap-1">
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                      <span>{pkg.analytics.viewCount}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span>{pkg.analytics.inquiryCount}</span>
-                    </div>
-                    {pkg.analytics.conversionRate && (
+                  {/* Analytics & Actions */}
+                  <div className="flex justify-between items-center gap-4 text-sm border-t pt-3">
+                    <div className="flex gap-4">
                       <div className="flex items-center gap-1">
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        <span>{(pkg.analytics.conversionRate * 100).toFixed(1)}%</span>
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        <span>{pkg.analytics.viewCount}</span>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 border-t pt-3">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => window.open(`/packages?highlight=${pkg._id}`, '_blank')}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => {
-                        setEditingPackage(pkg);
-                        setIsBuilderOpen(true);
-                      }}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleDelete(pkg._id?.toString() || '', pkg.basicInfo.name)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span>{pkg.analytics.inquiryCount}</span>
+                      </div>
+                      {pkg.analytics.conversionRate && (
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                          <span>{(pkg.analytics.conversionRate * 100).toFixed(1)}%</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Actions - Right side */}
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPackage(pkg);
+                          setIsBuilderOpen(true);
+                        }}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/packages?highlight=${pkg._id}`, '_blank');
+                        }}
+                        title="View live"
+                      >
+                        <Eye className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(pkg._id?.toString() || '', pkg.basicInfo.name);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -431,9 +462,9 @@ export const HubPackageManagement = () => {
           setEditingPackage(null);
         }
       }}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="max-w-3xl h-[85vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0 bg-white rounded-t-lg">
+            <DialogTitle className="text-base font-sans">
               {editingPackage ? 'Edit Package' : 'Create New Package'}
             </DialogTitle>
           </DialogHeader>

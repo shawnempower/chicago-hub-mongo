@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { HubPackageInsert, PACKAGE_CATEGORIES } from '@/integrations/mongodb/hubPackageSchema';
+import { HubPackageInsert, PACKAGE_CATEGORIES, HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -45,7 +45,7 @@ const getAuthHeaders = () => {
 interface PackageBuilderFormProps {
   onSuccess: (packageId: string) => void;
   onCancel: () => void;
-  existingPackage?: any; // For editing existing packages
+  existingPackage?: HubPackageInsert & { _id?: string }; // For editing existing packages
 }
 
 interface Publication {
@@ -124,7 +124,7 @@ const flattenAdvertisingOpportunities = (pub: Publication): FlattenedAd[] => {
   
   // Website ads
   if (channels.website?.advertisingOpportunities) {
-    channels.website.advertisingOpportunities.forEach((ad: any, idx: number) => {
+    channels.website.advertisingOpportunities.forEach((ad, idx: number) => {
       ads.push({
         adId: ad.adId || `${pub._id}-website-${idx}`,
         channel: 'website',
@@ -137,8 +137,8 @@ const flattenAdvertisingOpportunities = (pub: Publication): FlattenedAd[] => {
   
   // Newsletter ads
   if (channels.newsletters) {
-    channels.newsletters.forEach((newsletter: any, nlIdx: number) => {
-      newsletter.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
+    channels.newsletters.forEach((newsletter, nlIdx: number) => {
+      newsletter.advertisingOpportunities?.forEach((ad, adIdx: number) => {
         const adTitle = ad.title || ad.name || ad.adType || 'Newsletter Ad';
         ads.push({
           adId: ad.adId || `${pub._id}-newsletter-${nlIdx}-${adIdx}`,
@@ -153,7 +153,7 @@ const flattenAdvertisingOpportunities = (pub: Publication): FlattenedAd[] => {
   
   // Print ads
   if (channels.print?.advertisingOpportunities) {
-    channels.print.advertisingOpportunities.forEach((ad: any, idx: number) => {
+    channels.print.advertisingOpportunities.forEach((ad, idx: number) => {
       ads.push({
         adId: ad.adId || `${pub._id}-print-${idx}`,
         channel: 'print',
@@ -166,8 +166,8 @@ const flattenAdvertisingOpportunities = (pub: Publication): FlattenedAd[] => {
   
   // Social media ads
   if (channels.socialMedia) {
-    channels.socialMedia.forEach((social: any, socIdx: number) => {
-      social.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
+    channels.socialMedia.forEach((social, socIdx: number) => {
+      social.advertisingOpportunities?.forEach((ad, adIdx: number) => {
         ads.push({
           adId: ad.adId || `${pub._id}-social-${socIdx}-${adIdx}`,
           channel: 'social',
@@ -181,8 +181,8 @@ const flattenAdvertisingOpportunities = (pub: Publication): FlattenedAd[] => {
   
   // Podcast ads
   if (channels.podcasts) {
-    channels.podcasts.forEach((podcast: any, podIdx: number) => {
-      podcast.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
+    channels.podcasts.forEach((podcast, podIdx: number) => {
+      podcast.advertisingOpportunities?.forEach((ad, adIdx: number) => {
         const adName = ad.name || ad.title || ad.adFormat || 'Podcast Ad';
         ads.push({
           adId: ad.adId || `${pub._id}-podcast-${podIdx}-${adIdx}`,
@@ -197,8 +197,8 @@ const flattenAdvertisingOpportunities = (pub: Publication): FlattenedAd[] => {
   
   // Radio ads
   if (channels.radioStations) {
-    channels.radioStations.forEach((station: any, stationIdx: number) => {
-      station.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
+    channels.radioStations.forEach((station, stationIdx: number) => {
+      station.advertisingOpportunities?.forEach((ad, adIdx: number) => {
         const adName = ad.name || ad.title || ad.adFormat || 'Radio Spot';
         ads.push({
           adId: ad.adId || `${pub._id}-radio-${stationIdx}-${adIdx}`,
@@ -326,8 +326,9 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
   
   // UI state for inventory step
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'all' | 'selected'>('all');
   const [showSummary, setShowSummary] = useState(true);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [summaryViewMode, setSummaryViewMode] = useState<'publications' | 'ad-slots'>('publications');
 
   // Populate form when editing existing package
   useEffect(() => {
@@ -367,7 +368,7 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
   // Fetch publications
   useEffect(() => {
     fetchPublications();
-  }, []);
+  }, [fetchPublications]);
 
   // Convert publicationId keys to _id keys after publications load (for edit mode)
   useEffect(() => {
@@ -391,7 +392,7 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
     }
   }, [existingPackage, publications]);
 
-  const fetchPublications = async () => {
+  const fetchPublications = useCallback(async () => {
     setLoadingPublications(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/publications`, {
@@ -410,9 +411,9 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
     } finally {
       setLoadingPublications(false);
     }
-  };
+  }, [toast]);
 
-  const updateFormData = (section: string, data: any) => {
+  const updateFormData = (section: string, data: Partial<HubPackageInsert[keyof HubPackageInsert]>) => {
     setFormData(prev => ({
       ...prev,
       [section]: {
@@ -430,6 +431,18 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
         inventoryItems: prev[pubId]?.inventoryItems || []
       }
     }));
+  };
+
+  const toggleRowExpansion = (pubId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pubId)) {
+        newSet.delete(pubId);
+      } else {
+        newSet.add(pubId);
+      }
+      return newSet;
+    });
   };
 
   const toggleInventoryItem = (pubId: string, adId: string) => {
@@ -586,11 +599,11 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
         description: `Package ${isEditing ? 'updated' : 'created'} successfully`
       });
       onSuccess(result._id);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`Error ${existingPackage ? 'updating' : 'creating'} package:`, error);
       toast({
         title: 'Error',
-        description: error.message || `Failed to ${existingPackage ? 'update' : 'create'} package`,
+        description: error instanceof Error ? error.message : `Failed to ${existingPackage ? 'update' : 'create'} package`,
         variant: 'destructive'
       });
     } finally {
@@ -611,82 +624,39 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
   const pricing = calculatePricing();
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Create New Package</h1>
-          <p className="text-muted-foreground">Build a custom advertising package for Chicago Hub</p>
-        </div>
-        <Button variant="outline" onClick={onCancel}>
-          <X className="mr-2 h-4 w-4" />
-          Cancel
-        </Button>
-      </div>
-
-      {/* Progress Steps */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = currentStep === step.number;
-              const isComplete = currentStep > step.number;
-              
-              return (
-                <div key={step.number} className="flex items-center">
-                  <div className="flex flex-col items-center">
-                    <div className={`
-                      w-12 h-12 rounded-full flex items-center justify-center border-2
-                      ${isActive ? 'border-primary bg-primary text-white' : ''}
-                      ${isComplete ? 'border-green-500 bg-green-500 text-white' : ''}
-                      ${!isActive && !isComplete ? 'border-gray-300 text-gray-400' : ''}
-                    `}>
-                      {isComplete ? <Check className="h-6 w-6" /> : <Icon className="h-6 w-6" />}
-                    </div>
-                    <span className={`mt-2 text-sm font-medium ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {step.title}
-                    </span>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div className={`h-0.5 w-16 mx-4 ${currentStep > step.number ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+    <>
+      {/* Content */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div className={`pt-4 pb-6 px-6 ${currentStep === 3 ? 'flex flex-col h-full' : 'overflow-y-auto space-y-6'}`}>
 
       {/* Step 1: Basic Info */}
       {currentStep === 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-            <CardDescription>Give your package a name and describe what it offers</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
+        <div className="space-y-3">
+          <h2 className="text-base font-semibold font-sans">Basic Information</h2>
+          <div className="space-y-4">
+            <div className="space-y-1">
               <Label htmlFor="name">Package Name *</Label>
               <Input
                 id="name"
                 placeholder="e.g., South Side Essentials"
                 value={formData.basicInfo?.name || ''}
                 onChange={(e) => updateFormData('basicInfo', { name: e.target.value })}
+                className="bg-white"
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="tagline">Tagline *</Label>
               <Input
                 id="tagline"
                 placeholder="e.g., Reach 50,000+ South Side residents"
                 value={formData.basicInfo?.tagline || ''}
                 onChange={(e) => updateFormData('basicInfo', { tagline: e.target.value })}
+                className="bg-white"
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="description">Description *</Label>
               <Textarea
                 id="description"
@@ -694,17 +664,18 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
                 rows={4}
                 value={formData.basicInfo?.description || ''}
                 onChange={(e) => updateFormData('basicInfo', { description: e.target.value })}
+                className="bg-white"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="category">Category</Label>
                 <Select
                   value={formData.basicInfo?.category || 'geographic'}
                   onValueChange={(value) => updateFormData('basicInfo', { category: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -715,35 +686,32 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="subcategory">Subcategory</Label>
                 <Input
                   id="subcategory"
                   placeholder="e.g., south-side, digital-only"
                   value={formData.basicInfo?.subcategory || ''}
                   onChange={(e) => updateFormData('basicInfo', { subcategory: e.target.value })}
+                  className="bg-white"
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Step 2: Targeting */}
       {currentStep === 2 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Targeting</CardTitle>
-            <CardDescription>Define who this package is designed for</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+        <div className="space-y-3">
+          <div className="space-y-6">
             <div className="space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
+              <h3 className="text-sm text-muted-foreground font-sans flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
                 Geographic Targeting
               </h3>
               
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="neighborhoods">Neighborhoods (comma-separated)</Label>
                 <Textarea
                   id="neighborhoods"
@@ -756,10 +724,11 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
                       neighborhoods: e.target.value.split(',').map(n => n.trim()).filter(Boolean)
                     }
                   })}
+                  className="bg-white"
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="coverage">Coverage Description</Label>
                 <Input
                   id="coverage"
@@ -771,17 +740,18 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
                       coverageDescription: e.target.value
                     }
                   })}
+                  className="bg-white"
                 />
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
+              <h3 className="text-sm text-muted-foreground font-sans flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Target Audience
               </h3>
               
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="interests">Interests (comma-separated)</Label>
                 <Textarea
                   id="interests"
@@ -794,10 +764,11 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
                       interests: e.target.value.split(',').map(i => i.trim()).filter(Boolean)
                     }
                   })}
+                  className="bg-white"
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="industries">Target Industries (comma-separated)</Label>
                 <Textarea
                   id="industries"
@@ -810,44 +781,64 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
                       industries: e.target.value.split(',').map(i => i.trim()).filter(Boolean)
                     }
                   })}
+                  className="bg-white"
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Step 3: Publications & Inventory */}
       {currentStep === 3 && (
-        <div className="space-y-4">
-          {/* Compact Summary Bar */}
+        <div className="space-y-4 flex flex-col h-full overflow-hidden">
+          {/* Selected Publications Summary */}
           {selectedPubCount > 0 && (
-            <Card className="bg-primary/5 border-primary">
+            <Card className="bg-primary/5 border-gray-200">
               <CardHeader 
                 className="cursor-pointer py-3"
                 onClick={() => setShowSummary(!showSummary)}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-primary" />
-                    <div>
-                      <CardTitle className="text-sm">
-                        {selectedPubCount} Publications, {selectedInventoryCount} Placements Selected
-                      </CardTitle>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-muted-foreground">Selected</span>
+                      <div className="flex items-center rounded-md">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSummaryViewMode('publications');
+                          }}
+                          className={`px-3 py-1 text-xs font-medium rounded-l-md transition-colors border ${
+                            summaryViewMode === 'publications'
+                              ? 'bg-orange-50 text-orange-600 border-orange-600'
+                              : 'border-gray-300'
+                          }`}
+                          style={summaryViewMode !== 'publications' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
+                        >
+                          Publications
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSummaryViewMode('ad-slots');
+                          }}
+                          className={`px-3 py-1 text-xs font-medium rounded-r-md transition-colors border ${
+                            summaryViewMode === 'ad-slots'
+                              ? 'bg-orange-50 text-orange-600 border-orange-600'
+                              : 'border-gray-300'
+                          }`}
+                          style={summaryViewMode !== 'ad-slots' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
+                        >
+                          Ad Slots
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {selectedPubCount} {selectedPubCount === 1 ? 'publication' : 'publications'}, {selectedInventoryCount} {selectedInventoryCount === 1 ? 'placement' : 'placements'}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setViewMode(viewMode === 'selected' ? 'all' : 'selected');
-                      }}
-                    >
-                      <Filter className="h-4 w-4 mr-1" />
-                      {viewMode === 'selected' ? 'Show All' : 'Selected Only'}
-                    </Button>
                     {showSummary ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </div>
                 </div>
@@ -855,210 +846,260 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
               {showSummary && (
                 <CardContent className="pt-0">
                   <div className="flex flex-wrap gap-2">
-                    {publications
-                      .filter(pub => selectedPublications[pub._id]?.selected)
-                      .map(pub => {
-                        const selectedItems = selectedPublications[pub._id]?.inventoryItems || [];
-                        return (
+                    {summaryViewMode === 'publications' ? (
+                      // Publications view
+                      publications
+                        .filter(pub => selectedPublications[pub._id]?.selected)
+                        .map(pub => {
+                          const selectedItems = selectedPublications[pub._id]?.inventoryItems || [];
+                          return (
+                            <Badge 
+                              key={pub._id}
+                              variant="secondary" 
+                              className="text-xs px-2 py-1"
+                            >
+                              {pub.basicInfo.publicationName || 'Unknown'} ({selectedItems.length})
+                              <X 
+                                className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  togglePublication(pub._id, pub.publicationId);
+                                }}
+                              />
+                            </Badge>
+                          );
+                        })
+                    ) : (
+                      // Ad Slots view
+                      publications
+                        .filter(pub => selectedPublications[pub._id]?.selected)
+                        .flatMap(pub => {
+                          const selectedItems = selectedPublications[pub._id]?.inventoryItems || [];
+                          const availableInventory = flattenAdvertisingOpportunities(pub);
+                          return selectedItems.map(adId => {
+                            const ad = availableInventory.find(a => a.adId === adId);
+                            return {
+                              pubId: pub._id,
+                              pubName: pub.basicInfo.publicationName || 'Unknown',
+                              adId: adId,
+                              adTitle: ad?.title || 'Unknown Ad'
+                            };
+                          });
+                        })
+                        .map((item, index) => (
                           <Badge 
-                            key={pub._id}
+                            key={`${item.pubId}-${item.adId}-${index}`}
                             variant="secondary" 
                             className="text-xs px-2 py-1"
                           >
-                            {pub.basicInfo.publicationName || 'Unknown'} ({selectedItems.length})
+                            <span className="text-muted-foreground font-normal">{item.pubName}</span>
+                            <span className="mx-1">·</span>
+                            <span className="font-medium">{item.adTitle}</span>
                             <X 
                               className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive" 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                togglePublication(pub._id, pub.publicationId);
+                                toggleInventoryItem(item.pubId, item.adId);
                               }}
                             />
                           </Badge>
-                        );
-                      })}
+                        ))
+                    )}
                   </div>
                 </CardContent>
               )}
             </Card>
           )}
 
-          {/* Search & Filter Bar */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search publications..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSearchQuery('')}
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-          </Card>
-
-          {/* Publications List */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>
-                    {viewMode === 'selected' ? 'Selected Publications' : 'All Publications'}
-                  </CardTitle>
-                  <CardDescription>
-                    {viewMode === 'selected' 
-                      ? `${selectedPubCount} publications with selections`
-                      : `${publications.length} publications available`
-                    }
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
+          {/* Publications Table */}
+          <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex items-center justify-between mb-3 flex-shrink-0">
+              <h3 className="text-lg font-semibold font-sans">All Publications</h3>
+              <p className="text-sm text-muted-foreground">
+                {publications.length} publications available
+              </p>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="relative flex-shrink-0 mb-3">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search publications..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-white"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-7"
+                  onClick={() => setSearchQuery('')}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            <div className="flex-1 min-h-0">
               {loadingPublications ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                   <p className="text-muted-foreground">Loading publications...</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {publications
-                    .filter(pub => {
-                      // Filter by view mode first
-                      if (viewMode === 'selected') {
-                        if (!selectedPublications[pub._id]?.selected) {
-                          return false;
-                        }
-                      }
-                      
-                      // Then filter by search query
-                      if (searchQuery) {
-                        const name = pub.basicInfo.publicationName || '';
-                        return name.toLowerCase().includes(searchQuery.toLowerCase());
-                      }
-                      
-                      return true;
-                    })
-                    .map(pub => {
-                      const isSelected = selectedPublications[pub._id]?.selected;
-                      const selectedItems = selectedPublications[pub._id]?.inventoryItems || [];
-                      const availableInventory = flattenAdvertisingOpportunities(pub);
+                <Card className="h-full flex flex-col">
+                  <div className="flex-1 overflow-auto">
+                    <table className="w-full">
+                      <thead className="border-b sticky top-0 bg-white z-10" style={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)' }}>
+                        <tr className="text-left">
+                          <th className="py-3 px-4 text-sm font-medium text-muted-foreground w-12"></th>
+                          <th className="py-3 px-4 text-sm font-medium text-muted-foreground">Publication Name</th>
+                          <th className="py-3 px-4 text-sm font-medium text-muted-foreground text-center">Available</th>
+                          <th className="py-3 px-4 text-sm font-medium text-muted-foreground text-center">Selected</th>
+                          <th className="py-3 px-4 text-sm font-medium text-muted-foreground w-12"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {publications
+                          .filter(pub => {
+                            // Filter by search query
+                            if (searchQuery) {
+                              const name = pub.basicInfo.publicationName || '';
+                              return name.toLowerCase().includes(searchQuery.toLowerCase());
+                            }
+                            
+                            return true;
+                          })
+                          .map(pub => {
+                            const isSelected = selectedPublications[pub._id]?.selected;
+                            const selectedItems = selectedPublications[pub._id]?.inventoryItems || [];
+                            const availableInventory = flattenAdvertisingOpportunities(pub);
+                            const isExpanded = expandedRows.has(pub._id);
 
-                      return (
-                        <Card 
-                          key={pub._id} 
-                          className={`transition-all ${isSelected ? 'border-primary bg-primary/5' : ''}`}
-                        >
-                          <CardHeader className="py-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3 flex-1">
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => togglePublication(pub._id, pub.publicationId)}
-                                />
-                                <div className="flex-1">
-                                  <h3 className="font-semibold text-sm">
-                                    {pub.basicInfo.publicationName || 'Unknown Publication'}
-                                  </h3>
-                                  <p className="text-xs text-muted-foreground">
-                                    {availableInventory.length} placements • 
-                                    {selectedItems.length > 0 && (
-                                      <span className="text-primary font-medium ml-1">
-                                        {selectedItems.length} selected
+                            return (
+                              <>
+                                <tr 
+                                  key={pub._id}
+                                  className={`border-b transition-colors hover:bg-muted/50 ${isSelected ? 'bg-primary/5' : ''}`}
+                                >
+                                  <td className="py-3 px-4">
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => {
+                                        togglePublication(pub._id, pub.publicationId);
+                                        if (!isSelected) {
+                                          // Expand the row when selecting
+                                          setExpandedRows(prev => {
+                                            const newSet = new Set(prev);
+                                            newSet.add(pub._id);
+                                            return newSet;
+                                          });
+                                        }
+                                      }}
+                                    />
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => toggleRowExpansion(pub._id)}
+                                        className="p-1 hover:bg-muted rounded"
+                                      >
+                                        {isExpanded ? (
+                                          <ChevronDown className="h-4 w-4" />
+                                        ) : (
+                                          <ChevronRight className="h-4 w-4" />
+                                        )}
+                                      </button>
+                                      <span className="font-medium text-sm">
+                                        {pub.basicInfo.publicationName || 'Unknown Publication'}
                                       </span>
-                                    )}
-                                    {selectedItems.length === 0 && <span className="ml-1">none selected</span>}
-                                  </p>
-                                </div>
-                              </div>
-                              {isSelected && selectedItems.length > 0 && (
-                                <Badge variant="default" className="ml-2">
-                                  {selectedItems.length}
-                                </Badge>
-                              )}
-                            </div>
-                          </CardHeader>
-                          {isSelected && (
-                            <CardContent className="pt-0">
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <Label className="text-xs font-medium text-muted-foreground">
-                                    AD PLACEMENTS
-                                  </Label>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 text-xs"
-                                    onClick={() => {
-                                      // Select/deselect all items
-                                      const allSelected = selectedItems.length === availableInventory.length;
-                                      if (allSelected) {
-                                        setSelectedPublications(prev => ({
-                                          ...prev,
-                                          [pub._id]: { selected: true, inventoryItems: [] }
-                                        }));
-                                      } else {
-                                        setSelectedPublications(prev => ({
-                                          ...prev,
-                                          [pub._id]: { 
-                                            selected: true, 
-                                            inventoryItems: availableInventory.map(ad => ad.adId)
-                                          }
-                                        }));
-                                      }
-                                    }}
-                                  >
-                                    {selectedItems.length === availableInventory.length ? 'Deselect All' : 'Select All'}
-                                  </Button>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                                  {availableInventory.map(ad => (
-                                    <div 
-                                      key={ad.adId} 
-                                      className="flex items-center space-x-2 p-2 border rounded hover:bg-accent text-sm"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <Checkbox
-                                        checked={selectedItems.includes(ad.adId)}
-                                        onCheckedChange={(checked) => {
-                                          toggleInventoryItem(pub._id, ad.adId);
-                                        }}
-                                      />
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-medium truncate">{ad.title}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {ad.channel}
-                                        </p>
-                                      </div>
                                     </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </CardContent>
-                          )}
-                        </Card>
-                      );
-                    })}
+                                  </td>
+                                  <td className="py-3 px-4 text-center text-sm text-muted-foreground">
+                                    {availableInventory.length} placements
+                                  </td>
+                                  <td className="py-3 px-4 text-center">
+                                    {selectedItems.length > 0 ? (
+                                      <Badge variant="default" className="font-medium">
+                                        {selectedItems.length}
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-sm text-muted-foreground">none</span>
+                                    )}
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    {isSelected && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => {
+                                          // Select/deselect all items
+                                          const allSelected = selectedItems.length === availableInventory.length;
+                                          if (allSelected) {
+                                            setSelectedPublications(prev => ({
+                                              ...prev,
+                                              [pub._id]: { selected: true, inventoryItems: [] }
+                                            }));
+                                          } else {
+                                            setSelectedPublications(prev => ({
+                                              ...prev,
+                                              [pub._id]: { 
+                                                selected: true, 
+                                                inventoryItems: availableInventory.map(ad => ad.adId)
+                                              }
+                                            }));
+                                          }
+                                        }}
+                                      >
+                                        {selectedItems.length === availableInventory.length ? 'Deselect All' : 'Select All'}
+                                      </Button>
+                                    )}
+                                  </td>
+                                </tr>
+                                {isExpanded && (
+                                  <tr key={`${pub._id}-details`}>
+                                    <td colSpan={5} className="p-0">
+                                      <div className="bg-muted/20 px-4 py-3 border-b">
+                                        <div className="pl-12">
+                                          <Label className="text-xs font-medium text-muted-foreground mb-2 block">
+                                            AD PLACEMENTS
+                                          </Label>
+                                          <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+                                            {availableInventory.map(ad => (
+                                              <div 
+                                                key={ad.adId} 
+                                                className="flex items-center space-x-2 p-2 bg-background border rounded hover:bg-orange-50 text-sm transition-colors cursor-pointer"
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
+                                                <Checkbox
+                                                  checked={selectedItems.includes(ad.adId)}
+                                                  onCheckedChange={(checked) => {
+                                                    toggleInventoryItem(pub._id, ad.adId);
+                                                  }}
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                  <p className="text-xs font-medium truncate">{ad.title}</p>
+                                                  <p className="text-xs text-muted-foreground">
+                                                    {ad.channel}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
                   {publications.filter(pub => {
-                    // Filter by view mode first
-                    if (viewMode === 'selected') {
-                      if (!selectedPublications[pub._id]?.selected) {
-                        return false;
-                      }
-                    }
-                    
-                    // Then filter by search query
+                    // Filter by search query
                     if (searchQuery) {
                       const name = pub.basicInfo.publicationName || '';
                       return name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -1069,16 +1110,14 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
                     <div className="text-center py-8 text-muted-foreground">
                       {searchQuery 
                         ? 'No publications match your search' 
-                        : viewMode === 'selected' 
-                          ? 'No publications selected yet'
-                          : 'No publications available'
+                        : 'No publications available'
                       }
                     </div>
                   )}
-                </div>
+                </Card>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1114,7 +1153,7 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
               <CardDescription>What makes this package special?</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="highlights">Key Highlights (comma-separated)</Label>
                 <Textarea
                   id="highlights"
@@ -1127,7 +1166,7 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="includes">What's Included (comma-separated)</Label>
                 <Textarea
                   id="includes"
@@ -1140,7 +1179,7 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="badge">Package Badge (optional)</Label>
                 <Input
                   id="badge"
@@ -1165,12 +1204,10 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
 
       {/* Step 5: Review */}
       {currentStep === 5 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Review & Create</CardTitle>
-            <CardDescription>Review your package before creating</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+        <div className="space-y-6">
+          <h3 className="text-lg font-semibold font-sans">Review & Create</h3>
+          <Card>
+            <CardContent className="pt-6 space-y-6">
             <div>
               <h3 className="font-semibold text-lg mb-2">{formData.basicInfo?.name}</h3>
               <p className="text-muted-foreground">{formData.basicInfo?.tagline}</p>
@@ -1230,47 +1267,86 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       )}
+        </div>
+      </div>
 
-      {/* Navigation Buttons */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex justify-between">
+      {/* Sticky Bottom Navigation */}
+      <div className="flex-shrink-0 bg-white border-t border-gray-200 p-4 rounded-b-lg">
+        <div className="flex items-center justify-between max-w-full">
+          {/* Left: Back Button */}
+          <div className="flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
               disabled={currentStep === 1 || loading}
+              size="sm"
             >
               <ChevronLeft className="mr-2 h-4 w-4" />
-              Previous
+              Back
             </Button>
+          </div>
 
+          {/* Middle: Compact Stepper */}
+          <div className="flex items-center gap-2 flex-1 justify-center px-8">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = currentStep === step.number;
+              const isComplete = currentStep > step.number;
+              
+              return (
+                <div key={step.number} className="flex items-center">
+                  <button
+                    onClick={() => setCurrentStep(step.number)}
+                    disabled={loading}
+                    className={`
+                      w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer hover:scale-110
+                      ${isActive ? 'border-primary bg-primary text-white' : ''}
+                      ${isComplete ? 'border-green-500 bg-green-500 text-white hover:bg-green-600' : ''}
+                      ${!isActive && !isComplete ? 'border-gray-300 text-gray-400 hover:border-gray-400' : ''}
+                      ${loading ? 'opacity-50 cursor-not-allowed' : ''}
+                    `}
+                    title={step.title}
+                  >
+                    {isComplete ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                  </button>
+                  {index < steps.length - 1 && (
+                    <div className={`h-0.5 w-8 mx-1 ${currentStep > step.number ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right: Next/Submit Button */}
+          <div className="flex-shrink-0">
             {currentStep < 5 ? (
-              <Button onClick={() => setCurrentStep(Math.min(5, currentStep + 1))}>
+              <Button onClick={() => setCurrentStep(Math.min(5, currentStep + 1))} size="sm">
                 Next
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={loading}>
+              <Button onClick={handleSubmit} disabled={loading} size="sm">
                 {loading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Creating...
+                    Saving...
                   </>
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Create Package
+                    Save Package
                   </>
                 )}
               </Button>
             )}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </div>
+    </>
   );
 };
 
