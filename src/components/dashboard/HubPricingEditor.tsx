@@ -81,6 +81,32 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
     ? defaultPricing 
     : [{ pricing: defaultPricing }];
 
+  // Ensure all hub pricing entries have a pricingModel set (fix for legacy data)
+  React.useEffect(() => {
+    if (!pricingModels || pricingModels.length === 0) return;
+    
+    const defaultModel = pricingModels[0].value;
+    let needsUpdate = false;
+    
+    const updatedHubPricing = hubPricing.map(hubPrice => {
+      if (!hubPrice.pricing.pricingModel) {
+        needsUpdate = true;
+        return {
+          ...hubPrice,
+          pricing: {
+            ...hubPrice.pricing,
+            pricingModel: defaultModel
+          }
+        };
+      }
+      return hubPrice;
+    });
+    
+    if (needsUpdate) {
+      onHubPricingChange(updatedHubPricing);
+    }
+  }, [hubPricing, pricingModels, onHubPricingChange]);
+
   /**
    * Calculate total price based on flatRate × frequency multiplier
    * Example: $300 × 4x = $1200
