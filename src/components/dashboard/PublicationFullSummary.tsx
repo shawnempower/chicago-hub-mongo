@@ -3,6 +3,7 @@ import { usePublication } from '@/contexts/PublicationContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdOpportunityCard } from './AdOpportunityCard';
+import { calculateRevenue } from '@/utils/pricingCalculations';
 import { 
   Globe, 
   Mail, 
@@ -153,9 +154,10 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                 
                 websiteAds.forEach(ad => {
                   totalOpportunities++;
-                  const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
-                  addInventory('Website', 1, reach, price);
-                  estimatedMonthlyRevenuePotential += price;
+                  // Use standardized calculation
+                  const monthlyRevenue = calculateRevenue(ad, 'month');
+                  addInventory('Website', 1, reach, monthlyRevenue);
+                  estimatedMonthlyRevenuePotential += monthlyRevenue;
                 });
               }
 
@@ -167,9 +169,10 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                 if (newsletter.advertisingOpportunities) {
                   newsletter.advertisingOpportunities.forEach(ad => {
                     totalOpportunities++;
-                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
-                    addInventory('Newsletter', 1, reach, price);
-                    estimatedMonthlyRevenuePotential += price;
+                    // Use standardized calculation with frequency
+                    const monthlyRevenue = calculateRevenue(ad, 'month', newsletter.frequency);
+                    addInventory('Newsletter', 1, reach, monthlyRevenue);
+                    estimatedMonthlyRevenuePotential += monthlyRevenue;
                   });
                 }
               });
@@ -183,19 +186,10 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                   if (print.advertisingOpportunities) {
                     print.advertisingOpportunities.forEach(ad => {
                       totalOpportunities++;
-                      // Print pricing can be an array of tiers - use the first tier's price
-                      let price = 0;
-                      if (Array.isArray(ad.pricing) && ad.pricing.length > 0) {
-                        price = ad.pricing[0]?.pricing?.flatRate || 0;
-                      } else if (ad.pricing && typeof ad.pricing === 'object') {
-                        price = ad.pricing.flatRate || 0;
-                      }
-                      // Override with hubPricing if available
-                      if (ad.hubPricing?.[0]?.pricing?.flatRate) {
-                        price = ad.hubPricing[0].pricing.flatRate;
-                      }
-                      addInventory('Print', 1, reach, price);
-                      estimatedMonthlyRevenuePotential += price;
+                      // Use standardized calculation with frequency
+                      const monthlyRevenue = calculateRevenue(ad, 'month', print.frequency);
+                      addInventory('Print', 1, reach, monthlyRevenue);
+                      estimatedMonthlyRevenuePotential += monthlyRevenue;
                     });
                   }
                 });
@@ -209,9 +203,10 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                 if (social.advertisingOpportunities) {
                   social.advertisingOpportunities.forEach(ad => {
                     totalOpportunities++;
-                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
-                    addInventory('Social Media', 1, reach, price);
-                    estimatedMonthlyRevenuePotential += price;
+                    // Use standardized calculation
+                    const monthlyRevenue = calculateRevenue(ad, 'month');
+                    addInventory('Social Media', 1, reach, monthlyRevenue);
+                    estimatedMonthlyRevenuePotential += monthlyRevenue;
                   });
                 }
               });
@@ -224,9 +219,10 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                 if (event.advertisingOpportunities) {
                   event.advertisingOpportunities.forEach(ad => {
                     totalOpportunities++;
-                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || (typeof ad.pricing === 'number' ? ad.pricing : 0) || 0;
-                    addInventory('Events', 1, reach, price);
-                    estimatedMonthlyRevenuePotential += price;
+                    // Use standardized calculation with frequency
+                    const monthlyRevenue = calculateRevenue(ad, 'month', event.frequency);
+                    addInventory('Events', 1, reach, monthlyRevenue);
+                    estimatedMonthlyRevenuePotential += monthlyRevenue;
                   });
                 }
               });
@@ -239,24 +235,43 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                 if (podcast.advertisingOpportunities) {
                   podcast.advertisingOpportunities.forEach(ad => {
                     totalOpportunities++;
-                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
-                    addInventory('Podcasts', 1, reach, price);
-                    estimatedMonthlyRevenuePotential += price;
+                    // Use standardized calculation with frequency
+                    const monthlyRevenue = calculateRevenue(ad, 'month', podcast.frequency);
+                    addInventory('Podcasts', 1, reach, monthlyRevenue);
+                    estimatedMonthlyRevenuePotential += monthlyRevenue;
                   });
                 }
               });
 
               // Radio
               publication.distributionChannels?.radioStations?.forEach(radio => {
-                const reach = radio.listeners || 0;
-                totalReach += reach;
-                
-                if (radio.advertisingOpportunities) {
+                // NEW: Handle show-based structure
+                if (radio.shows && radio.shows.length > 0) {
+                  radio.shows.forEach((show: any) => {
+                    const reach = show.averageListeners || radio.listeners || 0;
+                    totalReach += reach;
+                    
+                    if (show.advertisingOpportunities) {
+                      show.advertisingOpportunities.forEach((ad: any) => {
+                        totalOpportunities++;
+                        // Use standardized calculation with show frequency
+                        const monthlyRevenue = calculateRevenue(ad, 'month', show.frequency);
+                        addInventory('Radio', 1, reach, monthlyRevenue);
+                        estimatedMonthlyRevenuePotential += monthlyRevenue;
+                      });
+                    }
+                  });
+                } else if (radio.advertisingOpportunities && radio.advertisingOpportunities.length > 0) {
+                  // LEGACY: Handle station-level ads only if no shows exist (prevent double-counting)
+                  const reach = radio.listeners || 0;
+                  totalReach += reach;
+                  
                   radio.advertisingOpportunities.forEach(ad => {
                     totalOpportunities++;
-                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
-                    addInventory('Radio', 1, reach, price);
-                    estimatedMonthlyRevenuePotential += price;
+                    // Use standardized calculation
+                    const monthlyRevenue = calculateRevenue(ad, 'month');
+                    addInventory('Radio', 1, reach, monthlyRevenue);
+                    estimatedMonthlyRevenuePotential += monthlyRevenue;
                   });
                 }
               });
@@ -269,9 +284,10 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                 if (streaming.advertisingOpportunities) {
                   streaming.advertisingOpportunities.forEach(ad => {
                     totalOpportunities++;
-                    const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
-                    addInventory('Streaming', 1, reach, price);
-                    estimatedMonthlyRevenuePotential += price;
+                    // Use standardized calculation with frequency
+                    const monthlyRevenue = calculateRevenue(ad, 'month', streaming.frequency);
+                    addInventory('Streaming', 1, reach, monthlyRevenue);
+                    estimatedMonthlyRevenuePotential += monthlyRevenue;
                   });
                 }
               });

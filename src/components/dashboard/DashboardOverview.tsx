@@ -12,6 +12,7 @@ import {
   Users,
   TrendingUp
 } from "lucide-react";
+import { calculateRevenue } from '@/utils/pricingCalculations';
 // MongoDB services removed - using API calls instead
 
 export function DashboardOverview() {
@@ -80,8 +81,7 @@ export function DashboardOverview() {
       totalReach += selectedPublication.distributionChannels.website.metrics?.monthlyVisitors || 0;
       
       websiteAds.forEach((ad: any) => {
-        const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
-        totalRevenuePotential += price;
+        totalRevenuePotential += calculateRevenue(ad, 'month');
         if (ad.hubPricing?.length > 0) hubPricingCount++;
       });
     }
@@ -94,8 +94,7 @@ export function DashboardOverview() {
         if (newsletter.advertisingOpportunities) {
           totalInventory += newsletter.advertisingOpportunities.length;
           newsletter.advertisingOpportunities.forEach((ad: any) => {
-            const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
-            totalRevenuePotential += price;
+            totalRevenuePotential += calculateRevenue(ad, 'month', newsletter.frequency);
             if (ad.hubPricing?.length > 0) hubPricingCount++;
           });
         }
@@ -110,16 +109,7 @@ export function DashboardOverview() {
         if (print.advertisingOpportunities) {
           totalInventory += print.advertisingOpportunities.length;
           print.advertisingOpportunities.forEach((ad: any) => {
-            let price = 0;
-            if (Array.isArray(ad.pricing) && ad.pricing.length > 0) {
-              price = ad.pricing[0]?.pricing?.flatRate || 0;
-            } else if (ad.pricing?.flatRate) {
-              price = ad.pricing.flatRate;
-            }
-            if (ad.hubPricing?.[0]?.pricing?.flatRate) {
-              price = ad.hubPricing[0].pricing.flatRate;
-            }
-            totalRevenuePotential += price;
+            totalRevenuePotential += calculateRevenue(ad, 'month', print.frequency);
             if (ad.hubPricing?.length > 0) hubPricingCount++;
           });
         }
@@ -134,8 +124,7 @@ export function DashboardOverview() {
         if (social.advertisingOpportunities) {
           totalInventory += social.advertisingOpportunities.length;
           social.advertisingOpportunities.forEach((ad: any) => {
-            const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || ad.pricing?.perPost || 0;
-            totalRevenuePotential += price;
+            totalRevenuePotential += calculateRevenue(ad, 'month');
             if (ad.hubPricing?.length > 0) hubPricingCount++;
           });
         }
@@ -150,8 +139,7 @@ export function DashboardOverview() {
         if (event.advertisingOpportunities) {
           totalInventory += event.advertisingOpportunities.length;
           event.advertisingOpportunities.forEach((ad: any) => {
-            const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || (typeof ad.pricing === 'number' ? ad.pricing : 0);
-            totalRevenuePotential += price;
+            totalRevenuePotential += calculateRevenue(ad, 'month', event.frequency);
             if (ad.hubPricing?.length > 0) hubPricingCount++;
           });
         }
@@ -166,8 +154,7 @@ export function DashboardOverview() {
         if (podcast.advertisingOpportunities) {
           totalInventory += podcast.advertisingOpportunities.length;
           podcast.advertisingOpportunities.forEach((ad: any) => {
-            const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
-            totalRevenuePotential += price;
+            totalRevenuePotential += calculateRevenue(ad, 'month', podcast.frequency);
             if (ad.hubPricing?.length > 0) hubPricingCount++;
           });
         }
@@ -178,12 +165,24 @@ export function DashboardOverview() {
     if (selectedPublication.distributionChannels.radioStations?.length > 0) {
       activeChannels++;
       selectedPublication.distributionChannels.radioStations.forEach((radio: any) => {
-        totalReach += radio.listeners || 0;
-        if (radio.advertisingOpportunities) {
+        // NEW: Handle show-based structure
+        if (radio.shows && radio.shows.length > 0) {
+          radio.shows.forEach((show: any) => {
+            totalReach += show.averageListeners || radio.listeners || 0;
+            if (show.advertisingOpportunities) {
+              totalInventory += show.advertisingOpportunities.length;
+              show.advertisingOpportunities.forEach((ad: any) => {
+                totalRevenuePotential += calculateRevenue(ad, 'month', show.frequency);
+                if (ad.hubPricing?.length > 0) hubPricingCount++;
+              });
+            }
+          });
+        } else if (radio.advertisingOpportunities && radio.advertisingOpportunities.length > 0) {
+          // LEGACY: Handle station-level ads only if no shows exist (prevent double-counting)
+          totalReach += radio.listeners || 0;
           totalInventory += radio.advertisingOpportunities.length;
           radio.advertisingOpportunities.forEach((ad: any) => {
-            const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || ad.pricing?.perSpot || 0;
-            totalRevenuePotential += price;
+            totalRevenuePotential += calculateRevenue(ad, 'month');
             if (ad.hubPricing?.length > 0) hubPricingCount++;
           });
         }
@@ -198,8 +197,7 @@ export function DashboardOverview() {
         if (streaming.advertisingOpportunities) {
           totalInventory += streaming.advertisingOpportunities.length;
           streaming.advertisingOpportunities.forEach((ad: any) => {
-            const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
-            totalRevenuePotential += price;
+            totalRevenuePotential += calculateRevenue(ad, 'month', streaming.frequency);
             if (ad.hubPricing?.length > 0) hubPricingCount++;
           });
         }

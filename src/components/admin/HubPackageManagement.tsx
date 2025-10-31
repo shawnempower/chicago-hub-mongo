@@ -45,10 +45,6 @@ export const HubPackageManagement = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchPackages();
-  }, [filterStatus, fetchPackages]);
-
   const fetchPackages = useCallback(async () => {
     try {
       setLoading(true);
@@ -76,6 +72,10 @@ export const HubPackageManagement = () => {
       setLoading(false);
     }
   }, [filterStatus, toast]);
+
+  useEffect(() => {
+    fetchPackages();
+  }, [fetchPackages]);
 
   const handleDelete = async (id: string, packageName: string) => {
     if (!confirm(`Are you sure you want to delete "${packageName}"?`)) return;

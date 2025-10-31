@@ -242,6 +242,15 @@ export interface AnalyticsEvent {
   timestamp: Date;
 }
 
+// ===== PERFORMANCE METRICS =====
+// Standardized performance metrics for revenue forecasting across all inventory types
+export interface PerformanceMetrics {
+  impressionsPerMonth?: number;  // For CPM, CPV, CPD pricing models
+  occurrencesPerMonth?: number;  // For per_send, per_spot, per_post, per_ad pricing models
+  audienceSize?: number;         // Base audience size (subscribers, circulation, followers, listeners)
+  guaranteed?: boolean;          // Whether metrics are guaranteed or estimated
+}
+
 // ===== UNIVERSAL PUBLISHER PROFILE SCHEMA =====
 // Comprehensive publication/media entity schema
 export interface Publication {
@@ -321,6 +330,7 @@ export interface Publication {
           monthly?: number;
           pricingModel?: 'per_post' | 'per_story' | 'monthly' | 'cpm' | 'contact';
         };
+        performanceMetrics?: PerformanceMetrics;
         specifications?: {
           imageSize?: string;
           videoLength?: string;
@@ -351,6 +361,8 @@ export interface Publication {
           pricingModel?: 'cpm' | 'flat' | 'cpc' | 'cpa' | 'contact';
           minimumCommitment?: string;
         };
+        monthlyImpressions?: number; // DEPRECATED: Use performanceMetrics.impressionsPerMonth
+        performanceMetrics?: PerformanceMetrics;
         specifications?: {
           size?: string;
           format?: string;
@@ -382,6 +394,7 @@ export interface Publication {
           perSend?: number;
           monthly?: number;
         };
+        performanceMetrics?: PerformanceMetrics;
       }>;
     }>;
     
@@ -406,6 +419,7 @@ export interface Publication {
           twelveTimes?: number;
           openRate?: number;
         };
+        performanceMetrics?: PerformanceMetrics;
         specifications?: {
           format?: string;
           resolution?: string;
@@ -425,6 +439,7 @@ export interface Publication {
         level?: 'title' | 'presenting' | 'supporting' | 'vendor' | 'booth';
         benefits?: string[];
         pricing?: number;
+        performanceMetrics?: PerformanceMetrics;
       }>;
     }>;
     
@@ -446,6 +461,7 @@ export interface Publication {
           flatRate?: number;
           pricingModel?: 'cpm' | 'flat' | 'contact';
         };
+        performanceMetrics?: PerformanceMetrics;
         specifications?: {
           format?: 'mp3' | 'wav' | 'script';
           bitrate?: string;
@@ -461,6 +477,43 @@ export interface Publication {
       format?: 'news_talk' | 'classic_rock' | 'country' | 'pop' | 'hip_hop' | 'jazz' | 'classical' | 'alternative' | 'sports' | 'other';
       coverageArea?: string;
       listeners?: number;
+      shows?: Array<{
+        showId?: string;
+        name?: string;
+        frequency?: 'daily' | 'weekdays' | 'weekly' | 'bi-weekly' | 'weekend-only' | 'saturdays' | 'sundays' | 'weekdays-plus-saturday' | 'weekdays-plus-sunday' | 'custom';
+        daysPerWeek?: number;
+        timeSlot?: string;
+        averageListeners?: number;
+        advertisingOpportunities?: Array<{
+          name?: string;
+          adFormat?: '30_second_spot' | '60_second_spot' | '15_second_spot' | 'live_read' | 'sponsorship' | 'traffic_weather_sponsor';
+          spotsPerShow?: number;
+          pricing?: {
+            perSpot?: number;
+            flatRate?: number;
+            pricingModel?: 'per_spot' | 'contact';
+          };
+          performanceMetrics?: PerformanceMetrics;
+          specifications?: {
+            format?: 'mp3' | 'wav' | 'live_script';
+            bitrate?: string;
+            duration?: number;
+          };
+          available?: boolean;
+          hubPricing?: Array<{
+            hubId?: string;
+            hubName?: string;
+            pricing?: {
+              flatRate?: number;
+              pricingModel?: string;
+              frequency?: string;
+            };
+            discount?: number;
+            available?: boolean;
+            minimumCommitment?: string;
+          }>;
+        }>;
+      }>;
       advertisingOpportunities?: Array<{
         name?: string;
         adFormat?: '30_second_spot' | '60_second_spot' | 'live_read' | 'sponsorship' | 'traffic_weather_sponsor';
@@ -471,6 +524,7 @@ export interface Publication {
           monthly?: number;
           pricingModel?: 'per_spot' | 'weekly' | 'monthly' | 'contact';
         };
+        performanceMetrics?: PerformanceMetrics;
         specifications?: {
           format?: 'mp3' | 'wav' | 'live_script';
           bitrate?: string;
@@ -497,6 +551,7 @@ export interface Publication {
           flatRate?: number;
           pricingModel?: 'cpm' | 'flat' | 'contact';
         };
+        performanceMetrics?: PerformanceMetrics;
         specifications?: {
           format?: 'mp4' | 'mov' | 'avi' | 'script' | 'image_overlay';
           resolution?: '1080p' | '720p' | '480p' | '4k';

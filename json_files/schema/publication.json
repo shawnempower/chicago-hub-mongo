@@ -395,7 +395,31 @@
                     }
                   },
                   "monthlyImpressions": {
-                    "type": "integer"
+                    "type": "integer",
+                    "description": "DEPRECATED: Use performanceMetrics.impressionsPerMonth instead. Kept for backward compatibility."
+                  },
+                  "performanceMetrics": {
+                    "type": "object",
+                    "description": "Performance metrics for revenue forecasting. Stored in monthly units, calculated daily for flexible timeframe projections.",
+                    "properties": {
+                      "impressionsPerMonth": {
+                        "type": "integer",
+                        "description": "Average monthly impressions, views, or downloads. Used for CPM, CPV, CPD pricing models."
+                      },
+                      "occurrencesPerMonth": {
+                        "type": "number",
+                        "description": "How many times this inventory runs per month. Used for per_send, per_spot, per_post, per_ad pricing models."
+                      },
+                      "audienceSize": {
+                        "type": "integer",
+                        "description": "Base audience size (subscribers, circulation, followers, listeners) - stored for reference."
+                      },
+                      "guaranteed": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Whether the metrics are guaranteed or estimated."
+                      }
+                    }
                   },
                   "available": {
                     "type": "boolean",
@@ -583,6 +607,29 @@
                     "available": {
                       "type": "boolean",
                       "default": true
+                    },
+                    "performanceMetrics": {
+                      "type": "object",
+                      "description": "Performance metrics for revenue forecasting. Stored in monthly units, calculated daily for flexible timeframe projections.",
+                      "properties": {
+                        "impressionsPerMonth": {
+                          "type": "integer",
+                          "description": "Average monthly impressions, views, or downloads. Used for CPM, CPV, CPD pricing models."
+                        },
+                        "occurrencesPerMonth": {
+                          "type": "number",
+                          "description": "How many times this inventory runs per month. Used for per_send, per_spot, per_post, per_ad pricing models."
+                        },
+                        "audienceSize": {
+                          "type": "integer",
+                          "description": "Base audience size (subscribers, circulation, followers, listeners) - stored for reference."
+                        },
+                        "guaranteed": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "Whether the metrics are guaranteed or estimated."
+                        }
+                      }
                     },
                     "hubPricing": {
                       "type": "array",
@@ -795,6 +842,29 @@
                         }
                       ]
                     },
+                    "performanceMetrics": {
+                      "type": "object",
+                      "description": "Performance metrics for revenue forecasting. Stored in monthly units, calculated daily for flexible timeframe projections.",
+                      "properties": {
+                        "impressionsPerMonth": {
+                          "type": "integer",
+                          "description": "Average monthly impressions, views, or downloads. Used for CPM, CPV, CPD pricing models."
+                        },
+                        "occurrencesPerMonth": {
+                          "type": "number",
+                          "description": "How many times this inventory runs per month. Used for per_send, per_spot, per_post, per_ad pricing models."
+                        },
+                        "audienceSize": {
+                          "type": "integer",
+                          "description": "Base audience size (subscribers, circulation, followers, listeners) - stored for reference."
+                        },
+                        "guaranteed": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "Whether the metrics are guaranteed or estimated."
+                        }
+                      }
+                    },
                     "hubPricing": {
                       "type": "array",
                       "description": "Pricing variations for different marketing hubs",
@@ -1002,6 +1072,29 @@
                         }
                       }
                     },
+                    "performanceMetrics": {
+                      "type": "object",
+                      "description": "Performance metrics for revenue forecasting. Stored in monthly units, calculated daily for flexible timeframe projections.",
+                      "properties": {
+                        "impressionsPerMonth": {
+                          "type": "integer",
+                          "description": "Average monthly impressions, views, or downloads. Used for CPM, CPV, CPD pricing models."
+                        },
+                        "occurrencesPerMonth": {
+                          "type": "number",
+                          "description": "How many times this inventory runs per month. Used for per_send, per_spot, per_post, per_ad pricing models."
+                        },
+                        "audienceSize": {
+                          "type": "integer",
+                          "description": "Base audience size (subscribers, circulation, followers, listeners) - stored for reference."
+                        },
+                        "guaranteed": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "Whether the metrics are guaranteed or estimated."
+                        }
+                      }
+                    },
                     "hubPricing": {
                       "type": "array",
                       "description": "Pricing variations for different marketing hubs",
@@ -1142,6 +1235,29 @@
                           "type": "string",
                           "enum": ["flat", "contact"],
                           "description": "Pricing model type (flat for one-time fee, contact for custom quotes)"
+                        }
+                      }
+                    },
+                    "performanceMetrics": {
+                      "type": "object",
+                      "description": "Performance metrics for revenue forecasting. Stored in monthly units, calculated daily for flexible timeframe projections.",
+                      "properties": {
+                        "impressionsPerMonth": {
+                          "type": "integer",
+                          "description": "Average monthly impressions, views, or downloads. Used for CPM, CPV, CPD pricing models."
+                        },
+                        "occurrencesPerMonth": {
+                          "type": "number",
+                          "description": "How many times this inventory runs per month. Used for per_send, per_spot, per_post, per_ad pricing models."
+                        },
+                        "audienceSize": {
+                          "type": "integer",
+                          "description": "Base audience size (subscribers, circulation, followers, listeners) - stored for reference."
+                        },
+                        "guaranteed": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "Whether the metrics are guaranteed or estimated."
                         }
                       }
                     },
@@ -1336,6 +1452,29 @@
                       "type": "boolean",
                       "default": true
                     },
+                    "performanceMetrics": {
+                      "type": "object",
+                      "description": "Performance metrics for revenue forecasting. Stored in monthly units, calculated daily for flexible timeframe projections.",
+                      "properties": {
+                        "impressionsPerMonth": {
+                          "type": "integer",
+                          "description": "Average monthly impressions, views, or downloads. Used for CPM, CPV, CPD pricing models."
+                        },
+                        "occurrencesPerMonth": {
+                          "type": "number",
+                          "description": "How many times this inventory runs per month. Used for per_send, per_spot, per_post, per_ad pricing models."
+                        },
+                        "audienceSize": {
+                          "type": "integer",
+                          "description": "Base audience size (subscribers, circulation, followers, listeners) - stored for reference."
+                        },
+                        "guaranteed": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "Whether the metrics are guaranteed or estimated."
+                        }
+                      }
+                    },
                     "hubPricing": {
                       "type": "array",
                       "description": "Pricing variations for different marketing hubs",
@@ -1447,6 +1586,195 @@
                 "type": "integer",
                 "description": "Average weekly listeners"
               },
+              "shows": {
+                "type": "array",
+                "description": "Radio shows/programs with their own schedules (similar to newsletters)",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "showId": {
+                      "type": "string",
+                      "description": "Unique identifier for the show"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Show name (e.g., 'Morning Drive with Perri Small')"
+                    },
+                    "frequency": {
+                      "type": "string",
+                      "enum": ["daily", "weekdays", "weekly", "bi-weekly", "weekend-only", "saturdays", "sundays", "weekdays-plus-saturday", "weekdays-plus-sunday", "custom"],
+                      "description": "How often the show airs (like newsletter frequency)"
+                    },
+                    "daysPerWeek": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 7,
+                      "description": "Exact number of days per week the show airs (for custom schedules or precision)"
+                    },
+                    "timeSlot": {
+                      "type": "string",
+                      "description": "Human-readable time slot (e.g., 'M-F 6AM-9AM')"
+                    },
+                    "averageListeners": {
+                      "type": "integer",
+                      "description": "Average listeners per episode/show"
+                    },
+                    "advertisingOpportunities": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "adFormat": {
+                            "type": "string",
+                            "enum": ["30_second_spot", "60_second_spot", "15_second_spot", "live_read", "sponsorship", "traffic_weather_sponsor"]
+                          },
+                          "spotsPerShow": {
+                            "type": "number",
+                            "default": 1,
+                            "description": "How many times this spot runs per show/episode"
+                          },
+                          "pricing": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "description": "Single pricing tier (backward compatible)",
+                                "properties": {
+                                  "flatRate": {
+                                    "type": "number",
+                                    "description": "Price per spot"
+                                  },
+                                  "pricingModel": {
+                                    "type": "string",
+                                    "enum": ["per_spot", "contact"],
+                                    "description": "Pricing model type"
+                                  },
+                                  "frequency": {
+                                    "type": "string",
+                                    "description": "Commitment tier (e.g., 1x, 4x, 12x)"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "array",
+                                "description": "Multiple pricing tiers",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "pricing": {
+                                      "type": "object",
+                                      "properties": {
+                                        "flatRate": {
+                                          "type": "number"
+                                        },
+                                        "pricingModel": {
+                                          "type": "string",
+                                          "enum": ["per_spot", "contact"]
+                                        },
+                                        "frequency": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "specifications": {
+                            "type": "object",
+                            "properties": {
+                              "format": {
+                                "type": "string",
+                                "enum": ["mp3", "wav", "live_script"]
+                              },
+                              "bitrate": {
+                                "type": "string"
+                              },
+                              "duration": {
+                                "type": "integer",
+                                "description": "Ad duration in seconds"
+                              }
+                            }
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "default": true
+                          },
+                          "performanceMetrics": {
+                            "type": "object",
+                            "description": "Performance metrics for revenue forecasting",
+                            "properties": {
+                              "impressionsPerMonth": {
+                                "type": "integer",
+                                "description": "Average monthly impressions (listeners × occurrences)"
+                              },
+                              "occurrencesPerMonth": {
+                                "type": "number",
+                                "description": "How many times this spot runs per month (calculated from show frequency × spotsPerShow)"
+                              },
+                              "audienceSize": {
+                                "type": "integer",
+                                "description": "Base audience size (listeners per show)"
+                              },
+                              "guaranteed": {
+                                "type": "boolean",
+                                "default": false,
+                                "description": "Whether the metrics are guaranteed or estimated"
+                              }
+                            }
+                          },
+                          "hubPricing": {
+                            "type": "array",
+                            "description": "Pricing variations for different marketing hubs",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "hubId": {
+                                  "type": "string"
+                                },
+                                "hubName": {
+                                  "type": "string"
+                                },
+                                "pricing": {
+                                  "type": "object",
+                                  "properties": {
+                                    "flatRate": {
+                                      "type": "number"
+                                    },
+                                    "pricingModel": {
+                                      "type": "string",
+                                      "enum": ["per_spot", "contact"]
+                                    },
+                                    "frequency": {
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                "discount": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 100
+                                },
+                                "available": {
+                                  "type": "boolean",
+                                  "default": true
+                                },
+                                "minimumCommitment": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": ["name", "frequency", "advertisingOpportunities"]
+                }
+              },
               "advertisingOpportunities": {
                 "type": "array",
                 "items": {
@@ -1529,6 +1857,29 @@
                     "available": {
                       "type": "boolean",
                       "default": true
+                    },
+                    "performanceMetrics": {
+                      "type": "object",
+                      "description": "Performance metrics for revenue forecasting. Stored in monthly units, calculated daily for flexible timeframe projections.",
+                      "properties": {
+                        "impressionsPerMonth": {
+                          "type": "integer",
+                          "description": "Average monthly impressions, views, or downloads. Used for CPM, CPV, CPD pricing models."
+                        },
+                        "occurrencesPerMonth": {
+                          "type": "number",
+                          "description": "How many times this inventory runs per month. Used for per_send, per_spot, per_post, per_ad pricing models."
+                        },
+                        "audienceSize": {
+                          "type": "integer",
+                          "description": "Base audience size (subscribers, circulation, followers, listeners) - stored for reference."
+                        },
+                        "guaranteed": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "Whether the metrics are guaranteed or estimated."
+                        }
+                      }
                     },
                     "hubPricing": {
                       "type": "array",
@@ -1696,6 +2047,29 @@
                       "type": "boolean",
                       "default": true
                     },
+                    "performanceMetrics": {
+                      "type": "object",
+                      "description": "Performance metrics for revenue forecasting. Stored in monthly units, calculated daily for flexible timeframe projections.",
+                      "properties": {
+                        "impressionsPerMonth": {
+                          "type": "integer",
+                          "description": "Average monthly impressions, views, or downloads. Used for CPM, CPV, CPD pricing models."
+                        },
+                        "occurrencesPerMonth": {
+                          "type": "number",
+                          "description": "How many times this inventory runs per month. Used for per_send, per_spot, per_post, per_ad pricing models."
+                        },
+                        "audienceSize": {
+                          "type": "integer",
+                          "description": "Base audience size (subscribers, circulation, followers, listeners) - stored for reference."
+                        },
+                        "guaranteed": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "Whether the metrics are guaranteed or estimated."
+                        }
+                      }
+                    },
                     "hubPricing": {
                       "type": "array",
                       "description": "Pricing variations for different marketing hubs",
@@ -1855,6 +2229,29 @@
                     "available": {
                       "type": "boolean",
                       "default": true
+                    },
+                    "performanceMetrics": {
+                      "type": "object",
+                      "description": "Performance metrics for revenue forecasting. Stored in monthly units, calculated daily for flexible timeframe projections.",
+                      "properties": {
+                        "impressionsPerMonth": {
+                          "type": "integer",
+                          "description": "Average monthly impressions, views, or downloads. Used for CPM, CPV, CPD pricing models."
+                        },
+                        "occurrencesPerMonth": {
+                          "type": "number",
+                          "description": "How many times this inventory runs per month. Used for per_send, per_spot, per_post, per_ad pricing models."
+                        },
+                        "audienceSize": {
+                          "type": "integer",
+                          "description": "Base audience size (subscribers, circulation, followers, listeners) - stored for reference."
+                        },
+                        "guaranteed": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "Whether the metrics are guaranteed or estimated."
+                        }
+                      }
                     },
                     "hubPricing": {
                       "type": "array",

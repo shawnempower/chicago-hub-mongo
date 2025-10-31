@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadManagement } from './LeadManagement';
 import { HubPackageManagement } from './HubPackageManagement';
 import { ErrorBoundary } from '../ErrorBoundary';
@@ -17,6 +18,33 @@ interface HubCentralDashboardProps {
 
 export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashboardProps) => {
   const { stats, loading, error } = useDashboardStats();
+  const [pricingTimeframe, setPricingTimeframe] = useState<'day' | 'month' | 'quarter'>('month');
+
+  // Helper to convert monthly values to selected timeframe
+  const convertToTimeframe = (monthlyValue: number): number => {
+    switch (pricingTimeframe) {
+      case 'day':
+        return monthlyValue / 30; // Approximate days per month
+      case 'quarter':
+        return monthlyValue * 3;
+      case 'month':
+      default:
+        return monthlyValue;
+    }
+  };
+
+  // Helper to get timeframe label
+  const getTimeframeLabel = (): string => {
+    switch (pricingTimeframe) {
+      case 'day':
+        return '/day';
+      case 'quarter':
+        return '/qtr';
+      case 'month':
+      default:
+        return '/mo';
+    }
+  };
 
   const renderContent = () => {
     if (activeTab === 'overview') {
@@ -332,33 +360,45 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
             {/* Pricing Insights */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-sans text-base">
-                  <DollarSign className="h-5 w-5" />
-                  Default Pricing
-                  <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors cursor-help">
-                          <Info className="h-4 w-4 text-blue-600" />
-                          <span className="text-xs text-blue-600 font-normal">How is this calculated?</span>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-sm" sideOffset={5}>
-                        <div className="space-y-2">
-                          <p className="font-semibold">Pricing Assumptions:</p>
-                          <ul className="space-y-1 text-xs list-disc ml-4">
-                            <li>Default pricing only (excludes hub-specific rates)</li>
-                            <li>Monthly estimates based on publication frequency</li>
-                            <li>Website: Flat rate/month or CPM × impressions</li>
-                            <li>Newsletter: Per-send × frequency (daily/weekly/monthly)</li>
-                            <li>Print: Frequency-based rates normalized to monthly</li>
-                            <li>Podcast/Radio/Streaming: Episode/spot frequency × monthly</li>
-                          </ul>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 font-sans text-base">
+                    <DollarSign className="h-5 w-5" />
+                    Default Pricing
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors cursor-help">
+                            <Info className="h-4 w-4 text-blue-600" />
+                            <span className="text-xs text-blue-600 font-normal">How is this calculated?</span>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-sm" sideOffset={5}>
+                          <div className="space-y-2">
+                            <p className="font-semibold">Pricing Assumptions:</p>
+                            <ul className="space-y-1 text-xs list-disc ml-4">
+                              <li>Default pricing only (excludes hub-specific rates)</li>
+                              <li>Uses 1x tier (full-price baseline)</li>
+                              <li>Website: Flat rate or CPM × impressions</li>
+                              <li>Newsletter: Per-send × frequency (daily/weekly/monthly)</li>
+                              <li>Print: Frequency-based rates normalized</li>
+                              <li>Podcast/Radio/Streaming: Episode/spot frequency</li>
+                            </ul>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </CardTitle>
+                  <Select value={pricingTimeframe} onValueChange={(value: any) => setPricingTimeframe(value)}>
+                    <SelectTrigger className="w-[120px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="day">Per Day</SelectItem>
+                      <SelectItem value="month">Per Month</SelectItem>
+                      <SelectItem value="quarter">Per Quarter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -366,54 +406,54 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                     <span className="text-xs">Website Ads</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averageWebsiteAdPrice ?? 0).toLocaleString()}/mo`}
+                        `$${Math.round(convertToTimeframe(stats?.pricingInsights?.totalWebsiteAdValue ?? 0)).toLocaleString()}${getTimeframeLabel()}`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs">Newsletter Ads</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averageNewsletterAdPrice ?? 0).toLocaleString()}/mo`}
+                        `$${Math.round(convertToTimeframe(stats?.pricingInsights?.totalNewsletterAdValue ?? 0)).toLocaleString()}${getTimeframeLabel()}`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs">Print Ads</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averagePrintAdPrice ?? 0).toLocaleString()}/mo`}
+                        `$${Math.round(convertToTimeframe(stats?.pricingInsights?.totalPrintAdValue ?? 0)).toLocaleString()}${getTimeframeLabel()}`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs">Podcast Ads</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averagePodcastAdPrice ?? 0).toLocaleString()}/mo`}
+                        `$${Math.round(convertToTimeframe(stats?.pricingInsights?.totalPodcastAdValue ?? 0)).toLocaleString()}${getTimeframeLabel()}`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs">Streaming Ads</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averageStreamingAdPrice ?? 0).toLocaleString()}/mo`}
+                        `$${Math.round(convertToTimeframe(stats?.pricingInsights?.totalStreamingAdValue ?? 0)).toLocaleString()}${getTimeframeLabel()}`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs">Radio Ads</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                        `$${(stats?.pricingInsights?.averageRadioAdPrice ?? 0).toLocaleString()}/mo`}
+                        `$${Math.round(convertToTimeframe(stats?.pricingInsights?.totalRadioAdValue ?? 0)).toLocaleString()}${getTimeframeLabel()}`}
                     </span>
                   </div>
                   <div className="pt-2 border-t">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium">Total Monthly Value</span>
+                      <span className="text-xs font-medium">Total Value</span>
                       <span className="font-bold text-sm text-green-600">
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                          `$${(stats?.pricingInsights?.totalInventoryValue ?? 0).toLocaleString()}/mo`}
+                          `$${Math.round(convertToTimeframe(stats?.pricingInsights?.totalInventoryValue ?? 0)).toLocaleString()}${getTimeframeLabel()}`}
                       </span>
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-1">
-                      Combined potential of all inventory
+                      Sum of all inventory above
                     </p>
                   </div>
                 </div>
@@ -423,10 +463,22 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
             {/* Hub Pricing */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-sans text-base">
-                  <TrendingUp className="h-5 w-5" />
-                  Hub Pricing
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 font-sans text-base">
+                    <TrendingUp className="h-5 w-5" />
+                    Hub Pricing
+                  </CardTitle>
+                  <Select value={pricingTimeframe} onValueChange={(value: any) => setPricingTimeframe(value)}>
+                    <SelectTrigger className="w-[120px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="day">Per Day</SelectItem>
+                      <SelectItem value="month">Per Month</SelectItem>
+                      <SelectItem value="quarter">Per Quarter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -436,42 +488,42 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                         <span className="text-xs">Website Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${stats.hubPricingInsights['chicago-hub'].averageWebsiteAdPrice.toLocaleString()}/mo`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalWebsiteAdValue)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Newsletter Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${stats.hubPricingInsights['chicago-hub'].averageNewsletterAdPrice.toLocaleString()}/mo`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalNewsletterAdValue)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Print Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${stats.hubPricingInsights['chicago-hub'].averagePrintAdPrice.toLocaleString()}/mo`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalPrintAdValue)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Podcast Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${stats.hubPricingInsights['chicago-hub'].averagePodcastAdPrice.toLocaleString()}/mo`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalPodcastAdValue)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Streaming Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${stats.hubPricingInsights['chicago-hub'].averageStreamingAdPrice.toLocaleString()}/mo`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalStreamingAdValue)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Radio Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${stats.hubPricingInsights['chicago-hub'].averageRadioAdPrice.toLocaleString()}/mo`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalRadioAdValue)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="pt-2 border-t">
@@ -479,11 +531,11 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                           <span className="text-xs font-medium">Total Hub Value</span>
                           <span className="font-bold text-sm text-green-600">
                             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                              `$${stats.hubPricingInsights['chicago-hub'].totalInventoryValue.toLocaleString()}/mo`}
+                              `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalInventoryValue)).toLocaleString()}${getTimeframeLabel()}`}
                           </span>
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-1">
-                          Monthly potential for this hub
+                          Sum of all inventory above
                         </p>
                       </div>
                     </>

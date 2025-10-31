@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { calculateRevenue } from '@/utils/pricingCalculations';
 import { 
   ChevronRight,
   ChevronLeft,
@@ -214,6 +215,92 @@ const flattenAdvertisingOpportunities = (pub: Publication): FlattenedAd[] => {
   return ads;
 };
 
+// Helper to get the full ad object with pricing data
+const getFullAdObject = (pub: Publication, adId: string): { ad: any; frequency?: string } | null => {
+  const channels = pub.distributionChannels;
+  if (!channels) return null;
+
+  // Website ads
+  if (channels.website?.advertisingOpportunities) {
+    const ad = channels.website.advertisingOpportunities.find((a, idx) => 
+      (a.adId || `${pub._id}-website-${idx}`) === adId
+    );
+    if (ad) return { ad };
+  }
+
+  // Newsletter ads
+  if (channels.newsletters) {
+    for (const [nlIdx, newsletter] of channels.newsletters.entries()) {
+      const ad = newsletter.advertisingOpportunities?.find((a, adIdx) => 
+        (a.adId || `${pub._id}-newsletter-${nlIdx}-${adIdx}`) === adId
+      );
+      if (ad) return { ad, frequency: newsletter.frequency };
+    }
+  }
+
+  // Print ads
+  if (channels.print && Array.isArray(channels.print)) {
+    for (const print of channels.print) {
+      const ad = print.advertisingOpportunities?.find((a, idx) => 
+        (a.adId || `${pub._id}-print-${idx}`) === adId
+      );
+      if (ad) return { ad, frequency: print.frequency };
+    }
+  }
+
+  // Social media
+  if (channels.socialMedia) {
+    for (const [socIdx, social] of channels.socialMedia.entries()) {
+      const ad = social.advertisingOpportunities?.find((a, adIdx) => 
+        (a.adId || `${pub._id}-social-${socIdx}-${adIdx}`) === adId
+      );
+      if (ad) return { ad };
+    }
+  }
+
+  // Podcasts
+  if (channels.podcasts) {
+    for (const [podIdx, podcast] of channels.podcasts.entries()) {
+      const ad = podcast.advertisingOpportunities?.find((a, adIdx) => 
+        (a.adId || `${pub._id}-podcast-${podIdx}-${adIdx}`) === adId
+      );
+      if (ad) return { ad, frequency: podcast.frequency };
+    }
+  }
+
+  // Radio
+  if (channels.radioStations) {
+    for (const [stationIdx, station] of channels.radioStations.entries()) {
+      const ad = station.advertisingOpportunities?.find((a, adIdx) => 
+        (a.adId || `${pub._id}-radio-${stationIdx}-${adIdx}`) === adId
+      );
+      if (ad) return { ad };
+    }
+  }
+
+  // Events
+  if (channels.events) {
+    for (const [eventIdx, event] of channels.events.entries()) {
+      const ad = event.advertisingOpportunities?.find((a, adIdx) => 
+        (a.adId || `${pub._id}-event-${eventIdx}-${adIdx}`) === adId
+      );
+      if (ad) return { ad, frequency: event.frequency };
+    }
+  }
+
+  // Streaming
+  if (channels.streamingVideo) {
+    for (const [streamIdx, streaming] of channels.streamingVideo.entries()) {
+      const ad = streaming.advertisingOpportunities?.find((a, adIdx) => 
+        (a.adId || `${pub._id}-streaming-${streamIdx}-${adIdx}`) === adId
+      );
+      if (ad) return { ad, frequency: streaming.frequency };
+    }
+  }
+
+  return null;
+};
+
 export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: PackageBuilderFormProps) => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
@@ -365,7 +452,28 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
     }
   }, [existingPackage]);
 
-  // Fetch publications
+  const fetchPublications = useCallback(async () => {
+    setLoadingPublications(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/publications`, {
+        headers: getAuthHeaders()
+      });
+      if (!response.ok) throw new Error('Failed to fetch publications');
+      const data = await response.json();
+      setPublications(data);
+    } catch (error) {
+      console.error('Error fetching publications:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load publications',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingPublications(false);
+    }
+  }, [toast]);
+
+  // Fetch publications on mount
   useEffect(() => {
     fetchPublications();
   }, [fetchPublications]);
@@ -391,27 +499,6 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
       setSelectedPublications(selections);
     }
   }, [existingPackage, publications]);
-
-  const fetchPublications = useCallback(async () => {
-    setLoadingPublications(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/publications`, {
-        headers: getAuthHeaders()
-      });
-      if (!response.ok) throw new Error('Failed to fetch publications');
-      const data = await response.json();
-      setPublications(data);
-    } catch (error) {
-      console.error('Error fetching publications:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load publications',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoadingPublications(false);
-    }
-  }, [toast]);
 
   const updateFormData = (section: string, data: Partial<HubPackageInsert[keyof HubPackageInsert]>) => {
     setFormData(prev => ({
@@ -463,13 +550,22 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
   };
 
   const calculatePricing = () => {
-    // Simple pricing calculation based on selected inventory
+    // Calculate pricing based on actual ad revenue using standardized calculation
     let basePrice = 0;
     
     Object.entries(selectedPublications).forEach(([pubId, data]) => {
       if (data.selected && data.inventoryItems.length > 0) {
-        // Add $500 per inventory item as base
-        basePrice += data.inventoryItems.length * 500;
+        const pub = publications.find(p => p._id === pubId);
+        if (!pub) return;
+
+        // Calculate revenue for each selected ad
+        data.inventoryItems.forEach(adId => {
+          const adData = getFullAdObject(pub, adId);
+          if (adData) {
+            const monthlyRevenue = calculateRevenue(adData.ad, 'month', adData.frequency);
+            basePrice += monthlyRevenue;
+          }
+        });
       }
     });
 

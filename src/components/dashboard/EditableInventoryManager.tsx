@@ -12,6 +12,7 @@ import { PublicationFrontend } from '@/types/publication';
 import { AdFormatSelector } from '@/components/AdFormatSelector';
 import { NewsletterAdFormat, getAdDimensions } from '@/types/newsletterAdFormat';
 import { WebsiteAdFormatSelector } from '@/components/WebsiteAdFormatSelector';
+import { RadioShowEditor } from '@/components/admin/RadioShowEditor';
 import { 
   Globe, 
   Mail, 
@@ -2450,8 +2451,9 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
         <CardContent>
           <div className="space-y-6">
             {radioStations.map((radio, radioIndex) => (
-              <div key={radioIndex} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
+              <div key={radioIndex} className="border rounded-lg p-4 space-y-4">
+                {/* Station Header */}
+                <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">
                     {radio.callSign} - {radio.frequency}
                   </h3>
@@ -2466,7 +2468,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                 </div>
                 
                 {/* Radio Station Properties */}
-                <div className="p-4 bg-yellow-50 rounded-lg space-y-4 mb-4">
+                <div className="p-4 bg-yellow-50 rounded-lg space-y-4">
                   <h4 className="font-medium text-yellow-800">Radio Station Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -2543,175 +2545,21 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                   </div>
                 </div>
                 
-                <div className="space-y-4">
-                  {radio.advertisingOpportunities?.map((ad, adIndex) => (
-                    <div key={adIndex} className="p-4 bg-muted/30 rounded-lg space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Radio Ad #{adIndex + 1}</h4>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                          <Label>Ad Name</Label>
-                          <Input
-                            value={ad.name || ''}
-                            onChange={(e) => updateRadioAd(radioIndex, adIndex, 'name', e.target.value)}
-                            placeholder="Drive Time Spot"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>Ad Format</Label>
-                          <Select 
-                            value={ad.adFormat || ''}
-                            onValueChange={(value) => updateRadioAd(radioIndex, adIndex, 'adFormat', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select format..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="30_second_spot">30-second spot</SelectItem>
-                              <SelectItem value="60_second_spot">60-second spot</SelectItem>
-                              <SelectItem value="live_read">Live Read</SelectItem>
-                              <SelectItem value="sponsorship">Sponsorship</SelectItem>
-                              <SelectItem value="traffic_weather_sponsor">Traffic/Weather Sponsor</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <Label>Time Slot</Label>
-                          <Select
-                            value={ad.timeSlot || ''}
-                            onValueChange={(value) => updateRadioAd(radioIndex, adIndex, 'timeSlot', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select time slot..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="drive_time_morning">Morning Drive</SelectItem>
-                              <SelectItem value="drive_time_evening">Evening Drive</SelectItem>
-                              <SelectItem value="midday">Midday</SelectItem>
-                              <SelectItem value="weekend">Weekend</SelectItem>
-                              <SelectItem value="overnight">Overnight</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <Label>Duration</Label>
-                          <div className="space-y-2">
-                            <Select 
-                              value={
-                                customDurationMode[`radio-${radioIndex}-${adIndex}`]
-                                  ? 'custom'
-                                  : (ad.specifications?.duration && [15, 30, 60, 90, 120].includes(ad.specifications.duration)
-                                    ? String(ad.specifications.duration)
-                                    : 'custom')
-                              }
-                              onValueChange={(value) => {
-                                const key = `radio-${radioIndex}-${adIndex}`;
-                                if (value === 'custom') {
-                                  // Enter custom mode and clear duration
-                                  setCustomDurationMode({ ...customDurationMode, [key]: true });
-                                  updateRadioAd(radioIndex, adIndex, 'specifications', {
-                                    ...ad.specifications,
-                                    duration: undefined
-                                  });
-                                  return;
-                                }
-                                // Exit custom mode and set standard duration
-                                setCustomDurationMode({ ...customDurationMode, [key]: false });
-                                const duration = parseInt(value);
-                                updateRadioAd(radioIndex, adIndex, 'specifications', {
-                                  ...ad.specifications,
-                                  duration
-                                });
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select duration..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="15">15 seconds (:15)</SelectItem>
-                                <SelectItem value="30">30 seconds (:30)</SelectItem>
-                                <SelectItem value="60">60 seconds (:60)</SelectItem>
-                                <SelectItem value="90">90 seconds (:90)</SelectItem>
-                                <SelectItem value="120">120 seconds (:120)</SelectItem>
-                                <SelectItem value="custom">Custom...</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {(customDurationMode[`radio-${radioIndex}-${adIndex}`] || (!ad.specifications?.duration || ![15, 30, 60, 90, 120].includes(ad.specifications.duration))) && (
-                              <Input
-                                type="number"
-                                value={ad.specifications?.duration || ''}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  const numVal = val === '' ? undefined : parseInt(val, 10);
-                                  updateRadioAd(radioIndex, adIndex, 'specifications', {
-                                    ...ad.specifications,
-                                    duration: isNaN(numVal) ? undefined : numVal
-                                  });
-                                }}
-                                placeholder="Enter seconds (e.g., 45, 180, 600)"
-                              />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label>Pricing Model</Label>
-                          <Select 
-                            value={ad.pricing?.pricingModel || 'per_spot'}
-                            onValueChange={(value) => updateRadioAdPricing(radioIndex, adIndex, 'pricingModel', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="per_spot">Per Spot</SelectItem>
-                              <SelectItem value="contact">Contact for Pricing</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <Label>Price ($)</Label>
-                          <Input
-                            type="number"
-                            value={ad.pricing?.flatRate || ''}
-                            onChange={(e) => updateRadioAdPricing(radioIndex, adIndex, 'flatRate', parseFloat(e.target.value) || 0)}
-                            placeholder="150"
-                          />
-                        </div>
-                        
-                        <div className="md:col-span-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeRadioAd(radioIndex, adIndex)}
-                            className="text-destructive hover:text-destructive w-full"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Remove Ad
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => addRadioAd(radioIndex)}
-                    className="w-full"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Ad to {radio.callSign}
-                  </Button>
-                </div>
+                {/* Radio Show Editor */}
+                <RadioShowEditor
+                  station={radio}
+                  onChange={(updatedStation) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      distributionChannels: {
+                        ...prev.distributionChannels,
+                        radioStations: prev.distributionChannels?.radioStations?.map((s, idx) =>
+                          idx === radioIndex ? updatedStation : s
+                        )
+                      }
+                    }));
+                  }}
+                />
               </div>
             ))}
             

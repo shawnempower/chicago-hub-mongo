@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { calculateRevenue } from '@/utils/pricingCalculations';
 import { 
   ArrowLeft, 
   Printer, 
@@ -72,25 +73,31 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       publication.distributionChannels.website.advertisingOpportunities.forEach((ad: any) => {
         const pricing: PricingTier[] = [];
         
-        // Standard pricing
-        if (ad.pricing?.flatRate) {
+        // Standard pricing - use standardized calculation
+        const standardRevenue = calculateRevenue(ad, 'month');
+        if (standardRevenue > 0) {
           pricing.push({
             label: 'Standard',
-            standardPrice: ad.pricing.flatRate,
-            pricingModel: ad.pricing.pricingModel,
+            standardPrice: standardRevenue,
+            pricingModel: ad.pricing?.pricingModel,
           });
         }
 
-        // Hub pricing
+        // Hub pricing - calculate for each hub
         ad.hubPricing?.forEach((hub: any) => {
-          pricing.push({
-            label: hub.hubName || hub.hubId,
-            hubPrice: hub.pricing?.flatRate,
-            pricingModel: hub.pricing?.pricingModel,
-            discount: hub.discount,
-            available: hub.available,
-            minimumCommitment: hub.minimumCommitment,
-          });
+          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
+          const hubRevenue = calculateRevenue(hubAd, 'month');
+          
+          if (hubRevenue > 0) {
+            pricing.push({
+              label: hub.hubName || hub.hubId,
+              hubPrice: hubRevenue,
+              pricingModel: hub.pricing?.pricingModel,
+              discount: hub.discount,
+              available: hub.available,
+              minimumCommitment: hub.minimumCommitment,
+            });
+          }
         });
 
         if (pricing.length > 0) {
@@ -116,23 +123,30 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       newsletter.advertisingOpportunities?.forEach((ad: any) => {
         const pricing: PricingTier[] = [];
         
-        if (ad.pricing?.flatRate) {
+        // Standard pricing with frequency
+        const standardRevenue = calculateRevenue(ad, 'month', newsletter.frequency);
+        if (standardRevenue > 0) {
           pricing.push({
             label: 'Standard',
-            standardPrice: ad.pricing.flatRate,
-            pricingModel: ad.pricing.pricingModel,
+            standardPrice: standardRevenue,
+            pricingModel: ad.pricing?.pricingModel,
           });
         }
 
         ad.hubPricing?.forEach((hub: any) => {
-          pricing.push({
-            label: hub.hubName || hub.hubId,
-            hubPrice: hub.pricing?.flatRate,
-            pricingModel: hub.pricing?.pricingModel,
-            discount: hub.discount,
-            available: hub.available,
-            minimumCommitment: hub.minimumCommitment,
-          });
+          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
+          const hubRevenue = calculateRevenue(hubAd, 'month', newsletter.frequency);
+          
+          if (hubRevenue > 0) {
+            pricing.push({
+              label: hub.hubName || hub.hubId,
+              hubPrice: hubRevenue,
+              pricingModel: hub.pricing?.pricingModel,
+              discount: hub.discount,
+              available: hub.available,
+              minimumCommitment: hub.minimumCommitment,
+            });
+          }
         });
 
         if (pricing.length > 0) {
@@ -166,40 +180,49 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
               const frequency = tier.pricing?.frequency || tier.frequency;
               let tierLabel = frequency || tier.name || tier.size || `Tier ${idx + 1}`;
               
+              // Calculate monthly revenue for this tier
+              const tierAd = { ...ad, pricing: tier.pricing || tier };
+              const tierRevenue = calculateRevenue(tierAd, 'month', print.frequency);
+              
+              if (tierRevenue > 0) {
+                pricing.push({
+                  label: tierLabel,
+                  standardPrice: tierRevenue,
+                  pricingModel: tier.pricing?.pricingModel || tier.pricingModel,
+                });
+              }
+            });
+          } else {
+            const standardRevenue = calculateRevenue(ad, 'month', print.frequency);
+            if (standardRevenue > 0) {
               pricing.push({
-                label: tierLabel,
-                standardPrice: tier.pricing?.flatRate,
-                pricingModel: tier.pricing?.pricingModel,
+                label: 'Standard',
+                standardPrice: standardRevenue,
+                pricingModel: ad.pricing?.pricingModel,
               });
-            });
-          } else if (ad.pricing?.flatRate) {
-            pricing.push({
-              label: 'Standard',
-              standardPrice: ad.pricing.flatRate,
-              pricingModel: ad.pricing.pricingModel,
-            });
+            }
           }
 
           ad.hubPricing?.forEach((hub: any) => {
-            // Debug log for Chicago Reader hub pricing
-            if (print.name === 'Chicago Reader') {
-              console.log('Chicago Reader hub pricing:', hub);
-            }
-            
             // Hub pricing may also have frequency inside pricing object
             const hubFrequency = hub.pricing?.frequency;
             const hubLabel = hubFrequency 
               ? `${hub.hubName || hub.hubId} (${hubFrequency})`
               : hub.hubName || hub.hubId;
             
-            pricing.push({
-              label: hubLabel,
-              hubPrice: hub.pricing?.flatRate,
-              pricingModel: hub.pricing?.pricingModel,
-              discount: hub.discount,
-              available: hub.available,
-              minimumCommitment: hub.minimumCommitment,
-            });
+            const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
+            const hubRevenue = calculateRevenue(hubAd, 'month', print.frequency);
+            
+            if (hubRevenue > 0) {
+              pricing.push({
+                label: hubLabel,
+                hubPrice: hubRevenue,
+                pricingModel: hub.pricing?.pricingModel,
+                discount: hub.discount,
+                available: hub.available,
+                minimumCommitment: hub.minimumCommitment,
+              });
+            }
           });
 
           if (pricing.length > 0) {
@@ -226,23 +249,29 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       social.advertisingOpportunities?.forEach((ad: any) => {
         const pricing: PricingTier[] = [];
         
-        if (ad.pricing?.flatRate || ad.pricing?.perPost) {
+        const standardRevenue = calculateRevenue(ad, 'month');
+        if (standardRevenue > 0) {
           pricing.push({
             label: 'Standard',
-            standardPrice: ad.pricing.flatRate || ad.pricing.perPost,
-            pricingModel: ad.pricing.pricingModel,
+            standardPrice: standardRevenue,
+            pricingModel: ad.pricing?.pricingModel,
           });
         }
 
         ad.hubPricing?.forEach((hub: any) => {
-          pricing.push({
-            label: hub.hubName || hub.hubId,
-            hubPrice: hub.pricing?.flatRate || hub.pricing?.perPost,
-            pricingModel: hub.pricing?.pricingModel,
-            discount: hub.discount,
-            available: hub.available,
-            minimumCommitment: hub.minimumCommitment,
-          });
+          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
+          const hubRevenue = calculateRevenue(hubAd, 'month');
+          
+          if (hubRevenue > 0) {
+            pricing.push({
+              label: hub.hubName || hub.hubId,
+              hubPrice: hubRevenue,
+              pricingModel: hub.pricing?.pricingModel,
+              discount: hub.discount,
+              available: hub.available,
+              minimumCommitment: hub.minimumCommitment,
+            });
+          }
         });
 
         if (pricing.length > 0) {
@@ -267,24 +296,29 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       event.advertisingOpportunities?.forEach((ad: any) => {
         const pricing: PricingTier[] = [];
         
-        const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || (typeof ad.pricing === 'number' ? ad.pricing : 0);
-        if (price) {
+        const standardRevenue = calculateRevenue(ad, 'month', event.frequency);
+        if (standardRevenue > 0) {
           pricing.push({
             label: 'Standard',
-            standardPrice: price,
+            standardPrice: standardRevenue,
             pricingModel: ad.pricing?.pricingModel,
           });
         }
 
         ad.hubPricing?.forEach((hub: any) => {
-          pricing.push({
-            label: hub.hubName || hub.hubId,
-            hubPrice: hub.pricing?.flatRate,
-            pricingModel: hub.pricing?.pricingModel,
-            discount: hub.discount,
-            available: hub.available,
-            minimumCommitment: hub.minimumCommitment,
-          });
+          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
+          const hubRevenue = calculateRevenue(hubAd, 'month', event.frequency);
+          
+          if (hubRevenue > 0) {
+            pricing.push({
+              label: hub.hubName || hub.hubId,
+              hubPrice: hubRevenue,
+              pricingModel: hub.pricing?.pricingModel,
+              discount: hub.discount,
+              available: hub.available,
+              minimumCommitment: hub.minimumCommitment,
+            });
+          }
         });
 
         if (pricing.length > 0) {
@@ -309,23 +343,29 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       podcast.advertisingOpportunities?.forEach((ad: any) => {
         const pricing: PricingTier[] = [];
         
-        if (ad.pricing?.flatRate) {
+        const standardRevenue = calculateRevenue(ad, 'month', podcast.frequency);
+        if (standardRevenue > 0) {
           pricing.push({
             label: 'Standard',
-            standardPrice: ad.pricing.flatRate,
-            pricingModel: ad.pricing.pricingModel,
+            standardPrice: standardRevenue,
+            pricingModel: ad.pricing?.pricingModel,
           });
         }
 
         ad.hubPricing?.forEach((hub: any) => {
-          pricing.push({
-            label: hub.hubName || hub.hubId,
-            hubPrice: hub.pricing?.flatRate,
-            pricingModel: hub.pricing?.pricingModel,
-            discount: hub.discount,
-            available: hub.available,
-            minimumCommitment: hub.minimumCommitment,
-          });
+          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
+          const hubRevenue = calculateRevenue(hubAd, 'month', podcast.frequency);
+          
+          if (hubRevenue > 0) {
+            pricing.push({
+              label: hub.hubName || hub.hubId,
+              hubPrice: hubRevenue,
+              pricingModel: hub.pricing?.pricingModel,
+              discount: hub.discount,
+              available: hub.available,
+              minimumCommitment: hub.minimumCommitment,
+            });
+          }
         });
 
         if (pricing.length > 0) {
@@ -347,42 +387,96 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
     // Radio Ads
     publication.distributionChannels.radioStations?.forEach((radio: any) => {
       const reach = radio.listeners;
-      radio.advertisingOpportunities?.forEach((ad: any) => {
-        const pricing: PricingTier[] = [];
-        
-        if (ad.pricing?.flatRate || ad.pricing?.perSpot) {
-          pricing.push({
-            label: 'Standard',
-            standardPrice: ad.pricing.flatRate || ad.pricing.perSpot,
-            pricingModel: ad.pricing.pricingModel,
-          });
-        }
+      
+      // NEW: Handle show-based structure
+      if (radio.shows && radio.shows.length > 0) {
+        radio.shows.forEach((show: any) => {
+          show.advertisingOpportunities?.forEach((ad: any) => {
+            const pricing: PricingTier[] = [];
+            
+            const standardRevenue = calculateRevenue(ad, 'month', show.frequency);
+            if (standardRevenue > 0) {
+              pricing.push({
+                label: 'Standard',
+                standardPrice: standardRevenue,
+                pricingModel: ad.pricing?.pricingModel,
+              });
+            }
 
-        ad.hubPricing?.forEach((hub: any) => {
-          pricing.push({
-            label: hub.hubName || hub.hubId,
-            hubPrice: hub.pricing?.flatRate || hub.pricing?.weekly || hub.pricing?.monthly,
-            pricingModel: hub.pricing?.pricingModel,
-            discount: hub.discount,
-            available: hub.available,
-            minimumCommitment: hub.minimumCommitment,
+            ad.hubPricing?.forEach((hub: any) => {
+              const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
+              const hubRevenue = calculateRevenue(hubAd, 'month', show.frequency);
+              
+              if (hubRevenue > 0) {
+                pricing.push({
+                  label: hub.hubName || hub.hubId,
+                  hubPrice: hubRevenue,
+                  pricingModel: hub.pricing?.pricingModel,
+                  discount: hub.discount,
+                  available: hub.available,
+                  minimumCommitment: hub.minimumCommitment,
+                });
+              }
+            });
+
+            if (pricing.length > 0) {
+              items.push({
+                channel: 'Radio',
+                channelIcon: Radio,
+                name: `${radio.callSign} - ${show.name}`,
+                format: ad.adFormat || ad.specifications?.duration ? `${ad.specifications.duration}s spot` : 'Unknown',
+                reach,
+                reachLabel: 'Listeners',
+                pricing,
+              });
+            }
           });
         });
+      } else if (radio.advertisingOpportunities && radio.advertisingOpportunities.length > 0) {
+        // LEGACY: Handle station-level ads only if no shows exist (prevent double-counting)
+        radio.advertisingOpportunities.forEach((ad: any) => {
+          const pricing: PricingTier[] = [];
+          
+          const standardRevenue = calculateRevenue(ad, 'month');
+          if (standardRevenue > 0) {
+            pricing.push({
+              label: 'Standard',
+              standardPrice: standardRevenue,
+              pricingModel: ad.pricing?.pricingModel,
+            });
+          }
 
-        if (pricing.length > 0) {
-          items.push({
-            channel: 'Radio',
-            channelIcon: Radio,
-            name: `${radio.callSign} - ${ad.name}`,
-            format: ad.adFormat,
-            reach,
-            reachLabel: 'Weekly Listeners',
-            pricing,
-            hubId: ad.hubPricing?.[0]?.hubId,
-            hubName: ad.hubPricing?.[0]?.hubName,
+          ad.hubPricing?.forEach((hub: any) => {
+            const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
+            const hubRevenue = calculateRevenue(hubAd, 'month');
+            
+            if (hubRevenue > 0) {
+              pricing.push({
+                label: hub.hubName || hub.hubId,
+                hubPrice: hubRevenue,
+                pricingModel: hub.pricing?.pricingModel,
+                discount: hub.discount,
+                available: hub.available,
+                minimumCommitment: hub.minimumCommitment,
+              });
+            }
           });
-        }
-      });
+
+          if (pricing.length > 0) {
+            items.push({
+              channel: 'Radio',
+              channelIcon: Radio,
+              name: `${radio.callSign} - ${ad.name}`,
+              format: ad.adFormat,
+              reach,
+              reachLabel: 'Weekly Listeners',
+              pricing,
+              hubId: ad.hubPricing?.[0]?.hubId,
+              hubName: ad.hubPricing?.[0]?.hubName,
+            });
+          }
+        });
+      }
     });
 
     // Streaming Video Ads
@@ -391,23 +485,29 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       streaming.advertisingOpportunities?.forEach((ad: any) => {
         const pricing: PricingTier[] = [];
         
-        if (ad.pricing?.flatRate) {
+        const standardRevenue = calculateRevenue(ad, 'month', streaming.frequency);
+        if (standardRevenue > 0) {
           pricing.push({
             label: 'Standard',
-            standardPrice: ad.pricing.flatRate,
-            pricingModel: ad.pricing.pricingModel,
+            standardPrice: standardRevenue,
+            pricingModel: ad.pricing?.pricingModel,
           });
         }
 
         ad.hubPricing?.forEach((hub: any) => {
-          pricing.push({
-            label: hub.hubName || hub.hubId,
-            hubPrice: hub.pricing?.flatRate,
-            pricingModel: hub.pricing?.pricingModel,
-            discount: hub.discount,
-            available: hub.available,
-            minimumCommitment: hub.minimumCommitment,
-          });
+          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
+          const hubRevenue = calculateRevenue(hubAd, 'month', streaming.frequency);
+          
+          if (hubRevenue > 0) {
+            pricing.push({
+              label: hub.hubName || hub.hubId,
+              hubPrice: hubRevenue,
+              pricingModel: hub.pricing?.pricingModel,
+              discount: hub.discount,
+              available: hub.available,
+              minimumCommitment: hub.minimumCommitment,
+            });
+          }
         });
 
         if (pricing.length > 0) {

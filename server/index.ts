@@ -43,12 +43,29 @@ import { authService, initializeAuthService } from '../src/integrations/mongodb/
 import { getDatabase } from '../src/integrations/mongodb/client';
 import { ObjectId } from 'mongodb';
 import multer from 'multer';
+import { calculateRevenue } from '../src/utils/pricingCalculations';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Initialize storefront image service (will be set after S3 service is ready)
 let storefrontImageService: StorefrontImageService | null = null;
+
+// ===== STANDARDIZED REVENUE CALCULATION =====
+/**
+ * Calculate monthly revenue using the new standardized pricing utilities
+ * This is a bridge function that wraps the new calculateRevenue utility
+ * while maintaining backward compatibility with existing code
+ */
+function estimateMonthlyRevenueNew(ad: any, channelFrequency?: string): number {
+  try {
+    // Use the new standardized calculation
+    return calculateRevenue(ad, 'month', channelFrequency);
+  } catch (error) {
+    console.error('Error in estimateMonthlyRevenueNew:', error);
+    return 0;
+  }
+}
 
 // Middleware
 app.use(helmet());
@@ -2318,8 +2335,8 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
 
     // Helper function to collect pricing for both default and hub-specific
     const collectAdPricing = (ad: any, channelType: string, frequency?: string, channelKey: 'websiteAdPrices' | 'newsletterAdPrices' | 'printAdPrices' | 'podcastAdPrices' | 'streamingAdPrices' | 'radioAdPrices') => {
-      // Always calculate default pricing (without hub pricing)
-      const defaultPrice = estimateMonthlyRevenue(ad, channelType, frequency, false);
+      // Always calculate default pricing (without hub pricing) using standardized calculation
+      const defaultPrice = calculateRevenue(ad, 'month', frequency);
       if (defaultPrice > 0) {
         pricingData[channelKey].push(defaultPrice);
         pricingData.totalValue += defaultPrice;
@@ -2346,9 +2363,9 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
             };
           }
 
-          // Calculate monthly price for this hub
+          // Calculate monthly price for this hub using standardized calculation
           const tempAd = { ...ad, pricing: hubPrice.pricing, hubPricing: null };
-          const hubMonthlyPrice = estimateMonthlyRevenue(tempAd, channelType, frequency, false);
+          const hubMonthlyPrice = calculateRevenue(tempAd, 'month', frequency);
           
           if (hubMonthlyPrice > 0) {
             hubPricingData[hubId][channelKey].push(hubMonthlyPrice);
@@ -2655,18 +2672,44 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       // Handle radio stations
       if (pub.distributionChannels?.radioStations) {
         for (const radio of pub.distributionChannels.radioStations) {
-          if (radio.advertisingOpportunities) {
-            const radioAds = radio.advertisingOpportunities.length;
-            inventoryByType.radioStations += radioAds;
-            adInventoryCount += radioAds;
-            
-            // Collect radio pricing data (separate default and hub pricing)
-            radio.advertisingOpportunities.forEach(ad => {
-              collectAdPricing(ad, 'radio', undefined, 'radioAdPrices');
-            });
+          // NEW: Handle show-based structure
+          if (radio.shows && radio.shows.length > 0) {
+            for (const show of radio.shows) {
+              if (show.advertisingOpportunities) {
+                const radioAds = show.advertisingOpportunities.length;
+                inventoryByType.radioStations += radioAds;
+                adInventoryCount += radioAds;
+                
+                // Collect radio pricing data (use show frequency)
+                show.advertisingOpportunities.forEach((ad: any) => {
+                  // Pass show frequency for accurate revenue calculation
+                  collectAdPricing(ad, 'radio', show.frequency, 'radioAdPrices');
+                });
+              }
+              
+              // Aggregate show listeners
+              if (show.averageListeners) {
+                audienceMetrics.totalRadioListeners += show.averageListeners;
+              }
+            }
           }
           
-          // Aggregate radio listeners
+          // LEGACY: Handle station-level ads (backward compatibility)
+          // Only process legacy ads if there are NO shows (to prevent double-counting)
+          if (!radio.shows || radio.shows.length === 0) {
+            if (radio.advertisingOpportunities && radio.advertisingOpportunities.length > 0) {
+              const radioAds = radio.advertisingOpportunities.length;
+              inventoryByType.radioStations += radioAds;
+              adInventoryCount += radioAds;
+              
+              // Collect radio pricing data (no frequency for legacy)
+              radio.advertisingOpportunities.forEach(ad => {
+                collectAdPricing(ad, 'radio', undefined, 'radioAdPrices');
+              });
+            }
+          }
+          
+          // Aggregate radio listeners (station-level for legacy)
           if (radio.listeners) {
             audienceMetrics.totalRadioListeners += radio.listeners;
           }
@@ -2709,12 +2752,12 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
     Object.keys(hubPricingData).forEach(hubId => {
       const hubData = hubPricingData[hubId];
       hubPricingInsights[hubId] = {
-        averageWebsiteAdPrice: calculateAverage(hubData.websiteAdPrices),
-        averageNewsletterAdPrice: calculateAverage(hubData.newsletterAdPrices),
-        averagePrintAdPrice: calculateAverage(hubData.printAdPrices),
-        averagePodcastAdPrice: calculateAverage(hubData.podcastAdPrices),
-        averageStreamingAdPrice: calculateAverage(hubData.streamingAdPrices),
-        averageRadioAdPrice: calculateAverage(hubData.radioAdPrices),
+        totalWebsiteAdValue: Math.round(hubData.websiteAdPrices.reduce((sum, price) => sum + price, 0)),
+        totalNewsletterAdValue: Math.round(hubData.newsletterAdPrices.reduce((sum, price) => sum + price, 0)),
+        totalPrintAdValue: Math.round(hubData.printAdPrices.reduce((sum, price) => sum + price, 0)),
+        totalPodcastAdValue: Math.round(hubData.podcastAdPrices.reduce((sum, price) => sum + price, 0)),
+        totalStreamingAdValue: Math.round(hubData.streamingAdPrices.reduce((sum, price) => sum + price, 0)),
+        totalRadioAdValue: Math.round(hubData.radioAdPrices.reduce((sum, price) => sum + price, 0)),
         totalInventoryValue: Math.round(hubData.totalValue),
         inventoryCount: hubData.inventoryCount
       };
@@ -2749,12 +2792,12 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       
       // Default pricing (without hub-specific pricing)
       pricingInsights: {
-        averageWebsiteAdPrice: calculateAverage(pricingData.websiteAdPrices),
-        averageNewsletterAdPrice: calculateAverage(pricingData.newsletterAdPrices),
-        averagePrintAdPrice: calculateAverage(pricingData.printAdPrices),
-        averagePodcastAdPrice: calculateAverage(pricingData.podcastAdPrices),
-        averageStreamingAdPrice: calculateAverage(pricingData.streamingAdPrices),
-        averageRadioAdPrice: calculateAverage(pricingData.radioAdPrices),
+        totalWebsiteAdValue: Math.round(pricingData.websiteAdPrices.reduce((sum, price) => sum + price, 0)),
+        totalNewsletterAdValue: Math.round(pricingData.newsletterAdPrices.reduce((sum, price) => sum + price, 0)),
+        totalPrintAdValue: Math.round(pricingData.printAdPrices.reduce((sum, price) => sum + price, 0)),
+        totalPodcastAdValue: Math.round(pricingData.podcastAdPrices.reduce((sum, price) => sum + price, 0)),
+        totalStreamingAdValue: Math.round(pricingData.streamingAdPrices.reduce((sum, price) => sum + price, 0)),
+        totalRadioAdValue: Math.round(pricingData.radioAdPrices.reduce((sum, price) => sum + price, 0)),
         totalInventoryValue: Math.round(pricingData.totalValue),
         inventoryCount: pricingData.inventoryCount
       },

@@ -37,12 +37,14 @@ import { FieldError } from '@/components/ui/field-error';
 import { AdFormatSelector } from '@/components/AdFormatSelector';
 import { NewsletterAdFormat } from '@/types/newsletterAdFormat';
 import { WebsiteAdFormatSelector } from '@/components/WebsiteAdFormatSelector';
+import { RadioShowEditor } from '@/components/admin/RadioShowEditor';
 import { 
   validatePositiveInteger,
   validatePositiveNumber,
   validatePercentage,
   getValidationClass
 } from '@/utils/fieldValidation';
+import { calculateRevenue } from '@/utils/pricingCalculations';
 
 // Helper function to validate inventory item data
 const validateInventoryItem = (item: any, type: string): boolean => {
@@ -2708,17 +2710,34 @@ export const DashboardInventoryManager = () => {
           {/* Website Advertising Opportunities */}
           <div>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
-                <Target className="w-5 h-5" />
-                Advertising Opportunities
-              </h3>
+              <div className="flex items-center gap-3">
+                <h3 className="flex items-center gap-2 font-sans font-semibold" style={{ fontSize: '1.0rem' }}>
+                  <Target className="w-5 h-5" />
+                  Advertising Opportunities
+                </h3>
+                {(() => {
+                  const totalRevenue = (currentPublication.distributionChannels?.website?.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                    return sum + calculateRevenue(ad, 'month');
+                  }, 0);
+                  return totalRevenue > 0 ? (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      ${Math.round(totalRevenue).toLocaleString()}/mo
+                    </Badge>
+                  ) : null;
+                })()}
+              </div>
               <Button onClick={addWebsiteOpportunity}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Ad Slot
               </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {currentPublication.distributionChannels?.website?.advertisingOpportunities?.map((opportunity: any, index: number) => (
+              {currentPublication.distributionChannels?.website?.advertisingOpportunities?.map((opportunity: any, index: number) => {
+                // Calculate revenue and metrics for this website ad
+                const adRevenue = calculateRevenue(opportunity, 'month');
+                const impressions = opportunity.performanceMetrics?.impressionsPerMonth || 0;
+                
+                return (
                 <div key={index} className="relative">
                   <div className="group border border-gray-200 rounded-lg shadow-sm p-4 bg-white transition-shadow duration-200 hover:shadow-md">
                     {/* Title and Badges */}
@@ -2821,6 +2840,24 @@ export const DashboardInventoryManager = () => {
                         </div>
                       </div>
 
+                      {/* Revenue & Metrics */}
+                      {(adRevenue > 0 || impressions > 0 || opportunity.pricing) && (
+                        <div className="bg-green-50 border border-green-200 rounded p-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                            <p className="text-sm font-bold text-green-800">
+                              {adRevenue > 0 ? `$${Math.round(adRevenue).toLocaleString()}` : 'Not calculated'}
+                            </p>
+                          </div>
+                          {impressions > 0 && (
+                            <div className="flex items-center justify-between text-xs text-green-700">
+                              <span>Impressions/Month</span>
+                              <span className="font-medium">{Math.round(impressions).toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Pricing section */}
                       <div>
                         <div className="flex items-center gap-2 mb-2">
@@ -2839,7 +2876,8 @@ export const DashboardInventoryManager = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
               
               {(!currentPublication.distributionChannels?.website?.advertisingOpportunities || 
                 currentPublication.distributionChannels.website.advertisingOpportunities.length === 0) && (
@@ -2878,12 +2916,23 @@ export const DashboardInventoryManager = () => {
           </div>
           
           <div className="space-y-4">
-            {currentPublication.distributionChannels?.podcasts?.map((podcast, index) => (
+            {currentPublication.distributionChannels?.podcasts?.map((podcast, index) => {
+              // Calculate total monthly revenue for this podcast
+              const totalRevenue = (podcast.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                return sum + calculateRevenue(ad, 'month', podcast.frequency);
+              }, 0);
+              
+              return (
                   <Card key={index} className="p-4 shadow-lg">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <h4 className="font-semibold">{podcast.name}</h4>
                         <Badge variant="secondary">{podcast.frequency?.charAt(0).toUpperCase() + podcast.frequency?.slice(1)}</Badge>
+                        {totalRevenue > 0 && (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            ${Math.round(totalRevenue).toLocaleString()}/mo
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -2942,7 +2991,13 @@ export const DashboardInventoryManager = () => {
                       
                       {podcast.advertisingOpportunities && podcast.advertisingOpportunities.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {podcast.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                          {podcast.advertisingOpportunities.map((ad: any, adIndex: number) => {
+                            // Calculate revenue and metrics for this podcast ad
+                            const adRevenue = calculateRevenue(ad, 'month', podcast.frequency);
+                            const occurrences = ad.performanceMetrics?.occurrencesPerMonth || 0;
+                            const impressions = ad.performanceMetrics?.impressionsPerMonth || 0;
+                            
+                            return (
                             <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -2986,6 +3041,29 @@ export const DashboardInventoryManager = () => {
                                   <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
                                   <p className="text-xs text-gray-900">{ad.duration ? `${ad.duration}s` : 'N/A'}</p>
                                 </div>
+                                {/* Revenue & Metrics */}
+                                {(adRevenue > 0 || occurrences > 0 || impressions > 0) && (
+                                  <div className="bg-green-50 border border-green-200 rounded p-2">
+                                    {adRevenue > 0 && (
+                                      <div className="flex items-center justify-between mb-1">
+                                        <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                        <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
+                                      </div>
+                                    )}
+                                    {occurrences > 0 && (
+                                      <div className="flex items-center justify-between text-xs text-green-700">
+                                        <span>Episodes/Month</span>
+                                        <span className="font-medium">{Math.round(occurrences).toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {impressions > 0 && (
+                                      <div className="flex items-center justify-between text-xs text-green-700">
+                                        <span>Downloads/Month</span>
+                                        <span className="font-medium">{Math.round(impressions).toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                                 <div>
                                   <div className="flex items-center gap-2 mb-1">
                                     <p className="text-xs font-medium text-gray-500">Pricing</p>
@@ -3002,7 +3080,8 @@ export const DashboardInventoryManager = () => {
                                 </div>
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
@@ -3011,7 +3090,8 @@ export const DashboardInventoryManager = () => {
                     </div>
 
                   </Card>
-                ))}
+                  );
+                })}
                 
             {(!currentPublication.distributionChannels?.podcasts || 
               currentPublication.distributionChannels.podcasts.length === 0) && (
@@ -3054,12 +3134,26 @@ export const DashboardInventoryManager = () => {
           </div>
           
           <div className="space-y-4">
-            {currentPublication.distributionChannels?.radioStations?.map((station, index) => (
+            {currentPublication.distributionChannels?.radioStations?.map((station, index) => {
+              // Calculate total monthly revenue for this radio station (all shows)
+              const totalRevenue = (station.shows || []).reduce((stationSum: number, show: any) => {
+                const showRevenue = (show.advertisingOpportunities || []).reduce((showSum: number, ad: any) => {
+                  return showSum + calculateRevenue(ad, 'month', show.frequency);
+                }, 0);
+                return stationSum + showRevenue;
+              }, 0);
+              
+              return (
                   <Card key={index} className="p-4 shadow-lg">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <h4 className="font-semibold">{station.callSign}</h4>
                         <Badge variant="secondary">{station.frequency?.charAt(0).toUpperCase() + station.frequency?.slice(1)}</Badge>
+                        {totalRevenue > 0 && (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            ${Math.round(totalRevenue).toLocaleString()}/mo
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -3080,7 +3174,7 @@ export const DashboardInventoryManager = () => {
                     </div>
                     {/* Specifications Container */}
                     <div className="mt-3 p-3 bg-gray-50 rounded-md border">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground">Format</span>
                           <span className="ml-2 font-medium">{station.format}</span>
@@ -3094,108 +3188,243 @@ export const DashboardInventoryManager = () => {
                           <span className="ml-2 font-medium">{station.listeners?.toLocaleString()}</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Ads</span>
-                          <span className="ml-2 font-medium">{station.advertisingOpportunities?.length || 0}</span>
+                          <span className="text-muted-foreground">Shows</span>
+                          <span className="ml-2 font-medium">{station.shows?.length || 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Total Ads</span>
+                          <span className="ml-2 font-medium">{station.shows?.reduce((sum: number, show: any) => sum + (show.advertisingOpportunities?.length || 0), 0) || 0}</span>
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Advertising Opportunities */}
+
+                                    {/* Radio Shows */}
                     <div className="-mx-4 -mb-4 mt-4">
                       <div className="border-t border-gray-200"></div>
                       <div className="p-4 bg-gray-50">
                         <div className="flex items-center justify-between mb-3">
-                          <h5 className="font-sans font-semibold text-sm">Advertising Opportunities</h5>
+                          <h5 className="font-sans font-semibold text-sm">Radio Shows</h5>
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => addRadioOpportunity(index)}
+                            onClick={() => {
+                              // Add a new show
+                              const newShow = {
+                                showId: `show-${Date.now()}`,
+                                name: 'New Show',
+                                frequency: 'weekdays',
+                                daysPerWeek: 5,
+                                timeSlot: '',
+                                averageListeners: station.listeners || 0,
+                                advertisingOpportunities: []
+                              };
+                              const updatedStations = [...(currentPublication.distributionChannels?.radioStations || [])];
+                              updatedStations[index] = {
+                                ...station,
+                                shows: [...(station.shows || []), newShow]
+                              };
+                              handleUpdatePublication({
+                                distributionChannels: {
+                                  ...currentPublication.distributionChannels,
+                                  radioStations: updatedStations
+                                }
+                              });
+                            }}
                           >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add Ad
-                        </Button>
-                      </div>
-                      
-                      {station.advertisingOpportunities && station.advertisingOpportunities.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {station.advertisingOpportunities.map((ad: any, adIndex: number) => (
-                            <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
-                                  {ad.adFormat && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      {ad.adFormat}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => openEditDialog(ad, 'radio-ad', index, adIndex)}
-                                >
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                  onClick={() => cloneRadioOpportunity(index, adIndex)}
-                                  title="Clone this ad"
-                                >
-                                  <Copy className="w-3 h-3" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => removeRadioOpportunity(index, adIndex)}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                              </div>
-                              <div className="space-y-2">
-                                <div className="grid grid-cols-2 gap-x-4">
-                                  <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Time Slot</p>
-                                    <p className="text-xs text-gray-900">{ad.timeSlot?.replace(/_/g, ' ') || 'N/A'}</p>
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Show
+                          </Button>
+                        </div>
+                        
+                        {station.shows && station.shows.length > 0 ? (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {station.shows.map((show: any, showIndex: number) => {
+                                // Calculate show revenue
+                                const showRevenue = (show.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                                  return sum + calculateRevenue(ad, 'month', show.frequency);
+                                }, 0);
+                                
+                                // Count custom pricing across all ads in this show
+                                const customPricingCount = (show.advertisingOpportunities || []).reduce((count: number, ad: any) => {
+                                  return count + (ad.hubPricing?.length || 0);
+                                }, 0);
+                                
+                                // Calculate total impressions and occurrences for this show
+                                const totalImpressions = (show.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                                  return sum + (ad.performanceMetrics?.impressionsPerMonth || 0);
+                                }, 0);
+                                
+                                const totalOccurrences = (show.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                                  return sum + (ad.performanceMetrics?.occurrencesPerMonth || 0);
+                                }, 0);
+                                
+                                return (
+                                  <div key={showIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <h5 className="text-sm font-semibold text-gray-900">{show.name}</h5>
+                                        <Badge variant="secondary" className="text-xs">
+                                          {show.frequency}
+                                        </Badge>
+                                        {showRevenue > 0 && (
+                                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                                            ${Math.round(showRevenue).toLocaleString()}/mo
+                                          </Badge>
+                                        )}
+                                        {customPricingCount > 0 && (
+                                          <Badge 
+                                            variant="secondary" 
+                                            className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-1.5 py-0.5"
+                                          >
+                                            +{customPricingCount} CUSTOM
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          className="h-6 w-6 p-0"
+                                          onClick={() => {
+                                            // Store which show to edit and trigger RadioShowEditor
+                                            (window as any)[`openRadioShow_${station.callSign}_${showIndex}`]?.();
+                                          }}
+                                        >
+                                          <Edit className="w-3 h-3" />
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                          onClick={() => {
+                                            // Clone this show
+                                            const clonedShow = {
+                                              ...JSON.parse(JSON.stringify(show)),
+                                              showId: `show-${Date.now()}`,
+                                              name: `${show.name} (Copy)`
+                                            };
+                                            const updatedStations = [...(currentPublication.distributionChannels?.radioStations || [])];
+                                            updatedStations[index] = {
+                                              ...station,
+                                              shows: [...(station.shows || []), clonedShow]
+                                            };
+                                            handleUpdatePublication({
+                                              distributionChannels: {
+                                                ...currentPublication.distributionChannels,
+                                                radioStations: updatedStations
+                                              }
+                                            });
+                                          }}
+                                          title="Clone this show"
+                                        >
+                                          <Copy className="w-3 h-3" />
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                          onClick={() => {
+                                            const updatedStations = [...(currentPublication.distributionChannels?.radioStations || [])];
+                                            updatedStations[index] = {
+                                              ...station,
+                                              shows: station.shows.filter((_: any, i: number) => i !== showIndex)
+                                            };
+                                            handleUpdatePublication({
+                                              distributionChannels: {
+                                                ...currentPublication.distributionChannels,
+                                                radioStations: updatedStations
+                                              }
+                                            });
+                                          }}
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="grid grid-cols-2 gap-x-4">
+                                        <div>
+                                          <p className="text-xs font-medium text-gray-500 mb-0.5">Time Slot</p>
+                                          <p className="text-xs text-gray-900">{show.timeSlot || 'Not specified'}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-xs font-medium text-gray-500 mb-0.5">Days/Week</p>
+                                          <p className="text-xs text-gray-900">{show.daysPerWeek}</p>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Revenue & Metrics Summary */}
+                                      {(showRevenue > 0 || totalImpressions > 0 || totalOccurrences > 0) && (
+                                        <div className="bg-green-50 border border-green-200 rounded p-2">
+                                          {showRevenue > 0 && (
+                                            <div className="flex items-center justify-between mb-1">
+                                              <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                              <p className="text-sm font-bold text-green-800">${Math.round(showRevenue).toLocaleString()}</p>
+                                            </div>
+                                          )}
+                                          {totalOccurrences > 0 && (
+                                            <div className="flex items-center justify-between text-xs text-green-700">
+                                              <span>Spots/Month</span>
+                                              <span className="font-medium">{Math.round(totalOccurrences).toLocaleString()}</span>
+                                            </div>
+                                          )}
+                                          {totalImpressions > 0 && (
+                                            <div className="flex items-center justify-between text-xs text-green-700">
+                                              <span>Impressions/Month</span>
+                                              <span className="font-medium">{Math.round(totalImpressions).toLocaleString()}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                      
+                                      <div>
+                                        <p className="text-xs font-medium text-gray-500 mb-0.5">Advertising Opportunities</p>
+                                        <p className="text-xs text-gray-900">{show.advertisingOpportunities?.length || 0} ads</p>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
-                                    <p className="text-xs text-gray-900">
-                                      {ad.specifications?.duration ? `${ad.specifications.duration}s` : ad.duration ? `${ad.duration}s` : 'N/A'}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="text-xs font-medium text-gray-500">Pricing</p>
-                                    {ad.hubPricing && ad.hubPricing.length > 0 && (
-                                      <Badge 
-                                        variant="secondary" 
-                                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-1.5 py-0.5"
-                                      >
-                                        +{ad.hubPricing.length} CUSTOM
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  {renderPricingDisplay(ad.pricing)}
-                                </div>
-                              </div>
+                                );
+                              })}
                             </div>
-                          ))}
-                        </div>
+                            
+                            {/* Hidden RadioShowEditor - only renders modal */}
+                            <div style={{ position: 'absolute', left: '-9999px' }}>
+                              <RadioShowEditor
+                                key={`radio-editor-${station.callSign}-${index}`}
+                                station={station}
+                                onChange={async (updatedStation) => {
+                                  const updatedStations = [...(currentPublication.distributionChannels?.radioStations || [])];
+                                  updatedStations[index] = updatedStation;
+                                  await handleUpdatePublication({
+                                    distributionChannels: {
+                                      ...currentPublication.distributionChannels,
+                                      radioStations: updatedStations
+                                    }
+                                  });
+                                }}
+                                ref={(ref: any) => {
+                                  // Store reference to trigger modal
+                                  if (ref && station.shows) {
+                                    station.shows.forEach((show: any, showIdx: number) => {
+                                      (window as any)[`openRadioShow_${station.callSign}_${showIdx}`] = () => {
+                                        ref.openShowDialog?.(show);
+                                      };
+                                    });
+                                  }
+                                }}
+                              />
+                            </div>
+                          </>
                         ) : (
-                          <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
+                          <p className="text-xs text-muted-foreground">No shows yet</p>
                         )}
-                        </div>
                       </div>
+                    </div>
 
                     </Card>
-                  ))}
+                    );
+                  })}
                   
               {(!currentPublication.distributionChannels?.radioStations ||
               currentPublication.distributionChannels.radioStations.length === 0) && (
@@ -3238,12 +3467,23 @@ export const DashboardInventoryManager = () => {
           </div>
           
           <div className="space-y-4">
-            {currentPublication.distributionChannels?.streamingVideo?.map((channel, index) => (
+            {currentPublication.distributionChannels?.streamingVideo?.map((channel, index) => {
+              // Calculate total monthly revenue for this streaming channel
+              const totalRevenue = (channel.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                return sum + calculateRevenue(ad, 'month', channel.frequency);
+              }, 0);
+              
+              return (
                   <Card key={index} className="p-4 shadow-lg">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <h4 className="font-semibold">{channel.name}</h4>
                         <Badge variant="secondary">{channel.platform?.charAt(0).toUpperCase() + channel.platform?.slice(1)}</Badge>
+                        {totalRevenue > 0 && (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            ${Math.round(totalRevenue).toLocaleString()}/mo
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -3302,7 +3542,13 @@ export const DashboardInventoryManager = () => {
                       
                       {channel.advertisingOpportunities && channel.advertisingOpportunities.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {channel.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                          {channel.advertisingOpportunities.map((ad: any, adIndex: number) => {
+                            // Calculate revenue and metrics for this streaming ad
+                            const adRevenue = calculateRevenue(ad, 'month', channel.frequency);
+                            const occurrences = ad.performanceMetrics?.occurrencesPerMonth || 0;
+                            const impressions = ad.performanceMetrics?.impressionsPerMonth || 0;
+                            
+                            return (
                             <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -3352,6 +3598,29 @@ export const DashboardInventoryManager = () => {
                                     <p className="text-xs text-gray-900">{ad.specifications?.resolution || 'N/A'}</p>
                                   </div>
                                 </div>
+                                {/* Revenue & Metrics */}
+                                {(adRevenue > 0 || occurrences > 0 || impressions > 0) && (
+                                  <div className="bg-green-50 border border-green-200 rounded p-2">
+                                    {adRevenue > 0 && (
+                                      <div className="flex items-center justify-between mb-1">
+                                        <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                        <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
+                                      </div>
+                                    )}
+                                    {occurrences > 0 && (
+                                      <div className="flex items-center justify-between text-xs text-green-700">
+                                        <span>Videos/Month</span>
+                                        <span className="font-medium">{Math.round(occurrences).toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {impressions > 0 && (
+                                      <div className="flex items-center justify-between text-xs text-green-700">
+                                        <span>Views/Month</span>
+                                        <span className="font-medium">{Math.round(impressions).toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                                 <div>
                                   <div className="flex items-center gap-2 mb-1">
                                     <p className="text-xs font-medium text-gray-500">Pricing</p>
@@ -3368,16 +3637,18 @@ export const DashboardInventoryManager = () => {
                                 </div>
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         ) : (
                           <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                         )}
-                        </div>
                       </div>
+                    </div>
 
                     </Card>
-                  ))}
+                    );
+                  })}
                   
               {(!currentPublication.distributionChannels?.streamingVideo ||
               currentPublication.distributionChannels.streamingVideo.length === 0) && (
@@ -3435,12 +3706,23 @@ export const DashboardInventoryManager = () => {
                     }
                   }
                   
-                  return printArray.map((publication, index) => (
+                  return printArray.map((publication, index) => {
+                    // Calculate total monthly revenue for this print publication
+                    const totalRevenue = (publication.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                      return sum + calculateRevenue(ad, 'month', publication.frequency);
+                    }, 0);
+                    
+                    return (
                     <Card key={index} className="p-4 shadow-lg">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
                           <h4 className="font-semibold">{publication.name}</h4>
                           <Badge variant="secondary">{publication.frequency?.charAt(0).toUpperCase() + publication.frequency?.slice(1)}</Badge>
+                          {totalRevenue > 0 && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              ${Math.round(totalRevenue).toLocaleString()}/mo
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <Button
@@ -3495,7 +3777,13 @@ export const DashboardInventoryManager = () => {
                         
                         {publication.advertisingOpportunities && publication.advertisingOpportunities.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {publication.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                            {publication.advertisingOpportunities.map((ad: any, adIndex: number) => {
+                              // Calculate revenue and metrics for this print ad
+                              const adRevenue = calculateRevenue(ad, 'month', publication.frequency);
+                              const occurrences = ad.performanceMetrics?.occurrencesPerMonth || 0;
+                              const impressions = ad.performanceMetrics?.impressionsPerMonth || 0;
+                              
+                              return (
                               <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                                 <div className="flex items-center justify-between mb-3">
                                   <div className="flex items-center gap-2 flex-wrap">
@@ -3545,6 +3833,29 @@ export const DashboardInventoryManager = () => {
                                       <p className="text-xs text-gray-900">{ad.color || 'N/A'}</p>
                                     </div>
                                   </div>
+                                  {/* Revenue & Metrics */}
+                                  {(adRevenue > 0 || occurrences > 0 || impressions > 0) && (
+                                    <div className="bg-green-50 border border-green-200 rounded p-2">
+                                      {adRevenue > 0 && (
+                                        <div className="flex items-center justify-between mb-1">
+                                          <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                          <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
+                                        </div>
+                                      )}
+                                      {occurrences > 0 && (
+                                        <div className="flex items-center justify-between text-xs text-green-700">
+                                          <span>Issues/Month</span>
+                                          <span className="font-medium">{Math.round(occurrences).toLocaleString()}</span>
+                                        </div>
+                                      )}
+                                      {impressions > 0 && (
+                                        <div className="flex items-center justify-between text-xs text-green-700">
+                                          <span>Circulation/Month</span>
+                                          <span className="font-medium">{Math.round(impressions).toLocaleString()}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                   <div>
                                     <div className="flex items-center gap-2 mb-1">
                                       <p className="text-xs font-medium text-gray-500">Pricing</p>
@@ -3561,16 +3872,18 @@ export const DashboardInventoryManager = () => {
                                   </div>
                                 </div>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                           ) : (
                             <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
                           )}
-                          </div>
                         </div>
+                      </div>
 
                       </Card>
-                    ));
+                      );
+                    });
                   })()}
                   
               {!currentPublication.distributionChannels?.print && (
@@ -3617,13 +3930,26 @@ export const DashboardInventoryManager = () => {
           </div>
 
           {currentPublication.distributionChannels?.events && currentPublication.distributionChannels.events.length > 0 ? (
-            currentPublication.distributionChannels.events.map((event, eventIndex) => (
+            currentPublication.distributionChannels.events.map((event, eventIndex) => {
+              // Calculate total monthly revenue for this event
+              const totalRevenue = (event.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                return sum + calculateRevenue(ad, 'month', event.frequency);
+              }, 0);
+              
+              return (
               <Card key={eventIndex} className="p-6 shadow-lg">
                 <div className="space-y-4">
                   {/* Event Header */}
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h4 className="font-medium text-base mb-1">{event.name || `Event ${eventIndex + 1}`}</h4>
+                      <div className="flex items-center gap-3 mb-1">
+                        <h4 className="font-medium text-base">{event.name || `Event ${eventIndex + 1}`}</h4>
+                        {totalRevenue > 0 && (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            ${Math.round(totalRevenue).toLocaleString()}/mo
+                          </Badge>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mt-2">
                         <div>
                           <span className="font-medium">Type:</span> {event.type || 'N/A'}
@@ -3758,7 +4084,8 @@ export const DashboardInventoryManager = () => {
                   </div>
                 </div>
               </Card>
-            ))
+              );
+            })
           ) : (
             <Card className="p-8 text-center text-muted-foreground">
               <Calendar className="w-12 h-12 mx-auto mb-3 opacity-20" />
@@ -3782,12 +4109,23 @@ export const DashboardInventoryManager = () => {
           </div>
           
           <div className="space-y-4">
-            {currentPublication.distributionChannels?.newsletters?.map((newsletter, index) => (
+            {currentPublication.distributionChannels?.newsletters?.map((newsletter, index) => {
+              // Calculate total monthly revenue for this newsletter
+              const totalRevenue = (newsletter.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                return sum + calculateRevenue(ad, 'month', newsletter.frequency);
+              }, 0);
+              
+              return (
               <Card key={index} className="p-4 shadow-lg">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     <h4 className="font-semibold">{newsletter.name}</h4>
                     <Badge variant="secondary">{newsletter.frequency?.charAt(0).toUpperCase() + newsletter.frequency?.slice(1)}</Badge>
+                    {totalRevenue > 0 && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        ${Math.round(totalRevenue).toLocaleString()}/mo
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -3847,7 +4185,13 @@ export const DashboardInventoryManager = () => {
                     <h5 className="font-sans font-semibold text-sm mb-3">Advertising Opportunities</h5>
                     {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {newsletter.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                      {newsletter.advertisingOpportunities.map((ad: any, adIndex: number) => {
+                        // Calculate revenue and metrics for this ad
+                        const adRevenue = calculateRevenue(ad, 'month', newsletter.frequency);
+                        const occurrences = ad.performanceMetrics?.occurrencesPerMonth || 0;
+                        const impressions = ad.performanceMetrics?.impressionsPerMonth || 0;
+                        
+                        return (
                         <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -3931,6 +4275,29 @@ export const DashboardInventoryManager = () => {
                                 })()}
                               </p>
                             </div>
+                            {/* Revenue & Metrics */}
+                            {(adRevenue > 0 || occurrences > 0 || impressions > 0) && (
+                              <div className="bg-green-50 border border-green-200 rounded p-2">
+                                {adRevenue > 0 && (
+                                  <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                    <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
+                                  </div>
+                                )}
+                                {occurrences > 0 && (
+                                  <div className="flex items-center justify-between text-xs text-green-700">
+                                    <span>Sends/Month</span>
+                                    <span className="font-medium">{Math.round(occurrences).toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {impressions > 0 && (
+                                  <div className="flex items-center justify-between text-xs text-green-700">
+                                    <span>Impressions/Month</span>
+                                    <span className="font-medium">{Math.round(impressions).toLocaleString()}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             <div>
                               <div className="flex items-center gap-2 mb-1">
                                 <p className="text-xs font-medium text-gray-500">Pricing</p>
@@ -3947,7 +4314,8 @@ export const DashboardInventoryManager = () => {
                             </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
@@ -3956,7 +4324,8 @@ export const DashboardInventoryManager = () => {
                 </div>
 
               </Card>
-            ))}
+              );
+            })}
             
             {(!currentPublication.distributionChannels?.newsletters || 
               currentPublication.distributionChannels.newsletters.length === 0) && (
@@ -3998,12 +4367,23 @@ export const DashboardInventoryManager = () => {
           </div>
           
           <div className="space-y-4">
-            {currentPublication.distributionChannels?.socialMedia?.map((profile, index) => (
+            {currentPublication.distributionChannels?.socialMedia?.map((profile, index) => {
+              // Calculate total monthly revenue for this social media profile
+              const totalRevenue = (profile.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                return sum + calculateRevenue(ad, 'month');
+              }, 0);
+              
+              return (
               <Card key={index} className="p-4 shadow-lg">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     <h4 className="font-semibold capitalize">{profile.platform}</h4>
                     <Badge variant="secondary">@{profile.handle}</Badge>
+                    {totalRevenue > 0 && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        ${Math.round(totalRevenue).toLocaleString()}/mo
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -4068,7 +4448,13 @@ export const DashboardInventoryManager = () => {
                   
                   {profile.advertisingOpportunities && profile.advertisingOpportunities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {profile.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                      {profile.advertisingOpportunities.map((ad: any, adIndex: number) => {
+                        // Calculate revenue and metrics for this social media ad
+                        const adRevenue = calculateRevenue(ad, 'month');
+                        const occurrences = ad.performanceMetrics?.occurrencesPerMonth || 0;
+                        const impressions = ad.performanceMetrics?.impressionsPerMonth || 0;
+                        
+                        return (
                         <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -4118,6 +4504,29 @@ export const DashboardInventoryManager = () => {
                                 <p className="text-xs text-gray-900">{ad.duration || 'N/A'}</p>
                               </div>
                             </div>
+                            {/* Revenue & Metrics */}
+                            {(adRevenue > 0 || occurrences > 0 || impressions > 0) && (
+                              <div className="bg-green-50 border border-green-200 rounded p-2">
+                                {adRevenue > 0 && (
+                                  <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                    <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
+                                  </div>
+                                )}
+                                {occurrences > 0 && (
+                                  <div className="flex items-center justify-between text-xs text-green-700">
+                                    <span>Posts/Month</span>
+                                    <span className="font-medium">{Math.round(occurrences).toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {impressions > 0 && (
+                                  <div className="flex items-center justify-between text-xs text-green-700">
+                                    <span>Impressions/Month</span>
+                                    <span className="font-medium">{Math.round(impressions).toLocaleString()}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             <div>
                               <div className="flex items-center gap-2 mb-1">
                                 <p className="text-xs font-medium text-gray-500">Pricing</p>
@@ -4134,7 +4543,8 @@ export const DashboardInventoryManager = () => {
                             </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-xs text-muted-foreground">No advertising opportunities yet</p>
@@ -4143,7 +4553,8 @@ export const DashboardInventoryManager = () => {
                 </div>
 
               </Card>
-            ))}
+              );
+            })}
             
             {(!currentPublication.distributionChannels?.socialMedia || 
               currentPublication.distributionChannels.socialMedia.length === 0) && (
@@ -4186,11 +4597,24 @@ export const DashboardInventoryManager = () => {
           </div>
 
           <div className="space-y-4">
-            {currentPublication.distributionChannels?.television?.map((station, index) => (
+            {currentPublication.distributionChannels?.television?.map((station, index) => {
+              // Calculate total monthly revenue for this TV station
+              const totalRevenue = (station.advertisingOpportunities || []).reduce((sum: number, ad: any) => {
+                return sum + calculateRevenue(ad, 'month', station.frequency);
+              }, 0);
+              
+              return (
               <Card key={index} className="p-4 shadow-lg">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <h4 className="font-medium text-base">{station.callSign || `TV Station ${index + 1}`}</h4>
+                    <div className="flex items-center gap-3">
+                      <h4 className="font-medium text-base">{station.callSign || `TV Station ${index + 1}`}</h4>
+                      {totalRevenue > 0 && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          ${Math.round(totalRevenue).toLocaleString()}/mo
+                        </Badge>
+                      )}
+                    </div>
                     {/* Specifications Container */}
                     <div className="mt-3 p-3 bg-gray-50 rounded-md border">
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
@@ -4326,7 +4750,8 @@ export const DashboardInventoryManager = () => {
                 </div>
 
               </Card>
-            ))}
+              );
+            })}
             
             {(!currentPublication.distributionChannels?.television || 
               currentPublication.distributionChannels.television.length === 0) && (
@@ -4361,7 +4786,8 @@ export const DashboardInventoryManager = () => {
         <DialogContent className="w-auto max-w-max max-h-[90vh] flex flex-col overflow-x-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>
-              Edit {editingType === 'website' ? 'Website' : 
+              {editingType === 'radio-show' ? 'Edit Radio Show' :
+               `Edit ${editingType === 'website' ? 'Website' : 
                    editingType === 'newsletter' ? 'Newsletter' :
                    editingType === 'print-ad' ? 'Print' :
                    editingType === 'podcast-ad' ? 'Podcast' :
@@ -4376,10 +4802,12 @@ export const DashboardInventoryManager = () => {
                    editingType === 'radio-container' ? 'Radio Properties' :
                    editingType === 'streaming-container' ? 'Streaming Properties' :
                    editingType === 'social-media-container' ? 'Social Media Properties' :
-                   'Item'} {editingType?.includes('-container') ? '' : editingType?.includes('-ad') ? 'Advertising Opportunity' : 'Advertising Opportunity'}
+                   'Item'} ${editingType?.includes('-container') ? '' : editingType?.includes('-ad') ? 'Advertising Opportunity' : 'Advertising Opportunity'}`}
             </DialogTitle>
             <DialogDescription>
-              {editingType?.includes('-container') 
+              {editingType === 'radio-show'
+                ? 'Manage shows and their advertising opportunities for this radio station.'
+                : editingType?.includes('-container') 
                 ? 'Update the properties and metrics for this channel.'
                 : 'Update the details for this advertising opportunity.'
               }
@@ -5830,7 +6258,7 @@ export const DashboardInventoryManager = () => {
             </div>
           )}
           
-          {editingItem && (
+          {editingItem && editingType !== 'radio-show' && (
             <div className="flex justify-end space-x-2 pt-4 border-t flex-shrink-0">
               <Button variant="outline" onClick={closeEditDialog}>
                 Cancel
