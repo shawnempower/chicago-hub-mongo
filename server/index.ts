@@ -2344,10 +2344,21 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       }
 
       // Collect hub-specific pricing
+      // IMPORTANT: After migration, hub pricing may have multiple tiers for same hub
+      // We need to process each hub only ONCE per inventory item
       if (ad.hubPricing && Array.isArray(ad.hubPricing)) {
+        const processedHubs = new Set<string>();
+        
         ad.hubPricing.forEach((hubPrice: any) => {
           const hubId = hubPrice.hubId || 'unknown';
           const hubName = hubPrice.hubName || hubId;
+          const hubKey = hubId;
+          
+          // Skip if we've already processed this hub for this ad
+          if (processedHubs.has(hubKey)) {
+            return;
+          }
+          processedHubs.add(hubKey);
           
           // Initialize hub data if not exists
           if (!hubPricingData[hubId]) {
@@ -2364,6 +2375,10 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
           }
 
           // Calculate monthly price for this hub using standardized calculation
+          // hubPrice.pricing can be either:
+          // - Single object (one tier)
+          // - Array of objects (multiple tiers)
+          // The calculateRevenue function handles both via getFirstPricing()
           const tempAd = { ...ad, pricing: hubPrice.pricing, hubPricing: null };
           const hubMonthlyPrice = calculateRevenue(tempAd, 'month', frequency);
           
@@ -2635,9 +2650,11 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
             inventoryByType.podcasts += podcastAds;
             adInventoryCount += podcastAds;
             
-            // Collect podcast pricing data (separate default and hub pricing)
+            // Collect podcast pricing data (DO NOT pass episode frequency)
+            // Episode frequency describes release schedule, not ad occurrences per episode
+            // Podcast ads MUST have performanceMetrics.occurrencesPerMonth to be counted
             podcast.advertisingOpportunities.forEach(ad => {
-              collectAdPricing(ad, 'podcast', podcast.frequency, 'podcastAdPrices');
+              collectAdPricing(ad, 'podcast', undefined, 'podcastAdPrices');
             });
           }
           
@@ -2680,10 +2697,11 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
                 inventoryByType.radioStations += radioAds;
                 adInventoryCount += radioAds;
                 
-                // Collect radio pricing data (use show frequency)
+                // Collect radio pricing data (DO NOT pass show frequency)
+                // Show frequency describes when the show airs, not ad occurrences
+                // Radio ads MUST have performanceMetrics.occurrencesPerMonth to be counted
                 show.advertisingOpportunities.forEach((ad: any) => {
-                  // Pass show frequency for accurate revenue calculation
-                  collectAdPricing(ad, 'radio', show.frequency, 'radioAdPrices');
+                  collectAdPricing(ad, 'radio', undefined, 'radioAdPrices');
                 });
               }
               

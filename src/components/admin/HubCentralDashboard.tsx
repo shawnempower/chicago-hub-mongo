@@ -5,10 +5,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadManagement } from './LeadManagement';
 import { HubPackageManagement } from './HubPackageManagement';
+import { HubDataQuality } from './HubDataQuality';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { usePublicationsFull } from '@/hooks/usePublications';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
-import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info } from 'lucide-react';
+import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
 interface HubCentralDashboardProps {
@@ -18,6 +20,7 @@ interface HubCentralDashboardProps {
 
 export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashboardProps) => {
   const { stats, loading, error } = useDashboardStats();
+  const { publications, loading: loadingPubs } = usePublicationsFull();
   const [pricingTimeframe, setPricingTimeframe] = useState<'day' | 'month' | 'quarter'>('month');
 
   // Helper to convert monthly values to selected timeframe
@@ -151,6 +154,20 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </CardContent>
             </Card>
           </div>
+
+          {/* Hub Data Quality Score */}
+          {loadingPubs ? (
+            <Card>
+              <CardContent className="flex items-center justify-center h-32">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </CardContent>
+            </Card>
+          ) : (
+            <HubDataQuality 
+              publications={publications} 
+              hubName="Chicago Hub"
+            />
+          )}
 
           {/* Marketplace Insights Section */}
           <div className="grid gap-6 md:grid-cols-2">
@@ -467,6 +484,27 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                   <CardTitle className="flex items-center gap-2 font-sans text-base">
                     <TrendingUp className="h-5 w-5" />
                     Hub Pricing
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button type="button" className="inline-flex items-center">
+                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs p-3" sideOffset={8}>
+                          <p className="text-xs mb-2">Revenue forecasts for hub-specific pricing across all inventory</p>
+                          <a 
+                            href="/pricing-formulas.html#hub-pricing" 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-500 hover:text-blue-700 underline inline-block font-medium"
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            View pricing formulas →
+                          </a>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </CardTitle>
                   <Select value={pricingTimeframe} onValueChange={(value: any) => setPricingTimeframe(value)}>
                     <SelectTrigger className="w-[120px] h-8">
@@ -528,7 +566,30 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                       </div>
                       <div className="pt-2 border-t">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium">Total Hub Value</span>
+                          <span className="text-xs font-medium flex items-center gap-1">
+                            Total Hub Value
+                            <TooltipProvider delayDuration={300}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="inline-flex items-center">
+                                    <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs p-3" sideOffset={8}>
+                                  <p className="text-xs mb-2">Total forecasted revenue at hub pricing rates</p>
+                                  <a 
+                                    href="/pricing-formulas.html#revenue-forecasting" 
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-500 hover:text-blue-700 underline inline-block font-medium"
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                  >
+                                    View pricing formulas →
+                                  </a>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </span>
                           <span className="font-bold text-sm text-green-600">
                             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
                               `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalInventoryValue)).toLocaleString()}${getTimeframeLabel()}`}

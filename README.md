@@ -12,9 +12,9 @@ A comprehensive platform connecting advertisers with Chicago-area media outlets,
 - **Survey Integration**: Lead capture and audience insights
 - **🆕 Price Forecasting**: Standardized revenue calculations across all inventory types
 
-## 💰 Price Forecasting System
+## 💰 Pricing & Revenue System
 
-The Chicago Hub includes a comprehensive price forecasting system for accurate revenue projections.
+The Chicago Hub includes a comprehensive pricing and revenue forecasting system with data quality monitoring.
 
 ### Quick Start
 ```typescript
@@ -25,9 +25,13 @@ const annualRevenue = calculateRevenue(ad, 'year', frequency);
 ```
 
 ### Documentation
+- **Pricing Formulas**: [`pricing-formulas.html`](./pricing-formulas.html) - Interactive web guide with navigation
 - **Quick Start**: [`PRICING_QUICK_START.md`](./PRICING_QUICK_START.md) - Get started in 5 minutes
 - **Full Documentation**: [`PRICE_FORECASTING_INDEX.md`](./PRICE_FORECASTING_INDEX.md) - Complete documentation index
 - **Developer Reference**: [`QUICK_REFERENCE.md`](./QUICK_REFERENCE.md) - Quick lookup guide
+- **Data Quality**: [`PRICING_DATA_QUALITY_ANALYSIS.md`](./PRICING_DATA_QUALITY_ANALYSIS.md) - Data validation and issues
+- **Hub Pricing Migration**: [`HUB_PRICING_MIGRATION_SUMMARY.md`](./HUB_PRICING_MIGRATION_SUMMARY.md) - Structure consolidation
+- **UI Improvements**: [`HUB_PRICING_UI_IMPROVEMENTS.md`](./HUB_PRICING_UI_IMPROVEMENTS.md) - Multi-tier pricing UI
 
 ### Key Features
 - ✅ **14 pricing models** supported (per_send, cpm, per_ad, etc.)
@@ -36,18 +40,27 @@ const annualRevenue = calculateRevenue(ad, 'year', frequency);
 - ✅ **Performance metrics** integration
 - ✅ **React hooks** for easy integration
 - ✅ **Type-safe** with full TypeScript coverage
+- ✅ **Data quality monitoring** with real-time validation
+- ✅ **Multi-tier hub pricing** with consolidated structure
 
 **Accuracy**: 300-2,900% improvement over previous methods!
+
+### Recent Improvements (Nov 2024)
+1. **Hub Pricing Structure**: Migrated 82 items from duplicate hub entries to consolidated multi-tier structure
+2. **Data Quality Monitoring**: Real-time validation with severity levels (Critical, High, Medium)
+3. **UI Enhancement**: New multi-tier pricing interface with expand/collapse and tier management
+4. **Radio/Podcast Fix**: Corrected frequency inference to prevent inflated totals
+5. **Package Pricing**: Fixed bundle calculations to use hub pricing when available
 
 ### Integration Status
 ✅ **5/5 major components** using standardized calculations:
 - PublicationFullSummary (user dashboards)
-- DashboardOverview (quick stats)
+- DashboardOverview (quick stats + data quality)
 - HubPricingReport (pricing comparisons)
 - PackageBuilderForm (package creation)
-- Server Dashboard Stats (backend API)
+- Server Dashboard Stats (backend API with deduplication)
 
-**Result**: Every pricing calculation in the platform is now standardized and accurate!
+**Result**: Every pricing calculation in the platform is now standardized, accurate, and validated!
 
 ## 🚀 Live Application
 
@@ -153,9 +166,25 @@ The frontend automatically detects the environment:
 
 ## 📚 Documentation
 
+### General Documentation
 - [Current Production Setup](./CURRENT_PRODUCTION_SETUP.md)
 - [Deployment Guide](./PRODUCTION_DEPLOYMENT_GUIDE.md)
 - [Environment Variables Guide](./ENV_MANAGEMENT_GUIDE.md)
+
+### Pricing & Revenue Calculation
+
+**🌐 [Pricing Formulas Web Page](./pricing-formulas.html)** - **Start here!** Single-page interactive reference with navigation
+
+**📄 Markdown Documentation:**
+- **[Pricing Documentation Index](./PRICING_DOCUMENTATION_INDEX.md)** - Complete guide to all documentation
+- **[Pricing Quick Reference](./PRICING_QUICK_REFERENCE.md)** - Quick lookup card (print this!)
+- **[Pricing Formulas Guide](./PRICING_FORMULAS_GUIDE.md)** - Complete technical specification
+- **[Pricing Examples](./PRICING_EXAMPLES.md)** - Real-world scenarios with calculations
+- **[Pricing Flowcharts](./PRICING_FLOWCHARTS.md)** - Visual decision trees
+
+**Additional Guides:**
+- [Total Price Calculation](./TOTAL_PRICE_CALCULATION.md) - UI implementation details
+- [Pricing Migration Guide](./PRICING_MIGRATION_GUIDE.md) - Schema migration documentation
 
 ## 🧪 Testing
 

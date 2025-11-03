@@ -1,6 +1,7 @@
 import { usePublication } from "@/contexts/PublicationContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 import { 
   Package, 
@@ -10,9 +11,11 @@ import {
   Settings,
   DollarSign,
   Users,
-  TrendingUp
+  TrendingUp,
+  HelpCircle
 } from "lucide-react";
 import { calculateRevenue } from '@/utils/pricingCalculations';
+import { PublicationDataQuality } from '@/components/admin/PublicationDataQuality';
 // MongoDB services removed - using API calls instead
 
 export function DashboardOverview() {
@@ -290,6 +293,27 @@ export function DashboardOverview() {
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Hub Pricing
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="inline-flex items-center">
+                      <HelpCircle className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs p-3" sideOffset={8}>
+                    <p className="text-xs mb-2">Number of inventory items with special hub pricing rates</p>
+                    <a 
+                      href="/pricing-formulas.html#hub-pricing" 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-500 hover:text-blue-700 underline inline-block font-medium"
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      View pricing formulas →
+                    </a>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -302,6 +326,12 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Data Quality Score - Full Width */}
+      <PublicationDataQuality 
+        publication={selectedPublication}
+        onViewDetails={() => handleQuickAction('inventory')}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}

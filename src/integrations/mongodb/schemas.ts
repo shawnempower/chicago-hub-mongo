@@ -503,11 +503,16 @@ export interface Publication {
           hubPricing?: Array<{
             hubId?: string;
             hubName?: string;
+            // pricing can be single tier (object) or multiple tiers (array)
             pricing?: {
               flatRate?: number;
               pricingModel?: string;
               frequency?: string;
-            };
+            } | Array<{
+              flatRate?: number;
+              pricingModel?: string;
+              frequency?: string;
+            }>;
             discount?: number;
             available?: boolean;
             minimumCommitment?: string;

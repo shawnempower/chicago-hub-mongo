@@ -8,6 +8,7 @@ interface PublicationContextType {
   availablePublications: PublicationFrontend[];
   loading: boolean;
   error: string | null;
+  refreshPublication: () => Promise<void>;
 }
 
 const PublicationContext = createContext<PublicationContextType | undefined>(undefined);
@@ -68,6 +69,26 @@ export const PublicationProvider: React.FC<PublicationProviderProps> = ({ childr
     }
   };
 
+  const refreshPublication = async () => {
+    if (!selectedPublication) return;
+    
+    try {
+      const publications = await getPublications();
+      const refreshedPub = publications.find(
+        p => p._id === selectedPublication._id || 
+             p.publicationId === selectedPublication.publicationId
+      );
+      
+      if (refreshedPub) {
+        setSelectedPublication(refreshedPub);
+        // Also update in availablePublications
+        setAvailablePublications(publications);
+      }
+    } catch (err) {
+      console.error('Error refreshing publication:', err);
+    }
+  };
+
   return (
     <PublicationContext.Provider
       value={{
@@ -76,6 +97,7 @@ export const PublicationProvider: React.FC<PublicationProviderProps> = ({ childr
         availablePublications,
         loading,
         error,
+        refreshPublication,
       }}
     >
       {children}

@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chicago Hub - Pricing Formulas & Calculations</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .sidebar h1 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            color: #3498db;
+        }
+
+        .sidebar .tagline {
+            font-size: 0.9em;
+            color: #95a5a6;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .nav-section {
+            margin-bottom: 25px;
+        }
+
+        .nav-section h3 {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #95a5a6;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .nav-section ul {
+            list-style: none;
+        }
+
+        .nav-section li {
+            margin-bottom: 8px;
+        }
+
+        .nav-section a {
+            color: #ecf0f1;
+            text-decoration: none;
+            display: block;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            font-size: 0.9em;
+        }
+
+        .nav-section a:hover {
+            background: #34495e;
+            color: #3498db;
+            padding-left: 16px;
+        }
+
+        .nav-section a.active {
+            background: #3498db;
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 40px;
+            max-width: 1200px;
+        }
+
+        .content-section {
+            background: white;
+            padding: 40px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .content-section h2 {
+            color: #2c3e50;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+        }
+
+        .content-section h3 {
+            color: #34495e;
+            font-size: 1.5em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        .content-section h4 {
+            color: #34495e;
+            font-size: 1.2em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        /* Formula Boxes */
+        .formula-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 1.1em;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .formula-box .formula-title {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .formula-box .formula {
+            font-family: 'Courier New', monospace;
+            font-size: 1.3em;
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 4px;
+            border-left: 4px solid rgba(255,255,255,0.5);
+        }
+
+        .formula-box .example {
+            margin-top: 15px;
+            font-size: 0.95em;
+            opacity: 0.95;
+        }
+
+        /* Code Blocks */
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            background: #ecf0f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #c7254e;
+        }
+
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: #ecf0f1;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+
+        th {
+            background: #3498db;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        tr:hover {
+            background: #e8f4f8;
+        }
+
+        /* Alert Boxes */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: #d9edf7;
+            border-color: #3498db;
+            color: #2c3e50;
+        }
+
+        .alert-success {
+            background: #dff0d8;
+            border-color: #27ae60;
+            color: #2c3e50;
+        }
+
+        .alert-warning {
+            background: #fcf8e3;
+            border-color: #f39c12;
+            color: #2c3e50;
+        }
+
+        .alert-danger {
+            background: #f2dede;
+            border-color: #e74c3c;
+            color: #2c3e50;
+        }
+
+        /* Grid Examples */
+        .example-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .example-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+
+        .example-card h4 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .example-card .calc {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .example-card .result {
+            font-weight: bold;
+            color: #27ae60;
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+
+        /* Visual Box */
+        .visual-box {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            border: 2px solid #bdc3c7;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 0 5px 5px 0;
+        }
+
+        .badge-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .badge-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge-info {
+            background: #16a085;
+            color: white;
+        }
+
+        /* Print Button */
+        .print-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 1em;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .print-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(52, 152, 219, 0.5);
+        }
+
+        /* Scroll to top */
+        .scroll-top {
+            position: fixed;
+            bottom: 90px;
+            right: 30px;
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 50%;
+            font-size: 1.2em;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .scroll-top.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .scroll-top:hover {
+            background: #2c3e50;
+            transform: translateY(-2px);
+        }
+
+        /* Print Styles */
+        @media print {
+            .sidebar,
+            .print-btn,
+            .scroll-top {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .content-section {
+                page-break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+                z-index: 1000;
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+                position: fixed;
+                top: 20px;
+                left: 20px;
+                background: #2c3e50;
+                color: white;
+                border: none;
+                padding: 12px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                z-index: 999;
+            }
+
+            .example-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .mobile-menu-btn {
+            display: none;
+        }
+
+        /* Highlight important numbers */
+        .highlight-number {
+            background: #fffacd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            color: #d35400;
+        }
+
+        /* List styling */
+        ul, ol {
+            margin: 15px 0 15px 30px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Links */
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰ Menu</button>
+
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <h1>💰 Pricing Guide</h1>
+            <p class="tagline">Complete formulas & calculations reference</p>
+
+            <div class="nav-section">
+                <h3>Quick Start</h3>
+                <ul>
+                    <li><a href="#overview">Overview</a></li>
+                    <li><a href="#core-formulas">Core Formulas</a></li>
+                    <li><a href="#quick-calc">Quick Calculations</a></li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <h3>Pricing Models</h3>
+                <ul>
+                    <li><a href="#time-based">Time-Based</a></li>
+                    <li><a href="#occurrence-based">Occurrence-Based</a></li>
+                    <li><a href="#impression-based">Impression-Based</a></li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <h3>Calculations</h3>
+                <ul>
+                    <li><a href="#commitment-packages">Commitment Packages</a></li>
+                    <li><a href="#revenue-forecasting">Revenue Forecasting</a></li>
+                    <li><a href="#hub-pricing">Hub Pricing</a></li>
+                    <li><a href="#package-bundles">Package Bundles</a></li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <h3>Examples</h3>
+                <ul>
+                    <li><a href="#newsletter-example">Newsletter Ads</a></li>
+                    <li><a href="#print-example">Print Ads</a></li>
+                    <li><a href="#website-example">Website Ads</a></li>
+                    <li><a href="#package-example">Multi-Channel Package</a></li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <h3>Reference</h3>
+                <ul>
+                    <li><a href="#frequency-table">Frequency Tables</a></li>
+                    <li><a href="#edge-cases">Edge Cases</a></li>
+                    <li><a href="#troubleshooting">Troubleshooting</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Overview Section -->
+            <section id="overview" class="content-section">
+                <h2>📊 Overview</h2>
+                <p>The Chicago Hub pricing system uses a <strong>standardized calculation framework</strong> that normalizes all pricing models to a common base (daily rates) and then projects revenue across any timeframe.</p>
+
+                <h3>Key Principles</h3>
+                <div class="alert alert-info">
+                    <strong>Core Concepts:</strong>
+                    <ul>
+                        <li><strong>Standardization:</strong> All pricing uses <code>flatRate</code> + <code>pricingModel</code> schema</li>
+                        <li><strong>Daily Base Unit:</strong> All calculations normalize to daily rates first</li>
+                        <li><strong>Timeframe Projection:</strong> Revenue is projected using <code>days × daily_rate</code></li>
+                        <li><strong>Conservative Forecasting:</strong> Revenue forecasts use the 1x tier (full price)</li>
+                        <li><strong>Volume Discounts:</strong> Multi-tier pricing represents volume discounts</li>
+                    </ul>
+                </div>
+
+                <h3>Schema Structure</h3>
+                <pre><code>{
+  "flatRate": 300,           // The price amount
+  "pricingModel": "per_send", // How the price is applied
+  "frequency": "4x"           // Commitment multiplier (optional)
+}</code></pre>
+
+                <h3>Pricing vs Revenue</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Concept</th>
+                            <th>What It Means</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Pricing</strong></td>
+                            <td>What you charge the customer (commitment package total)</td>
+                            <td>$300/send × 4x = <strong>$1,200</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Revenue</strong></td>
+                            <td>What you'll actually earn over time (forecasted income)</td>
+                            <td>$300/send × 4.33 sends/month = <strong>$1,299/month</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Core Formulas Section -->
+            <section id="core-formulas" class="content-section">
+                <h2>🎯 Core Formulas</h2>
+
+                <div class="formula-box">
+                    <div class="formula-title">1. Commitment Package Total</div>
+                    <div class="formula">Total = Base Price × Frequency Multiplier</div>
+                    <div class="example">
+                        <strong>Example:</strong> $300 × 4x = $1,200<br>
+                        <strong>Use:</strong> Package pricing, customer invoices
+                    </div>
+                </div>
+
+                <div class="formula-box">
+                    <div class="formula-title">2. Revenue Forecast</div>
+                    <div class="formula">Revenue = Daily Rate × Days in Timeframe</div>
+                    <div class="example">
+                        <strong>Example:</strong> $300 × 4.33 occurrences/month = $1,299/month<br>
+                        <strong>Use:</strong> Financial projections, reporting
+                    </div>
+                </div>
+
+                <div class="formula-box">
+                    <div class="formula-title">3. Hub Discount</div>
+                    <div class="formula">Discount % = ((Default - Hub) / Default) × 100</div>
+                    <div class="example">
+                        <strong>Example:</strong> (($300-$250)/$300) × 100 = 16.67%<br>
+                        <strong>Use:</strong> Hub pricing calculations
+                    </div>
+                </div>
+
+                <div class="formula-box">
+                    <div class="formula-title">4. Package Bundle Pricing</div>
+                    <div class="formula">Package Price = SUM(monthly revenue for each item)</div>
+                    <div class="example">
+                        <strong>Uses hub pricing when available, otherwise default pricing</strong><br>
+                        <strong>Example:</strong> $1,083 + $500 + $1,732 = $3,315/month<br>
+                        <strong>Use:</strong> Multi-publication packages
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Calculations Section -->
+            <section id="quick-calc" class="content-section">
+                <h2>⚡ Quick Calculations</h2>
+
+                <div class="example-grid">
+                    <div class="example-card">
+                        <h4>Calculate Package Total</h4>
+                        <p>1. Get base price (flatRate)<br>
+                           2. Get frequency (e.g., "4x")<br>
+                           3. Multiply: Base × Multiplier</p>
+                        <div class="calc">$300 × 4 = $1,200</div>
+                        <div class="result">✓ Package Total: $1,200</div>
+                    </div>
+
+                    <div class="example-card">
+                        <h4>Calculate Monthly Revenue</h4>
+                        <p>1. Get base price<br>
+                           2. Get monthly occurrences<br>
+                           3. Multiply: Base × Occurrences</p>
+                        <div class="calc">$300 × 4.33 = $1,299</div>
+                        <div class="result">✓ Monthly Revenue: $1,299</div>
+                    </div>
+
+                    <div class="example-card">
+                        <h4>Calculate Hub Discount</h4>
+                        <p>1. Get default price<br>
+                           2. Get hub price<br>
+                           3. Calculate percentage</p>
+                        <div class="calc">($300-$250)/$300×100 = 16.67%</div>
+                        <div class="result">✓ Discount: 16.67%</div>
+                    </div>
+
+                    <div class="example-card">
+                        <h4>Calculate CPM Revenue</h4>
+                        <p>1. Get CPM rate<br>
+                           2. Get monthly impressions<br>
+                           3. Apply formula</p>
+                        <div class="calc">($15 × 200,000) / 1,000 = $3,000</div>
+                        <div class="result">✓ Monthly Revenue: $3,000</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pricing Models Section -->
+            <section id="time-based" class="content-section">
+                <h2>⏰ Time-Based Pricing Models</h2>
+                <p>Charged based on duration, regardless of performance.</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Description</th>
+                            <th>Example</th>
+                            <th>Daily Calculation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>flat</code> / <code>monthly</code></td>
+                            <td>Monthly flat rate</td>
+                            <td>$500/month</td>
+                            <td>$500 ÷ 30 = $16.67/day</td>
+                        </tr>
+                        <tr>
+                            <td><code>per_week</code></td>
+                            <td>Weekly rate</td>
+                            <td>$150/week</td>
+                            <td>($150 × 52) ÷ 365 = $21.37/day</td>
+                        </tr>
+                        <tr>
+                            <td><code>per_day</code></td>
+                            <td>Daily rate</td>
+                            <td>$25/day</td>
+                            <td>$25/day</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-info">
+                    <strong>Formula:</strong> Revenue = Daily Rate × Days
+                </div>
+            </section>
+
+            <section id="occurrence-based" class="content-section">
+                <h2>📅 Occurrence-Based Pricing Models</h2>
+                <p>Charged per publication/broadcast occurrence.</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Description</th>
+                            <th>Example</th>
+                            <th>Typical Use</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>per_send</code></td>
+                            <td>Per newsletter send</td>
+                            <td>$300/send</td>
+                            <td>Email newsletters</td>
+                        </tr>
+                        <tr>
+                            <td><code>per_ad</code></td>
+                            <td>Per print ad placement</td>
+                            <td>$500/ad</td>
+                            <td>Print publications</td>
+                        </tr>
+                        <tr>
+                            <td><code>per_spot</code></td>
+                            <td>Per radio/podcast spot</td>
+                            <td>$100/spot</td>
+                            <td>Audio ads</td>
+                        </tr>
+                        <tr>
+                            <td><code>per_post</code></td>
+                            <td>Per social media post</td>
+                            <td>$75/post</td>
+                            <td>Social media</td>
+                        </tr>
+                        <tr>
+                            <td><code>per_story</code></td>
+                            <td>Per story placement</td>
+                            <td>$50/story</td>
+                            <td>Social stories</td>
+                        </tr>
+                        <tr>
+                            <td><code>per_episode</code></td>
+                            <td>Per podcast episode</td>
+                            <td>$200/episode</td>
+                            <td>Podcasts</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-info">
+                    <strong>Formula:</strong> Revenue = flatRate × (occurrencesPerMonth ÷ 30) × Days
+                </div>
+            </section>
+
+            <section id="impression-based" class="content-section">
+                <h2>👁️ Impression-Based Pricing Models</h2>
+                <p>Charged based on audience exposure.</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Description</th>
+                            <th>Example</th>
+                            <th>Formula</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>cpm</code></td>
+                            <td>Cost per 1000 impressions</td>
+                            <td>$15 CPM</td>
+                            <td>(CPM × Impressions) ÷ 1000</td>
+                        </tr>
+                        <tr>
+                            <td><code>cpd</code></td>
+                            <td>Cost per 1000 downloads</td>
+                            <td>$20 CPD</td>
+                            <td>(CPD × Downloads) ÷ 1000</td>
+                        </tr>
+                        <tr>
+                            <td><code>cpv</code></td>
+                            <td>Cost per 1000 views</td>
+                            <td>$25 CPV</td>
+                            <td>(CPV × Views) ÷ 1000</td>
+                        </tr>
+                        <tr>
+                            <td><code>cpc</code></td>
+                            <td>Cost per click</td>
+                            <td>$2 CPC</td>
+                            <td>CPC × Clicks</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-info">
+                    <strong>Note:</strong> For CPC, if CTR is unknown, assume 1% (0.01)
+                </div>
+            </section>
+
+            <!-- Commitment Packages Section -->
+            <section id="commitment-packages" class="content-section">
+                <h2>📦 Commitment Package Calculations</h2>
+
+                <h3>How It Works</h3>
+                <p>Commitment packages multiply the base price by a frequency multiplier (1x, 4x, 12x, etc.).</p>
+
+                <div class="formula-box">
+                    <div class="formula">Total = flatRate × parse_multiplier(frequency)</div>
+                    <div class="example">
+                        Frequency parsing:<br>
+                        • "1x" → 1<br>
+                        • "4x" → 4<br>
+                        • "12x" → 12<br>
+                        • "52x" → 52<br>
+                        • "One time" → 1<br>
+                        • (empty) → 1
+                    </div>
+                </div>
+
+                <h3>Multi-Tier Example</h3>
+                <div class="visual-box">
+Print Ad - 3 Tiers:
+
+┌────────────────────────────────────────┐
+│ 1x:  $1,200 × 1  = $1,200             │ ← Full price
+│ 4x:  $1,000 × 4  = $4,000 (Save $800) │ ← Discounted rate
+│ 12x: $  900 × 12 = $10,800 (Save $3,600) │ ← Best rate
+└────────────────────────────────────────┘
+
+Effective Rates:
+  1x:  $1,200/ad
+  4x:  $1,000/ad (17% off)
+  12x: $900/ad (25% off)
+                </div>
+
+                <h3>When Total Displays</h3>
+                <div class="alert alert-success">
+                    <strong>✓ Shows Total When:</strong>
+                    <ul>
+                        <li>Base price is entered (flatRate > 0)</li>
+                        <li>Frequency is entered and valid (e.g., "4x", "12x")</li>
+                        <li>Pricing model is NOT "contact"</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-danger">
+                    <strong>✗ Hides Total When:</strong>
+                    <ul>
+                        <li>No base price entered</li>
+                        <li>Pricing model is "Contact for pricing"</li>
+                        <li>Frequency is empty or invalid</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Revenue Forecasting Section -->
+            <section id="revenue-forecasting" class="content-section">
+                <h2>📈 Revenue Forecasting</h2>
+
+                <h3>The Daily Normalization System</h3>
+                <p>All revenue calculations work by first normalizing pricing to a <strong>daily base rate</strong>, then projecting across the desired timeframe.</p>
+
+                <div class="formula-box">
+                    <div class="formula-title">Step 1: Normalize to Daily</div>
+                    <div class="formula">
+Daily Rate = normalize_to_daily(pricing)<br>
+Daily Occurrences = occurrencesPerMonth ÷ 30<br>
+Daily Impressions = impressionsPerMonth ÷ 30
+                    </div>
+                </div>
+
+                <div class="formula-box">
+                    <div class="formula-title">Step 2: Project to Timeframe</div>
+                    <div class="formula">Revenue = Daily Rate × Days in Timeframe</div>
+                </div>
+
+                <h3>Timeframe Days</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timeframe</th>
+                            <th>Days</th>
+                            <th>Example Calculation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Day</td>
+                            <td>1</td>
+                            <td>$43 × 1 = $43</td>
+                        </tr>
+                        <tr>
+                            <td>Week</td>
+                            <td>7</td>
+                            <td>$43 × 7 = $301</td>
+                        </tr>
+                        <tr>
+                            <td>Month</td>
+                            <td>30</td>
+                            <td>$43 × 30 = $1,290</td>
+                        </tr>
+                        <tr>
+                            <td>Quarter</td>
+                            <td>91.25</td>
+                            <td>$43 × 91.25 = $3,924</td>
+                        </tr>
+                        <tr>
+                            <td>Year</td>
+                            <td>365</td>
+                            <td>$43 × 365 = $15,695</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Revenue Range Estimates</h3>
+                <p>Provide confidence intervals based on data quality:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data Quality</th>
+                            <th>Variance</th>
+                            <th>Conservative</th>
+                            <th>Expected</th>
+                            <th>Optimistic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-success">Guaranteed</span></td>
+                            <td>±5%</td>
+                            <td>95%</td>
+                            <td>100%</td>
+                            <td>105%</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-warning">Estimated</span></td>
+                            <td>±15%</td>
+                            <td>85%</td>
+                            <td>100%</td>
+                            <td>115%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="example-grid">
+                    <div class="example-card">
+                        <h4>Guaranteed Metrics</h4>
+                        <p>Expected: $1,299/month</p>
+                        <div class="calc">
+Conservative: $1,299 × 0.95 = $1,234<br>
+Expected: $1,299<br>
+Optimistic: $1,299 × 1.05 = $1,364
+                        </div>
+                        <div class="result">Range: $1,234 - $1,364</div>
+                    </div>
+
+                    <div class="example-card">
+                        <h4>Estimated Metrics</h4>
+                        <p>Expected: $450/month</p>
+                        <div class="calc">
+Conservative: $450 × 0.85 = $383<br>
+Expected: $450<br>
+Optimistic: $450 × 1.15 = $518
+                        </div>
+                        <div class="result">Range: $383 - $518</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hub Pricing Section -->
+            <section id="hub-pricing" class="content-section">
+                <h2>🏢 Hub Pricing & Discounts</h2>
+
+                <h3>What is Hub Pricing?</h3>
+                <p>Publications can offer <strong>different prices to different marketing hubs</strong>. This allows for volume discounts and strategic partnerships.</p>
+
+                <h3>Discount Calculation</h3>
+                <div class="formula-box">
+                    <div class="formula">
+Hub Discount % = ((Default Price - Hub Price) / Default Price) × 100<br>
+Savings = Default Price - Hub Price
+                    </div>
+                </div>
+
+                <h3>Example Comparison</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Default</th>
+                            <th>Chicago Hub</th>
+                            <th>Savings</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Per Send</td>
+                            <td>$300</td>
+                            <td>$250</td>
+                            <td class="highlight-number">$50 (17%)</td>
+                        </tr>
+                        <tr>
+                            <td>4x Package</td>
+                            <td>$1,200</td>
+                            <td>$1,000</td>
+                            <td class="highlight-number">$200 (17%)</td>
+                        </tr>
+                        <tr>
+                            <td>Monthly Revenue</td>
+                            <td>$1,299</td>
+                            <td>$1,083</td>
+                            <td class="highlight-number">$216</td>
+                        </tr>
+                        <tr>
+                            <td>Annual Revenue</td>
+                            <td>$15,810</td>
+                            <td>$13,190</td>
+                            <td class="highlight-number">$2,620</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="visual-box">
+Newsletter Ad Comparison:
+
+Default Pricing:
+  $300/send × 4x = $1,200 total
+
+Hub Pricing:
+  $250/send × 4x = $1,000 total
+
+💰 Savings: $200 (16.67% discount)
+                </div>
+            </section>
+
+            <!-- Package Bundles Section -->
+            <section id="package-bundles" class="content-section">
+                <h2>📦 Package Bundle Pricing</h2>
+
+                <h3>How Bundle Pricing Works</h3>
+                <p>When building hub packages that bundle multiple inventory items, the system uses <strong>hub pricing rates when available</strong>, otherwise uses default pricing.</p>
+
+                <div class="formula-box">
+                    <div class="formula">
+Package Price = SUM(monthly revenue for each item)<br>
+<br>
+For each item:<br>
+  If hub pricing exists → use hub price<br>
+  Else → use default price
+                    </div>
+                </div>
+
+                <h3>Example: 3-Publication Package</h3>
+                <div class="visual-box">
+Selected Inventory:
+  1. Newsletter Ad (Chicago Reader) - with hub pricing
+     → $250/send × 4.33 = $1,083/month
+  
+  2. Website Banner (Block Club) - default pricing
+     → $500/month flat = $500/month
+  
+  3. Print Ad (South Side Weekly) - with hub pricing
+     → $900/ad × 4.33 = $3,897/month
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Package Price: $5,480/month
+
+Hub pricing savings already built into item rates
+                </div>
+
+                <div class="alert alert-success">
+                    <strong>Package Benefits:</strong>
+                    <ul>
+                        <li>Hub pricing rates when available</li>
+                        <li>Multi-channel reach</li>
+                        <li>Simplified billing</li>
+                        <li>Strategic market coverage</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Newsletter Example -->
+            <section id="newsletter-example" class="content-section">
+                <h2>📧 Example: Newsletter Advertising</h2>
+
+                <h3>Chicago Reader Newsletter - Weekly Send</h3>
+                <p><strong>Details:</strong> 12,000 subscribers, Weekly (Mondays), 45% open rate</p>
+
+                <h4>Pricing Tiers</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tier</th>
+                            <th>Per Send</th>
+                            <th>Frequency</th>
+                            <th>Total</th>
+                            <th>Savings</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>One-time</td>
+                            <td>$300</td>
+                            <td>1x</td>
+                            <td class="highlight-number">$300</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>4-week</td>
+                            <td>$275</td>
+                            <td>4x</td>
+                            <td class="highlight-number">$1,100</td>
+                            <td>$100 (8%)</td>
+                        </tr>
+                        <tr>
+                            <td>12-week</td>
+                            <td>$250</td>
+                            <td>12x</td>
+                            <td class="highlight-number">$3,000</td>
+                            <td>$600 (17%)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Revenue Forecasting (using 1x tier)</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timeframe</th>
+                            <th>Calculation</th>
+                            <th>Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Daily</td>
+                            <td>$300 × (4.33 ÷ 30)</td>
+                            <td class="highlight-number">$43</td>
+                        </tr>
+                        <tr>
+                            <td>Weekly</td>
+                            <td>$300 × (4.33 ÷ 30) × 7</td>
+                            <td class="highlight-number">$303</td>
+                        </tr>
+                        <tr>
+                            <td>Monthly</td>
+                            <td>$300 × 4.33</td>
+                            <td class="highlight-number">$1,299</td>
+                        </tr>
+                        <tr>
+                            <td>Quarterly</td>
+                            <td>$300 × (4.33 ÷ 30) × 91.25</td>
+                            <td class="highlight-number">$3,949</td>
+                        </tr>
+                        <tr>
+                            <td>Annual</td>
+                            <td>$300 × 52.7</td>
+                            <td class="highlight-number">$15,810</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-info">
+                    <strong>Revenue Range (Guaranteed ±5%):</strong><br>
+                    Conservative: $1,234 | Expected: $1,299 | Optimistic: $1,364
+                </div>
+            </section>
+
+            <!-- Print Example -->
+            <section id="print-example" class="content-section">
+                <h2>📰 Example: Print Advertising</h2>
+
+                <h3>South Side Weekly - Full Page Ad</h3>
+                <p><strong>Details:</strong> 10,000 circulation, Weekly (Thursdays)</p>
+
+                <h4>Commitment Packages</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tier</th>
+                            <th>Per Ad</th>
+                            <th>Frequency</th>
+                            <th>Total</th>
+                            <th>Effective Rate</th>
+                            <th>Savings</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>One-time</td>
+                            <td>$1,200</td>
+                            <td>1x</td>
+                            <td class="highlight-number">$1,200</td>
+                            <td>$1,200/ad</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>4-week</td>
+                            <td>$1,000</td>
+                            <td>4x</td>
+                            <td class="highlight-number">$4,000</td>
+                            <td>$1,000/ad</td>
+                            <td>$800 (17%)</td>
+                        </tr>
+                        <tr>
+                            <td>12-week</td>
+                            <td>$900</td>
+                            <td>12x</td>
+                            <td class="highlight-number">$10,800</td>
+                            <td>$900/ad</td>
+                            <td>$3,600 (25%)</td>
+                        </tr>
+                        <tr>
+                            <td>52-week</td>
+                            <td>$800</td>
+                            <td>52x</td>
+                            <td class="highlight-number">$41,600</td>
+                            <td>$800/ad</td>
+                            <td>$20,800 (33%)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Revenue Forecasting (using 1x tier)</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timeframe</th>
+                            <th>Calculation</th>
+                            <th>Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Monthly</td>
+                            <td>$1,200 × 4.33</td>
+                            <td class="highlight-number">$5,196</td>
+                        </tr>
+                        <tr>
+                            <td>Quarterly</td>
+                            <td>$1,200 × 13</td>
+                            <td class="highlight-number">$15,600</td>
+                        </tr>
+                        <tr>
+                            <td>Annual</td>
+                            <td>$1,200 × 52</td>
+                            <td class="highlight-number">$62,400</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-warning">
+                    <strong>Revenue Range (Estimated ±15%):</strong><br>
+                    Conservative: $4,417 | Expected: $5,196 | Optimistic: $5,975
+                </div>
+            </section>
+
+            <!-- Website Example -->
+            <section id="website-example" class="content-section">
+                <h2>🌐 Example: Website Display Ads</h2>
+
+                <h3>Block Club Chicago - Banner Ad (CPM)</h3>
+                <p><strong>Details:</strong> 200,000 monthly impressions, $15 CPM</p>
+
+                <h4>Monthly Calculation</h4>
+                <div class="visual-box">
+Daily Impressions = 200,000 ÷ 30 = 6,667/day
+Total Impressions (30 days) = 6,667 × 30 = 200,000
+Revenue = ($15 × 200,000) ÷ 1,000 = $3,000/month
+                </div>
+
+                <h4>Annual Calculation</h4>
+                <div class="visual-box">
+Daily Impressions = 6,667/day
+Total Impressions (365 days) = 6,667 × 365 = 2,433,455
+Revenue = ($15 × 2,433,455) ÷ 1,000 = $36,502/year
+                </div>
+
+                <h4>Performance Metrics</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Monthly Impressions</td>
+                            <td>200,000</td>
+                        </tr>
+                        <tr>
+                            <td>CPM Rate</td>
+                            <td>$15</td>
+                        </tr>
+                        <tr>
+                            <td>Monthly Revenue</td>
+                            <td class="highlight-number">$3,000</td>
+                        </tr>
+                        <tr>
+                            <td>Est. Clicks (1% CTR)</td>
+                            <td>2,000</td>
+                        </tr>
+                        <tr>
+                            <td>Effective CPC</td>
+                            <td>$1.50</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-success">
+                    <strong>Revenue Range (Guaranteed ±5%):</strong><br>
+                    Conservative: $2,850 | Expected: $3,000 | Optimistic: $3,150
+                </div>
+            </section>
+
+            <!-- Package Example -->
+            <section id="package-example" class="content-section">
+                <h2>📦 Example: Multi-Channel Package</h2>
+
+                <h3>"South Side Saturation" Package</h3>
+                <p><strong>Duration:</strong> 1 month | <strong>Channels:</strong> Newsletter + Website + Print</p>
+
+                <h4>Package Components</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Details</th>
+                            <th>Monthly Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>1. Newsletter Ad</strong></td>
+                            <td>Chicago Reader<br>$300/send × 4.33</td>
+                            <td class="highlight-number">$1,299</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2. Website Banner</strong></td>
+                            <td>Block Club Chicago<br>$500/month flat</td>
+                            <td class="highlight-number">$500</td>
+                        </tr>
+                        <tr>
+                            <td><strong>3. Print Ad</strong></td>
+                            <td>South Side Weekly<br>$1,000/ad × 4.33 (4x rate)</td>
+                            <td class="highlight-number">$4,330</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"><strong>Base Price Total</strong></td>
+                            <td class="highlight-number">$6,129</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Bundle Pricing Calculation</h4>
+                <div class="visual-box">
+Base Price:              $6,129/month
+Hub Discount (25%):      -$1,532
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Final Package Price:     $4,597/month
+
+💰 Monthly Savings:      $1,532
+💰 Annual Savings:       $18,384
+                </div>
+
+                <h4>Performance Summary</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Combined Reach</td>
+                            <td>~47,000 unique individuals</td>
+                        </tr>
+                        <tr>
+                            <td>Monthly Impressions</td>
+                            <td>~195,000</td>
+                        </tr>
+                        <tr>
+                            <td>Channels</td>
+                            <td>3 (email, web, print)</td>
+                        </tr>
+                        <tr>
+                            <td>Monthly Touchpoints</td>
+                            <td>~13</td>
+                        </tr>
+                        <tr>
+                            <td>Cost per Touchpoint</td>
+                            <td>~$354</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-success">
+                    <strong>✓ Package Benefits:</strong>
+                    <ul>
+                        <li>Save $1,532/month vs. individual pricing</li>
+                        <li>Reach 47,000+ South Side residents</li>
+                        <li>Multi-channel visibility (email, web, print)</li>
+                        <li>13 touchpoints per month</li>
+                        <li>Simplified billing and management</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Frequency Table -->
+            <section id="frequency-table" class="content-section">
+                <h2>📅 Frequency Reference Tables</h2>
+
+                <h3>Commitment Frequency Multipliers</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Frequency String</th>
+                            <th>Multiplier</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>"1x"</code> or <code>"One time"</code></td>
+                            <td>1</td>
+                            <td>$300 × 1 = $300</td>
+                        </tr>
+                        <tr>
+                            <td><code>"4x"</code></td>
+                            <td>4</td>
+                            <td>$300 × 4 = $1,200</td>
+                        </tr>
+                        <tr>
+                            <td><code>"12x"</code></td>
+                            <td>12</td>
+                            <td>$300 × 12 = $3,600</td>
+                        </tr>
+                        <tr>
+                            <td><code>"26x"</code></td>
+                            <td>26</td>
+                            <td>$300 × 26 = $7,800</td>
+                        </tr>
+                        <tr>
+                            <td><code>"52x"</code></td>
+                            <td>52</td>
+                            <td>$300 × 52 = $15,600</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Publication Frequency → Monthly Occurrences</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Frequency</th>
+                            <th>Monthly Occurrences</th>
+                            <th>Annual Occurrences</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Daily</td>
+                            <td>30</td>
+                            <td>365</td>
+                            <td>$100 × 30 = $3,000/month</td>
+                        </tr>
+                        <tr>
+                            <td>Daily (business)</td>
+                            <td>22</td>
+                            <td>260</td>
+                            <td>$100 × 22 = $2,200/month</td>
+                        </tr>
+                        <tr>
+                            <td>Weekly</td>
+                            <td>4.33</td>
+                            <td>52</td>
+                            <td>$300 × 4.33 = $1,299/month</td>
+                        </tr>
+                        <tr>
+                            <td>Bi-weekly</td>
+                            <td>2.17</td>
+                            <td>26</td>
+                            <td>$400 × 2.17 = $868/month</td>
+                        </tr>
+                        <tr>
+                            <td>Monthly</td>
+                            <td>1</td>
+                            <td>12</td>
+                            <td>$500 × 1 = $500/month</td>
+                        </tr>
+                        <tr>
+                            <td>Quarterly</td>
+                            <td>0.33</td>
+                            <td>4</td>
+                            <td>$1,000 × 0.33 = $330/month</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Mental Math Quick Reference</h3>
+                <div class="example-grid">
+                    <div class="example-card">
+                        <h4>Monthly from Weekly</h4>
+                        <div class="calc">Weekly × 4.33 ≈ Monthly</div>
+                        <div class="result">$300/week × 4.33 ≈ $1,300/month</div>
+                    </div>
+
+                    <div class="example-card">
+                        <h4>Annual from Monthly</h4>
+                        <div class="calc">Monthly × 12 = Annual</div>
+                        <div class="result">$1,299/month × 12 ≈ $15,600/year</div>
+                    </div>
+
+                    <div class="example-card">
+                        <h4>Hub Discount (25%)</h4>
+                        <div class="calc">Base ÷ 4 = Discount</div>
+                        <div class="result">$3,600 ÷ 4 = $900 discount</div>
+                    </div>
+
+                    <div class="example-card">
+                        <h4>CPM to Revenue</h4>
+                        <div class="calc">(CPM × Impressions) ÷ 1,000</div>
+                        <div class="result">($15 × 100,000) ÷ 1,000 = $1,500</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Edge Cases -->
+            <section id="edge-cases" class="content-section">
+                <h2>⚠️ Edge Cases & Special Handling</h2>
+
+                <h3>Contact Pricing</h3>
+                <div class="alert alert-info">
+                    <strong>Model:</strong> <code>contact</code><br>
+                    <strong>Behavior:</strong> Returns <code>null</code> - no calculation<br>
+                    <strong>Display:</strong> "Contact for pricing"
+                </div>
+
+                <h3>Missing Data Scenarios</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Scenario</th>
+                            <th>Behavior</th>
+                            <th>Solution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>No flatRate</td>
+                            <td>Total = null (hidden)</td>
+                            <td>Add flatRate value</td>
+                        </tr>
+                        <tr>
+                            <td>No frequency</td>
+                            <td>Total = Base Price (1x)</td>
+                            <td>Normal behavior</td>
+                        </tr>
+                        <tr>
+                            <td>No occurrences (occurrence model)</td>
+                            <td>Revenue = $0</td>
+                            <td>Add performanceMetrics.occurrencesPerMonth</td>
+                        </tr>
+                        <tr>
+                            <td>No impressions (CPM/CPC model)</td>
+                            <td>Revenue = $0</td>
+                            <td>Add performanceMetrics.impressionsPerMonth</td>
+                        </tr>
+                        <tr>
+                            <td>Zero Price</td>
+                            <td>Total hidden</td>
+                            <td>Used for free/promo listings</td>
+                        </tr>
+                        <tr>
+                            <td>Invalid frequency format</td>
+                            <td>Treats as 1x</td>
+                            <td>Format as "Nx" (e.g., "4x")</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Tier Selection Logic</h3>
+                <div class="alert alert-warning">
+                    <strong>Important:</strong> Revenue forecasts ALWAYS use the <strong>1x tier</strong> (or lowest multiplier) for conservative estimates.
+                    <br><br>
+                    <strong>Why?</strong>
+                    <ul>
+                        <li>1x tier = base rate (full price)</li>
+                        <li>Higher tiers (4x, 12x) = volume discounts</li>
+                        <li>Forecasting needs conservative maximum revenue potential</li>
+                    </ul>
+                </div>
+
+                <h3>Commitment Total vs Revenue Forecast</h3>
+                <div class="visual-box">
+❓ Why are these different?
+
+Commitment Total (4x): $1,100
+Monthly Revenue Forecast: $1,299
+
+✓ BOTH are correct! They measure different things:
+
+Commitment Total:
+  • What customer pays for package
+  • Uses discounted rate ($275)
+  • Formula: $275 × 4 = $1,100
+
+Revenue Forecast:
+  • What you'll earn over time
+  • Uses base rate ($300) for conservative estimate
+  • Formula: $300 × 4.33 occurrences = $1,299
+                </div>
+            </section>
+
+            <!-- Troubleshooting -->
+            <section id="troubleshooting" class="content-section">
+                <h2>🔧 Troubleshooting Guide</h2>
+
+                <h3>Issue 1: "Total Not Showing"</h3>
+                <div class="alert alert-danger">
+                    <strong>Problem:</strong> Commitment total is hidden<br><br>
+                    <strong>Check:</strong>
+                    <ul>
+                        <li>Is pricingModel = "contact"? → Total always hidden for contact pricing</li>
+                        <li>Is flatRate missing or 0? → Add a flatRate value</li>
+                        <li>Is frequency empty? → This is OK, shows base price (1x)</li>
+                    </ul>
+                </div>
+
+                <h3>Issue 2: "Revenue Shows $0"</h3>
+                <div class="alert alert-danger">
+                    <strong>Problem:</strong> Revenue forecast is zero<br><br>
+                    <strong>For Occurrence-Based Models:</strong>
+                    <ul>
+                        <li>Add <code>performanceMetrics.occurrencesPerMonth</code></li>
+                        <li>OR provide <code>channelFrequency</code> when calling calculateRevenue()</li>
+                    </ul>
+                    <strong>For Impression-Based Models:</strong>
+                    <ul>
+                        <li>Add <code>performanceMetrics.impressionsPerMonth</code></li>
+                    </ul>
+                </div>
+
+                <h3>Issue 3: "Wrong Tier Used"</h3>
+                <div class="alert alert-info">
+                    <strong>Expected Behavior:</strong> System uses 1x tier for forecasting<br><br>
+                    <strong>Why:</strong>
+                    <ul>
+                        <li>Revenue forecasts need <strong>conservative estimates</strong></li>
+                        <li>1x tier = base rate (maximum revenue potential)</li>
+                        <li>Discounted tiers (4x, 12x) are for customer packages, not forecasting</li>
+                    </ul>
+                </div>
+
+                <h3>Issue 4: "Hub Pricing Not Applying"</h3>
+                <div class="alert alert-danger">
+                    <strong>Problem:</strong> Getting default rates instead of hub rates<br><br>
+                    <strong>Checklist:</strong>
+                    <ul>
+                        <li>Does <code>hubPricing</code> array exist?</li>
+                        <li>Does hub entry with matching <code>hubId</code> exist?</li>
+                        <li>Is <code>available</code> = true (or undefined)?</li>
+                        <li>Are you passing the <code>hubId</code> parameter?</li>
+                    </ul>
+                </div>
+
+                <h3>Quick Decision Table</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>If you want to...</th>
+                            <th>Use this formula</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Show package total</td>
+                            <td><code>Base × Multiplier</code></td>
+                        </tr>
+                        <tr>
+                            <td>Forecast monthly income</td>
+                            <td><code>Base × Monthly Occurrences</code></td>
+                        </tr>
+                        <tr>
+                            <td>Forecast annual income</td>
+                            <td><code>Daily Rate × 365</code></td>
+                        </tr>
+                        <tr>
+                            <td>Calculate hub discount</td>
+                            <td><code>((Default - Hub) / Default) × 100</code></td>
+                        </tr>
+                        <tr>
+                            <td>Price a bundle</td>
+                            <td><code>SUM(revenues) × 0.75</code></td>
+                        </tr>
+                        <tr>
+                            <td>Show savings</td>
+                            <td><code>Default - Hub</code></td>
+                        </tr>
+                        <tr>
+                            <td>Show effective rate</td>
+                            <td><code>Total / Multiplier</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Footer -->
+            <section class="content-section" style="background: #ecf0f1; border-left: 4px solid #3498db;">
+                <p style="text-align: center; color: #7f8c8d;">
+                    <strong>Chicago Hub - Pricing Formulas & Calculations</strong><br>
+                    Last Updated: November 2025 | Version 1.0<br>
+                    <em>Complete reference for pricing calculations and revenue forecasting</em>
+                </p>
+            </section>
+        </main>
+    </div>
+
+    <!-- Floating Buttons -->
+    <button class="print-btn" onclick="window.print()">🖨️ Print</button>
+    <button class="scroll-top" id="scrollTop" onclick="scrollToTop()">↑</button>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    
+                    // Update active link
+                    document.querySelectorAll('.sidebar a').forEach(link => {
+                        link.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    // Close mobile menu if open
+                    if (window.innerWidth <= 768) {
+                        document.getElementById('sidebar').classList.remove('mobile-open');
+                    }
+                }
+            });
+        });
+
+        // Scroll to top button visibility
+        window.addEventListener('scroll', function() {
+            const scrollTop = document.getElementById('scrollTop');
+            if (window.pageYOffset > 300) {
+                scrollTop.classList.add('visible');
+            } else {
+                scrollTop.classList.remove('visible');
+            }
+        });
+
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            document.getElementById('sidebar').classList.toggle('mobile-open');
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            
+            if (window.innerWidth <= 768 && 
+                !sidebar.contains(event.target) && 
+                !menuBtn.contains(event.target)) {
+                sidebar.classList.remove('mobile-open');
+            }
+        });
+
+        // Highlight active section on scroll
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('.content-section');
+            const navLinks = document.querySelectorAll('.sidebar a');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

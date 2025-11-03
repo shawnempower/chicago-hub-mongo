@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { calculateRevenue } from '@/utils/pricingCalculations';
 import { 
   ChevronRight,
@@ -27,7 +28,8 @@ import {
   Search,
   Filter,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  HelpCircle
 } from 'lucide-react';
 import { HubPackageInsert, PACKAGE_CATEGORIES, HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -551,7 +553,8 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
 
   const calculatePricing = () => {
     // Calculate pricing based on actual ad revenue using standardized calculation
-    let basePrice = 0;
+    // Use hub pricing if available, otherwise use default pricing
+    let totalPrice = 0;
     
     Object.entries(selectedPublications).forEach(([pubId, data]) => {
       if (data.selected && data.inventoryItems.length > 0) {
@@ -562,22 +565,34 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
         data.inventoryItems.forEach(adId => {
           const adData = getFullAdObject(pub, adId);
           if (adData) {
-            const monthlyRevenue = calculateRevenue(adData.ad, 'month', adData.frequency);
-            basePrice += monthlyRevenue;
+            // Check if there's hub pricing for this inventory item
+            const hasHubPricing = adData.ad.hubPricing && adData.ad.hubPricing.length > 0;
+            
+            if (hasHubPricing) {
+              // Use hub pricing - create temporary ad with hub pricing
+              // Use first hub pricing entry (after migration, each hub is one entry)
+              // hubPricingData.pricing can be object (single tier) or array (multiple tiers)
+              // calculateRevenue() handles both via getFirstPricing()
+              const hubPricingData = adData.ad.hubPricing[0];
+              const tempAd = { ...adData.ad, pricing: hubPricingData.pricing, hubPricing: null };
+              const monthlyRevenue = calculateRevenue(tempAd, 'month', adData.frequency);
+              totalPrice += monthlyRevenue;
+            } else {
+              // Use default pricing
+              const monthlyRevenue = calculateRevenue(adData.ad, 'month', adData.frequency);
+              totalPrice += monthlyRevenue;
+            }
           }
         });
       }
     });
 
-    const discountPercentage = 25; // Default 25% hub discount
-    const hubDiscount = Math.round(basePrice * (discountPercentage / 100));
-    const finalPrice = basePrice - hubDiscount;
-
+    // No additional discount - the price is what it is (hub pricing or default)
     return {
-      basePrice,
-      hubDiscount,
-      finalPrice,
-      discountPercentage
+      basePrice: totalPrice,
+      hubDiscount: 0,
+      finalPrice: totalPrice,
+      discountPercentage: 0
     };
   };
 
@@ -1222,23 +1237,62 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Pricing</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Pricing
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="inline-flex items-center">
+                        <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs p-3" sideOffset={8}>
+                      <p className="text-xs mb-2">Package pricing based on sum of monthly revenue. Uses hub pricing rates when available.</p>
+                      <a 
+                        href="/pricing-formulas.html#package-bundles" 
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-500 hover:text-blue-700 underline inline-block font-medium"
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        View pricing formulas →
+                      </a>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </CardTitle>
               <CardDescription>Calculated based on selected inventory</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground">Base Price</p>
-                  <p className="text-2xl font-bold">${pricing.basePrice.toLocaleString()}</p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground">Hub Discount ({pricing.discountPercentage}%)</p>
-                  <p className="text-2xl font-bold text-green-600">-${pricing.hubDiscount.toLocaleString()}</p>
-                </div>
-              </div>
               <div className="p-4 bg-primary/10 border-2 border-primary rounded-lg">
-                <p className="text-sm text-muted-foreground">Final Monthly Price</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  Monthly Package Price
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="inline-flex items-center">
+                          <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs p-3" sideOffset={8}>
+                        <p className="text-xs mb-2">Sum of monthly revenue for all selected inventory. Uses hub pricing when available, otherwise uses default pricing.</p>
+                        <a 
+                          href="/pricing-formulas.html#package-bundles" 
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-500 hover:text-blue-700 underline inline-block font-medium"
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
+                          View pricing formulas →
+                        </a>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </p>
                 <p className="text-3xl font-bold text-primary">${pricing.finalPrice.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Based on {Object.values(selectedPublications).reduce((count, pub) => count + pub.inventoryItems.length, 0)} selected inventory items
+                </p>
               </div>
             </CardContent>
           </Card>

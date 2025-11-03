@@ -335,12 +335,39 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
         newsletters: prev.distributionChannels?.newsletters?.map((newsletter, nIndex) =>
           nIndex === newsletterIndex ? {
             ...newsletter,
-            advertisingOpportunities: newsletter.advertisingOpportunities?.map((ad, aIndex) =>
-              aIndex === adIndex ? { 
-                ...ad, 
-                pricing: { ...ad.pricing, [field]: value }
-              } : ad
-            )
+            advertisingOpportunities: newsletter.advertisingOpportunities?.map((ad, aIndex) => {
+              if (aIndex !== adIndex) return ad;
+              
+              // Handle multi-tier pricing (array) vs single-tier pricing (object)
+              if (Array.isArray(ad.pricing)) {
+                // For multi-tier, update ALL tiers with the pricingModel (if that's what's being updated)
+                if (field === 'pricingModel') {
+                  return {
+                    ...ad,
+                    pricing: ad.pricing.map((tier: any) => ({
+                      ...tier,
+                      pricing: { ...(tier.pricing || tier), [field]: value }
+                    }))
+                  };
+                } else {
+                  // For other fields, update the first tier only
+                  const updatedPricing = [...ad.pricing];
+                  if (updatedPricing[0]) {
+                    updatedPricing[0] = {
+                      ...updatedPricing[0],
+                      pricing: { ...(updatedPricing[0].pricing || updatedPricing[0]), [field]: value }
+                    };
+                  }
+                  return { ...ad, pricing: updatedPricing };
+                }
+              } else {
+                // Single-tier pricing - simple object update
+                return { 
+                  ...ad, 
+                  pricing: { ...ad.pricing, [field]: value }
+                };
+              }
+            })
           } : newsletter
         )
       }
@@ -1432,29 +1459,60 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label>Pricing Model</Label>
+                            <Label>Pricing Model <span className="text-red-500">*</span></Label>
                             <Select 
-                              value={ad.pricing?.pricingModel || 'per_send'} 
+                              value={(() => {
+                                // Handle multi-tier pricing (array) vs single-tier (object)
+                                if (Array.isArray(ad.pricing) && ad.pricing[0]) {
+                                  const firstTier = ad.pricing[0].pricing || ad.pricing[0];
+                                  return firstTier.pricingModel || undefined;
+                                }
+                                return ad.pricing?.pricingModel || undefined;
+                              })()} 
                               onValueChange={(value) => updateNewsletterAdPricing(newsletterIndex, adIndex, 'pricingModel', value)}
                             >
-                              <SelectTrigger>
-                                <SelectValue />
+                              <SelectTrigger className={(() => {
+                                if (Array.isArray(ad.pricing) && ad.pricing[0]) {
+                                  const firstTier = ad.pricing[0].pricing || ad.pricing[0];
+                                  return !firstTier.pricingModel ? 'border-red-300 bg-red-50' : '';
+                                }
+                                return !ad.pricing?.pricingModel ? 'border-red-300 bg-red-50' : '';
+                              })()}>
+                                <SelectValue placeholder="⚠️ Select pricing model..." />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="per_send">/send</SelectItem>
                                 <SelectItem value="contact">Contact for pricing</SelectItem>
                               </SelectContent>
                             </Select>
+                            {(() => {
+                              const hasPricingModel = Array.isArray(ad.pricing) && ad.pricing[0]
+                                ? (ad.pricing[0].pricing || ad.pricing[0]).pricingModel
+                                : ad.pricing?.pricingModel;
+                              return !hasPricingModel ? (
+                                <p className="text-xs text-red-600 mt-1">Required field - please select a pricing model</p>
+                              ) : null;
+                            })()}
                           </div>
                           
                           <div>
                             <Label>Price ($)</Label>
                             <Input
                               type="number"
-                              value={ad.pricing?.flatRate || ''}
+                              value={(() => {
+                                // Handle multi-tier pricing (array) vs single-tier (object)
+                                if (Array.isArray(ad.pricing) && ad.pricing[0]) {
+                                  const firstTier = ad.pricing[0].pricing || ad.pricing[0];
+                                  return firstTier.flatRate || '';
+                                }
+                                return ad.pricing?.flatRate || '';
+                              })()}
                               onChange={(e) => updateNewsletterAdPricing(newsletterIndex, adIndex, 'flatRate', parseFloat(e.target.value))}
                               placeholder="200"
                             />
+                            {Array.isArray(ad.pricing) && ad.pricing.length > 1 && (
+                              <p className="text-xs text-blue-600 mt-1">Note: This item has {ad.pricing.length} pricing tiers. Editing the first tier only.</p>
+                            )}
                           </div>
                         </div>
                       </div>
