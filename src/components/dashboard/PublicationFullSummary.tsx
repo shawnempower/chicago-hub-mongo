@@ -721,7 +721,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                     });
                                   }
                                 });
-                              } else if (ad.pricing && typeof ad.pricing === 'object') {
+                              } else if (ad.pricing && !Array.isArray(ad.pricing)) {
                                 // Single pricing object
                                 const price = ad.pricing.flatRate;
                                 const pricingModel = ad.pricing.pricingModel;
@@ -827,7 +827,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                           <p className="font-medium mb-3">Event Advertising Opportunities</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {event.advertisingOpportunities.map((ad: any, adIndex: number) => {
-                              const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || (typeof ad.pricing === 'number' ? ad.pricing : 0);
+                              const price = ad.hubPricing?.[0]?.pricing?.flatRate || ad.pricing?.flatRate || 0;
                               return (
                                 <AdOpportunityCard
                                   key={adIndex}

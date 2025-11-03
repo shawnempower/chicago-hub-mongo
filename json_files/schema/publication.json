@@ -1188,55 +1188,105 @@
         },
         "events": {
           "type": "array",
+          "description": "Event sponsorship opportunities",
           "items": {
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "Event name"
               },
               "type": {
-                "type": "string"
+                "type": "string",
+                "description": "Type of event (fundraiser, gala, conference, etc.)"
               },
               "frequency": {
-                "type": "string"
+                "type": "string",
+                "enum": ["annual", "bi-annually", "quarterly", "monthly", "weekly"],
+                "description": "How often the event occurs (standardized for revenue forecasting)"
               },
               "averageAttendance": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 1,
+                "description": "Average number of attendees (reach metric)"
               },
               "targetAudience": {
-                "type": "string"
+                "type": "string",
+                "description": "Target audience description"
               },
               "location": {
-                "type": "string"
+                "type": "string",
+                "description": "Event location"
+              },
+              "date": {
+                "type": "string",
+                "description": "Specific event date (optional)"
               },
               "advertisingOpportunities": {
                 "type": "array",
+                "description": "Sponsorship opportunities available for this event",
                 "items": {
                   "type": "object",
                   "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Descriptive name for this opportunity (e.g., 'Annual Gala - Title Sponsor')"
+                    },
                     "level": {
                       "type": "string",
-                      "enum": ["title", "presenting", "supporting", "vendor", "booth"]
+                      "enum": ["title", "presenting", "supporting", "vendor", "booth"],
+                      "description": "Sponsorship level"
                     },
                     "benefits": {
                       "type": "array",
+                      "description": "List of benefits included in this sponsorship",
                       "items": {
                         "type": "string"
                       }
                     },
                     "pricing": {
-                      "type": "object",
-                      "properties": {
-                        "flatRate": {
-                          "type": "number",
-                          "description": "Sponsorship fee amount"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "description": "Single pricing tier",
+                          "properties": {
+                            "flatRate": {
+                              "type": "number",
+                              "description": "Sponsorship fee amount"
+                            },
+                            "pricingModel": {
+                              "type": "string",
+                              "enum": ["flat", "contact"],
+                              "description": "Pricing model (flat for one-time fee, contact for custom quotes)"
+                            },
+                            "frequency": {
+                              "type": "string",
+                              "description": "Optional: for multi-year commitments (e.g., '3x' for 3 years)"
+                            }
+                          },
+                          "required": ["flatRate", "pricingModel"]
                         },
-                        "pricingModel": {
-                          "type": "string",
-                          "enum": ["flat", "contact"],
-                          "description": "Pricing model type (flat for one-time fee, contact for custom quotes)"
+                        {
+                          "type": "array",
+                          "description": "Multiple pricing tiers (e.g., 1-year vs 3-year commitment)",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "flatRate": {
+                                "type": "number"
+                              },
+                              "pricingModel": {
+                                "type": "string",
+                                "enum": ["flat", "contact"]
+                              },
+                              "frequency": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["flatRate", "pricingModel"]
+                          }
                         }
-                      }
+                      ]
                     },
                     "performanceMetrics": {
                       "type": "object",
@@ -1305,8 +1355,55 @@
                           }
                         }
                       }
+                    },
+                    "specifications": {
+                      "type": "object",
+                      "description": "Structured sponsorship specifications",
+                      "properties": {
+                        "logoPlacement": {
+                          "type": "array",
+                          "description": "Where sponsor logos will appear",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "speakingOpportunity": {
+                          "type": "boolean",
+                          "description": "Whether sponsor gets speaking time"
+                        },
+                        "tableSeating": {
+                          "type": "integer",
+                          "description": "Number of seats/tables provided"
+                        },
+                        "vipAccess": {
+                          "type": "boolean",
+                          "description": "VIP access included"
+                        },
+                        "socialMediaMentions": {
+                          "type": "integer",
+                          "description": "Number of social media mentions"
+                        },
+                        "pressRelease": {
+                          "type": "boolean",
+                          "description": "Press release inclusion"
+                        },
+                        "mediaKit": {
+                          "type": "boolean",
+                          "description": "Media kit inclusion"
+                        },
+                        "booths": {
+                          "type": "integer",
+                          "description": "Number of booth spaces"
+                        }
+                      }
+                    },
+                    "available": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "Whether this sponsorship is still available (not sold out)"
                     }
-                  }
+                  },
+                  "required": ["level", "pricing"]
                 }
               },
               "generalTerms": {

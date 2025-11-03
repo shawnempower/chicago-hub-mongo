@@ -1,6 +1,63 @@
 // Frontend-only type definitions for Publications
 // These are separated from MongoDB schemas to avoid browser imports
 
+// ===== EVENT FREQUENCY TYPES =====
+export type EventFrequency = 
+  | 'annual' 
+  | 'bi-annually'
+  | 'quarterly'
+  | 'monthly'
+  | 'weekly';
+
+export interface EventFrequencyOption {
+  value: EventFrequency;
+  label: string;
+  description: string;
+  monthlyOccurrences: number;
+}
+
+export const EVENT_FREQUENCY_OPTIONS: EventFrequencyOption[] = [
+  { 
+    value: 'annual', 
+    label: 'Annual', 
+    description: 'Once per year (most common for events)',
+    monthlyOccurrences: 0.083
+  },
+  { 
+    value: 'bi-annually', 
+    label: 'Bi-Annually', 
+    description: 'Twice per year',
+    monthlyOccurrences: 0.167
+  },
+  { 
+    value: 'quarterly', 
+    label: 'Quarterly', 
+    description: '4 times per year',
+    monthlyOccurrences: 0.333
+  },
+  { 
+    value: 'monthly', 
+    label: 'Monthly', 
+    description: '12 times per year',
+    monthlyOccurrences: 1.0
+  },
+  { 
+    value: 'weekly', 
+    label: 'Weekly', 
+    description: '52 times per year (rare for events)',
+    monthlyOccurrences: 4.33
+  }
+];
+
+export const EVENT_FREQUENCY_TO_MONTHLY: Record<EventFrequency, number> = {
+  'annual': 0.083,
+  'bi-annually': 0.167,
+  'quarterly': 0.333,
+  'monthly': 1.0,
+  'weekly': 4.33
+};
+
+// ===== SERVICE AREA TYPES =====
 export interface ServiceArea {
   dmaName: string;
   dmaNormalized: string;
@@ -229,14 +286,30 @@ export interface PublicationFrontend {
     events?: Array<{
       name?: string;
       type?: string;
-      frequency?: string;
+      frequency?: EventFrequency;
       averageAttendance?: number;
       targetAudience?: string;
       location?: string;
+      date?: string;
       advertisingOpportunities?: Array<{
+        name?: string;
         level?: 'title' | 'presenting' | 'supporting' | 'vendor' | 'booth';
         benefits?: string[];
-        pricing?: number;
+        pricing?: StandardPricing | StandardPricing[];
+        performanceMetrics?: PerformanceMetrics;
+        hubPricing?: HubPricing[];
+        specifications?: {
+          logoPlacement?: string[];
+          speakingOpportunity?: boolean;
+          tableSeating?: number;
+          vipAccess?: boolean;
+          socialMediaMentions?: number;
+          pressRelease?: boolean;
+          mediaKit?: boolean;
+          booths?: number;
+          [key: string]: any;
+        };
+        available?: boolean;
       }>;
       generalTerms?: {
         leadTime?: string;

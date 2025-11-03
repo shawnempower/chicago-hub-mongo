@@ -62,7 +62,7 @@ const renderMetricValue = (metric: ChannelMetricValue, borderColor: string) => {
             <li key={idx} className="text-sm">
               <strong className="text-gray-900">{event.name}:</strong>{' '}
               <span className="text-gray-700">
-                {event.attendance?.toLocaleString()} attendees, {event.frequency || 'N/A'}
+                {event.averageAttendance?.toLocaleString()} attendees, {event.frequency || 'N/A'}
               </span>
             </li>
           ))}

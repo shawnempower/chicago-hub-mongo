@@ -38,6 +38,8 @@ import { AdFormatSelector } from '@/components/AdFormatSelector';
 import { NewsletterAdFormat } from '@/types/newsletterAdFormat';
 import { WebsiteAdFormatSelector } from '@/components/WebsiteAdFormatSelector';
 import { RadioShowEditor } from '@/components/admin/RadioShowEditor';
+import { EventFrequencySelectorInline } from '@/components/dashboard/EventFrequencySelector';
+import { EventFrequency } from '@/types/publication';
 import { 
   validatePositiveInteger,
   validatePositiveNumber,
@@ -1496,7 +1498,7 @@ export const DashboardInventoryManager = () => {
     const newEvent = {
       name: 'New Event',
       type: 'Community Event',
-      frequency: 'monthly',
+      frequency: 'annual' as EventFrequency,
       averageAttendance: 0,
       targetAudience: 'General audience',
       location: 'TBD',
@@ -4005,14 +4007,38 @@ export const DashboardInventoryManager = () => {
                       </Button>
                     </div>
                     {event.advertisingOpportunities && event.advertisingOpportunities.length > 0 ? (
-                      event.advertisingOpportunities.map((opportunity, oppIndex) => (
-                        <div key={oppIndex} className="border rounded-lg p-4 bg-white">
-                          <div className="flex items-center justify-between mb-2">
-                            <h6 className="font-medium capitalize">{opportunity.level || 'Sponsorship'}</h6>
-                            <div className="flex gap-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {event.advertisingOpportunities.map((opportunity, oppIndex) => {
+                          // Calculate revenue and metrics for this sponsorship
+                          const adRevenue = calculateRevenue(opportunity, 'month', event.frequency);
+                          const occurrences = opportunity.performanceMetrics?.occurrencesPerMonth || 0;
+                          const attendance = event.averageAttendance || 0;
+                          
+                          // Format occurrences - only show decimals if < 1
+                          const formatOccurrences = (val: number) => {
+                            if (val === 0) return '0';
+                            if (val >= 1) return Math.round(val).toString();
+                            return val.toFixed(2);
+                          };
+                          
+                          return (
+                          <div key={oppIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h6 className="text-sm font-semibold text-gray-900 capitalize">
+                                {opportunity.name || `${opportunity.level || 'Sponsorship'}`}
+                              </h6>
+                              {opportunity.level && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {opportunity.level}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                className="h-6 w-6 p-0"
                                 onClick={() => {
                                   setEditingType('event');
                                   setEditingParentIndex(eventIndex);
@@ -4020,7 +4046,33 @@ export const DashboardInventoryManager = () => {
                                   setEditingItem({ ...opportunity });
                                 }}
                               >
-                                <Edit className="w-4 h-4" />
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => {
+                                  // Clone functionality
+                                  const clonedOpportunity = { 
+                                    ...opportunity, 
+                                    name: `${opportunity.name || opportunity.level} (Copy)`
+                                  };
+                                  const updatedEvents = [...(currentPublication.distributionChannels?.events || [])];
+                                  updatedEvents[eventIndex].advertisingOpportunities = [
+                                    ...(updatedEvents[eventIndex].advertisingOpportunities || []),
+                                    clonedOpportunity
+                                  ];
+                                  handleUpdatePublication({
+                                    distributionChannels: {
+                                      ...currentPublication.distributionChannels,
+                                      events: updatedEvents
+                                    }
+                                  });
+                                }}
+                                title="Clone this sponsorship"
+                              >
+                                <Copy className="w-3 h-3" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -4038,45 +4090,59 @@ export const DashboardInventoryManager = () => {
                             <div className="mb-2">
                               <p className="text-xs font-medium text-gray-500 mb-1">Benefits</p>
                               <ul className="text-xs text-gray-700 space-y-0.5">
-                                {opportunity.benefits.map((benefit, idx) => (
+                                {opportunity.benefits.slice(0, 3).map((benefit, idx) => (
                                   <li key={idx}>• {benefit}</li>
                                 ))}
+                                {opportunity.benefits.length > 3 && (
+                                  <li className="text-gray-500 italic">+{opportunity.benefits.length - 3} more...</li>
+                                )}
                               </ul>
                             </div>
                           )}
 
-                          {/* Pricing */}
-                          <div className="mt-2">
-                            <p className="text-xs font-medium text-gray-500 mb-1">Sponsorship Fee</p>
-                            <div className="flex items-center gap-2">
-                              {(() => {
-                                // Handle different pricing formats
-                                if (typeof opportunity.pricing === 'number') {
-                                  // Legacy: direct number
-                                  return <p className="text-sm font-semibold text-gray-900">${opportunity.pricing.toLocaleString()}</p>;
-                                } else if (opportunity.pricing?.flatRate && opportunity.pricing?.pricingModel) {
-                                  // New clean schema
-                                  return (
-                                    <>
-                                      <span className="text-sm font-semibold text-gray-900">
-                                        {opportunity.pricing.pricingModel === 'contact' ? 'Contact' : `$${opportunity.pricing.flatRate.toLocaleString()}`}
-                                      </span>
-                                      <span className="text-xs text-gray-600">
-                                        {opportunity.pricing.pricingModel === 'contact' ? 'for pricing' : ''}
-                                      </span>
-                                    </>
-                                  );
-                                } else if (opportunity.pricing?.sponsorshipFee) {
-                                  // Legacy: sponsorshipFee field
-                                  return <p className="text-sm font-semibold text-gray-900">${opportunity.pricing.sponsorshipFee.toLocaleString()}</p>;
-                                } else {
-                                  return <p className="text-sm font-semibold text-gray-900">Contact for pricing</p>;
-                                }
-                              })()}
+                          {/* Revenue & Metrics */}
+                          {(adRevenue > 0 || occurrences > 0 || attendance > 0) && (
+                            <div className="bg-green-50 border border-green-200 rounded p-2 mt-2">
+                              {adRevenue > 0 && (
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                  <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
+                                </div>
+                              )}
+                              {occurrences > 0 && (
+                                <div className="flex items-center justify-between text-xs text-green-700">
+                                  <span>Events/Month</span>
+                                  <span className="font-medium">{formatOccurrences(occurrences)}</span>
+                                </div>
+                              )}
+                              {attendance > 0 && (
+                                <div className="flex items-center justify-between text-xs text-green-700">
+                                  <span>Avg Attendance</span>
+                                  <span className="font-medium">{attendance.toLocaleString()}</span>
+                                </div>
+                              )}
                             </div>
+                          )}
+
+                          {/* Pricing - always show (matches podcast/newsletter pattern) */}
+                          <div className="mt-2">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-xs font-medium text-gray-500">Pricing</p>
+                              {opportunity.hubPricing && opportunity.hubPricing.length > 0 && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-normal px-1.5 py-0.5"
+                                >
+                                  +{opportunity.hubPricing.length} CUSTOM
+                                </Badge>
+                              )}
+                            </div>
+                            {renderPricingDisplay(opportunity.pricing)}
                           </div>
                         </div>
-                      ))
+                        );
+                        })}
+                      </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">No sponsorship opportunities defined</p>
                     )}
@@ -5543,14 +5609,34 @@ export const DashboardInventoryManager = () => {
               {/* Event Sponsorship Fields */}
               {editingType === 'event' && (
                 <>
-                  <div>
-                    <Label htmlFor="level">Sponsorship Level</Label>
-                    <Input
-                      id="level"
-                      value={editingItem.level || ''}
-                      onChange={(e) => setEditingItem({ ...editingItem, level: e.target.value })}
-                      placeholder="e.g., Title, Presenting, Supporting"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Sponsorship Name</Label>
+                      <Input
+                        id="name"
+                        value={editingItem.name || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        placeholder="e.g., Annual Gala - Title Sponsor"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="level">Sponsorship Level</Label>
+                      <Select
+                        value={editingItem.level || ''}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, level: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select level..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="title">Title Sponsor</SelectItem>
+                          <SelectItem value="presenting">Presenting Sponsor</SelectItem>
+                          <SelectItem value="supporting">Supporting Sponsor</SelectItem>
+                          <SelectItem value="vendor">Vendor</SelectItem>
+                          <SelectItem value="booth">Booth Space</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   
                   <div>
@@ -5581,6 +5667,7 @@ export const DashboardInventoryManager = () => {
                       { value: 'flat', label: 'Flat rate' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
+                    allowMultipleDefaultPricing={true}
                     onDefaultPricingChange={(pricing) => 
                       setEditingItem({ ...editingItem, pricing })
                     }
@@ -5618,11 +5705,9 @@ export const DashboardInventoryManager = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="frequency">Frequency</Label>
-                      <Input
-                        id="frequency"
-                        value={editingItem.frequency || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, frequency: e.target.value })}
-                        placeholder="Annual, Monthly"
+                      <EventFrequencySelectorInline
+                        value={editingItem.frequency as EventFrequency}
+                        onChange={(value) => setEditingItem({ ...editingItem, frequency: value })}
                       />
                     </div>
                     <div>
@@ -6228,7 +6313,7 @@ export const DashboardInventoryManager = () => {
               )}
 
               {/* Generic fallback for other types */}
-              {!['website', 'newsletter', 'print-ad', 'podcast-ad', 'radio-ad', 'streaming-ad', 'social-media-ad', 'newsletter-container', 'print-container', 'podcast-container', 'radio-container', 'streaming-container', 'social-media-container', 'website-container'].includes(editingType) && (
+              {!['website', 'newsletter', 'print-ad', 'podcast-ad', 'radio-ad', 'streaming-ad', 'social-media-ad', 'event', 'newsletter-container', 'print-container', 'podcast-container', 'radio-container', 'streaming-container', 'social-media-container', 'website-container', 'event-container'].includes(editingType) && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Name</Label>

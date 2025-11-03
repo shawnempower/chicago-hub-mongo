@@ -214,6 +214,22 @@ const flattenAdvertisingOpportunities = (pub: Publication): FlattenedAd[] => {
     });
   }
   
+  // Event sponsorships
+  if (channels.events) {
+    channels.events.forEach((event, eventIdx: number) => {
+      event.advertisingOpportunities?.forEach((ad, adIdx: number) => {
+        const adName = ad.name || `${ad.level} Sponsor`;
+        ads.push({
+          adId: ad.adId || `${pub._id}-event-${eventIdx}-${adIdx}`,
+          channel: 'event',
+          title: `${event.name || 'Event'} - ${adName}`,
+          adType: ad.level || 'sponsorship',
+          placement: `${event.frequency || 'annual'} event`
+        });
+      });
+    });
+  }
+  
   return ads;
 };
 

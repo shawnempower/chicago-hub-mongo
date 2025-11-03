@@ -662,7 +662,7 @@ export const PublicationInventory: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                     <div>
                       <span className="text-muted-foreground">Attendance:</span>
-                      <span className="ml-2 font-medium">{event.attendance?.toLocaleString() || 'N/A'}</span>
+                      <span className="ml-2 font-medium">{event.averageAttendance?.toLocaleString() || 'N/A'}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Location:</span>
