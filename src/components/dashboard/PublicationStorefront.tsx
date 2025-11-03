@@ -507,7 +507,7 @@ export const PublicationStorefront: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="theme">
               <Palette className="w-4 h-4 mr-2" />
-              Theme
+              Appearance
             </TabsTrigger>
             <TabsTrigger value="seo">
               <Globe className="w-4 h-4 mr-2" />
@@ -758,6 +758,41 @@ export const PublicationStorefront: React.FC = () => {
                         <SelectItem value="bold">Bold</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Branding Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-sans text-base">Branding</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Configure your logo and favicon for the storefront.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <StorefrontImageManager
+                      publicationId={selectedPublication?.publicationId.toString() || ''}
+                      config={storefrontConfig}
+                      onChange={handleConfigChange}
+                      imageType="favicon"
+                      label="Favicon"
+                      description="Icon displayed in browser tabs (recommended: 32x32 or 16x16 .ico or .png)"
+                    />
+                  </div>
+
+                  <div>
+                    <StorefrontImageManager
+                      publicationId={selectedPublication?.publicationId.toString() || ''}
+                      config={storefrontConfig}
+                      onChange={handleConfigChange}
+                      imageType="metaLogo"
+                      label="Primary Logo"
+                      description="Main publication logo (recommended: 200x50px, PNG with transparency)."
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -1148,15 +1183,16 @@ export const PublicationStorefront: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">Storefront Status</CardTitle>
-                <p className="text-sm text-muted-foreground">
+          <TabsContent value="settings" className="space-y-0 px-12">
+            {/* Storefront Status Section */}
+            <div className="grid grid-cols-2 gap-8 py-8">
+              <div>
+                <h3 className="text-base font-semibold font-sans">Storefront Status</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Control the visibility and status of your storefront.
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              </div>
+              <div className="space-y-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -1242,68 +1278,21 @@ export const PublicationStorefront: React.FC = () => {
                       </div>
                     )}
                   </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <Label>Status Information</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Status:</span>
-                          <span className="font-medium">
-                            {storefrontConfig.meta.isDraft ? 'Draft' : 'Live'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Last Updated:</span>
-                          <span>{new Date(storefrontConfig.meta.lastUpdated).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Created:</span>
-                          <span>
-                            {storefrontConfig.createdAt 
-                              ? new Date(storefrontConfig.createdAt).toLocaleDateString()
-                              : 'Unknown'
-                            }
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Components:</span>
-                          <span>
-                            {Object.values(storefrontConfig.components).filter(c => c.enabled).length} enabled
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">Publication Information</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Basic information about your publication and storefront.
+            <Separator />
+
+            {/* Publication Information Section */}
+            <div className="grid grid-cols-2 gap-8 py-8">
+              <div>
+                <h3 className="text-base font-semibold font-sans">Publication Information</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Basic settings for your storefront.
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="publication-name">Publication Name</Label>
-                  <Input
-                    id="publication-name"
-                    value={selectedPublication?.basicInfo.publicationName || ''}
-                    disabled
-                    className="bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Publication name cannot be changed from the storefront settings
-                  </p>
-                </div>
-
+              </div>
+              <div className="space-y-4">
                 <div>
                   <Label htmlFor="website-url">
                     Storefront Domain <span className="text-red-500">*</span>
@@ -1357,51 +1346,20 @@ export const PublicationStorefront: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="config-version">Configuration Version</Label>
-                  <Input
-                    id="config-version"
-                    value={storefrontConfig.meta.configVersion}
-                    disabled
-                    className="bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Version number for tracking configuration changes
-                  </p>
-                </div>
+              </div>
+            </div>
 
-                <div>
-                  <StorefrontImageManager
-                    publicationId={selectedPublication?.publicationId.toString() || ''}
-                    config={storefrontConfig}
-                    onChange={handleConfigChange}
-                    imageType="favicon"
-                    label="Favicon"
-                    description="Icon displayed in browser tabs (recommended: 32x32 or 16x16 .ico or .png)"
-                  />
-                </div>
+            <Separator />
 
-                <div>
-                  <StorefrontImageManager
-                    publicationId={selectedPublication?.publicationId.toString() || ''}
-                    config={storefrontConfig}
-                    onChange={handleConfigChange}
-                    imageType="metaLogo"
-                    label="Primary Logo"
-                    description="Main publication logo (recommended: 200x50px, PNG with transparency). Used as fallback if navbar logo is not set."
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">Advanced Settings</CardTitle>
-                <p className="text-sm text-muted-foreground">
+            {/* Advanced Settings Section */}
+            <div className="grid grid-cols-2 gap-8 py-8">
+              <div>
+                <h3 className="text-base font-semibold font-sans">Advanced Settings</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Advanced configuration and maintenance options.
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              </div>
+              <div className="space-y-4">
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <div className="flex items-start gap-2">
                     <div className="text-yellow-600 mt-0.5">
@@ -1446,8 +1404,8 @@ export const PublicationStorefront: React.FC = () => {
                     Duplicate Storefront
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       ) : (
