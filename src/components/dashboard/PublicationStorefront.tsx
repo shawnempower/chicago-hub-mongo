@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { ColorPicker } from '@/components/ui/color-picker';
 import { 
   Store, 
   Plus,
@@ -538,93 +539,53 @@ export const PublicationStorefront: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="light-primary">Light Primary Color</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="light-primary"
-                        value={storefrontConfig.theme.colors.lightPrimary}
-                        onChange={(e) => handleConfigChange({
-                          ...storefrontConfig,
-                          theme: {
-                            ...storefrontConfig.theme,
-                            colors: { ...storefrontConfig.theme.colors, lightPrimary: e.target.value }
-                          }
-                        })}
-                        placeholder="#000000"
-                      />
-                      <div 
-                        className="w-10 h-10 rounded border"
-                        style={{ backgroundColor: storefrontConfig.theme.colors.lightPrimary }}
-                      />
-                    </div>
-                  </div>
+                  <ColorPicker
+                    label="Light Primary Color"
+                    value={storefrontConfig.theme.colors.lightPrimary}
+                    onChange={(color) => handleConfigChange({
+                      ...storefrontConfig,
+                      theme: {
+                        ...storefrontConfig.theme,
+                        colors: { ...storefrontConfig.theme.colors, lightPrimary: color }
+                      }
+                    })}
+                  />
 
-                  <div>
-                    <Label htmlFor="dark-primary">Dark Primary Color</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="dark-primary"
-                        value={storefrontConfig.theme.colors.darkPrimary}
-                        onChange={(e) => handleConfigChange({
-                          ...storefrontConfig,
-                          theme: {
-                            ...storefrontConfig.theme,
-                            colors: { ...storefrontConfig.theme.colors, darkPrimary: e.target.value }
-                          }
-                        })}
-                        placeholder="#ffffff"
-                      />
-                      <div 
-                        className="w-10 h-10 rounded border"
-                        style={{ backgroundColor: storefrontConfig.theme.colors.darkPrimary }}
-                      />
-                    </div>
-                  </div>
+                  <ColorPicker
+                    label="Dark Primary Color"
+                    value={storefrontConfig.theme.colors.darkPrimary}
+                    onChange={(color) => handleConfigChange({
+                      ...storefrontConfig,
+                      theme: {
+                        ...storefrontConfig.theme,
+                        colors: { ...storefrontConfig.theme.colors, darkPrimary: color }
+                      }
+                    })}
+                  />
 
-                  <div>
-                    <Label htmlFor="grad-start">Gradient Start</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="grad-start"
-                        value={storefrontConfig.theme.colors.gradStart}
-                        onChange={(e) => handleConfigChange({
-                          ...storefrontConfig,
-                          theme: {
-                            ...storefrontConfig.theme,
-                            colors: { ...storefrontConfig.theme.colors, gradStart: e.target.value }
-                          }
-                        })}
-                        placeholder="#ff0000"
-                      />
-                      <div 
-                        className="w-10 h-10 rounded border"
-                        style={{ backgroundColor: storefrontConfig.theme.colors.gradStart }}
-                      />
-                    </div>
-                  </div>
+                  <ColorPicker
+                    label="Gradient Start"
+                    value={storefrontConfig.theme.colors.gradStart}
+                    onChange={(color) => handleConfigChange({
+                      ...storefrontConfig,
+                      theme: {
+                        ...storefrontConfig.theme,
+                        colors: { ...storefrontConfig.theme.colors, gradStart: color }
+                      }
+                    })}
+                  />
 
-                  <div>
-                    <Label htmlFor="grad-end">Gradient End</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="grad-end"
-                        value={storefrontConfig.theme.colors.gradEnd}
-                        onChange={(e) => handleConfigChange({
-                          ...storefrontConfig,
-                          theme: {
-                            ...storefrontConfig.theme,
-                            colors: { ...storefrontConfig.theme.colors, gradEnd: e.target.value }
-                          }
-                        })}
-                        placeholder="#0000ff"
-                      />
-                      <div 
-                        className="w-10 h-10 rounded border"
-                        style={{ backgroundColor: storefrontConfig.theme.colors.gradEnd }}
-                      />
-                    </div>
-                  </div>
+                  <ColorPicker
+                    label="Gradient End"
+                    value={storefrontConfig.theme.colors.gradEnd}
+                    onChange={(color) => handleConfigChange({
+                      ...storefrontConfig,
+                      theme: {
+                        ...storefrontConfig.theme,
+                        colors: { ...storefrontConfig.theme.colors, gradEnd: color }
+                      }
+                    })}
+                  />
 
                   <div>
                     <Label htmlFor="gradient-angle">Gradient Angle</Label>
@@ -666,27 +627,17 @@ export const PublicationStorefront: React.FC = () => {
                     </Select>
                   </div>
 
-                  <div>
-                    <Label htmlFor="cta-text-color">CTA Text Color</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="cta-text-color"
-                        value={storefrontConfig.theme.colors.ctaTextColor}
-                        onChange={(e) => handleConfigChange({
-                          ...storefrontConfig,
-                          theme: {
-                            ...storefrontConfig.theme,
-                            colors: { ...storefrontConfig.theme.colors, ctaTextColor: e.target.value }
-                          }
-                        })}
-                        placeholder="#ffffff"
-                      />
-                      <div 
-                        className="w-10 h-10 rounded border"
-                        style={{ backgroundColor: storefrontConfig.theme.colors.ctaTextColor }}
-                      />
-                    </div>
-                  </div>
+                  <ColorPicker
+                    label="CTA Text Color"
+                    value={storefrontConfig.theme.colors.ctaTextColor}
+                    onChange={(color) => handleConfigChange({
+                      ...storefrontConfig,
+                      theme: {
+                        ...storefrontConfig.theme,
+                        colors: { ...storefrontConfig.theme.colors, ctaTextColor: color }
+                      }
+                    })}
+                  />
                 </div>
 
                 <div className="mt-4">
