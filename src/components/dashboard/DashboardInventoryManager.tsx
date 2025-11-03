@@ -965,6 +965,23 @@ export const DashboardInventoryManager = () => {
           }
           break;
 
+        case 'television-ad':
+          if (updatedPublication.distributionChannels?.television) {
+            if (isAdding) {
+              // Adding new television ad
+              if (!updatedPublication.distributionChannels.television[editingIndex].advertisingOpportunities) {
+                updatedPublication.distributionChannels.television[editingIndex].advertisingOpportunities = [];
+              }
+              updatedPublication.distributionChannels.television[editingIndex].advertisingOpportunities.push(editingItem);
+            } else {
+              // Editing existing television ad
+              if (editingSubIndex >= 0 && updatedPublication.distributionChannels.television[editingIndex]?.advertisingOpportunities) {
+                updatedPublication.distributionChannels.television[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+              }
+            }
+          }
+          break;
+
         case 'social-media-ad':
           if (updatedPublication.distributionChannels?.socialMedia) {
             if (isAdding) {
@@ -1065,6 +1082,12 @@ export const DashboardInventoryManager = () => {
           }
           break;
 
+        case 'television-container':
+          if (updatedPublication.distributionChannels?.television && editingIndex >= 0) {
+            updatedPublication.distributionChannels.television[editingIndex] = editingItem;
+          }
+          break;
+
         case 'social-media-container':
           if (updatedPublication.distributionChannels?.socialMedia && editingIndex >= 0) {
             updatedPublication.distributionChannels.socialMedia[editingIndex] = editingItem;
@@ -1107,6 +1130,9 @@ export const DashboardInventoryManager = () => {
           case 'streaming-ad':
             savedItem = result.distributionChannels?.streamingVideo?.[editingIndex]?.advertisingOpportunities?.[editingSubIndex];
             break;
+          case 'television-ad':
+            savedItem = result.distributionChannels?.television?.[editingIndex]?.advertisingOpportunities?.[editingSubIndex];
+            break;
           case 'social-media-ad':
             savedItem = result.distributionChannels?.socialMedia?.[editingIndex]?.advertisingOpportunities?.[editingSubIndex];
             break;
@@ -1137,6 +1163,9 @@ export const DashboardInventoryManager = () => {
             break;
           case 'streaming-container':
             savedItem = result.distributionChannels?.streamingVideo?.[editingIndex];
+            break;
+          case 'television-container':
+            savedItem = result.distributionChannels?.television?.[editingIndex];
             break;
           case 'social-media-container':
             savedItem = result.distributionChannels?.socialMedia?.[editingIndex];
@@ -4683,7 +4712,7 @@ export const DashboardInventoryManager = () => {
                     </div>
                     {/* Specifications Container */}
                     <div className="mt-3 p-3 bg-gray-50 rounded-md border">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         {station.channel && (
                           <div>
                             <span className="text-muted-foreground">Channel</span>
@@ -4702,6 +4731,10 @@ export const DashboardInventoryManager = () => {
                             <span className="ml-2 font-medium">{station.viewers.toLocaleString()}</span>
                           </div>
                         )}
+                        <div>
+                          <span className="text-muted-foreground">Total Spots</span>
+                          <span className="ml-2 font-medium">{station.advertisingOpportunities?.length || 0}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -4741,7 +4774,13 @@ export const DashboardInventoryManager = () => {
                   
                   {station.advertisingOpportunities && station.advertisingOpportunities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {station.advertisingOpportunities.map((ad: any, adIndex: number) => (
+                      {station.advertisingOpportunities.map((ad: any, adIndex: number) => {
+                        // Calculate revenue and metrics for this TV ad
+                        const adRevenue = calculateRevenue(ad, 'month', station.frequency);
+                        const occurrences = ad.performanceMetrics?.occurrencesPerMonth || 0;
+                        const viewersPerSpot = ad.performanceMetrics?.audienceSize || 0;
+                        
+                        return (
                         <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -4791,6 +4830,29 @@ export const DashboardInventoryManager = () => {
                                 <p className="text-xs text-gray-900">{ad.specifications?.duration ? `${ad.specifications.duration}s` : 'N/A'}</p>
                               </div>
                             </div>
+                            {/* Revenue & Metrics */}
+                            {(adRevenue > 0 || occurrences > 0 || viewersPerSpot > 0) && (
+                              <div className="bg-green-50 border border-green-200 rounded p-2">
+                                {adRevenue > 0 && (
+                                  <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                    <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
+                                  </div>
+                                )}
+                                {occurrences > 0 && (
+                                  <div className="flex items-center justify-between text-xs text-green-700">
+                                    <span>Spots/Month</span>
+                                    <span className="font-medium">{Math.round(occurrences).toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {viewersPerSpot > 0 && (
+                                  <div className="flex items-center justify-between text-xs text-green-700">
+                                    <span>Viewers/Spot</span>
+                                    <span className="font-medium">{Math.round(viewersPerSpot).toLocaleString()}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             <div>
                               <div className="flex items-center gap-2 mb-1">
                                 <p className="text-xs font-medium text-gray-500">Pricing</p>
@@ -4807,7 +4869,8 @@ export const DashboardInventoryManager = () => {
                             </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-xs text-muted-foreground">No ad products yet</p>
@@ -4859,6 +4922,7 @@ export const DashboardInventoryManager = () => {
                    editingType === 'podcast-ad' ? 'Podcast' :
                    editingType === 'radio-ad' ? 'Radio' :
                    editingType === 'streaming-ad' ? 'Streaming Video' :
+                   editingType === 'television-ad' ? 'Television' :
                    editingType === 'social-media-ad' ? 'Social Media' :
                    editingType === 'event' ? 'Event Sponsorship' :
                    editingType === 'event-container' ? 'Event Properties' :
@@ -4867,6 +4931,7 @@ export const DashboardInventoryManager = () => {
                    editingType === 'podcast-container' ? 'Podcast Properties' :
                    editingType === 'radio-container' ? 'Radio Properties' :
                    editingType === 'streaming-container' ? 'Streaming Properties' :
+                   editingType === 'television-container' ? 'TV Station Properties' :
                    editingType === 'social-media-container' ? 'Social Media Properties' :
                    'Item'} ${editingType?.includes('-container') ? '' : editingType?.includes('-ad') ? 'Advertising Opportunity' : 'Advertising Opportunity'}`}
             </DialogTitle>
@@ -5460,6 +5525,209 @@ export const DashboardInventoryManager = () => {
                       { value: 'flat', label: '/month' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
+                    onDefaultPricingChange={(pricing) => 
+                      setEditingItem({ ...editingItem, pricing })
+                    }
+                    onHubPricingChange={(hubPricing) => 
+                      setEditingItem({ ...editingItem, hubPricing })
+                    }
+                  />
+                </>
+              )}
+
+              {/* Television Ad Fields */}
+              {editingType === 'television-ad' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Ad Name</Label>
+                      <Input
+                        id="name"
+                        value={editingItem.name || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        placeholder="Prime Time 30-Second Spot"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="adFormat">Ad Format</Label>
+                      <Select
+                        value={editingItem.adFormat || ''}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select format..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30_second_spot">30 Second Spot</SelectItem>
+                          <SelectItem value="60_second_spot">60 Second Spot</SelectItem>
+                          <SelectItem value="15_second_spot">15 Second Spot</SelectItem>
+                          <SelectItem value="sponsored_segment">Sponsored Segment</SelectItem>
+                          <SelectItem value="product_placement">Product Placement</SelectItem>
+                          <SelectItem value="billboard">Billboard</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="daypart">Daypart</Label>
+                      <Select
+                        value={editingItem.daypart || ''}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, daypart: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select daypart..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="prime_time">Prime Time (8pm-11pm)</SelectItem>
+                          <SelectItem value="daytime">Daytime (9am-4pm)</SelectItem>
+                          <SelectItem value="early_morning">Early Morning (6am-9am)</SelectItem>
+                          <SelectItem value="late_night">Late Night (11pm-2am)</SelectItem>
+                          <SelectItem value="weekend">Weekend</SelectItem>
+                          <SelectItem value="sports">Sports</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="duration">Duration (seconds)</Label>
+                      <Select
+                        value={String(editingItem.specifications?.duration || '')}
+                        onValueChange={(value) => setEditingItem({
+                          ...editingItem,
+                          specifications: {
+                            ...editingItem.specifications,
+                            duration: parseInt(value)
+                          }
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select duration..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15">15 seconds</SelectItem>
+                          <SelectItem value="30">30 seconds</SelectItem>
+                          <SelectItem value="60">60 seconds</SelectItem>
+                          <SelectItem value="90">90 seconds</SelectItem>
+                          <SelectItem value="120">120 seconds</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Technical Specifications</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="format">Video Format</Label>
+                        <Select
+                          value={editingItem.specifications?.format || ''}
+                          onValueChange={(value) => setEditingItem({
+                            ...editingItem,
+                            specifications: {
+                              ...editingItem.specifications,
+                              format: value
+                            }
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select format..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="mpeg2">MPEG2 (Broadcast)</SelectItem>
+                            <SelectItem value="h264">H.264 (Digital)</SelectItem>
+                            <SelectItem value="prores">ProRes (Production)</SelectItem>
+                            <SelectItem value="live_script">Live Script (Host Read)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="resolution">Resolution</Label>
+                        <Select
+                          value={editingItem.specifications?.resolution || ''}
+                          onValueChange={(value) => setEditingItem({
+                            ...editingItem,
+                            specifications: {
+                              ...editingItem.specifications,
+                              resolution: value
+                            }
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select resolution..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1080p">1080p (Full HD)</SelectItem>
+                            <SelectItem value="720p">720p (HD)</SelectItem>
+                            <SelectItem value="4k">4K (Ultra HD)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Performance Metrics</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="occurrencesPerMonth">Spots Per Month</Label>
+                        <Input
+                          id="occurrencesPerMonth"
+                          type="number"
+                          value={editingItem.performanceMetrics?.occurrencesPerMonth || ''}
+                          onChange={(e) => setEditingItem({
+                            ...editingItem,
+                            performanceMetrics: {
+                              ...editingItem.performanceMetrics,
+                              occurrencesPerMonth: e.target.value ? parseInt(e.target.value) : undefined
+                            }
+                          })}
+                          placeholder="30"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="audienceSize">Viewers Per Spot</Label>
+                        <Input
+                          id="audienceSize"
+                          type="number"
+                          value={editingItem.performanceMetrics?.audienceSize || ''}
+                          onChange={(e) => setEditingItem({
+                            ...editingItem,
+                            performanceMetrics: {
+                              ...editingItem.performanceMetrics,
+                              audienceSize: e.target.value ? parseInt(e.target.value) : undefined
+                            }
+                          })}
+                          placeholder="50000"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <HubPricingEditor
+                    defaultPricing={editingItem.pricing || {}}
+                    hubPricing={editingItem.hubPricing || []}
+                    pricingFields={[
+                      { key: 'flatRate', label: 'Price', placeholder: '2500' }
+                    ]}
+                    pricingModels={[
+                      { value: 'per_spot', label: '/spot' },
+                      { value: 'weekly', label: '/week' },
+                      { value: 'monthly', label: '/month' },
+                      { value: 'contact', label: 'Contact for pricing' }
+                    ]}
+                    conditionalFields={[
+                      {
+                        key: 'frequency',
+                        label: 'Frequency',
+                        type: 'text',
+                        showWhen: ['per_spot'],
+                        placeholder: 'e.g., 1x, 2x, 3x, etc',
+                        pattern: '^\\d+x$',
+                        patternMessage: 'Enter a frequency like "1x", "2x", "12x", etc.'
+                      }
+                    ]}
+                    allowMultipleDefaultPricing={true}
                     onDefaultPricingChange={(pricing) => 
                       setEditingItem({ ...editingItem, pricing })
                     }
@@ -6084,6 +6352,88 @@ export const DashboardInventoryManager = () => {
                 </>
               )}
 
+              {/* Television Station Container Fields */}
+              {editingType === 'television-container' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="callSign">Call Sign</Label>
+                      <Input
+                        id="callSign"
+                        value={editingItem.callSign || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, callSign: e.target.value })}
+                        placeholder="WLS-TV"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="channel">Channel</Label>
+                      <Input
+                        id="channel"
+                        value={editingItem.channel || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, channel: e.target.value })}
+                        placeholder="7"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="network">Network</Label>
+                      <Select
+                        value={editingItem.network || ''}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, network: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select network..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="abc">ABC</SelectItem>
+                          <SelectItem value="nbc">NBC</SelectItem>
+                          <SelectItem value="cbs">CBS</SelectItem>
+                          <SelectItem value="fox">Fox</SelectItem>
+                          <SelectItem value="pbs">PBS</SelectItem>
+                          <SelectItem value="cw">The CW</SelectItem>
+                          <SelectItem value="independent">Independent</SelectItem>
+                          <SelectItem value="cable">Cable</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="coverageArea">Coverage Area</Label>
+                      <Input
+                        id="coverageArea"
+                        value={editingItem.coverageArea || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, coverageArea: e.target.value })}
+                        placeholder="Chicago DMA"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="stationId">Station ID</Label>
+                      <Input
+                        id="stationId"
+                        value={editingItem.stationId || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, stationId: e.target.value })}
+                        placeholder="wls-abc7-chicago"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="viewers">Average Weekly Viewers</Label>
+                      <Input
+                        id="viewers"
+                        type="number"
+                        value={editingItem.viewers || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, viewers: parseInt(e.target.value) || 0 })}
+                        placeholder="2500000"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* Social Media Container Fields */}
               {editingType === 'social-media-container' && (
                 <>
@@ -6313,7 +6663,7 @@ export const DashboardInventoryManager = () => {
               )}
 
               {/* Generic fallback for other types */}
-              {!['website', 'newsletter', 'print-ad', 'podcast-ad', 'radio-ad', 'streaming-ad', 'social-media-ad', 'event', 'newsletter-container', 'print-container', 'podcast-container', 'radio-container', 'streaming-container', 'social-media-container', 'website-container', 'event-container'].includes(editingType) && (
+              {!['website', 'newsletter', 'print-ad', 'podcast-ad', 'radio-ad', 'streaming-ad', 'television-ad', 'social-media-ad', 'event', 'newsletter-container', 'print-container', 'podcast-container', 'radio-container', 'streaming-container', 'television-container', 'social-media-container', 'website-container', 'event-container', 'radio-show'].includes(editingType) && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Name</Label>

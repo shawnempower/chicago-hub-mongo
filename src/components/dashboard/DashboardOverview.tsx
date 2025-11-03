@@ -207,6 +207,21 @@ export function DashboardOverview() {
       });
     }
 
+    // Television
+    if (selectedPublication.distributionChannels.television?.length > 0) {
+      activeChannels++;
+      selectedPublication.distributionChannels.television.forEach((station: any) => {
+        totalReach += station.viewers || 0;
+        if (station.advertisingOpportunities) {
+          totalInventory += station.advertisingOpportunities.length;
+          station.advertisingOpportunities.forEach((ad: any) => {
+            totalRevenuePotential += calculateRevenue(ad, 'month', station.frequency);
+            if (ad.hubPricing?.length > 0) hubPricingCount++;
+          });
+        }
+      });
+    }
+
     return {
       totalInventory,
       totalRevenuePotential,
