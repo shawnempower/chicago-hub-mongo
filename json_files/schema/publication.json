@@ -2076,8 +2076,12 @@
                 "type": "string"
               },
               "platform": {
-                "type": "string",
-                "enum": ["youtube", "twitch", "facebook_live", "instagram_live", "linkedin_live", "custom_streaming", "other"]
+                "type": "array",
+                "description": "Platforms where content is streamed (multi-platform support)",
+                "items": {
+                  "type": "string",
+                  "enum": ["youtube", "twitch", "facebook_live", "instagram_live", "linkedin_live", "custom_streaming", "other"]
+                }
               },
               "subscribers": {
                 "type": "integer"
@@ -2086,13 +2090,18 @@
                 "type": "integer",
                 "description": "Average views per video/stream"
               },
+              "averageViewsPerMonth": {
+                "type": "integer",
+                "description": "Average monthly views (clarified metric)"
+              },
               "contentType": {
                 "type": "string",
                 "enum": ["live_news", "recorded_shows", "interviews", "events", "mixed"]
               },
-              "streamingSchedule": {
+              "frequency": {
                 "type": "string",
-                "description": "Regular streaming schedule"
+                "description": "How often content is published (for revenue calculations)",
+                "enum": ["daily", "weekly", "bi-weekly", "monthly", "irregular"]
               },
               "advertisingOpportunities": {
                 "type": "array",
@@ -2110,16 +2119,26 @@
                       "type": "integer",
                       "description": "Ad duration in seconds"
                     },
+                    "position": {
+                      "type": "string",
+                      "enum": ["pre-roll", "mid-roll", "post-roll"],
+                      "description": "Standardized position field"
+                    },
                     "pricing": {
                       "type": "object",
                       "properties": {
                         "flatRate": {
                           "type": "number",
-                          "description": "Price amount (meaning depends on pricingModel)"
+                          "description": "Price amount (meaning depends on pricingModel - e.g., $32 CPM = $32 per 1000 views)"
                         },
                         "pricingModel": {
                           "type": "string",
-                          "enum": ["cpv", "per_video", "cpm", "flat", "contact"]
+                          "enum": ["cpm", "cpv", "flat", "per_spot", "monthly", "contact"],
+                          "description": "How the flatRate is calculated"
+                        },
+                        "frequency": {
+                          "type": "string",
+                          "description": "Optional: for commitment tiers (e.g., 1x, 4x, 12x)"
                         }
                       }
                     },
@@ -2190,7 +2209,11 @@
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["cpv", "per_video", "cpm", "flat", "contact"]
+                                "enum": ["cpm", "cpv", "flat", "per_spot", "monthly", "contact"]
+                              },
+                              "frequency": {
+                                "type": "string",
+                                "description": "Optional: for commitment tiers"
                               }
                             }
                           },

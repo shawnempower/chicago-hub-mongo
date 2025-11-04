@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chicago Hub - Pricing Formulas & Calculations</title>
+    <!-- Disable favicon -->
+    <link rel="icon" href="data:,">
     <style>
         * {
             margin: 0;
@@ -513,14 +515,9 @@
                     <li><a href="#newsletter-example">Newsletter Ads</a></li>
                     <li><a href="#print-example">Print Ads</a></li>
                     <li><a href="#website-example">Website Ads</a></li>
+                    <li><a href="#television">📺 Television Ads</a></li>
+                    <li><a href="#streaming">🎥 Streaming Video</a></li>
                     <li><a href="#package-example">Multi-Channel Package</a></li>
-                </ul>
-            </div>
-
-            <div class="nav-section">
-                <h3>Inventory Types</h3>
-                <ul>
-                    <li><a href="#television">📺 Television</a></li>
                 </ul>
             </div>
 
@@ -796,9 +793,9 @@
                         </tr>
                         <tr>
                             <td><code>cpv</code></td>
-                            <td>Cost per 1000 views</td>
-                            <td>$25 CPV</td>
-                            <td>(CPV × Views) ÷ 1000</td>
+                            <td>Cost per 100 views (streaming video standard)</td>
+                            <td>$32 CPV</td>
+                            <td>(CPV × Views) ÷ 100</td>
                         </tr>
                         <tr>
                             <td><code>cpc</code></td>
@@ -1636,7 +1633,17 @@ Revenue Forecast:
             <!-- Television Advertising Section -->
             <section id="television" class="content-section">
                 <h2>📺 Television Advertising</h2>
-                <p>Television advertising provides powerful visual storytelling and broad audience reach. Understanding TV pricing models, dayparts, and specifications is essential for accurate revenue forecasting.</p>
+                <p>Television advertising provides powerful visual storytelling and broad audience reach. TV spots are sold per-airing or via weekly/monthly packages with pricing that varies by daypart.</p>
+
+                <h3>🎯 Quick Example</h3>
+                <div class="visual-box">
+<strong>Scenario:</strong> Local restaurant wants :30 second spot during evening news<br><br>
+<strong>Pricing:</strong><br>
+• Prime Time spot: $500/airing<br>
+• Run 5x per week<br>
+• Monthly cost: $500 × 5 × 4.33 weeks = <strong>$10,825/month</strong><br><br>
+<strong>Reach:</strong> ~15,000 viewers per airing = 75,000 weekly impressions
+                </div>
 
                 <h3>📊 TV Advertising Overview</h3>
                 <div class="alert alert-info">
@@ -2039,61 +2046,238 @@ Step 2: Project to Timeframe
                     </div>
                 </div>
 
-                <h3>🔍 Schema Consistency Check</h3>
-                <p>TV inventory follows the same standardized structure as Radio and Streaming Video:</p>
+            </section>
+
+            <!-- Streaming Video Section -->
+            <section id="streaming" class="content-section">
+                <h2>🎥 Streaming Video</h2>
+                <p>Streaming video advertising is calculated based on channel-level metrics (views, frequency) combined with ad-specific properties.</p>
+
+                <h3>📊 Key Metrics</h3>
+                <div class="visual-box">
+                    <h4>Channel-Level Metrics</h4>
+                    <ul>
+                        <li><strong>subscribers:</strong> Total channel subscribers</li>
+                        <li><strong>averageViews:</strong> Average views per video/episode</li>
+                        <li><strong>frequency:</strong> Publishing frequency (daily, weekly, bi-weekly, monthly)</li>
+                        <li><strong>platform:</strong> Array of platforms (YouTube, Twitch, Facebook Live, etc.)</li>
+                    </ul>
+
+                    <h4>Ad-Level Properties</h4>
+                    <ul>
+                        <li><strong>position:</strong> pre-roll, mid-roll, or post-roll</li>
+                        <li><strong>duration:</strong> Ad length in seconds</li>
+                        <li><strong>spotsPerShow:</strong> Number of times ad runs per video (defaults to 1)</li>
+                        <li><strong>adFormat:</strong> pre-roll, mid-roll, post-roll, overlay, sponsored_content, product_placement, live_mention</li>
+                    </ul>
+                </div>
+
+                <h3>💰 Pricing Models</h3>
                 <table>
                     <thead>
                         <tr>
-                            <th>Field</th>
-                            <th>TV</th>
-                            <th>Radio</th>
-                            <th>Streaming</th>
-                            <th>Status</th>
+                            <th>Model</th>
+                            <th>Description</th>
+                            <th>Example</th>
+                            <th>When to Use</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Pricing Structure</td>
-                            <td>✅ flatRate + pricingModel</td>
-                            <td>✅ flatRate + pricingModel</td>
-                            <td>✅ flatRate + pricingModel</td>
-                            <td>🟢 Consistent</td>
+                            <td><code>cpv</code></td>
+                            <td>Cost per 100 views</td>
+                            <td>$32 per 100 views</td>
+                            <td>Video streaming standard (YouTube, Twitch)</td>
                         </tr>
                         <tr>
-                            <td>Hub Pricing</td>
-                            <td>✅ hubPricing array</td>
-                            <td>✅ hubPricing array</td>
-                            <td>✅ hubPricing array</td>
-                            <td>🟢 Consistent</td>
+                            <td><code>cpm</code></td>
+                            <td>Cost per 1000 views</td>
+                            <td>$25 per 1000 views</td>
+                            <td>High-volume channels</td>
                         </tr>
                         <tr>
-                            <td>Performance Metrics</td>
-                            <td>✅ performanceMetrics object</td>
-                            <td>✅ performanceMetrics object</td>
-                            <td>✅ performanceMetrics object</td>
-                            <td>🟢 Consistent</td>
+                            <td><code>per_spot</code></td>
+                            <td>Per ad placement</td>
+                            <td>$500 per spot</td>
+                            <td>Premium placements</td>
                         </tr>
                         <tr>
-                            <td>Specifications</td>
-                            <td>✅ specifications object</td>
-                            <td>✅ specifications object</td>
-                            <td>✅ specifications object</td>
-                            <td>🟢 Consistent</td>
-                        </tr>
-                        <tr>
-                            <td>General Terms</td>
-                            <td>✅ generalTerms object</td>
-                            <td>✅ generalTerms object</td>
-                            <td>✅ generalTerms object</td>
-                            <td>🟢 Consistent</td>
+                            <td><code>monthly</code></td>
+                            <td>Monthly flat rate</td>
+                            <td>$2000/month</td>
+                            <td>Exclusive sponsorships</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div class="alert alert-success">
-                    <strong>✅ TV Schema Validation Complete</strong><br>
-                    The television inventory schema is fully consistent with other broadcast media types (Radio, Streaming Video) and follows all standardized pricing patterns used throughout the Chicago Hub system.
+                <h3>🧮 Revenue Calculation</h3>
+                <div class="formula-box">
+                    <div class="formula-title">Streaming Ad Revenue Formula</div>
+                    <div class="formula">
+                        1. Monthly Occurrences = frequency_to_occurrences(frequency) × spotsPerShow<br>
+                        2. Monthly Impressions = averageViews × Monthly Occurrences<br>
+                        3. Revenue = calculate_by_pricing_model(flatRate, impressions, occurrences)
+                    </div>
                 </div>
+
+                <div class="example-grid">
+                    <div class="example-card">
+                        <h4>Example 1: CPV Pricing</h4>
+                        <pre><code>{
+  "channel": {
+    "name": "VONTV.com",
+    "platform": ["custom_streaming"],
+    "averageViews": 78125,
+    "frequency": "weekly",
+    "subscribers": 0
+  },
+  "ad": {
+    "name": "Package One",
+    "position": "pre-roll",
+    "duration": 30,
+    "spotsPerShow": 1,
+    "pricing": {
+      "flatRate": 32,
+      "pricingModel": "cpv"
+    }
+  }
+}</code></pre>
+                        <div class="calculation">
+                            <strong>Calculation:</strong><br>
+                            Weekly frequency = 4.33 videos/month<br>
+                            Monthly Impressions = 78,125 × 4.33 × 1 = 338,281 views<br>
+                            Revenue = ($32 × 338,281) ÷ 100 = <strong>$108,250/month</strong>
+                        </div>
+                    </div>
+
+                    <div class="example-card">
+                        <h4>Example 2: Multiple Spots Per Show</h4>
+                        <pre><code>{
+  "channel": {
+    "name": "Gaming Stream",
+    "averageViews": 5000,
+    "frequency": "daily"
+  },
+  "ad": {
+    "name": "Mid-Roll Package",
+    "position": "mid-roll",
+    "spotsPerShow": 2,  // 2 mid-rolls per video
+    "pricing": {
+      "flatRate": 25,
+      "pricingModel": "cpv"
+    }
+  }
+}</code></pre>
+                        <div class="calculation">
+                            <strong>Calculation:</strong><br>
+                            Daily frequency = 30 videos/month<br>
+                            Spots per month = 30 × 2 = 60 spots<br>
+                            Monthly Impressions = 5,000 × 60 = 300,000 views<br>
+                            Revenue = ($25 × 300,000) ÷ 100 = <strong>$75,000/month</strong>
+                        </div>
+                    </div>
+
+                    <div class="example-card">
+                        <h4>Example 3: Per Spot Pricing</h4>
+                        <pre><code>{
+  "channel": {
+    "frequency": "weekly"
+  },
+  "ad": {
+    "name": "Exclusive Sponsorship",
+    "position": "pre-roll",
+    "spotsPerShow": 1,
+    "pricing": {
+      "flatRate": 800,
+      "pricingModel": "per_spot"
+    }
+  }
+}</code></pre>
+                        <div class="calculation">
+                            <strong>Calculation:</strong><br>
+                            Weekly frequency = 4.33 episodes/month<br>
+                            Total spots = 4.33 × 1 = 4.33 spots/month<br>
+                            Revenue = $800 × 4.33 = <strong>$3,464/month</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>🔄 Frequency Conversion</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Frequency</th>
+                            <th>Monthly Occurrences</th>
+                            <th>Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>daily</td>
+                            <td>30</td>
+                            <td>Daily vlogs, news shows</td>
+                        </tr>
+                        <tr>
+                            <td>weekly</td>
+                            <td>4.33</td>
+                            <td>Weekly podcasts, series</td>
+                        </tr>
+                        <tr>
+                            <td>bi-weekly</td>
+                            <td>2.17</td>
+                            <td>Every other week content</td>
+                        </tr>
+                        <tr>
+                            <td>monthly</td>
+                            <td>1</td>
+                            <td>Monthly specials</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>⚠️ Data Quality Requirements</h3>
+                <div class="alert alert-danger">
+                    <strong>Critical (🔴) - Required for revenue calculation:</strong>
+                    <ul>
+                        <li><code>channel.frequency</code> - Cannot calculate impressions/month without it</li>
+                        <li><code>channel.averageViews</code> - Required for CPM/CPV pricing models</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>Warning (⚠️) - Impacts reporting:</strong>
+                    <ul>
+                        <li><code>channel.platform</code> - Should specify YouTube, Twitch, etc.</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>Info (ℹ️) - Nice to have:</strong>
+                    <ul>
+                        <li><code>channel.subscribers</code> - Improves audience reach metrics</li>
+                    </ul>
+                </div>
+
+                <h3>🎯 Best Practices</h3>
+                <div class="visual-box">
+                    <h4>1. Use CPV for Streaming</h4>
+                    <p>CPV (per 100 views) is the industry standard for video streaming platforms like YouTube and Twitch. It aligns with typical streaming ad rates.</p>
+
+                    <h4>2. Set spotsPerShow Correctly</h4>
+                    <p>If you run multiple ads per video (e.g., 1 pre-roll + 2 mid-rolls), set <code>spotsPerShow</code> to 3. This automatically multiplies your impressions.</p>
+
+                    <h4>3. Multi-Platform Support</h4>
+                    <p>Use the <code>platform</code> array to track simultaneous streaming:</p>
+                    <pre><code>"platform": ["youtube", "twitch", "facebook_live"]</code></pre>
+
+                    <h4>4. Channel vs. Ad Metrics</h4>
+                    <p><strong>Store metrics at the channel level</strong> (averageViews, frequency, subscribers). The system automatically calculates ad-level metrics using:</p>
+                    <ul>
+                        <li>impressionsPerMonth = averageViews × frequency × spotsPerShow</li>
+                        <li>occurrencesPerMonth = frequency × spotsPerShow</li>
+                    </ul>
+                </div>
+
             </section>
 
             <!-- Troubleshooting -->

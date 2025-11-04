@@ -288,12 +288,75 @@ function calculateDataQuality(publication: Publication | any): DataQualityScore 
     );
   });
 
-  // Check Streaming
+  // Check Streaming (with special channel-level checks)
   channels.streamingVideo?.forEach(stream => {
+    const streamName = stream.name || 'Unnamed Channel';
+    
+    // Count the channel itself as an item to be checked
+    totalItems++;
+    
+    // Check streaming channel-level data quality
+    const channelIssues: DataQualityIssue[] = [];
+    
+    // Issue: Missing frequency (critical for revenue calculations)
+    if (!stream.frequency) {
+      channelIssues.push({
+        severity: 'critical',
+        type: 'Missing Frequency',
+        count: 1,
+        description: 'Publishing frequency is required to calculate impressions/month',
+        items: [`[Streaming] ${streamName}`]
+      });
+    }
+    
+    // Issue: Missing averageViews (critical for CPM/CPV calculations)
+    if (!stream.averageViews && stream.advertisingOpportunities?.some((ad: any) => 
+      ['cpm', 'cpv'].includes(ad.pricing?.pricingModel)
+    )) {
+      channelIssues.push({
+        severity: 'critical',
+        type: 'Missing Performance Data',
+        count: 1,
+        description: 'averageViews is required for CPM/CPV pricing',
+        items: [`[Streaming] ${streamName}`]
+      });
+    }
+    
+    // Issue: Missing platform
+    if (!stream.platform || (Array.isArray(stream.platform) && stream.platform.length === 0)) {
+      channelIssues.push({
+        severity: 'warning',
+        type: 'Missing Platform',
+        count: 1,
+        description: 'Platform should be specified (YouTube, Twitch, etc.)',
+        items: [`[Streaming] ${streamName}`]
+      });
+    }
+    
+    // Issue: Missing subscribers (less critical, but useful)
+    if (!stream.subscribers || stream.subscribers === 0) {
+      channelIssues.push({
+        severity: 'info',
+        type: 'Missing Audience Data',
+        count: 1,
+        description: 'Subscriber count helps with audience reach metrics',
+        items: [`[Streaming] ${streamName}`]
+      });
+    }
+    
+    // If no channel-level issues, count as complete
+    if (channelIssues.length === 0) {
+      completeItems++;
+    }
+    
+    // Add channel-level issues
+    allIssues.push(...channelIssues);
+    
+    // Check each streaming ad
     checkChannel(
       stream.advertisingOpportunities || [],
       'Streaming',
-      (item) => `[Streaming] ${stream.name} - ${item.name || 'Unnamed'}`
+      (item) => `[Streaming] ${streamName} - ${item.name || 'Unnamed'}`
     );
   });
 

@@ -891,9 +891,17 @@ export const PublicationInventory: React.FC = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <Video className="h-5 w-5 text-indigo-600" />
                     <h4 className="text-lg font-semibold">{streaming.name || 'Streaming Channel'}</h4>
-                    <Badge variant="secondary" className="text-xs">
-                      {streaming.platform || 'Not Set'}
-                    </Badge>
+                    {Array.isArray(streaming.platform) && streaming.platform.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {streaming.platform.map((p) => (
+                          <Badge key={p} variant="secondary" className="text-xs capitalize">
+                            {p.replace('_', ' ')}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">Not Set</Badge>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 text-sm mb-3">
@@ -902,8 +910,18 @@ export const PublicationInventory: React.FC = () => {
                       <span className="ml-2 font-medium">{streaming.subscribers?.toLocaleString() || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Avg Views:</span>
+                      <span className="text-muted-foreground">Avg Views/Video:</span>
                       <span className="ml-2 font-medium">{streaming.averageViews?.toLocaleString() || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Frequency:</span>
+                      <span className="ml-2 font-medium">
+                        {streaming.frequency ? (
+                          <span className="capitalize">{streaming.frequency}</span>
+                        ) : (
+                          <span className="text-orange-500">⚠️ Not Set</span>
+                        )}
+                      </span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Content Type:</span>
@@ -924,16 +942,32 @@ export const PublicationInventory: React.FC = () => {
                     {streaming.advertisingOpportunities && streaming.advertisingOpportunities.length > 0 ? (
                       <div className="space-y-2">
                         {streaming.advertisingOpportunities.map((ad, adIndex) => (
-                          <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                            <div className="flex-1">
-                              <span className="font-medium">{ad.name}</span>
-                              <span className="text-muted-foreground ml-2">
-                                {ad.adFormat} • {ad.duration}s • {formatPrice(ad.pricing)}
-                              </span>
+                          <div key={adIndex} className="p-2 bg-gray-50 rounded text-xs space-y-1">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <span className="font-medium">{ad.name}</span>
+                                <span className="text-muted-foreground ml-2">
+                                  {ad.position && <span className="capitalize">{ad.position} • </span>}
+                                  {ad.adFormat} • {ad.duration}s • {formatPrice(ad.pricing)}
+                                </span>
+                              </div>
+                              <Badge className={getAvailabilityColor('Available')}>
+                                Available
+                              </Badge>
                             </div>
-                            <Badge className={getAvailabilityColor('Available')}>
-                              Available
-                            </Badge>
+                            {ad.performanceMetrics && (ad.performanceMetrics.impressionsPerMonth || ad.performanceMetrics.occurrencesPerMonth) && (
+                              <div className="text-muted-foreground text-xs pl-1">
+                                {ad.performanceMetrics.impressionsPerMonth && (
+                                  <span>{ad.performanceMetrics.impressionsPerMonth.toLocaleString()} impressions/mo</span>
+                                )}
+                                {ad.performanceMetrics.occurrencesPerMonth && (
+                                  <span className="ml-2">{ad.performanceMetrics.occurrencesPerMonth} spots/mo</span>
+                                )}
+                                {ad.performanceMetrics.guaranteed && (
+                                  <span className="ml-2 text-green-600">✓ Guaranteed</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

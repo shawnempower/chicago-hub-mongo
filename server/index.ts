@@ -2333,6 +2333,18 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       return null;
     };
 
+    // Helper to convert frequency to monthly occurrences
+    const getOccurrencesFromFrequency = (frequency: string): number => {
+      if (!frequency) return 0;
+      switch(frequency.toLowerCase()) {
+        case 'daily': return 30;
+        case 'weekly': return 4.33;
+        case 'bi-weekly': return 2.17;
+        case 'monthly': return 1;
+        default: return 0;
+      }
+    };
+
     // Helper function to collect pricing for both default and hub-specific
     const collectAdPricing = (ad: any, channelType: string, frequency?: string, channelKey: 'websiteAdPrices' | 'newsletterAdPrices' | 'printAdPrices' | 'podcastAdPrices' | 'streamingAdPrices' | 'radioAdPrices') => {
       // Always calculate default pricing (without hub pricing) using standardized calculation
@@ -2673,9 +2685,27 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
             inventoryByType.streamingVideo += streamingAds;
             adInventoryCount += streamingAds;
             
-            // Collect streaming pricing data (separate default and hub pricing)
-            stream.advertisingOpportunities.forEach(ad => {
-              collectAdPricing(ad, 'streaming', undefined, 'streamingAdPrices');
+            // Collect streaming pricing data (with channel frequency for revenue calculation)
+            stream.advertisingOpportunities.forEach((ad: any) => {
+              // Enrich ad with channel-level metrics for CPM/CPV calculations
+              const enrichedAd = {
+                ...ad,
+                performanceMetrics: {
+                  ...ad.performanceMetrics,
+                  // Calculate impressions from averageViews × frequency occurrences
+                  impressionsPerMonth: stream.averageViews && stream.frequency 
+                    ? stream.averageViews * getOccurrencesFromFrequency(stream.frequency)
+                    : (ad.performanceMetrics?.impressionsPerMonth || 0),
+                  audienceSize: stream.subscribers || stream.averageViews || 0
+                }
+              };
+              
+              // Account for multiple spots per video
+              if (ad.spotsPerShow && ad.spotsPerShow > 1) {
+                enrichedAd.performanceMetrics.impressionsPerMonth *= ad.spotsPerShow;
+              }
+              
+              collectAdPricing(enrichedAd, 'streaming', stream.frequency, 'streamingAdPrices');
             });
           }
           

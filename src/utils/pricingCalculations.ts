@@ -250,9 +250,12 @@ export function calculateRevenue(
     // Impression-based
     case 'cpm':
     case 'cpd':
-    case 'cpv':
       const totalImpressions = daily.dailyImpressions * days;
       return ((pricing.flatRate || 0) * totalImpressions) / 1000;
+    
+    case 'cpv': // Cost Per View - per 100 views (common in video streaming)
+      const totalViews = daily.dailyImpressions * days;
+      return ((pricing.flatRate || 0) * totalViews) / 100;
 
     case 'cpc':
       const totalClicks = daily.dailyImpressions * days * 0.01; // Assume 1% CTR if no data

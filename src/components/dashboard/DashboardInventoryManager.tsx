@@ -2436,11 +2436,11 @@ export const DashboardInventoryManager = () => {
         newChannel = {
           channelId: `stream_${Date.now()}`,
           name: 'New Channel',
-          platform: 'youtube',
+          platform: ['youtube'],
           subscribers: 0,
           averageViews: 0,
           contentType: 'mixed',
-          streamingSchedule: 'Daily',
+          frequency: 'weekly',
           advertisingOpportunities: []
         };
         channelKey = 'streamingVideo';
@@ -3507,9 +3507,17 @@ export const DashboardInventoryManager = () => {
               return (
                   <Card key={index} className="p-4 shadow-lg">
                     <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <h4 className="font-semibold">{channel.name}</h4>
-                        <Badge variant="secondary">{channel.platform?.charAt(0).toUpperCase() + channel.platform?.slice(1)}</Badge>
+                        {Array.isArray(channel.platform) && channel.platform.length > 0 ? (
+                          channel.platform.map((p) => (
+                            <Badge key={p} variant="secondary" className="capitalize">
+                              {p.replace('_', ' ')}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant="secondary">Not Set</Badge>
+                        )}
                         {totalRevenue > 0 && (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                             ${Math.round(totalRevenue).toLocaleString()}/mo
@@ -3538,15 +3546,25 @@ export const DashboardInventoryManager = () => {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground">Subscribers</span>
-                          <span className="ml-2 font-medium">{channel.subscribers?.toLocaleString()}</span>
+                          <span className="ml-2 font-medium">{channel.subscribers?.toLocaleString() || 'N/A'}</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Avg Views</span>
-                          <span className="ml-2 font-medium">{channel.averageViews?.toLocaleString()}</span>
+                          <span className="text-muted-foreground">Avg Views/Video</span>
+                          <span className="ml-2 font-medium">{channel.averageViews?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Frequency</span>
+                          <span className="ml-2 font-medium">
+                            {channel.frequency ? (
+                              <span className="capitalize">{channel.frequency}</span>
+                            ) : (
+                              <span className="text-orange-500">⚠️ Not Set</span>
+                            )}
+                          </span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Content</span>
-                          <span className="ml-2 font-medium">{channel.contentType}</span>
+                          <span className="ml-2 font-medium">{channel.contentType || 'N/A'}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Ads</span>
@@ -3574,16 +3592,51 @@ export const DashboardInventoryManager = () => {
                       {channel.advertisingOpportunities && channel.advertisingOpportunities.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {channel.advertisingOpportunities.map((ad: any, adIndex: number) => {
-                            // Calculate revenue and metrics for this streaming ad
-                            const adRevenue = calculateRevenue(ad, 'month', channel.frequency);
-                            const occurrences = ad.performanceMetrics?.occurrencesPerMonth || 0;
-                            const impressions = ad.performanceMetrics?.impressionsPerMonth || 0;
+                            // Calculate occurrences from frequency
+                            const getOccurrencesFromFrequency = (freq: string) => {
+                              if (!freq) return 0;
+                              switch(freq.toLowerCase()) {
+                                case 'daily': return 30;
+                                case 'weekly': return 4.33;
+                                case 'bi-weekly': return 2.17;
+                                case 'monthly': return 1;
+                                default: return 0;
+                              }
+                            };
+                            
+                            const occurrences = getOccurrencesFromFrequency(channel.frequency);
+                            const impressions = channel.averageViews ? channel.averageViews * occurrences : 0;
+                            const audienceSize = channel.subscribers || channel.averageViews || 0;
+                            
+                            // Account for multiple spots per video (e.g., 2 mid-rolls = 2x impressions)
+                            const spotsPerShow = ad.spotsPerShow || 1;
+                            const totalOccurrences = occurrences * spotsPerShow;
+                            const totalImpressions = impressions * spotsPerShow;
+                            
+                            // Populate performanceMetrics for revenue calculation
+                            // This allows calculateRevenue to work with CPM/CPV pricing
+                            const adWithMetrics = {
+                              ...ad,
+                              performanceMetrics: {
+                                impressionsPerMonth: totalImpressions,
+                                occurrencesPerMonth: totalOccurrences,
+                                audienceSize: audienceSize
+                              }
+                            };
+                            
+                            // Calculate revenue with the enriched ad data
+                            const adRevenue = calculateRevenue(adWithMetrics, 'month', channel.frequency);
                             
                             return (
                             <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
+                                  {ad.position && (
+                                    <Badge variant="outline" className="text-xs capitalize">
+                                      {ad.position}
+                                    </Badge>
+                                  )}
                                   {ad.adFormat && (
                                     <Badge variant="secondary" className="text-xs">
                                       {ad.adFormat}
@@ -3625,29 +3678,29 @@ export const DashboardInventoryManager = () => {
                                     <p className="text-xs text-gray-900">{ad.duration ? `${ad.duration}s` : 'N/A'}</p>
                                   </div>
                                   <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Resolution</p>
-                                    <p className="text-xs text-gray-900">{ad.specifications?.resolution || 'N/A'}</p>
+                                    <p className="text-xs font-medium text-gray-500 mb-0.5">Audience</p>
+                                    <p className="text-xs text-gray-900">{audienceSize > 0 ? audienceSize.toLocaleString() : 'N/A'}</p>
                                   </div>
                                 </div>
-                                {/* Revenue & Metrics */}
-                                {(adRevenue > 0 || occurrences > 0 || impressions > 0) && (
+                                {/* Revenue & Metrics - Show if we have pricing and channel data */}
+                                {(adRevenue > 0 || (channel.frequency && (occurrences > 0 || impressions > 0))) && (
                                   <div className="bg-green-50 border border-green-200 rounded p-2">
                                     {adRevenue > 0 && (
                                       <div className="flex items-center justify-between mb-1">
-                                        <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                        <p className="text-xs font-medium text-green-700">Est. Monthly Revenue</p>
                                         <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
                                       </div>
                                     )}
                                     {occurrences > 0 && (
                                       <div className="flex items-center justify-between text-xs text-green-700">
-                                        <span>Videos/Month</span>
-                                        <span className="font-medium">{Math.round(occurrences).toLocaleString()}</span>
+                                        <span>Videos/Month{spotsPerShow > 1 ? ` (×${spotsPerShow} spots)` : ''}</span>
+                                        <span className="font-medium">{spotsPerShow > 1 ? totalOccurrences.toFixed(1) : occurrences.toFixed(1)}</span>
                                       </div>
                                     )}
                                     {impressions > 0 && (
                                       <div className="flex items-center justify-between text-xs text-green-700">
-                                        <span>Views/Month</span>
-                                        <span className="font-medium">{Math.round(impressions).toLocaleString()}</span>
+                                        <span>Est. Impressions/Month</span>
+                                        <span className="font-medium">{Math.round(totalImpressions).toLocaleString()}</span>
                                       </div>
                                     )}
                                   </div>
@@ -5492,26 +5545,147 @@ export const DashboardInventoryManager = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="position">Position</Label>
-                      <Input
-                        id="position"
-                        value={editingItem.position || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, position: e.target.value })}
-                        placeholder="Pre-roll, Mid-roll, Overlay"
-                      />
+                      <Label htmlFor="adFormat">Ad Format</Label>
+                      <Select
+                        value={editingItem.adFormat || ''}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select format..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pre-roll">Pre-roll</SelectItem>
+                          <SelectItem value="mid-roll">Mid-roll</SelectItem>
+                          <SelectItem value="post-roll">Post-roll</SelectItem>
+                          <SelectItem value="overlay">Overlay</SelectItem>
+                          <SelectItem value="sponsored_content">Sponsored Content</SelectItem>
+                          <SelectItem value="product_placement">Product Placement</SelectItem>
+                          <SelectItem value="live_mention">Live Mention</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   
-                  <div>
-                    <Label htmlFor="duration">Duration (seconds)</Label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      value={editingItem.duration || ''}
-                      onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || 15 })}
-                      placeholder="15"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="position">Position *</Label>
+                      <Select
+                        value={editingItem.position || editingItem.adFormat || ''}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, position: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select position..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pre-roll">Pre-roll (before content)</SelectItem>
+                          <SelectItem value="mid-roll">Mid-roll (during content)</SelectItem>
+                          <SelectItem value="post-roll">Post-roll (after content)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">Where the ad appears in the video</p>
+                    </div>
+                        <div>
+                          <Label htmlFor="duration">Duration (seconds)</Label>
+                          <Input
+                            id="duration"
+                            type="number"
+                            value={editingItem.duration || ''}
+                            onChange={(e) => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || 0 })}
+                            placeholder="15"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="spotsPerShow">Spots Per Video</Label>
+                        <Input
+                          id="spotsPerShow"
+                          type="number"
+                          value={editingItem.spotsPerShow || ''}
+                          onChange={(e) => setEditingItem({ ...editingItem, spotsPerShow: parseInt(e.target.value) || 1 })}
+                          placeholder="1"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          How many times this ad appears per video (e.g., 2 mid-rolls = 2 spots)
+                        </p>
+                      </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Technical Specifications</Label>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="format">Video Format</Label>
+                        <Select
+                          value={editingItem.specifications?.format || ''}
+                          onValueChange={(value) => setEditingItem({
+                            ...editingItem,
+                            specifications: {
+                              ...editingItem.specifications,
+                              format: value
+                            }
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select format..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="mp4">MP4</SelectItem>
+                            <SelectItem value="mov">MOV</SelectItem>
+                            <SelectItem value="avi">AVI</SelectItem>
+                            <SelectItem value="script">Script/Copy</SelectItem>
+                            <SelectItem value="image_overlay">Image Overlay</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="resolution">Resolution</Label>
+                        <Select
+                          value={editingItem.specifications?.resolution || ''}
+                          onValueChange={(value) => setEditingItem({
+                            ...editingItem,
+                            specifications: {
+                              ...editingItem.specifications,
+                              resolution: value
+                            }
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select resolution..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="4k">4K</SelectItem>
+                            <SelectItem value="1080p">1080p</SelectItem>
+                            <SelectItem value="720p">720p</SelectItem>
+                            <SelectItem value="480p">480p</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="aspectRatio">Aspect Ratio</Label>
+                        <Select
+                          value={editingItem.specifications?.aspectRatio || ''}
+                          onValueChange={(value) => setEditingItem({
+                            ...editingItem,
+                            specifications: {
+                              ...editingItem.specifications,
+                              aspectRatio: value
+                            }
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select ratio..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="16:9">16:9 (Widescreen)</SelectItem>
+                            <SelectItem value="9:16">9:16 (Vertical)</SelectItem>
+                            <SelectItem value="1:1">1:1 (Square)</SelectItem>
+                            <SelectItem value="4:3">4:3 (Standard)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
+
 
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
@@ -5520,9 +5694,11 @@ export const DashboardInventoryManager = () => {
                       { key: 'flatRate', label: 'Price', placeholder: '100' }
                     ]}
                     pricingModels={[
-                      { value: 'cpv', label: '/1000 views' },
-                      { value: 'per_video', label: '/video' },
-                      { value: 'flat', label: '/month' },
+                      { value: 'cpm', label: 'CPM (/1000 views)' },
+                      { value: 'cpv', label: 'CPV (/100 views)' },
+                      { value: 'flat', label: 'Flat Rate' },
+                      { value: 'per_spot', label: 'Per Spot' },
+                      { value: 'monthly', label: 'Monthly' },
                       { value: 'contact', label: 'Contact for pricing' }
                     ]}
                     onDefaultPricingChange={(pricing) => 
@@ -6306,15 +6482,40 @@ export const DashboardInventoryManager = () => {
                         placeholder="News Channel Live"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="platform">Platform</Label>
-                      <Input
-                        id="platform"
-                        value={editingItem.platform || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, platform: e.target.value })}
-                        placeholder="YouTube, Twitch, Facebook Live"
-                      />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="platform">Platforms (select all that apply)</Label>
+                    <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
+                      {[
+                        { value: 'youtube', label: 'YouTube' },
+                        { value: 'twitch', label: 'Twitch' },
+                        { value: 'facebook_live', label: 'Facebook Live' },
+                        { value: 'instagram_live', label: 'Instagram Live' },
+                        { value: 'linkedin_live', label: 'LinkedIn Live' },
+                        { value: 'custom_streaming', label: 'Custom Platform' },
+                        { value: 'other', label: 'Other' }
+                      ].map((platform) => (
+                        <label key={platform.value} className="flex items-center space-x-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={Array.isArray(editingItem.platform) ? editingItem.platform.includes(platform.value) : false}
+                            onChange={(e) => {
+                              const currentPlatforms = Array.isArray(editingItem.platform) ? editingItem.platform : [];
+                              const newPlatforms = e.target.checked
+                                ? [...currentPlatforms, platform.value]
+                                : currentPlatforms.filter(p => p !== platform.value);
+                              setEditingItem({ ...editingItem, platform: newPlatforms });
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                          <span>{platform.label}</span>
+                        </label>
+                      ))}
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select if you stream to multiple platforms simultaneously
+                    </p>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
@@ -6329,7 +6530,7 @@ export const DashboardInventoryManager = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="averageViews">Average Views</Label>
+                      <Label htmlFor="averageViews">Avg Views (per video)</Label>
                       <Input
                         id="averageViews"
                         type="number"
@@ -6337,17 +6538,53 @@ export const DashboardInventoryManager = () => {
                         onChange={(e) => setEditingItem({ ...editingItem, averageViews: parseInt(e.target.value) || 0 })}
                         placeholder="5000"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">Per video/stream</p>
                     </div>
                   </div>
                   
-                  <div>
-                    <Label htmlFor="contentType">Content Type</Label>
-                    <Input
-                      id="contentType"
-                      value={editingItem.contentType || ''}
-                      onChange={(e) => setEditingItem({ ...editingItem, contentType: e.target.value })}
-                      placeholder="Live News, Recorded Shows, Mixed"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="frequency">Publishing Frequency *</Label>
+                      <Select
+                        value={editingItem.frequency || ''}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, frequency: value })}
+                      >
+                        <SelectTrigger className={!editingItem.frequency ? 'border-orange-300' : ''}>
+                          <SelectValue placeholder="Select frequency..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="irregular">Irregular</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        How often you publish new content (required for revenue calculations)
+                      </p>
+                      {!editingItem.frequency && (
+                        <p className="text-xs text-orange-600 mt-1">⚠️ Required for accurate revenue forecasting</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="contentType">Content Type</Label>
+                      <Select
+                        value={editingItem.contentType || ''}
+                        onValueChange={(value) => setEditingItem({ ...editingItem, contentType: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select content type..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="live_news">Live News</SelectItem>
+                          <SelectItem value="recorded_shows">Recorded Shows</SelectItem>
+                          <SelectItem value="interviews">Interviews</SelectItem>
+                          <SelectItem value="events">Events</SelectItem>
+                          <SelectItem value="mixed">Mixed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </>
               )}

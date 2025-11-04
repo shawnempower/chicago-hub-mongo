@@ -290,8 +290,8 @@ export class HubPackagesService {
                   name: `${newsletter.name} - ${ad.name || 'Newsletter Ad'}`,
                   path: `distributionChannels.newsletters[${nlIndex}].advertisingOpportunities[${adIndex}]`,
                   pricing: {
-                    standard: ad.pricing?.perSend || ad.pricing?.flatRate || 0,
-                    hub: hubPricing?.pricing?.flatRate || ad.pricing?.perSend || ad.pricing?.flatRate || 0,
+                    standard: ad.pricing?.flatRate || ad.pricing?.perSend || 0, // flatRate is new standard, perSend for legacy
+                    hub: hubPricing?.pricing?.flatRate || ad.pricing?.flatRate || ad.pricing?.perSend || 0,
                     model: ad.pricing?.pricingModel || 'per_send'
                   },
                   specifications: ad.specifications

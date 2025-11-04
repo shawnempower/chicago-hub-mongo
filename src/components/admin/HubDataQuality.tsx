@@ -254,9 +254,51 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
         });
       }
 
-      // Analyze streaming
+      // Analyze streaming (with channel-level checks)
       if (pub.distributionChannels?.streamingVideo) {
         pub.distributionChannels.streamingVideo.forEach((stream: any) => {
+          const streamName = stream.name || 'Unnamed Channel';
+          
+          // Count the channel itself as an item to be checked
+          totalItems++;
+          
+          // Channel-level streaming issues
+          // Issue: Missing frequency (critical for revenue calculations)
+          if (!stream.frequency) {
+            allIssues.push({
+              severity: 'critical',
+              type: 'Missing Frequency',
+              count: 1,
+              description: 'Publishing frequency is required to calculate impressions/month',
+              items: [formatItemName(streamName, 'Streaming')]
+            });
+          }
+          
+          // Issue: Missing averageViews (critical for CPM/CPV calculations)
+          if (!stream.averageViews && stream.advertisingOpportunities?.some((ad: any) => 
+            ['cpm', 'cpv'].includes(ad.pricing?.pricingModel)
+          )) {
+            allIssues.push({
+              severity: 'critical',
+              type: 'Missing Performance Data',
+              count: 1,
+              description: 'averageViews is required for CPM/CPV pricing',
+              items: [formatItemName(streamName, 'Streaming')]
+            });
+          }
+          
+          // Issue: Missing platform
+          if (!stream.platform || (Array.isArray(stream.platform) && stream.platform.length === 0)) {
+            allIssues.push({
+              severity: 'warning',
+              type: 'Missing Platform',
+              count: 1,
+              description: 'Platform should be specified (YouTube, Twitch, etc.)',
+              items: [formatItemName(streamName, 'Streaming')]
+            });
+          }
+          
+          // Check individual streaming ads
           stream.advertisingOpportunities?.forEach((ad: any) => {
             const issues = analyzeInventoryItem(ad, 'Streaming', pubName);
             allIssues.push(...issues);

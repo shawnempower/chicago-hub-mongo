@@ -1125,9 +1125,12 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
           sIndex === streamingIndex ? {
             ...streaming,
             advertisingOpportunities: streaming.advertisingOpportunities?.map((ad, aIndex) =>
-              aIndex === adIndex ? { 
-                ...ad, 
-                pricing: { ...ad.pricing, [field]: value }
+              aIndex === adIndex ? {
+                ...ad,
+                pricing: {
+                  ...ad.pricing,
+                  [field]: value
+                }
               } : ad
             )
           } : streaming
@@ -2676,23 +2679,37 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                     </div>
                     
                     <div>
-                      <Label>Platform</Label>
-                      <Select 
-                        value={streaming.platform || ''} 
-                        onValueChange={(value) => updateStreamingChannel(streamingIndex, 'platform', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="YouTube">YouTube</SelectItem>
-                          <SelectItem value="Twitch">Twitch</SelectItem>
-                          <SelectItem value="Facebook Live">Facebook Live</SelectItem>
-                          <SelectItem value="Instagram Live">Instagram Live</SelectItem>
-                          <SelectItem value="LinkedIn Live">LinkedIn Live</SelectItem>
-                          <SelectItem value="Custom Platform">Custom Platform</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label>Platforms (select all that apply)</Label>
+                      <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
+                        {[
+                          { value: 'youtube', label: 'YouTube' },
+                          { value: 'twitch', label: 'Twitch' },
+                          { value: 'facebook_live', label: 'Facebook Live' },
+                          { value: 'instagram_live', label: 'Instagram Live' },
+                          { value: 'linkedin_live', label: 'LinkedIn Live' },
+                          { value: 'custom_streaming', label: 'Custom Platform' },
+                          { value: 'other', label: 'Other' }
+                        ].map((platform) => (
+                          <label key={platform.value} className="flex items-center space-x-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={Array.isArray(streaming.platform) ? streaming.platform.includes(platform.value) : false}
+                              onChange={(e) => {
+                                const currentPlatforms = Array.isArray(streaming.platform) ? streaming.platform : [];
+                                const newPlatforms = e.target.checked
+                                  ? [...currentPlatforms, platform.value]
+                                  : currentPlatforms.filter(p => p !== platform.value);
+                                updateStreamingChannel(streamingIndex, 'platform', newPlatforms);
+                              }}
+                              className="rounded border-gray-300"
+                            />
+                            <span>{platform.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Select if you stream to multiple platforms simultaneously
+                      </p>
                     </div>
                     
                     <div>
@@ -2708,13 +2725,14 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <Label>Average Views</Label>
+                      <Label>Average Views (per video)</Label>
                       <Input
                         type="number"
                         value={streaming.averageViews || ''}
                         onChange={(e) => updateStreamingChannel(streamingIndex, 'averageViews', parseInt(e.target.value))}
                         placeholder="5000"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">Per video/stream</p>
                     </div>
                     
                     <div>
@@ -2739,13 +2757,32 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                       </Select>
                     </div>
                     
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label>Stream Schedule</Label>
-                      <Input
-                        value={streaming.streamSchedule || ''}
-                        onChange={(e) => updateStreamingChannel(streamingIndex, 'streamSchedule', e.target.value)}
-                        placeholder="Mon-Fri 7PM EST"
-                      />
+                      <Label>Publishing Frequency *</Label>
+                      <Select 
+                        value={streaming.frequency || ''} 
+                        onValueChange={(value) => updateStreamingChannel(streamingIndex, 'frequency', value)}
+                      >
+                        <SelectTrigger className={!streaming.frequency ? 'border-orange-300' : ''}>
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="irregular">Irregular</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        How often you publish new content (needed for revenue calculations)
+                      </p>
+                      {!streaming.frequency && (
+                        <p className="text-xs text-orange-600 mt-1">⚠️ Required for accurate revenue forecasting</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2762,13 +2799,17 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <Label>Ad Name</Label>
                           <Input
                             value={ad.name || ''}
+                            onChange={(e) => updateStreamingAd(streamingIndex, adIndex, 'name', e.target.value)}
                             placeholder="Pre-roll Video"
                           />
                         </div>
                         
                         <div>
                           <Label>Ad Format</Label>
-                          <Select value={ad.adFormat || ''}>
+                          <Select 
+                            value={ad.adFormat || ''} 
+                            onValueChange={(value) => updateStreamingAd(streamingIndex, adIndex, 'adFormat', value)}
+                          >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
@@ -2777,6 +2818,26 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                               <SelectItem value="mid-roll">Mid-roll</SelectItem>
                               <SelectItem value="post-roll">Post-roll</SelectItem>
                               <SelectItem value="overlay">Overlay</SelectItem>
+                              <SelectItem value="sponsored_content">Sponsored Content</SelectItem>
+                              <SelectItem value="product_placement">Product Placement</SelectItem>
+                              <SelectItem value="live_mention">Live Mention</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Label>Position *</Label>
+                          <Select 
+                            value={ad.position || ad.adFormat || ''} 
+                            onValueChange={(value) => updateStreamingAd(streamingIndex, adIndex, 'position', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select position" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pre-roll">Pre-roll (before content)</SelectItem>
+                              <SelectItem value="mid-roll">Mid-roll (during content)</SelectItem>
+                              <SelectItem value="post-roll">Post-roll (after content)</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -2786,19 +2847,41 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <Input
                             type="number"
                             value={ad.duration || ''}
+                            onChange={(e) => updateStreamingAd(streamingIndex, adIndex, 'duration', parseInt(e.target.value))}
                             placeholder="15"
                           />
                         </div>
                         
                         <div>
+                          <Label>Spots Per Video</Label>
+                          <Input
+                            type="number"
+                            value={ad.spotsPerShow || ''}
+                            onChange={(e) => updateStreamingAd(streamingIndex, adIndex, 'spotsPerShow', parseInt(e.target.value))}
+                            placeholder="1"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            How many times per video
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
                           <Label>Pricing Model</Label>
-                          <Select value={ad.pricing?.pricingModel || 'cpm'}>
+                          <Select 
+                            value={ad.pricing?.pricingModel || 'cpm'} 
+                            onValueChange={(value) => updateStreamingAdPricing(streamingIndex, adIndex, 'pricingModel', value)}
+                          >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="cpm">/1000 views</SelectItem>
-                              <SelectItem value="flat">/video</SelectItem>
+                              <SelectItem value="cpm">CPM (/1000 views)</SelectItem>
+                              <SelectItem value="cpv">CPV (/100 views)</SelectItem>
+                              <SelectItem value="flat">Flat Rate</SelectItem>
+                              <SelectItem value="per_spot">Per Spot</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
                               <SelectItem value="contact">Contact for pricing</SelectItem>
                             </SelectContent>
                           </Select>
@@ -2809,6 +2892,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <Input
                             type="number"
                             value={ad.pricing?.flatRate || ''}
+                            onChange={(e) => updateStreamingAdPricing(streamingIndex, adIndex, 'flatRate', parseFloat(e.target.value))}
                             placeholder="20"
                           />
                         </div>

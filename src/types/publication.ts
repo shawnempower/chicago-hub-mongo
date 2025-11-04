@@ -226,9 +226,27 @@ export interface PublicationFrontend {
         position?: 'header' | 'footer' | 'inline' | 'dedicated';
         dimensions?: string;
         pricing?: {
-          perSend?: number;
-          monthly?: number;
+          flatRate?: number;
+          pricingModel?: 'per_send' | 'monthly' | 'flat' | 'contact';
+          frequency?: string;
         };
+        specifications?: {
+          format?: string;
+          dimensions?: string;
+        };
+        available?: boolean;
+        hubPricing?: Array<{
+          hubId: string;
+          hubName: string;
+          pricing: {
+            flatRate?: number;
+            pricingModel?: string;
+            frequency?: string;
+          };
+          discount?: number;
+          available?: boolean;
+          minimumCommitment?: string;
+        }>;
       }>;
       generalTerms?: {
         leadTime?: string;
@@ -395,19 +413,22 @@ export interface PublicationFrontend {
     streamingVideo?: Array<{
       channelId?: string;
       name?: string;
-      platform?: 'youtube' | 'twitch' | 'facebook_live' | 'instagram_live' | 'linkedin_live' | 'custom_streaming' | 'other';
+      platform?: ('youtube' | 'twitch' | 'facebook_live' | 'instagram_live' | 'linkedin_live' | 'custom_streaming' | 'other')[]; // Array for multi-platform streaming
       subscribers?: number;
       averageViews?: number;
+      averageViewsPerMonth?: number; // Clarified metric for monthly views
       contentType?: 'live_news' | 'recorded_shows' | 'interviews' | 'events' | 'mixed';
-      streamingSchedule?: string;
+      frequency?: string; // How often content is published (for revenue calculations)
       advertisingOpportunities?: Array<{
         name?: string;
         adFormat?: 'pre-roll' | 'mid-roll' | 'post-roll' | 'overlay' | 'sponsored_content' | 'product_placement' | 'live_mention';
         duration?: number;
+        position?: 'pre-roll' | 'mid-roll' | 'post-roll'; // Standardized position field
+        spotsPerShow?: number; // Number of times this ad runs per video/stream
         pricing?: {
-          cpm?: number;
-          flatRate?: number;
-          pricingModel?: 'cpm' | 'flat' | 'contact';
+          flatRate?: number; // The rate - meaning depends on pricingModel (e.g., $32 CPM = $32 per 1000 views)
+          pricingModel?: 'cpm' | 'cpv' | 'flat' | 'per_spot' | 'monthly' | 'contact';
+          frequency?: string;
         };
         specifications?: {
           format?: 'mp4' | 'mov' | 'avi' | 'script' | 'image_overlay';
@@ -415,6 +436,18 @@ export interface PublicationFrontend {
           aspectRatio?: '16:9' | '9:16' | '1:1' | '4:3';
         };
         available?: boolean;
+        hubPricing?: Array<{
+          hubId: string;
+          hubName: string;
+          pricing: {
+            flatRate?: number;
+            pricingModel?: string;
+            frequency?: string;
+          };
+          discount?: number;
+          available?: boolean;
+          minimumCommitment?: string;
+        }>;
       }>;
       generalTerms?: {
         leadTime?: string;
