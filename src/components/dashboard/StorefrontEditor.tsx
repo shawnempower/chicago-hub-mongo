@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   StorefrontConfiguration, 
   ComponentType,
@@ -44,6 +45,7 @@ import {
 } from 'lucide-react';
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { StorefrontImageManager } from './StorefrontImageManager';
 
 // Available component types that can be added
@@ -78,9 +80,20 @@ const AddComponentDropdown: React.FC<AddComponentDropdownProps> = ({ onAddCompon
 
   if (availableComponents.length === 0) {
     return (
-      <Button variant="ghost" size="sm" disabled>
-        <PlusCircle className="w-4 h-4" />
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-block">
+              <Button variant="ghost" size="sm" disabled className="pointer-events-none">
+                <PlusCircle className="w-4 h-4" />
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>All available components have been added</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 
@@ -101,7 +114,7 @@ const AddComponentDropdown: React.FC<AddComponentDropdownProps> = ({ onAddCompon
               className="flex items-center gap-2"
             >
               <Icon className="w-4 h-4" />
-              <span className="capitalize">{type}</span>
+              <span>{type === 'contactfaq' ? 'Contact Us' : type === 'aboutus' ? 'About Us' : type.charAt(0).toUpperCase() + type.slice(1)}</span>
             </DropdownMenuItem>
           );
         })}
@@ -343,6 +356,21 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
     return icons[componentType] || Settings;
   };
 
+  const getComponentLabel = (componentType: ComponentType) => {
+    const labels: Record<ComponentType, string> = {
+      navbar: 'Navbar',
+      hero: 'Hero',
+      audience: 'Audience',
+      testimonials: 'Testimonials',
+      inventory: 'Inventory',
+      campaign: 'Campaign',
+      contactfaq: 'Contact Us',
+      aboutus: 'About Us',
+      footer: 'Footer'
+    };
+    return labels[componentType] || componentType;
+  };
+
   const componentsList = Object.entries(config.components)
     .sort(([, a], [, b]) => a.order - b.order)
     .map(([type, component]) => ({ type: type as ComponentType, ...component }));
@@ -400,7 +428,21 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       />
 
       <div>
-        <Label>Statistics</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Statistics</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              const newStats = [...content.stats, { key: '', value: '' }];
+              updateComponentContent('hero', { ...content, stats: newStats });
+            }}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Statistic
+          </Button>
+        </div>
         <div className="space-y-2">
           {(content.stats || []).map((stat, index) => (
             <div key={index} className="flex gap-2">
@@ -434,17 +476,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               </Button>
             </div>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const newStats = [...content.stats, { key: '', value: '' }];
-              updateComponentContent('hero', { ...content, stats: newStats });
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Statistic
-          </Button>
         </div>
       </div>
     </div>
@@ -472,7 +503,21 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       </div>
 
       <div>
-        <Label>Age Demographics</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Age Demographics</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              const newDemos = [...content.ageDemographics, { label: '', percentage: 0 }];
+              updateComponentContent('audience', { ...content, ageDemographics: newDemos });
+            }}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Age Group
+          </Button>
+        </div>
         <div className="space-y-2">
           {(content.ageDemographics || []).map((demo, index) => (
             <div key={index} className="flex gap-2">
@@ -507,22 +552,25 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               </Button>
             </div>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const newDemos = [...content.ageDemographics, { label: '', percentage: 0 }];
-              updateComponentContent('audience', { ...content, ageDemographics: newDemos });
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Age Group
-          </Button>
         </div>
       </div>
 
       <div>
-        <Label>Stat Highlights</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Stat Highlights</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              const newStats = [...content.statHighlights, { key: '', value: '' }];
+              updateComponentContent('audience', { ...content, statHighlights: newStats });
+            }}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Stat
+          </Button>
+        </div>
         <div className="space-y-2">
           {(content.statHighlights || []).map((stat, index) => (
             <div key={index} className="flex gap-2">
@@ -556,17 +604,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               </Button>
             </div>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const newStats = [...content.statHighlights, { key: '', value: '' }];
-              updateComponentContent('audience', { ...content, statHighlights: newStats });
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Stat
-          </Button>
         </div>
       </div>
     </div>
@@ -583,31 +620,56 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
         description="Upload a navbar-specific logo. If not set, the Primary Logo from Settings will be used. (Recommended: 200x50px, PNG with transparency)"
       />
       
-      <div>
-        <Label htmlFor="navbar-cta-text">CTA Button Text</Label>
-        <Input
-          id="navbar-cta-text"
-          value={content.ctaText}
-          onChange={(e) => updateComponentContent('navbar', { ...content, ctaText: e.target.value })}
-          placeholder="Get Started"
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="navbar-cta-href">CTA Button Link</Label>
-        <Input
-          id="navbar-cta-href"
-          value={content.ctaHref}
-          onChange={(e) => updateComponentContent('navbar', { ...content, ctaHref: e.target.value })}
-          placeholder="#contact"
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="navbar-cta-text">CTA Button Text</Label>
+          <Input
+            id="navbar-cta-text"
+            value={content.ctaText}
+            onChange={(e) => updateComponentContent('navbar', { ...content, ctaText: e.target.value })}
+            placeholder="Get Started"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="navbar-cta-href">CTA Button Link</Label>
+          <Select
+            value={content.ctaHref}
+            onValueChange={(value) => updateComponentContent('navbar', { ...content, ctaHref: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select section" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.keys(config.components).map((componentType) => (
+                <SelectItem key={componentType} value={`#${componentType}`}>
+                  {getComponentLabel(componentType as ComponentType)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div>
-        <Label>Navigation Items</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Navigation Items</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              const newItems = [...content.navItems, { id: `nav-${Date.now()}`, label: '', href: '' }];
+              updateComponentContent('navbar', { ...content, navItems: newItems });
+            }}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Navigation Item
+          </Button>
+        </div>
         <div className="space-y-2">
           {(content.navItems || []).map((item, index) => (
-            <div key={index} className="grid grid-cols-3 gap-2">
+            <div key={index} className="flex gap-2">
               <Input
                 value={item.label}
                 onChange={(e) => {
@@ -617,38 +679,38 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 }}
                 placeholder="Label"
               />
-              <Input
+              <Select
                 value={item.href}
-                onChange={(e) => {
+                onValueChange={(value) => {
                   const newItems = [...(content.navItems || [])];
-                  newItems[index] = { ...item, href: e.target.value };
+                  newItems[index] = { ...item, href: value };
                   updateComponentContent('navbar', { ...content, navItems: newItems });
                 }}
-                placeholder="Link"
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(config.components).map((componentType) => (
+                    <SelectItem key={componentType} value={`#${componentType}`}>
+                      {getComponentLabel(componentType as ComponentType)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
+                className="shrink-0 h-9 w-9"
                 onClick={() => {
                   const newItems = (content.navItems || []).filter((_, i) => i !== index);
                   updateComponentContent('navbar', { ...content, navItems: newItems });
                 }}
               >
-                <X className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const newItems = [...content.navItems, { id: `nav-${Date.now()}`, label: '', href: '' }];
-              updateComponentContent('navbar', { ...content, navItems: newItems });
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Navigation Item
-          </Button>
         </div>
       </div>
     </div>
@@ -676,7 +738,28 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       </div>
 
       <div>
-        <Label>Advertising Channels</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Advertising Channels</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              const newChannels = [...content.channels, {
+                id: `channel-${Date.now()}`,
+                label: '',
+                title: '',
+                description: '',
+                imageUrl: '',
+                stats: []
+              }];
+              updateComponentContent('inventory', { ...content, channels: newChannels });
+            }}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Channel
+          </Button>
+        </div>
         <div className="space-y-4">
           {(content.channels || []).map((channel, index) => (
             <Card key={index} className="p-4">
@@ -745,7 +828,23 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 />
 
                 <div>
-                  <Label>Statistics</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Statistics</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => {
+                        const newChannels = [...(content.channels || [])];
+                        const newStats = [...channel.stats, { key: '', value: '' }];
+                        newChannels[index] = { ...channel, stats: newStats };
+                        updateComponentContent('inventory', { ...content, channels: newChannels });
+                      }}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Stat
+                    </Button>
+                  </div>
                   <div className="space-y-2">
                     {(channel.stats || []).map((stat, statIndex) => (
                       <div key={statIndex} className="flex gap-2">
@@ -785,19 +884,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                         </Button>
                       </div>
                     ))}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const newChannels = [...(content.channels || [])];
-                        const newStats = [...channel.stats, { key: '', value: '' }];
-                        newChannels[index] = { ...channel, stats: newStats };
-                        updateComponentContent('inventory', { ...content, channels: newChannels });
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Stat
-                    </Button>
                   </div>
                 </div>
 
@@ -814,23 +900,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               </div>
             </Card>
           ))}
-          <Button
-            variant="outline"
-            onClick={() => {
-              const newChannels = [...content.channels, {
-                id: `channel-${Date.now()}`,
-                label: '',
-                title: '',
-                description: '',
-                imageUrl: '',
-                stats: []
-              }];
-              updateComponentContent('inventory', { ...content, channels: newChannels });
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Channel
-          </Button>
         </div>
       </div>
     </div>
@@ -882,7 +951,24 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               />
             </div>
             <div>
-              <Label>Features</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Features</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {
+                    const newFeatures = [...content.planningCard.features, ''];
+                    updateComponentContent('campaign', { 
+                      ...content, 
+                      planningCard: { ...content.planningCard, features: newFeatures }
+                    });
+                  }}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Feature
+                </Button>
+              </div>
               <div className="space-y-2">
                 {(content.planningCard?.features || []).map((feature, index) => (
                   <div key={index} className="flex gap-2">
@@ -913,20 +999,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                     </Button>
                   </div>
                 ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newFeatures = [...content.planningCard.features, ''];
-                    updateComponentContent('campaign', { 
-                      ...content, 
-                      planningCard: { ...content.planningCard, features: newFeatures }
-                    });
-                  }}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Feature
-                </Button>
               </div>
             </div>
           </div>
@@ -934,7 +1006,21 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       </div>
 
       <div>
-        <Label>Campaign Features</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Campaign Features</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              const newFeatures = [...content.features, { title: '', description: '', icon: '' }];
+              updateComponentContent('campaign', { ...content, features: newFeatures });
+            }}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Feature
+          </Button>
+        </div>
         <div className="space-y-2">
           {(content.features || []).map((feature, index) => (
             <Card key={index} className="p-3">
@@ -988,16 +1074,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               </Button>
             </Card>
           ))}
-          <Button
-            variant="outline"
-            onClick={() => {
-              const newFeatures = [...content.features, { title: '', description: '', icon: '' }];
-              updateComponentContent('campaign', { ...content, features: newFeatures });
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Feature
-          </Button>
         </div>
       </div>
     </div>
@@ -1033,104 +1109,45 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
         />
       </div>
 
-      <div>
-        <Label>Form Labels</Label>
-        <Card className="p-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Name Field</Label>
-              <Input
-                value={content.formLabels.name}
-                onChange={(e) => updateComponentContent('contactfaq', { 
-                  ...content, 
-                  formLabels: { ...content.formLabels, name: e.target.value }
-                })}
-              />
-            </div>
-            <div>
-              <Label>Email Field</Label>
-              <Input
-                value={content.formLabels.email}
-                onChange={(e) => updateComponentContent('contactfaq', { 
-                  ...content, 
-                  formLabels: { ...content.formLabels, email: e.target.value }
-                })}
-              />
-            </div>
-            <div>
-              <Label>Company Field</Label>
-              <Input
-                value={content.formLabels.company}
-                onChange={(e) => updateComponentContent('contactfaq', { 
-                  ...content, 
-                  formLabels: { ...content.formLabels, company: e.target.value }
-                })}
-              />
-            </div>
-            <div>
-              <Label>Interest Field</Label>
-              <Input
-                value={content.formLabels.interest}
-                onChange={(e) => updateComponentContent('contactfaq', { 
-                  ...content, 
-                  formLabels: { ...content.formLabels, interest: e.target.value }
-                })}
-              />
-            </div>
-            <div>
-              <Label>Message Field</Label>
-              <Input
-                value={content.formLabels.message}
-                onChange={(e) => updateComponentContent('contactfaq', { 
-                  ...content, 
-                  formLabels: { ...content.formLabels, message: e.target.value }
-                })}
-              />
-            </div>
-            <div>
-              <Label>Submit Button</Label>
-              <Input
-                value={content.formLabels.submit}
-                onChange={(e) => updateComponentContent('contactfaq', { 
-                  ...content, 
-                  formLabels: { ...content.formLabels, submit: e.target.value }
-                })}
-              />
-            </div>
-          </div>
-        </Card>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Phone</Label>
+          <Input
+            value={content.contactInfo.phone}
+            onChange={(e) => updateComponentContent('contactfaq', { 
+              ...content, 
+              contactInfo: { ...content.contactInfo, phone: e.target.value }
+            })}
+          />
+        </div>
+        <div>
+          <Label>Email</Label>
+          <Input
+            value={content.contactInfo.email}
+            onChange={(e) => updateComponentContent('contactfaq', { 
+              ...content, 
+              contactInfo: { ...content.contactInfo, email: e.target.value }
+            })}
+          />
+        </div>
       </div>
 
       <div>
-        <Label>Contact Information</Label>
-        <Card className="p-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Phone</Label>
-              <Input
-                value={content.contactInfo.phone}
-                onChange={(e) => updateComponentContent('contactfaq', { 
-                  ...content, 
-                  contactInfo: { ...content.contactInfo, phone: e.target.value }
-                })}
-              />
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input
-                value={content.contactInfo.email}
-                onChange={(e) => updateComponentContent('contactfaq', { 
-                  ...content, 
-                  contactInfo: { ...content.contactInfo, email: e.target.value }
-                })}
-              />
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div>
-        <Label>FAQ Items</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label>FAQ Items</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              const newItems = [...content.faqItems, { id: `faq-${Date.now()}`, question: '', answer: '' }];
+              updateComponentContent('contactfaq', { ...content, faqItems: newItems });
+            }}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add FAQ Item
+          </Button>
+        </div>
         <div className="space-y-2">
           {(content.faqItems || []).map((item, index) => (
             <Card key={index} className="p-3">
@@ -1171,16 +1188,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               </div>
             </Card>
           ))}
-          <Button
-            variant="outline"
-            onClick={() => {
-              const newItems = [...content.faqItems, { id: `faq-${Date.now()}`, question: '', answer: '' }];
-              updateComponentContent('contactfaq', { ...content, faqItems: newItems });
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add FAQ Item
-          </Button>
         </div>
       </div>
     </div>
@@ -1207,7 +1214,21 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       />
 
       <div>
-        <Label>Paragraphs</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Paragraphs</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              const newParagraphs = [...content.paragraphs, ''];
+              updateComponentContent('aboutus', { ...content, paragraphs: newParagraphs });
+            }}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Paragraph
+          </Button>
+        </div>
         <div className="space-y-2">
           {(content.paragraphs || []).map((paragraph, index) => (
             <div key={index} className="space-y-2">
@@ -1236,16 +1257,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               />
             </div>
           ))}
-          <Button
-            variant="outline"
-            onClick={() => {
-              const newParagraphs = [...content.paragraphs, ''];
-              updateComponentContent('aboutus', { ...content, paragraphs: newParagraphs });
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Paragraph
-          </Button>
         </div>
       </div>
     </div>
@@ -1363,10 +1374,24 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       </div>
 
       <div>
-        <Label>Footer Navigation</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Footer Navigation</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              const newItems = [...content.navItems, { id: `footer-nav-${Date.now()}`, label: '', href: '' }];
+              updateComponentContent('footer', { ...content, navItems: newItems });
+            }}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Navigation Item
+          </Button>
+        </div>
         <div className="space-y-2">
           {(content.navItems || []).map((item, index) => (
-            <div key={index} className="grid grid-cols-3 gap-2">
+            <div key={index} className="flex gap-2">
               <Input
                 value={item.label}
                 onChange={(e) => {
@@ -1376,38 +1401,38 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                 }}
                 placeholder="Label"
               />
-              <Input
+              <Select
                 value={item.href}
-                onChange={(e) => {
+                onValueChange={(value) => {
                   const newItems = [...(content.navItems || [])];
-                  newItems[index] = { ...item, href: e.target.value };
+                  newItems[index] = { ...item, href: value };
                   updateComponentContent('footer', { ...content, navItems: newItems });
                 }}
-                placeholder="Link"
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(config.components).map((componentType) => (
+                    <SelectItem key={componentType} value={`#${componentType}`}>
+                      {getComponentLabel(componentType as ComponentType)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
+                className="shrink-0 h-9 w-9"
                 onClick={() => {
                   const newItems = (content.navItems || []).filter((_, i) => i !== index);
                   updateComponentContent('footer', { ...content, navItems: newItems });
                 }}
               >
-                <X className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const newItems = [...content.navItems, { id: `footer-nav-${Date.now()}`, label: '', href: '' }];
-              updateComponentContent('footer', { ...content, navItems: newItems });
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Navigation Item
-          </Button>
         </div>
       </div>
     </div>
@@ -1434,7 +1459,26 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       </div>
 
       <div>
-        <Label>Testimonials</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Testimonials</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => {
+              const newTestimonials = [...content.testimonials, { 
+                id: `testimonial-${Date.now()}`, 
+                name: '', 
+                company: '', 
+                quote: '' 
+              }];
+              updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
+            }}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Testimonial
+          </Button>
+        </div>
         <div className="space-y-2">
           {(content.testimonials || []).map((testimonial, index) => (
             <Card key={index} className="p-3">
@@ -1500,21 +1544,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               </div>
             </Card>
           ))}
-          <Button
-            variant="outline"
-            onClick={() => {
-              const newTestimonials = [...content.testimonials, { 
-                id: `testimonial-${Date.now()}`, 
-                name: '', 
-                company: '', 
-                quote: '' 
-              }];
-              updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Testimonial
-          </Button>
         </div>
       </div>
     </div>
@@ -1557,7 +1586,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Storefront Editor</h3>
+          <h3 className="text-lg font-semibold font-sans">Storefront Editor</h3>
           <p className="text-sm text-muted-foreground">
             Configure and customize your storefront components
           </p>
@@ -1571,20 +1600,20 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Component List */}
         <Card className="lg:col-span-1">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Components</CardTitle>
+              <CardTitle className="text-base font-sans">Components</CardTitle>
               <AddComponentDropdown onAddComponent={addComponent} existingComponents={Object.keys(config.components) as ComponentType[]} />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="space-y-2">
               {componentsList.map(({ type, enabled, order }) => {
                 const Icon = getComponentIcon(type);
                 return (
                   <div
                     key={type}
-                    className={`group flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
+                    className={`group flex items-center justify-between p-1 rounded cursor-pointer transition-colors font-sans ${
                       activeComponent === type 
                         ? 'bg-primary text-primary-foreground' 
                         : 'hover:bg-muted'
@@ -1595,7 +1624,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                       onClick={() => setActiveComponent(type)}
                     >
                       <Icon className="w-4 h-4" />
-                      <span className="text-sm capitalize">{type}</span>
+                      <span className="text-sm">{getComponentLabel(type)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       {enabled ? (
@@ -1603,7 +1632,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                       ) : (
                         <EyeOff className="w-4 h-4 text-muted-foreground" />
                       )}
-                      <span className="text-xs text-muted-foreground mr-2">{order}</span>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1638,8 +1666,8 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {React.createElement(getComponentIcon(activeComponent), { className: "w-5 h-5" })}
-                <CardTitle className="capitalize">{activeComponent} Component</CardTitle>
+                {React.createElement(getComponentIcon(activeComponent), { className: "w-4 h-4" })}
+                <CardTitle className="font-sans text-base">{getComponentLabel(activeComponent)} Component</CardTitle>
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2">
@@ -1684,7 +1712,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="font-sans">
             {config.components[activeComponent].enabled ? (
               renderComponentEditor(activeComponent)
             ) : (

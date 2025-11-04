@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { ColorPicker } from '@/components/ui/color-picker';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { 
   Store, 
   Plus,
@@ -809,57 +810,56 @@ export const PublicationStorefront: React.FC = () => {
               <CardContent className="space-y-4">
                 {Object.entries(storefrontConfig.theme.sectionSettings || {}).map(([sectionName, settings]) => (
                   <div key={sectionName} className="border rounded-lg p-4">
-                    <h4 className="font-medium capitalize mb-3">{sectionName}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Mode</Label>
-                        <Select
-                          value={settings.mode}
-                          onValueChange={(value: 'light' | 'dark') => handleConfigChange({
+                    <div className="flex items-center gap-6">
+                      {/* Section Name */}
+                      <div className="flex-none w-32">
+                        <h4 className="font-medium capitalize">{sectionName}</h4>
+                      </div>
+                      
+                      {/* Mode Toggle */}
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={settings.mode === 'dark'}
+                          onCheckedChange={(checked) => handleConfigChange({
                             ...storefrontConfig,
                             theme: {
                               ...storefrontConfig.theme,
                               sectionSettings: {
                                 ...(storefrontConfig.theme.sectionSettings || {}),
-                                [sectionName]: { ...settings, mode: value }
+                                [sectionName]: { ...settings, mode: checked ? 'dark' : 'light' }
                               }
                             }
                           })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="light">Light</SelectItem>
-                            <SelectItem value="dark">Dark</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        />
+                        <span className="text-sm text-muted-foreground min-w-[80px]">
+                          {settings.mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                        </span>
                       </div>
                       
-                      <div>
-                        <Label>Accent Override</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            value={settings.accentOverride || ''}
-                            onChange={(e) => handleConfigChange({
-                              ...storefrontConfig,
-                              theme: {
-                                ...storefrontConfig.theme,
-                                sectionSettings: {
-                                  ...(storefrontConfig.theme.sectionSettings || {}),
-                                  [sectionName]: { ...settings, accentOverride: e.target.value || null }
-                                }
+                      {/* Accent Override */}
+                      <div className="flex-1 flex items-center gap-2">
+                        <Label className="text-sm whitespace-nowrap">Accent Override</Label>
+                        <Input
+                          value={settings.accentOverride || ''}
+                          onChange={(e) => handleConfigChange({
+                            ...storefrontConfig,
+                            theme: {
+                              ...storefrontConfig.theme,
+                              sectionSettings: {
+                                ...(storefrontConfig.theme.sectionSettings || {}),
+                                [sectionName]: { ...settings, accentOverride: e.target.value || null }
                               }
-                            })}
-                            placeholder="Leave empty for default"
+                            }
+                          })}
+                          placeholder="Leave empty for default"
+                          className="flex-1"
+                        />
+                        {settings.accentOverride && (
+                          <div 
+                            className="w-10 h-10 rounded border flex-none"
+                            style={{ backgroundColor: settings.accentOverride }}
                           />
-                          {settings.accentOverride && (
-                            <div 
-                              className="w-10 h-10 rounded border"
-                              style={{ backgroundColor: settings.accentOverride }}
-                            />
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -868,15 +868,16 @@ export const PublicationStorefront: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="seo" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">Basic SEO</CardTitle>
-                <p className="text-sm text-muted-foreground">
+          <TabsContent value="seo" className="space-y-0 px-12">
+            {/* Basic SEO Section */}
+            <div className="grid grid-cols-2 gap-8 py-8">
+              <div>
+                <h3 className="text-base font-semibold font-sans">Basic SEO</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Configure basic search engine optimization settings.
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              </div>
+              <div className="space-y-4">
                 <div>
                   <Label htmlFor="seo-title">Page Title</Label>
                   <Input
@@ -930,17 +931,20 @@ export const PublicationStorefront: React.FC = () => {
                     Separate keywords with commas. Current: {(storefrontConfig.seoMetadata?.keywords || []).length} keywords
                   </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">Open Graph (Social Media)</CardTitle>
-                <p className="text-sm text-muted-foreground">
+            <Separator />
+
+            {/* Open Graph Section */}
+            <div className="grid grid-cols-2 gap-8 py-8">
+              <div>
+                <h3 className="text-base font-semibold font-sans">Open Graph (Social Media)</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Configure how your storefront appears when shared on social media.
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              </div>
+              <div className="space-y-4">
                 <div>
                   <Label htmlFor="og-title">Open Graph Title</Label>
                   <Input
@@ -978,17 +982,20 @@ export const PublicationStorefront: React.FC = () => {
                     description="Recommended size: 1200x630 pixels"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">SEO Preview</CardTitle>
-                <p className="text-sm text-muted-foreground">
+            <Separator />
+
+            {/* SEO Preview Section */}
+            <div className="grid grid-cols-2 gap-8 py-8">
+              <div>
+                <h3 className="text-base font-semibold font-sans">SEO Preview</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Preview how your storefront might appear in search results.
                 </p>
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div>
                 <div className="border rounded-lg p-4 bg-muted/50">
                   <div className="text-blue-600 text-lg font-medium hover:underline cursor-pointer">
                     {storefrontConfig.seoMetadata?.title || 'Your Storefront Title'}
@@ -1000,19 +1007,20 @@ export const PublicationStorefront: React.FC = () => {
                     {storefrontConfig.seoMetadata?.description || 'Your storefront description will appear here...'}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">Google Analytics</CardTitle>
-                <p className="text-sm text-muted-foreground">
+          <TabsContent value="analytics" className="space-y-0 px-12">
+            {/* Google Analytics Section */}
+            <div className="grid grid-cols-2 gap-8 py-8">
+              <div>
+                <h3 className="text-base font-semibold font-sans">Google Analytics</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Track visitor behavior and storefront performance with Google Analytics.
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              </div>
+              <div className="space-y-4">
                 <div>
                   <Label htmlFor="ga-id">Google Analytics Measurement ID</Label>
                   <Input
@@ -1029,24 +1037,26 @@ export const PublicationStorefront: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start gap-2">
-                    <div className="text-blue-600 mt-0.5">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-blue-900">Setup Instructions</h4>
-                      <div className="text-xs text-blue-700 mt-1 space-y-1">
-                        <p>1. Go to <a href="https://analytics.google.com" target="_blank" rel="noopener noreferrer" className="underline">Google Analytics</a></p>
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="ga-setup" className="border rounded-lg px-4">
+                    <AccordionTrigger className="text-sm font-medium hover:no-underline">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <span>Setup Instructions</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="text-sm text-muted-foreground space-y-2 pt-2">
+                        <p>1. Go to <a href="https://analytics.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800">Google Analytics</a></p>
                         <p>2. Create a new property for your storefront</p>
                         <p>3. Copy the Measurement ID (starts with G- or UA-)</p>
                         <p>4. Paste it in the field above</p>
                       </div>
-                    </div>
-                  </div>
-                </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
 
                 {storefrontConfig.analytics?.googleAnalyticsId && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -1062,17 +1072,20 @@ export const PublicationStorefront: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">Facebook Pixel</CardTitle>
-                <p className="text-sm text-muted-foreground">
+            <Separator />
+
+            {/* Facebook Pixel Section */}
+            <div className="grid grid-cols-2 gap-8 py-8">
+              <div>
+                <h3 className="text-base font-semibold font-sans">Facebook Pixel</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Track conversions and optimize Facebook advertising campaigns.
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              </div>
+              <div className="space-y-4">
                 <div>
                   <Label htmlFor="fb-pixel-id">Facebook Pixel ID</Label>
                   <Input
@@ -1089,25 +1102,27 @@ export const PublicationStorefront: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start gap-2">
-                    <div className="text-blue-600 mt-0.5">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-blue-900">Setup Instructions</h4>
-                      <div className="text-xs text-blue-700 mt-1 space-y-1">
-                        <p>1. Go to <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" className="underline">Facebook Business Manager</a></p>
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="fb-setup" className="border rounded-lg px-4">
+                    <AccordionTrigger className="text-sm font-medium hover:no-underline">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <span>Setup Instructions</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="text-sm text-muted-foreground space-y-2 pt-2">
+                        <p>1. Go to <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800">Facebook Business Manager</a></p>
                         <p>2. Navigate to Events Manager</p>
                         <p>3. Create or select your pixel</p>
                         <p>4. Copy the Pixel ID (15-16 digit number)</p>
                         <p>5. Paste it in the field above</p>
                       </div>
-                    </div>
-                  </div>
-                </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
 
                 {storefrontConfig.analytics?.facebookPixelId && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -1123,17 +1138,20 @@ export const PublicationStorefront: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sans text-base">Tracking Events</CardTitle>
-                <p className="text-sm text-muted-foreground">
+            <Separator />
+
+            {/* Tracking Events Section */}
+            <div className="grid grid-cols-2 gap-8 py-8">
+              <div>
+                <h3 className="text-base font-semibold font-sans">Tracking Events</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Events that will be automatically tracked on your storefront.
                 </p>
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <h4 className="font-medium">Standard Events</h4>
@@ -1179,8 +1197,8 @@ export const PublicationStorefront: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-0 px-12">

@@ -5,14 +5,14 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-xl text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all duration-200",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all duration-200",
-        outline: "border border-input bg-background hover:bg-[#F9F8F3] hover:text-foreground transition-all duration-200",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-all duration-200",
+        outline: "border border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm transition-all duration-200",
         ghost: "hover:bg-[#F9F8F3] hover:text-foreground transition-all duration-200",
         link: "text-primary underline-offset-4 hover:underline transition-all duration-200",
         // Custom variants for Chicago Media Hub
@@ -21,8 +21,8 @@ const buttonVariants = cva(
         "outline-light": "border-2 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-200",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
+        default: "h-9 px-3 py-1.5",
+        sm: "h-8 rounded-md px-2.5 py-1",
         lg: "h-12 rounded-xl px-8 py-3",
         xl: "h-14 rounded-xl px-10 py-4 text-lg",
         icon: "h-10 w-10",
