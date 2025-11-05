@@ -4965,9 +4965,9 @@ export const DashboardInventoryManager = () => {
 
       {/* Edit Dialog */}
       <Dialog open={editingItem !== null} onOpenChange={(open) => !open && closeEditDialog()}>
-        <DialogContent className="w-auto max-w-max max-h-[90vh] flex flex-col overflow-x-hidden">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle>
+        <DialogContent className="w-auto max-w-[48rem] max-h-[90vh] flex flex-col overflow-x-hidden p-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-4 pb-3 border-b bg-gray-50">
+            <DialogTitle className="text-base font-sans">
               {editingType === 'radio-show' ? 'Edit Radio Show' :
                `Edit ${editingType === 'website' ? 'Website' : 
                    editingType === 'newsletter' ? 'Newsletter' :
@@ -4988,18 +4988,10 @@ export const DashboardInventoryManager = () => {
                    editingType === 'social-media-container' ? 'Social Media Properties' :
                    'Item'} ${editingType?.includes('-container') ? '' : editingType?.includes('-ad') ? 'Advertising Opportunity' : 'Advertising Opportunity'}`}
             </DialogTitle>
-            <DialogDescription>
-              {editingType === 'radio-show'
-                ? 'Manage shows and their advertising opportunities for this radio station.'
-                : editingType?.includes('-container') 
-                ? 'Update the properties and metrics for this channel.'
-                : 'Update the details for this advertising opportunity.'
-              }
-            </DialogDescription>
           </DialogHeader>
           
           {editingItem && (
-            <div className="space-y-4 overflow-y-auto overflow-x-hidden flex-1 pr-2">
+            <div className="space-y-4 overflow-y-auto overflow-x-hidden flex-1 px-6 py-4 bg-white">
               
               {/* Website Ad Fields */}
               {editingType === 'website' && (
@@ -6931,7 +6923,7 @@ export const DashboardInventoryManager = () => {
           )}
           
           {editingItem && editingType !== 'radio-show' && (
-            <div className="flex justify-end space-x-2 pt-4 border-t flex-shrink-0">
+            <div className="flex justify-end space-x-2 px-6 py-4 border-t flex-shrink-0 bg-gray-50">
               <Button variant="outline" onClick={closeEditDialog}>
                 Cancel
               </Button>
