@@ -11,6 +11,7 @@ JWT_SECRET=your-super-secure-jwt-secret-minimum-32-characters-long
 
 # ===== MONGODB CONFIGURATION =====
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
+MONGODB_DB_NAME=chicago-hub
 
 # ===== AWS S3 CONFIGURATION =====
 AWS_ACCESS_KEY_ID=your-aws-access-key-id

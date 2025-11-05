@@ -61,7 +61,7 @@ const getClient = () => {
 };
 
 // Database and collection names
-export const DATABASE_NAME = 'chicago-hub';
+export const DATABASE_NAME = process.env.MONGODB_DB_NAME;
 export const PUBLICATIONS_COLLECTION = 'publications';
 
 // MongoDB client instance

@@ -27,6 +27,7 @@
     "fix:missing-pricing": "tsx scripts/fixMissingHubPricingModels.ts",
     "fix:missing-pricing:live": "tsx scripts/fixMissingHubPricingModels.ts --live",
     "test:subdomain": "tsx scripts/test-subdomain-service.ts",
+    "copy:db-to-staging": "tsx scripts/copyDatabaseToStaging.ts",
     "docker:build": "docker build -f Dockerfile.production -t chicago-hub-api:latest .",
     "docker:run": "docker run -p 3001:3001 --env-file .env chicago-hub-api:latest",
     "docker:push": "docker push 947442015939.dkr.ecr.us-east-2.amazonaws.com/chicago-hub-api:latest"

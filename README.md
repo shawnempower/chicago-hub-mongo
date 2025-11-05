@@ -154,6 +154,7 @@ The API will be available at `http://localhost:3001`
 See `env.template` for required environment variables:
 
 - `MONGODB_URI` - MongoDB connection string
+- `MONGODB_DB_NAME` - MongoDB database name (defaults to 'chicago-hub')
 - `JWT_SECRET` - JWT signing secret
 - `AWS_*` - AWS credentials for S3
 - `MAILGUN_*` - Email service configuration

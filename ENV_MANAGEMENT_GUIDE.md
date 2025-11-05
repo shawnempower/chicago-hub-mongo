@@ -12,6 +12,7 @@
 ```bash
 # Your .env file (NEVER commit this)
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
+MONGODB_DB_NAME=chicago-hub
 JWT_SECRET=your-super-secure-jwt-secret-here
 OPENAI_API_KEY=sk-proj-your-openai-api-key-here
 # ... other secrets
@@ -22,6 +23,7 @@ OPENAI_API_KEY=sk-proj-your-openai-api-key-here
 ```bash
 # env.template (SAFE to commit)
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
+MONGODB_DB_NAME=chicago-hub
 JWT_SECRET=your-secure-jwt-secret-here
 OPENAI_API_KEY=your-openai-api-key-here
 # ... placeholder values
@@ -131,6 +133,7 @@ git commit -m "Remove .env from tracking"
 
 ### Backend (ECS - already configured):
 - [x] `MONGODB_URI`
+- [x] `MONGODB_DB_NAME`
 - [x] `JWT_SECRET`
 - [x] `OPENAI_API_KEY`
 - [x] AWS credentials

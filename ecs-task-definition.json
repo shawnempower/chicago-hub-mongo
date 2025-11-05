@@ -41,6 +41,10 @@
           "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/mongodb-uri"
         },
         {
+          "name": "MONGODB_DB_NAME",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/mongodb-db-name"
+        },
+        {
           "name": "AWS_ACCESS_KEY_ID",
           "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/aws-access-key-id"
         },
