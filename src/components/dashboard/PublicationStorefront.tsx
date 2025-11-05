@@ -334,19 +334,22 @@ export const PublicationStorefront: React.FC = () => {
     let timeoutId: NodeJS.Timeout | null = null;
     
     return (subdomain: string) => {
+      // Clear previous timeout
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
       
+      // Reset states if empty
       if (!subdomain || subdomain.trim() === '') {
         setSubdomainAvailable(null);
         setCheckingSubdomain(false);
         return;
       }
 
-      setCheckingSubdomain(true);
-      
+      // Wait for user to stop typing before making the API call
       timeoutId = setTimeout(async () => {
+        setCheckingSubdomain(true);
+        
         try {
           const result = await checkSubdomainAvailability(
             subdomain,
@@ -366,7 +369,7 @@ export const PublicationStorefront: React.FC = () => {
         } finally {
           setCheckingSubdomain(false);
         }
-      }, 500); // 500ms debounce
+      }, 800); // 800ms debounce - wait for user to stop typing
     };
   }, [selectedPublication?.publicationId, domainError]);
 
