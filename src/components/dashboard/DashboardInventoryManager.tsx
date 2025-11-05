@@ -4965,7 +4965,7 @@ export const DashboardInventoryManager = () => {
 
       {/* Edit Dialog */}
       <Dialog open={editingItem !== null} onOpenChange={(open) => !open && closeEditDialog()}>
-        <DialogContent className="w-auto max-w-[48rem] max-h-[90vh] flex flex-col overflow-x-hidden p-0">
+        <DialogContent className="w-auto max-w-6xl max-h-[90vh] flex flex-col overflow-x-hidden p-0">
           <DialogHeader className="flex-shrink-0 px-6 pt-4 pb-3 border-b bg-gray-50">
             <DialogTitle className="text-base font-sans">
               {editingType === 'radio-show' ? 'Edit Radio Show' :
