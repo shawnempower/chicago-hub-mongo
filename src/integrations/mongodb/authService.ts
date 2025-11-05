@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { getDatabase } from './client';
+import { getDatabase, getDatabaseName } from './client';
 import { User, UserSession, UserProfile, COLLECTIONS } from './schemas';
 import { ObjectId } from 'mongodb';
 
@@ -166,17 +166,26 @@ export class AuthService {
   // Sign in user
   async signIn(email: string, password: string): Promise<{ user: AuthUser; token: string; error?: string }> {
     try {
+      console.log('🔍 SignIn attempt for email:', email.toLowerCase());
+      console.log('🔍 Using database:', getDatabaseName());
+      
       // Find user
       const user = await this.usersCollection.findOne({ email: email.toLowerCase() });
       if (!user) {
+        console.log('❌ User not found in database');
         return { user: {} as AuthUser, token: '', error: 'Invalid email or password' };
       }
 
+      console.log('✅ User found:', user.email);
+      
       // Verify password
       const isValidPassword = await this.verifyPassword(password, user.passwordHash);
       if (!isValidPassword) {
+        console.log('❌ Password verification failed');
         return { user: {} as AuthUser, token: '', error: 'Invalid email or password' };
       }
+
+      console.log('✅ Password verified successfully');
 
       // Update last login
       await this.usersCollection.updateOne(

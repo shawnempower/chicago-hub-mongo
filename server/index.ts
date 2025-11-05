@@ -6,6 +6,7 @@ dotenv.config();
 // Debug environment variables
 console.log('🔍 Environment variables loaded:');
 console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
+console.log('MONGODB_DB_NAME:', process.env.MONGODB_DB_NAME || 'NOT SET');
 console.log('NODE_ENV:', process.env.NODE_ENV || 'undefined');
 console.log('PORT:', process.env.PORT || 'undefined');
 

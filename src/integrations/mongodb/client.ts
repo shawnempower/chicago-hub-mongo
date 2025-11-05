@@ -61,7 +61,12 @@ const getClient = () => {
 };
 
 // Database and collection names
-export const DATABASE_NAME = process.env.MONGODB_DB_NAME;
+export const getDatabaseName = () => {
+  if (!process.env.MONGODB_DB_NAME) {
+    throw new Error('MONGODB_DB_NAME environment variable is required but not set');
+  }
+  return process.env.MONGODB_DB_NAME;
+};
 export const PUBLICATIONS_COLLECTION = 'publications';
 
 // MongoDB client instance
@@ -77,16 +82,16 @@ export const connectToDatabase = async () => {
       while (isConnecting) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      return getClient().db(DATABASE_NAME);
+      return getClient().db(getDatabaseName());
     }
 
     const client = getClient();
     
     // Check if already connected
     try {
-      await client.db(DATABASE_NAME).admin().ping();
+      await client.db(getDatabaseName()).admin().ping();
       console.log('Already connected to MongoDB!');
-      return client.db(DATABASE_NAME);
+      return client.db(getDatabaseName());
     } catch {
       // Not connected, proceed with connection
     }
@@ -99,7 +104,7 @@ export const connectToDatabase = async () => {
     console.log('📊 Pool settings: maxPoolSize=10, minPoolSize=2, maxIdleTime=30s');
     
     isConnecting = false;
-    return client.db(DATABASE_NAME);
+    return client.db(getDatabaseName());
   } catch (error) {
     isConnecting = false;
     console.error('❌ Error connecting to MongoDB:', error);
@@ -109,7 +114,7 @@ export const connectToDatabase = async () => {
 
 // Get database instance
 export const getDatabase = () => {
-  return getClient().db(DATABASE_NAME);
+  return getClient().db(getDatabaseName());
 };
 
 // Get publications collection
