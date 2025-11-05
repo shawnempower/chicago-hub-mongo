@@ -1598,6 +1598,36 @@ export class StorefrontConfigurationsService {
     }
   }
 
+  /**
+   * Check if a subdomain/websiteUrl already exists for a different publication
+   * @param websiteUrl - The full website URL to check
+   * @param excludePublicationId - Optional publication ID to exclude from the check (for updates)
+   * @returns true if subdomain is taken, false if available
+   */
+  async checkSubdomainExists(websiteUrl: string, excludePublicationId?: string): Promise<boolean> {
+    try {
+      // Normalize the URL (remove protocol, convert to lowercase)
+      const normalizedUrl = websiteUrl.replace(/^https?:\/\//, '').toLowerCase().trim();
+      
+      const query: any = {
+        websiteUrl: { 
+          $regex: new RegExp(`^https?://${normalizedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+        }
+      };
+      
+      // Exclude the current publication if updating
+      if (excludePublicationId) {
+        query.publicationId = { $ne: excludePublicationId };
+      }
+      
+      const existingConfig = await this.collection.findOne(query);
+      return !!existingConfig;
+    } catch (error) {
+      console.error('Error checking subdomain existence:', error);
+      throw error;
+    }
+  }
+
   async create(configData: StorefrontConfigurationInsert): Promise<StorefrontConfiguration> {
     try {
       // Check if configuration with same isDraft status already exists for this publication
@@ -1608,6 +1638,14 @@ export class StorefrontConfigurationsService {
       });
       if (existingConfig) {
         throw new Error(`Storefront configuration (${isDraft ? 'draft' : 'live'}) already exists for publication ${configData.publicationId}`);
+      }
+
+      // Check if subdomain is already taken by another publication
+      if (configData.websiteUrl) {
+        const subdomainTaken = await this.checkSubdomainExists(configData.websiteUrl, configData.publicationId);
+        if (subdomainTaken) {
+          throw new Error('This subdomain is already taken by another publication');
+        }
       }
 
       const now = new Date();
@@ -1638,6 +1676,14 @@ export class StorefrontConfigurationsService {
 
   async update(publicationId: string, updates: Partial<StorefrontConfigurationInsert>, isDraft?: boolean): Promise<StorefrontConfiguration | null> {
     try {
+      // Check if subdomain is being changed and if new subdomain is already taken
+      if (updates.websiteUrl) {
+        const subdomainTaken = await this.checkSubdomainExists(updates.websiteUrl, publicationId);
+        if (subdomainTaken) {
+          throw new Error('This subdomain is already taken by another publication');
+        }
+      }
+
       const updateData: StorefrontConfigurationUpdate = {
         ...updates,
         updatedAt: new Date(),

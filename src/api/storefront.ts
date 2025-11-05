@@ -304,6 +304,33 @@ export const validateStorefrontConfiguration = async (config: StorefrontConfigur
   }
 };
 
+// Check if subdomain is available
+export const checkSubdomainAvailability = async (subdomain: string, publicationId?: string): Promise<{
+  available: boolean;
+  subdomain: string;
+  message: string;
+}> => {
+  try {
+    const params = new URLSearchParams({ subdomain });
+    if (publicationId) {
+      params.append('publicationId', publicationId);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/storefront/check-subdomain?${params}`, {
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to check subdomain availability');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error checking subdomain availability:', error);
+    throw new Error('Failed to check subdomain availability');
+  }
+};
+
 // Get storefront configuration templates
 export const getStorefrontTemplates = async (): Promise<Array<{ id: string; name: string; description: string; config: StorefrontConfigurationInsert }>> => {
   try {

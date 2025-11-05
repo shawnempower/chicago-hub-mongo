@@ -46,7 +46,7 @@ import {
   Upload
 } from 'lucide-react';
 import { StorefrontConfiguration, validateStorefrontConfig } from '@/types/storefront';
-import { getStorefrontConfiguration, createStorefrontConfiguration, updateStorefrontConfiguration, publishStorefrontConfiguration, createDraftStorefrontConfiguration, setupStorefrontSubdomain } from '@/api/storefront';
+import { getStorefrontConfiguration, createStorefrontConfiguration, updateStorefrontConfiguration, publishStorefrontConfiguration, createDraftStorefrontConfiguration, setupStorefrontSubdomain, checkSubdomainAvailability } from '@/api/storefront';
 import { StorefrontEditor } from './StorefrontEditor';
 import { StorefrontImageManager } from './StorefrontImageManager';
 
@@ -72,6 +72,8 @@ export const PublicationStorefront: React.FC = () => {
     error?: string;
   } | null>(null); // Track subdomain setup status
   const [configuringDNS, setConfiguringDNS] = useState(false); // Track manual DNS configuration
+  const [checkingSubdomain, setCheckingSubdomain] = useState(false); // Track subdomain availability check
+  const [subdomainAvailable, setSubdomainAvailable] = useState<boolean | null>(null); // Track if subdomain is available
   
   // Dialog states
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -327,12 +329,58 @@ export const PublicationStorefront: React.FC = () => {
     return true;
   };
 
+  // Debounced subdomain availability check
+  const checkSubdomainAvailabilityDebounced = React.useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout;
+      return (subdomain: string) => {
+        clearTimeout(timeoutId);
+        
+        if (!subdomain || subdomain.trim() === '') {
+          setSubdomainAvailable(null);
+          return;
+        }
+
+        setCheckingSubdomain(true);
+        
+        timeoutId = setTimeout(async () => {
+          try {
+            const result = await checkSubdomainAvailability(
+              subdomain,
+              selectedPublication?.publicationId?.toString()
+            );
+            
+            setSubdomainAvailable(result.available);
+            
+            if (!result.available) {
+              setDomainError('This subdomain is already taken by another publication');
+            } else if (domainError === 'This subdomain is already taken by another publication') {
+              setDomainError(null);
+            }
+          } catch (error) {
+            console.error('Error checking subdomain availability:', error);
+            setSubdomainAvailable(null);
+          } finally {
+            setCheckingSubdomain(false);
+          }
+        }, 500); // 500ms debounce
+      };
+    })(),
+    [selectedPublication?.publicationId, domainError]
+  );
+
   const handleSaveConfig = async (config: StorefrontConfiguration) => {
     if (!selectedPublication?.publicationId) return;
     
     // Validate website URL before saving
     if (config.websiteUrl && !validateWebsiteUrl(config.websiteUrl)) {
       setError(domainError || 'Please fix the website URL before saving');
+      return;
+    }
+    
+    // Check subdomain availability before saving (if it's a new subdomain)
+    if (config.websiteUrl && !storefrontConfig?.websiteUrl && subdomainAvailable === false) {
+      setError('This subdomain is already taken by another publication');
       return;
     }
     
@@ -1650,12 +1698,17 @@ export const PublicationStorefront: React.FC = () => {
                             ...storefrontConfig,
                             websiteUrl: fullUrl
                           });
+                          
+                          // Check subdomain availability if not already set
+                          if (!storefrontConfig.websiteUrl && subdomain) {
+                            checkSubdomainAvailabilityDebounced(subdomain);
+                          }
                         }}
                         placeholder="yourname"
                         className={
                           storefrontConfig.websiteUrl 
                             ? 'bg-muted cursor-not-allowed opacity-75' 
-                            : (domainError ? 'border-red-500' : '')
+                            : (domainError ? 'border-red-500' : subdomainAvailable === false ? 'border-red-500' : '')
                         }
                         disabled={!!storefrontConfig.websiteUrl && !storefrontConfig.meta.isDraft}
                         readOnly={!!storefrontConfig.websiteUrl && storefrontConfig.meta.isDraft}
@@ -1675,10 +1728,20 @@ export const PublicationStorefront: React.FC = () => {
                         </Button>
                       )}
                     </div>
-                    {domainError ? (
+                    {checkingSubdomain && !storefrontConfig.websiteUrl ? (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className="animate-spin">⏳</span>
+                        Checking availability...
+                      </p>
+                    ) : domainError ? (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <span>⚠️</span>
                         {domainError}
+                      </p>
+                    ) : subdomainAvailable === true && !storefrontConfig.websiteUrl ? (
+                      <p className="text-xs text-green-600 flex items-center gap-1">
+                        <span>✅</span>
+                        Subdomain is available
                       </p>
                     ) : storefrontConfig.websiteUrl ? (
                       <div className="space-y-2">
