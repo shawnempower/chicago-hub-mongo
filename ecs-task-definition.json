@@ -59,6 +59,34 @@
         {
           "name": "MAILGUN_DOMAIN",
           "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/mailgun-domain"
+        },
+        {
+          "name": "STOREFRONT_DOMAIN",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/storefront-domain"
+        },
+        {
+          "name": "STOREFRONT_HOSTED_ZONE_ID",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/storefront-hosted-zone-id"
+        },
+        {
+          "name": "STOREFRONT_CLOUDFRONT_DISTRIBUTION_ID",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/storefront-cloudfront-distribution-id"
+        },
+        {
+          "name": "STOREFRONT_CLOUDFRONT_DOMAIN",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/storefront-cloudfront-domain"
+        },
+        {
+          "name": "STOREFRONT_SSL_CERTIFICATE_ARN",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/storefront-ssl-certificate-arn"
+        },
+        {
+          "name": "STOREFRONT_DNS_TTL",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/storefront-dns-ttl"
+        },
+        {
+          "name": "STOREFRONT_AWS_REGION",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/storefront-aws-region"
         }
       ],
       "logConfiguration": {

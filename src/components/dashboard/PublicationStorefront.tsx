@@ -13,6 +13,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Store, 
   Plus,
@@ -28,18 +39,20 @@ import {
   Palette,
   Layout,
   Globe,
+  Lock,
   BarChart3,
   FileText,
   Copy,
   Upload
 } from 'lucide-react';
 import { StorefrontConfiguration, validateStorefrontConfig } from '@/types/storefront';
-import { getStorefrontConfiguration, createStorefrontConfiguration, updateStorefrontConfiguration, publishStorefrontConfiguration, createDraftStorefrontConfiguration } from '@/api/storefront';
+import { getStorefrontConfiguration, createStorefrontConfiguration, updateStorefrontConfiguration, publishStorefrontConfiguration, createDraftStorefrontConfiguration, setupStorefrontSubdomain } from '@/api/storefront';
 import { StorefrontEditor } from './StorefrontEditor';
 import { StorefrontImageManager } from './StorefrontImageManager';
 
 export const PublicationStorefront: React.FC = () => {
   const { selectedPublication } = usePublication();
+  const { toast } = useToast();
   const [storefrontConfig, setStorefrontConfig] = useState<StorefrontConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,6 +65,33 @@ export const PublicationStorefront: React.FC = () => {
   const [hasDraft, setHasDraft] = useState(false); // Track if draft exists
   const [hasLive, setHasLive] = useState(false); // Track if live exists
   const [domainError, setDomainError] = useState<string | null>(null); // Domain validation error
+  const [subdomainStatus, setSubdomainStatus] = useState<{
+    success: boolean;
+    configured: boolean;
+    domain?: string;
+    error?: string;
+  } | null>(null); // Track subdomain setup status
+  const [configuringDNS, setConfiguringDNS] = useState(false); // Track manual DNS configuration
+  
+  // Dialog states
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    variant?: 'default' | 'destructive';
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+    confirmText: 'Confirm',
+    variant: 'default'
+  });
+
+  // Check if subdomain is configured (either was already configured or just successfully configured)
+  const subdomainConfigured = subdomainStatus?.success === true;
 
   useEffect(() => {
     if (selectedPublication) {
@@ -111,6 +151,7 @@ export const PublicationStorefront: React.FC = () => {
       setSaving(true);
       setError(null);
       setImportError(null);
+      setSubdomainStatus(null); // Clear previous subdomain status
       
       // Parse JSON
       let parsedConfig;
@@ -128,6 +169,12 @@ export const PublicationStorefront: React.FC = () => {
         return;
       }
       
+      // Validate websiteUrl if present
+      if (parsedConfig.websiteUrl && !validateWebsiteUrl(parsedConfig.websiteUrl)) {
+        setImportError(`Website URL validation failed:\n${domainError || 'Invalid domain format'}`);
+        return;
+      }
+      
       // Add publication ID and ensure proper structure
       const configToImport = {
         ...parsedConfig,
@@ -141,14 +188,104 @@ export const PublicationStorefront: React.FC = () => {
       
       const newConfig = await createStorefrontConfiguration(configToImport);
       
+      // Handle subdomain setup result (if server auto-configured it)
+      if (newConfig.subdomainSetup) {
+        setSubdomainStatus({
+          success: newConfig.subdomainSetup.success,
+          configured: newConfig.subdomainSetup.alreadyConfigured,
+          domain: newConfig.subdomainSetup.fullDomain,
+          error: newConfig.subdomainSetup.error
+        });
+        
+        // Show detailed feedback
+        if (newConfig.subdomainSetup.success) {
+          if (newConfig.subdomainSetup.alreadyConfigured) {
+            console.log('✅ Storefront created. Subdomain was already configured.');
+          } else {
+            console.log('✅ Storefront created and subdomain configured successfully!');
+            console.log('ℹ️  DNS propagation: 1-2 minutes | CloudFront deployment: 10-15 minutes');
+          }
+        } else {
+          console.warn('⚠️  Storefront created but subdomain setup failed:', newConfig.subdomainSetup.error);
+        }
+      }
+      
+      // Show info message if websiteUrl is set but DNS not configured
+      if (configToImport.websiteUrl && !newConfig.subdomainSetup) {
+        toast({
+          title: "✅ Storefront Created Successfully!",
+          description: (
+            <div className="space-y-2">
+              <p><strong>Domain:</strong> {configToImport.websiteUrl}</p>
+              <p>To configure DNS and CloudFront, click the "Configure DNS Now" button in the Settings tab.</p>
+            </div>
+          ),
+          duration: 7000,
+        });
+      }
+      
       setStorefrontConfig(newConfig);
       setActiveTab('editor');
       setImportJson(''); // Clear the input
+      
+      // Scroll to top to show subdomain status
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error('Error importing storefront:', err);
       setError('Failed to import storefront configuration');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Manual DNS configuration for existing storefront
+  const handleConfigureDNS = async () => {
+    if (!selectedPublication?.publicationId || !storefrontConfig?.websiteUrl) return;
+    
+    // Validate URL first
+    if (!validateWebsiteUrl(storefrontConfig.websiteUrl)) {
+      setError(domainError || 'Invalid domain format');
+      return;
+    }
+
+    // Show confirmation dialog
+    setConfirmDialog({
+      open: true,
+      title: 'Configure DNS for Subdomain?',
+      description: `${storefrontConfig.websiteUrl}\n\nThis will check and configure Route53 DNS and CloudFront CDN.\n\nContinue?`,
+      onConfirm: () => executeDNSConfiguration(),
+      confirmText: 'Configure DNS',
+      variant: 'default'
+    });
+  };
+
+  const executeDNSConfiguration = async () => {
+    if (!selectedPublication?.publicationId || !storefrontConfig?.websiteUrl) return;
+
+    try {
+      setConfiguringDNS(true);
+      setError(null);
+      setSubdomainStatus(null);
+
+      const result = await setupStorefrontSubdomain(
+        selectedPublication.publicationId.toString(),
+        viewingVersion === 'draft'
+      );
+
+      setSubdomainStatus({
+        success: result.success,
+        configured: result.alreadyConfigured,
+        domain: result.fullDomain,
+        error: result.error
+      });
+
+      // Scroll to show status
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err: any) {
+      console.error('Error configuring DNS:', err);
+      setError(err.message || 'Failed to configure DNS');
+    } finally {
+      setConfiguringDNS(false);
     }
   };
 
@@ -194,7 +331,7 @@ export const PublicationStorefront: React.FC = () => {
     if (!selectedPublication?.publicationId) return;
     
     // Validate website URL before saving
-    if (config.meta.websiteUrl && !validateWebsiteUrl(config.meta.websiteUrl)) {
+    if (config.websiteUrl && !validateWebsiteUrl(config.websiteUrl)) {
       setError(domainError || 'Please fix the website URL before saving');
       return;
     }
@@ -203,7 +340,14 @@ export const PublicationStorefront: React.FC = () => {
       setSaving(true);
       setError(null);
       
-      const updatedConfig = await updateStorefrontConfiguration(selectedPublication.publicationId.toString(), config);
+      // Clean data before sending: remove meta.websiteUrl if it exists
+      const cleanConfig = { ...config };
+      if ((cleanConfig.meta as any).websiteUrl) {
+        const { websiteUrl: _, ...restMeta } = cleanConfig.meta as any;
+        cleanConfig.meta = restMeta;
+      }
+      
+      const updatedConfig = await updateStorefrontConfiguration(selectedPublication.publicationId.toString(), cleanConfig);
       if (updatedConfig) {
         setStorefrontConfig(updatedConfig);
         setHasChanges(false);
@@ -218,8 +362,8 @@ export const PublicationStorefront: React.FC = () => {
 
   const handleConfigChange = (config: StorefrontConfiguration) => {
     // Validate website URL on change
-    if (config.meta.websiteUrl) {
-      validateWebsiteUrl(config.meta.websiteUrl);
+    if (config.websiteUrl) {
+      validateWebsiteUrl(config.websiteUrl);
     }
     
     setStorefrontConfig(config);
@@ -231,12 +375,12 @@ export const PublicationStorefront: React.FC = () => {
     if (!storefrontConfig) return { ready: false, reason: 'No configuration' };
     
     // Check if domain is set
-    if (!storefrontConfig.meta.websiteUrl) {
+    if (!storefrontConfig.websiteUrl) {
       return { ready: false, reason: 'Storefront domain is required' };
     }
     
     // Validate domain format
-    const urlWithoutProtocol = storefrontConfig.meta.websiteUrl.replace(/^https?:\/\//, '').toLowerCase();
+    const urlWithoutProtocol = storefrontConfig.websiteUrl.replace(/^https?:\/\//, '').toLowerCase();
     if (!urlWithoutProtocol.endsWith('.localmedia.store')) {
       return { ready: false, reason: 'Domain must be a subdomain of .localmedia.store' };
     }
@@ -263,9 +407,19 @@ export const PublicationStorefront: React.FC = () => {
       return;
     }
     
-    if (!confirm(`Are you sure you want to publish this draft?\n\nYour storefront will be live at:\n${storefrontConfig?.meta.websiteUrl}`)) {
-      return;
-    }
+    // Show confirmation dialog
+    setConfirmDialog({
+      open: true,
+      title: 'Publish Draft?',
+      description: `Your storefront will be live at:\n${storefrontConfig?.websiteUrl}\n\nNote: DNS propagation takes 1-2 minutes, CloudFront deployment takes 10-15 minutes.`,
+      onConfirm: () => executePublishDraft(),
+      confirmText: 'Publish',
+      variant: 'default'
+    });
+  };
+
+  const executePublishDraft = async () => {
+    if (!selectedPublication?.publicationId) return;
 
     try {
       setSaving(true);
@@ -278,7 +432,11 @@ export const PublicationStorefront: React.FC = () => {
         setHasDraft(false); // Draft was deleted during publish
         setHasLive(true); // New live version created
         setHasChanges(false);
-        alert(`🎉 Draft published successfully!\n\nYour storefront is now live at:\n${publishedConfig.meta.websiteUrl}`);
+        toast({
+          title: "🎉 Draft Published Successfully!",
+          description: `Your storefront is now live at: ${publishedConfig.websiteUrl}`,
+          duration: 5000,
+        });
       }
     } catch (err: any) {
       console.error('Error publishing draft:', err);
@@ -296,9 +454,19 @@ export const PublicationStorefront: React.FC = () => {
       ? 'A draft already exists. Replace it with a fresh copy from the live version? This will discard any unsaved changes in the draft.'
       : 'Create a draft copy from the live version? You can make changes to the draft without affecting the live storefront.';
     
-    if (!confirm(message)) {
-      return;
-    }
+    // Show confirmation dialog
+    setConfirmDialog({
+      open: true,
+      title: hasDraft ? 'Replace Existing Draft?' : 'Create Draft?',
+      description: message,
+      onConfirm: () => executeCreateDraft(),
+      confirmText: hasDraft ? 'Replace Draft' : 'Create Draft',
+      variant: hasDraft ? 'destructive' : 'default'
+    });
+  };
+
+  const executeCreateDraft = async () => {
+    if (!selectedPublication?.publicationId) return;
 
     try {
       setSaving(true);
@@ -329,7 +497,11 @@ export const PublicationStorefront: React.FC = () => {
         setViewingVersion('draft');
         setHasDraft(true);
         setHasChanges(false);
-        alert(hasDraft ? 'Draft replaced successfully! You are now editing the new draft version.' : 'Draft created successfully! You are now editing the draft version.');
+        toast({
+          title: hasDraft ? 'Draft Replaced Successfully!' : 'Draft Created Successfully!',
+          description: 'You are now editing the draft version.',
+          duration: 4000,
+        });
       }
     } catch (err: any) {
       console.error('Error creating draft:', err);
@@ -352,9 +524,25 @@ export const PublicationStorefront: React.FC = () => {
       return;
     }
     
-    if (hasChanges && !confirm('You have unsaved changes. Switching versions will discard them. Continue?')) {
+    if (hasChanges) {
+      // Show confirmation dialog
+      setConfirmDialog({
+        open: true,
+        title: 'Unsaved Changes',
+        description: 'You have unsaved changes. Switching versions will discard them. Continue?',
+        onConfirm: () => executeSwitchVersion(version),
+        confirmText: 'Switch Version',
+        variant: 'destructive'
+      });
       return;
     }
+
+    // No unsaved changes, switch directly
+    executeSwitchVersion(version);
+  };
+
+  const executeSwitchVersion = async (version: 'draft' | 'live') => {
+    if (!selectedPublication?.publicationId) return;
 
     try {
       setLoading(true);
@@ -466,9 +654,21 @@ export const PublicationStorefront: React.FC = () => {
         <div className="flex gap-2">
           {storefrontConfig && (
             <>
-              <Button variant="outline" disabled={!storefrontConfig || storefrontConfig.meta.isDraft}>
+              <Button 
+                variant="outline" 
+                disabled={!storefrontConfig.websiteUrl || !subdomainConfigured}
+                onClick={() => {
+                  if (storefrontConfig.websiteUrl && subdomainConfigured) {
+                    const url = storefrontConfig.meta.isDraft 
+                      ? `${storefrontConfig.websiteUrl}?isDraft=1`
+                      : storefrontConfig.websiteUrl;
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  }
+                }}
+                title={!storefrontConfig.websiteUrl ? 'Subdomain URL not set' : !subdomainConfigured ? 'Configure DNS first using the button below' : ''}
+              >
                 <Eye className="w-4 h-4 mr-2" />
-                Preview
+                {storefrontConfig.meta.isDraft ? 'Preview Draft' : 'View Live'}
               </Button>
               <Button 
                 variant="outline" 
@@ -492,6 +692,122 @@ export const PublicationStorefront: React.FC = () => {
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Subdomain Setup Status */}
+      {subdomainStatus && (
+        <Alert 
+          variant={subdomainStatus.success ? "default" : "destructive"} 
+          className={`border-l-4 ${subdomainStatus.success ? 'bg-green-50 dark:bg-green-950 border-green-500' : 'bg-red-50 dark:bg-red-950 border-red-500'}`}
+        >
+          <AlertDescription>
+            {subdomainStatus.success ? (
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2 font-semibold text-green-800 dark:text-green-200">
+                    {subdomainStatus.configured ? (
+                      <>
+                        <span className="text-xl">ℹ️</span>
+                        <span>Subdomain Already Configured</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xl">✅</span>
+                        <span>Subdomain Configured Successfully</span>
+                      </>
+                    )}
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => setSubdomainStatus(null)}
+                    className="h-6 px-2"
+                  >
+                    ✕
+                  </Button>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    <span className="font-medium">Domain:</span>
+                    <a 
+                      href={`https://${subdomainStatus.domain}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                    >
+                      {subdomainStatus.domain}
+                    </a>
+                  </div>
+
+                  {!subdomainStatus.configured && (
+                    <div className="mt-3 p-3 bg-white dark:bg-gray-900 rounded-md border border-green-200 dark:border-green-800">
+                      <p className="font-medium mb-2 text-green-900 dark:text-green-100">⏱️ Propagation Timeline:</p>
+                      <ul className="space-y-1 text-muted-foreground">
+                        <li className="flex items-center gap-2">
+                          <span className="w-32">DNS (Route53):</span>
+                          <strong className="text-green-700 dark:text-green-300">1-2 minutes</strong>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-32">CDN (CloudFront):</span>
+                          <strong className="text-green-700 dark:text-green-300">10-15 minutes</strong>
+                        </li>
+                      </ul>
+                      <p className="text-xs mt-2 text-muted-foreground">
+                        Your subdomain may not work immediately. Please wait for propagation to complete.
+                      </p>
+                    </div>
+                  )}
+
+                  {subdomainStatus.configured && (
+                    <p className="text-muted-foreground">
+                      This subdomain was already set up. Your storefront can use it immediately.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2 font-semibold text-red-800 dark:text-red-200">
+                    <span className="text-xl">⚠️</span>
+                    <span>Subdomain Setup Failed</span>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => setSubdomainStatus(null)}
+                    className="h-6 px-2"
+                  >
+                    ✕
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="p-3 bg-white dark:bg-gray-900 rounded-md border border-red-200 dark:border-red-800">
+                    <p className="font-medium text-red-900 dark:text-red-100 mb-1">Error Details:</p>
+                    <p className="text-sm text-red-700 dark:text-red-300">{subdomainStatus.error}</p>
+                  </div>
+
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-md border border-yellow-200 dark:border-yellow-800">
+                    <p className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">✓ Storefront Created</p>
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      Your storefront configuration was saved successfully, but the subdomain needs manual setup.
+                    </p>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Next Steps:</strong>
+                    <br />1. Contact your system administrator
+                    <br />2. Verify AWS credentials are configured
+                    <br />3. Check AWS permissions for Route53 and CloudFront
+                  </p>
+                </div>
+              </div>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -526,6 +842,7 @@ export const PublicationStorefront: React.FC = () => {
               onChange={handleConfigChange}
               onSave={handleSaveConfig}
               saving={saving}
+              publicationId={selectedPublication?.publicationId.toString() || ''}
             />
           </TabsContent>
 
@@ -1268,7 +1585,7 @@ export const PublicationStorefront: React.FC = () => {
                               </Button>
                               {readyCheck.ready ? (
                                 <p className="text-xs text-muted-foreground">
-                                  ✅ Ready to publish to {storefrontConfig.meta.websiteUrl}
+                                  ✅ Ready to publish to {storefrontConfig.websiteUrl}
                                 </p>
                               ) : (
                                 <p className="text-xs text-muted-foreground">
@@ -1315,39 +1632,97 @@ export const PublicationStorefront: React.FC = () => {
                   <Label htmlFor="website-url">
                     Storefront Domain <span className="text-red-500">*</span>
                   </Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground whitespace-nowrap font-mono text-sm">
-                      https://
-                    </span>
-                    <Input
-                      id="website-url"
-                      value={(storefrontConfig.meta.websiteUrl || '').replace(/^https?:\/\//, '').replace('.localmedia.store', '')}
-                      onChange={(e) => {
-                        const subdomain = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-                        const fullUrl = subdomain ? `https://${subdomain}.localmedia.store` : '';
-                        handleConfigChange({
-                          ...storefrontConfig,
-                          meta: { ...storefrontConfig.meta, websiteUrl: fullUrl }
-                        });
-                      }}
-                      placeholder="yourname"
-                      className={domainError ? 'border-red-500' : ''}
-                      required
-                    />
-                    <span className="text-muted-foreground whitespace-nowrap font-mono text-sm">
-                      .localmedia.store
-                    </span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      {storefrontConfig.websiteUrl && (
+                        <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="text-muted-foreground whitespace-nowrap font-mono text-sm">
+                        https://
+                      </span>
+                      <Input
+                        id="website-url"
+                        value={(storefrontConfig.websiteUrl || '').replace(/^https?:\/\//, '').replace('.localmedia.store', '')}
+                        onChange={(e) => {
+                          const subdomain = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                          const fullUrl = subdomain ? `https://${subdomain}.localmedia.store` : '';
+                          handleConfigChange({
+                            ...storefrontConfig,
+                            websiteUrl: fullUrl
+                          });
+                        }}
+                        placeholder="yourname"
+                        className={
+                          storefrontConfig.websiteUrl 
+                            ? 'bg-muted cursor-not-allowed opacity-75' 
+                            : (domainError ? 'border-red-500' : '')
+                        }
+                        disabled={!!storefrontConfig.websiteUrl && !storefrontConfig.meta.isDraft}
+                        readOnly={!!storefrontConfig.websiteUrl && storefrontConfig.meta.isDraft}
+                        required
+                      />
+                      <span className="text-muted-foreground whitespace-nowrap font-mono text-sm">
+                        .localmedia.store
+                      </span>
+                      {storefrontConfig.websiteUrl && !domainError && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(storefrontConfig.websiteUrl, '_blank')}
+                          className="shrink-0"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                    {domainError ? (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <span>⚠️</span>
+                        {domainError}
+                      </p>
+                    ) : storefrontConfig.websiteUrl ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-xs">
+                          <div className="flex items-center gap-1 text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/50 px-2 py-1 rounded border border-amber-200 dark:border-amber-800">
+                            <Lock className="w-3 h-3" />
+                            <span className="font-medium">Subdomain Locked</span>
+                          </div>
+                          <span className="text-muted-foreground">Cannot be changed for security reasons</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded p-2">
+                          <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">🌐 Automatic DNS Setup</p>
+                          <p>When you save or publish, Route53 and CloudFront will be automatically configured.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">
+                          Enter your subdomain (lowercase letters, numbers, and hyphens only)
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Example: <code className="bg-muted px-1 py-0.5 rounded">arlnow</code> → <code className="bg-muted px-1 py-0.5 rounded">https://arlnow.localmedia.store</code>
+                        </p>
+                      </div>
+                    )}
+                    {storefrontConfig.websiteUrl && !domainError && (
+                      <div className="space-y-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleConfigureDNS}
+                          disabled={configuringDNS || saving}
+                          className="w-full"
+                        >
+                          <Globe className="w-4 h-4 mr-2" />
+                          {configuringDNS ? 'Configuring DNS...' : 'Configure DNS Now'}
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center">
+                          Manually check and configure Route53 & CloudFront for this subdomain
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  {domainError ? (
-                    <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
-                      <span>⚠️</span>
-                      {domainError}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Enter your subdomain (lowercase letters, numbers, and hyphens only)
-                    </p>
-                  )}
                 </div>
 
                 <div>
@@ -1404,7 +1779,7 @@ export const PublicationStorefront: React.FC = () => {
                       const url = URL.createObjectURL(dataBlob);
                       const link = document.createElement('a');
                       link.href = url;
-                      link.download = `storefront-config-${storefrontConfig.meta.publisher_id}-${new Date().toISOString().split('T')[0]}.json`;
+                      link.download = `storefront-config-${storefrontConfig.meta.publisherId}-${new Date().toISOString().split('T')[0]}.json`;
                       link.click();
                     }}
                     className="w-full"
@@ -1442,7 +1817,7 @@ export const PublicationStorefront: React.FC = () => {
                         </h3>
                         {readyCheck.ready ? (
                           <p className="text-muted-foreground mb-6 max-w-md">
-                            Your storefront configuration is ready. Publish it to make it live at {storefrontConfig?.meta.websiteUrl}
+                            Your storefront configuration is ready. Publish it to make it live at {storefrontConfig?.websiteUrl}
                           </p>
                         ) : (
                           <div className="mb-6 max-w-md">
@@ -1557,6 +1932,32 @@ export const PublicationStorefront: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {confirmDialog.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmDialog({ ...confirmDialog, open: false });
+                confirmDialog.onConfirm();
+              }}
+              className={confirmDialog.variant === 'destructive' ? 'bg-destructive hover:bg-destructive/90' : ''}
+            >
+              {confirmDialog.confirmText}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

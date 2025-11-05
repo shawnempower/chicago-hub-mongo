@@ -1,4 +1,4 @@
-import { StorefrontConfiguration, StorefrontConfigurationInsert, StorefrontConfigurationUpdate } from '@/types/storefront';
+import { StorefrontConfiguration, StorefrontConfigurationInsert } from '@/types/storefront';
 import { API_BASE_URL } from '@/config/api';
 
 // Get auth token from localStorage
@@ -77,7 +77,7 @@ export const getStorefrontConfigurations = async (filters?: {
 };
 
 // Create a new storefront configuration
-export const createStorefrontConfiguration = async (configData: StorefrontConfigurationInsert): Promise<StorefrontConfiguration> => {
+export const createStorefrontConfiguration = async (configData: StorefrontConfigurationInsert): Promise<StorefrontConfiguration & { subdomainSetup?: any }> => {
   try {
     const response = await fetch(`${API_BASE_URL}/storefront`, {
       method: 'POST',
@@ -93,7 +93,22 @@ export const createStorefrontConfiguration = async (configData: StorefrontConfig
       throw new Error(errorData.error || 'Failed to create storefront configuration');
     }
 
-    return await response.json();
+    const result = await response.json();
+    
+    // Log subdomain setup result if present
+    if (result.subdomainSetup) {
+      if (result.subdomainSetup.success) {
+        if (result.subdomainSetup.alreadyConfigured) {
+          console.log(`ℹ️  Subdomain already configured: ${result.subdomainSetup.fullDomain}`);
+        } else {
+          console.log(`✅ Subdomain setup: ${result.subdomainSetup.fullDomain}`);
+        }
+      } else {
+        console.warn(`⚠️  Subdomain setup failed: ${result.subdomainSetup.error}`);
+      }
+    }
+
+    return result;
   } catch (error) {
     console.error('Error creating storefront configuration:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to create storefront configuration');
@@ -101,9 +116,15 @@ export const createStorefrontConfiguration = async (configData: StorefrontConfig
 };
 
 // Update an existing storefront configuration
-export const updateStorefrontConfiguration = async (publicationId: string, updates: Partial<StorefrontConfigurationInsert>): Promise<StorefrontConfiguration | null> => {
+export const updateStorefrontConfiguration = async (publicationId: string, updates: Partial<StorefrontConfigurationInsert>, isDraft?: boolean): Promise<StorefrontConfiguration | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}`, {
+    // Add isDraft query parameter if specified, otherwise infer from updates.meta.isDraft
+    const isDraftParam = isDraft !== undefined ? isDraft : updates.meta?.isDraft;
+    const url = isDraftParam !== undefined 
+      ? `${API_BASE_URL}/storefront/${publicationId}?isDraft=${isDraftParam}`
+      : `${API_BASE_URL}/storefront/${publicationId}`;
+    
+    const response = await fetch(url, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -298,5 +319,48 @@ export const getStorefrontTemplates = async (): Promise<Array<{ id: string; name
   } catch (error) {
     console.error('Error fetching storefront templates:', error);
     throw new Error('Failed to fetch storefront templates');
+  }
+};
+
+// Manually setup/refresh subdomain for existing storefront
+export const setupStorefrontSubdomain = async (publicationId: string, isDraft: boolean = false): Promise<{
+  success: boolean;
+  fullDomain: string;
+  alreadyConfigured: boolean;
+  error?: string;
+}> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}/setup-subdomain?isDraft=${isDraft}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication required');
+      }
+      if (response.status === 503) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Subdomain service unavailable');
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to setup subdomain');
+    }
+
+    const result = await response.json();
+    
+    // Log the result
+    if (result.success) {
+      if (result.alreadyConfigured) {
+        console.log(`ℹ️  Subdomain already configured: ${result.fullDomain}`);
+      } else {
+        console.log(`✅ Subdomain configured: ${result.fullDomain}`);
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error setting up subdomain:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to setup subdomain');
   }
 };

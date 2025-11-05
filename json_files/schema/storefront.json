@@ -3,12 +3,19 @@
   "title": "EmpowerLocal Storefront Configuration",
   "description": "Complete schema for configuring EmpowerLocal Storefront Components including theme, content, and metadata",
   "type": "object",
-  "required": ["meta", "theme", "components"],
+  "required": ["meta", "theme", "components", "websiteUrl"],
   "properties": {
+    "websiteUrl": {
+      "type": "string",
+      "description": "Website URL that hosts the storefront (required for preview and publishing)",
+      "format": "uri",
+      "minLength": 1,
+      "examples": ["https://mystore.localmedia.store", "https://chicagoreader.localmedia.store"]
+    },
     "meta": {
       "type": "object",
       "description": "Configuration metadata and versioning information",
-      "required": ["configVersion", "publisherId", "websiteUrl", "isDraft"],
+      "required": ["configVersion", "publisherId", "isDraft"],
       "properties": {
         "configVersion": {
           "type": "string",
@@ -29,13 +36,6 @@
           "type": "string",
           "description": "Unique identifier for the publisher or organization",
           "minLength": 1
-        },
-        "websiteUrl": {
-          "type": "string",
-          "description": "Website URL that hosts the storefront (required for preview and publishing)",
-          "format": "uri",
-          "minLength": 1,
-          "examples": ["https://chicagoreader.com", "https://blockclubchicago.org"]
         },
         "isDraft": {
           "type": "boolean",

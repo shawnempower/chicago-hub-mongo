@@ -17,6 +17,7 @@ import { connectToDatabase, setupGracefulShutdown } from '../src/integrations/mo
 import { emailService } from './emailService';
 import { s3Service } from './s3Service';
 import { StorefrontImageService } from './storefrontImageService';
+import { subdomainService } from './subdomainService';
 
 // Import the services and initialization function
 import { 
@@ -997,7 +998,16 @@ app.post('/api/storefront', authenticateToken, async (req: any, res) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
+    // Create storefront configuration
+    // Note: Subdomain setup is now manual-only via the /setup-subdomain endpoint
     const config = await storefrontConfigurationsService.create(req.body);
+    
+    // Log if websiteUrl is set (DNS should be configured manually)
+    if (req.body.websiteUrl) {
+      console.log(`ℹ️  Storefront created with domain: ${req.body.websiteUrl}`);
+      console.log(`   Use POST /api/storefront/:publicationId/setup-subdomain to configure DNS`);
+    }
+    
     res.status(201).json(config);
   } catch (error) {
     console.error('Error creating storefront configuration:', error);
@@ -1018,11 +1028,26 @@ app.put('/api/storefront/:publicationId', authenticateToken, async (req: any, re
     }
 
     const { publicationId } = req.params;
+    const { isDraft } = req.query;
     
     // Filter out MongoDB internal fields that shouldn't be updated
     const { _id, createdAt, updatedAt, publicationId: bodyPublicationId, ...updateData } = req.body;
     
-    const config = await storefrontConfigurationsService.update(publicationId, updateData);
+    // Get isDraft from body if not in query
+    const isDraftValue = isDraft !== undefined ? isDraft === 'true' : updateData.meta?.isDraft;
+    
+    // Security: Prevent subdomain changes once set
+    if (updateData.websiteUrl) {
+      const existingConfig = await storefrontConfigurationsService.getByPublicationId(publicationId, isDraftValue);
+      if (existingConfig && existingConfig.websiteUrl && existingConfig.websiteUrl !== updateData.websiteUrl) {
+        return res.status(403).json({ 
+          error: 'Subdomain cannot be changed once set',
+          details: 'For security reasons, the subdomain URL cannot be modified after initial configuration.'
+        });
+      }
+    }
+    
+    const config = await storefrontConfigurationsService.update(publicationId, updateData, isDraftValue);
     
     if (!config) {
       return res.status(404).json({ error: 'Storefront configuration not found' });
@@ -1034,7 +1059,81 @@ app.put('/api/storefront/:publicationId', authenticateToken, async (req: any, re
     console.error('Publication ID:', req.params.publicationId);
     console.error('User ID:', req.user?.id);
     console.error('Request body keys:', Object.keys(req.body || {}));
-    res.status(500).json({ error: 'Failed to update storefront configuration' });
+    console.error('Full error details:', JSON.stringify(error, null, 2));
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    res.status(500).json({ 
+      error: 'Failed to update storefront configuration',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// Manual subdomain setup for existing storefront (admin only)
+app.post('/api/storefront/:publicationId/setup-subdomain', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const subdomainServiceInstance = subdomainService();
+    if (!subdomainServiceInstance) {
+      return res.status(503).json({ 
+        success: false,
+        error: 'Subdomain service unavailable. Check AWS credentials in server configuration.' 
+      });
+    }
+
+    const { publicationId } = req.params;
+    const { isDraft } = req.query;
+
+    // Get storefront to find websiteUrl
+    const storefront = await storefrontConfigurationsService.getByPublicationId(
+      publicationId, 
+      isDraft === 'true'
+    );
+    
+    if (!storefront) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Storefront not found' 
+      });
+    }
+
+    const websiteUrl = storefront.websiteUrl;
+    if (!websiteUrl) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Storefront does not have a websiteUrl configured. Please set a domain first.' 
+      });
+    }
+
+    // Extract subdomain
+    const subdomain = websiteUrl.replace(/^https?:\/\//, '').split('.')[0];
+    
+    if (!subdomain || subdomain === 'localmedia') {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid subdomain in websiteUrl' 
+      });
+    }
+
+    console.log(`Admin ${req.user.email} requesting manual subdomain setup: ${subdomain}`);
+
+    // Setup subdomain
+    const result = await subdomainServiceInstance.setupSubdomain(subdomain);
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error setting up subdomain:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || 'Failed to setup subdomain' 
+    });
   }
 });
 

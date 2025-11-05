@@ -5,8 +5,9 @@ export interface StorefrontMeta {
   description?: string;
   lastUpdated?: string;
   publisherId: string;
-  websiteUrl?: string;
   isDraft: boolean;
+  faviconUrl?: string;
+  logoUrl?: string;
 }
 
 export interface StorefrontColors {
@@ -290,6 +291,7 @@ export interface Analytics {
 export interface StorefrontConfiguration {
   _id?: string;
   publicationId?: string;
+  websiteUrl?: string; // Root level website URL (required for preview/publishing)
   meta: StorefrontMeta;
   theme: StorefrontTheme;
   components: StorefrontComponents;
@@ -328,9 +330,11 @@ export const validateStorefrontConfig = (config: unknown): string[] => {
     if (meta.configVersion && typeof meta.configVersion === 'string' && !/^\d+\.\d+\.\d+$/.test(meta.configVersion)) {
       errors.push('meta.configVersion must follow semantic versioning (e.g., "1.0.0")');
     }
-    if (meta.websiteUrl && typeof meta.websiteUrl !== 'string') {
-      errors.push('meta.websiteUrl must be a string');
-    }
+  }
+  
+  // Validate websiteUrl at root level
+  if (configObj.websiteUrl && typeof configObj.websiteUrl !== 'string') {
+    errors.push('websiteUrl must be a string');
   }
   
   if (!configObj.theme) {

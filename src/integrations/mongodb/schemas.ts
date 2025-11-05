@@ -824,12 +824,12 @@ export interface PublicationFileUpdate extends Partial<Omit<PublicationFile, '_i
 export interface StorefrontConfiguration {
   _id?: string | ObjectId;
   publicationId: string; // Reference to publication
+  websiteUrl: string; // Required for preview and publishing (root level)
   meta: {
     configVersion: string;
     description?: string;
     lastUpdated?: string;
     publisherId: string;
-    websiteUrl: string; // Required for preview and publishing
     isDraft: boolean;
     faviconUrl?: string;
     logoUrl?: string;
