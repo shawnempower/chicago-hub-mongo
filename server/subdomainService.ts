@@ -12,7 +12,7 @@ import {
 // Configuration loaded from environment variables
 // In production: AWS Systems Manager Parameter Store (SSM)
 // In development: .env file
-const CONFIG = {
+const getConfig = () => ({
   DOMAIN: process.env.STOREFRONT_DOMAIN,
   HOSTED_ZONE_ID: process.env.STOREFRONT_HOSTED_ZONE_ID,
   CLOUDFRONT_DISTRIBUTION_ID: process.env.STOREFRONT_CLOUDFRONT_DISTRIBUTION_ID,
@@ -20,19 +20,23 @@ const CONFIG = {
   SSL_CERTIFICATE_ARN: process.env.STOREFRONT_SSL_CERTIFICATE_ARN,
   AWS_REGION: process.env.STOREFRONT_AWS_REGION,
   DNS_TTL: parseInt(process.env.STOREFRONT_DNS_TTL || '300')
+});
+
+// Validate configuration (called when service is instantiated)
+const validateConfig = () => {
+  const CONFIG = getConfig();
+  const missingConfig = Object.entries(CONFIG)
+    .filter(([key, value]) => key !== 'DNS_TTL' && !value)
+    .map(([key]) => `STOREFRONT_${key}`);
+
+  if (missingConfig.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missingConfig.join(', ')}\n` +
+      'Please ensure these are set in your .env file (development) or AWS SSM Parameter Store (production)'
+    );
+  }
+  return CONFIG;
 };
-
-// Validate required configuration
-const missingConfig = Object.entries(CONFIG)
-  .filter(([key, value]) => key !== 'DNS_TTL' && !value)
-  .map(([key]) => `STOREFRONT_${key}`);
-
-if (missingConfig.length > 0) {
-  throw new Error(
-    `Missing required environment variables: ${missingConfig.join(', ')}\n` +
-    'Please ensure these are set in your .env file (development) or AWS SSM Parameter Store (production)'
-  );
-}
 
 interface SubdomainSetupResult {
   success: boolean;
@@ -44,10 +48,14 @@ interface SubdomainSetupResult {
 export class SubdomainService {
   private route53Client: Route53Client;
   private cloudFrontClient: CloudFrontClient;
+  private CONFIG: ReturnType<typeof getConfig>;
 
   constructor() {
+    // Validate and get config when service is instantiated
+    this.CONFIG = validateConfig();
+    
     const awsConfig = {
-      region: CONFIG.AWS_REGION,
+      region: this.CONFIG.AWS_REGION,
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
@@ -64,7 +72,7 @@ export class SubdomainService {
   private async checkRoute53Exists(fullDomain: string): Promise<boolean> {
     try {
       const command = new ListResourceRecordSetsCommand({
-        HostedZoneId: CONFIG.HOSTED_ZONE_ID,
+        HostedZoneId: this.CONFIG.HOSTED_ZONE_ID,
         StartRecordName: fullDomain,
         StartRecordType: 'CNAME',
         MaxItems: 1
@@ -90,7 +98,7 @@ export class SubdomainService {
   private async checkCloudFrontHasAlias(fullDomain: string): Promise<boolean> {
     try {
       const command = new GetDistributionConfigCommand({
-        Id: CONFIG.CLOUDFRONT_DISTRIBUTION_ID
+        Id: this.CONFIG.CLOUDFRONT_DISTRIBUTION_ID
       });
 
       const response = await this.cloudFrontClient.send(command);
@@ -108,7 +116,7 @@ export class SubdomainService {
    */
   private async createRoute53Record(fullDomain: string): Promise<void> {
     const command = new ChangeResourceRecordSetsCommand({
-      HostedZoneId: CONFIG.HOSTED_ZONE_ID,
+      HostedZoneId: this.CONFIG.HOSTED_ZONE_ID,
       ChangeBatch: {
         Changes: [
           {
@@ -116,8 +124,8 @@ export class SubdomainService {
             ResourceRecordSet: {
               Name: fullDomain,
               Type: 'CNAME',
-              TTL: CONFIG.DNS_TTL,
-              ResourceRecords: [{ Value: CONFIG.CLOUDFRONT_DOMAIN }]
+              TTL: this.CONFIG.DNS_TTL,
+              ResourceRecords: [{ Value: this.CONFIG.CLOUDFRONT_DOMAIN }]
             }
           }
         ]
@@ -125,7 +133,7 @@ export class SubdomainService {
     });
 
     await this.route53Client.send(command);
-    console.log(`✅ Route53 CNAME created: ${fullDomain} → ${CONFIG.CLOUDFRONT_DOMAIN}`);
+    console.log(`✅ Route53 CNAME created: ${fullDomain} → ${this.CONFIG.CLOUDFRONT_DOMAIN}`);
   }
 
   /**
@@ -134,7 +142,7 @@ export class SubdomainService {
   private async addCloudFrontAlias(fullDomain: string): Promise<void> {
     // Get current config
     const getCommand = new GetDistributionConfigCommand({
-      Id: CONFIG.CLOUDFRONT_DISTRIBUTION_ID
+      Id: this.CONFIG.CLOUDFRONT_DISTRIBUTION_ID
     });
 
     const getResponse = await this.cloudFrontClient.send(getCommand);
@@ -152,16 +160,16 @@ export class SubdomainService {
 
     // Ensure SSL certificate is configured
     config.ViewerCertificate = {
-      ACMCertificateArn: CONFIG.SSL_CERTIFICATE_ARN,
+      ACMCertificateArn: this.CONFIG.SSL_CERTIFICATE_ARN,
       SSLSupportMethod: 'sni-only',
       MinimumProtocolVersion: 'TLSv1.2_2021',
-      Certificate: CONFIG.SSL_CERTIFICATE_ARN,
+      Certificate: this.CONFIG.SSL_CERTIFICATE_ARN,
       CertificateSource: 'acm'
     };
 
     // Update distribution
     const updateCommand = new UpdateDistributionCommand({
-      Id: CONFIG.CLOUDFRONT_DISTRIBUTION_ID,
+      Id: this.CONFIG.CLOUDFRONT_DISTRIBUTION_ID,
       DistributionConfig: config,
       IfMatch: etag
     });
@@ -178,13 +186,13 @@ export class SubdomainService {
     if (!/^[a-z0-9-]+$/.test(subdomain)) {
       return {
         success: false,
-        fullDomain: `${subdomain}.${CONFIG.DOMAIN}`,
+        fullDomain: `${subdomain}.${this.CONFIG.DOMAIN}`,
         alreadyConfigured: false,
         error: 'Invalid subdomain format. Use only lowercase letters, numbers, and hyphens.'
       };
     }
 
-    const fullDomain = `${subdomain}.${CONFIG.DOMAIN}`;
+    const fullDomain = `${subdomain}.${this.CONFIG.DOMAIN}`;
 
     try {
       console.log(`🔧 Checking subdomain: ${fullDomain}`);
