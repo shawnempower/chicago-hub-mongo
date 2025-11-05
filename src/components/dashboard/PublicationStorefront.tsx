@@ -330,44 +330,45 @@ export const PublicationStorefront: React.FC = () => {
   };
 
   // Debounced subdomain availability check
-  const checkSubdomainAvailabilityDebounced = React.useCallback(
-    (() => {
-      let timeoutId: NodeJS.Timeout;
-      return (subdomain: string) => {
+  const checkSubdomainAvailabilityDebounced = React.useMemo(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    return (subdomain: string) => {
+      if (timeoutId) {
         clearTimeout(timeoutId);
-        
-        if (!subdomain || subdomain.trim() === '') {
-          setSubdomainAvailable(null);
-          return;
-        }
+      }
+      
+      if (!subdomain || subdomain.trim() === '') {
+        setSubdomainAvailable(null);
+        setCheckingSubdomain(false);
+        return;
+      }
 
-        setCheckingSubdomain(true);
-        
-        timeoutId = setTimeout(async () => {
-          try {
-            const result = await checkSubdomainAvailability(
-              subdomain,
-              selectedPublication?.publicationId?.toString()
-            );
-            
-            setSubdomainAvailable(result.available);
-            
-            if (!result.available) {
-              setDomainError('This subdomain is already taken by another publication');
-            } else if (domainError === 'This subdomain is already taken by another publication') {
-              setDomainError(null);
-            }
-          } catch (error) {
-            console.error('Error checking subdomain availability:', error);
-            setSubdomainAvailable(null);
-          } finally {
-            setCheckingSubdomain(false);
+      setCheckingSubdomain(true);
+      
+      timeoutId = setTimeout(async () => {
+        try {
+          const result = await checkSubdomainAvailability(
+            subdomain,
+            selectedPublication?.publicationId?.toString()
+          );
+          
+          setSubdomainAvailable(result.available);
+          
+          if (!result.available) {
+            setDomainError('This subdomain is already taken by another publication');
+          } else if (domainError === 'This subdomain is already taken by another publication') {
+            setDomainError(null);
           }
-        }, 500); // 500ms debounce
-      };
-    })(),
-    [selectedPublication?.publicationId, domainError]
-  );
+        } catch (error) {
+          console.error('Error checking subdomain availability:', error);
+          setSubdomainAvailable(null);
+        } finally {
+          setCheckingSubdomain(false);
+        }
+      }, 500); // 500ms debounce
+    };
+  }, [selectedPublication?.publicationId, domainError]);
 
   const handleSaveConfig = async (config: StorefrontConfiguration) => {
     if (!selectedPublication?.publicationId) return;
