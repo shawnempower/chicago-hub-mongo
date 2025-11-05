@@ -935,6 +935,41 @@ app.get('/api/publications/files/search', authenticateToken, async (req: any, re
 
 // ===== STOREFRONT CONFIGURATION ROUTES =====
 
+// Check if subdomain is available (admin only) - MUST be before :publicationId route
+app.get('/api/storefront/check-subdomain', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { subdomain, publicationId } = req.query;
+    
+    if (!subdomain) {
+      return res.status(400).json({ error: 'Subdomain is required' });
+    }
+
+    // Construct full URL
+    const websiteUrl = `https://${subdomain}.localmedia.store`;
+    
+    // Check if subdomain exists
+    const exists = await storefrontConfigurationsService.checkSubdomainExists(
+      websiteUrl, 
+      publicationId as string | undefined
+    );
+    
+    res.json({ 
+      available: !exists,
+      subdomain,
+      message: exists ? 'This subdomain is already taken' : 'Subdomain is available'
+    });
+  } catch (error) {
+    console.error('Error checking subdomain availability:', error);
+    res.status(500).json({ error: 'Failed to check subdomain availability' });
+  }
+});
+
 // Get storefront configuration by publication ID
 app.get('/api/storefront/:publicationId', async (req, res) => {
   try {
@@ -986,41 +1021,6 @@ app.get('/api/storefront', authenticateToken, async (req: any, res) => {
   } catch (error) {
     console.error('Error fetching storefront configurations:', error);
     res.status(500).json({ error: 'Failed to fetch storefront configurations' });
-  }
-});
-
-// Check if subdomain is available (admin only)
-app.get('/api/storefront/check-subdomain', authenticateToken, async (req: any, res) => {
-  try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    const { subdomain, publicationId } = req.query;
-    
-    if (!subdomain) {
-      return res.status(400).json({ error: 'Subdomain is required' });
-    }
-
-    // Construct full URL
-    const websiteUrl = `https://${subdomain}.localmedia.store`;
-    
-    // Check if subdomain exists
-    const exists = await storefrontConfigurationsService.checkSubdomainExists(
-      websiteUrl, 
-      publicationId as string | undefined
-    );
-    
-    res.json({ 
-      available: !exists,
-      subdomain,
-      message: exists ? 'This subdomain is already taken' : 'Subdomain is available'
-    });
-  } catch (error) {
-    console.error('Error checking subdomain availability:', error);
-    res.status(500).json({ error: 'Failed to check subdomain availability' });
   }
 });
 
