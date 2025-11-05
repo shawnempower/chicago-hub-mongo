@@ -74,6 +74,8 @@ export const PublicationStorefront: React.FC = () => {
   const [configuringDNS, setConfiguringDNS] = useState(false); // Track manual DNS configuration
   const [checkingSubdomain, setCheckingSubdomain] = useState(false); // Track subdomain availability check
   const [subdomainAvailable, setSubdomainAvailable] = useState<boolean | null>(null); // Track if subdomain is available
+  const checkSubdomainTimeoutRef = React.useRef<NodeJS.Timeout | null>(null); // Ref to store timeout ID
+  const [originalWebsiteUrl, setOriginalWebsiteUrl] = useState<string | null>(null); // Track the original saved websiteUrl
   
   // Dialog states
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -138,6 +140,8 @@ export const PublicationStorefront: React.FC = () => {
       }
       
       setStorefrontConfig(config);
+      // Track the original websiteUrl to distinguish "already set" from "being typed"
+      setOriginalWebsiteUrl(config?.websiteUrl || null);
     } catch (err) {
       console.error('Error loading storefront configuration:', err);
       setError('Failed to load storefront configuration');
@@ -330,60 +334,67 @@ export const PublicationStorefront: React.FC = () => {
   };
 
   // Debounced subdomain availability check
-  const checkSubdomainAvailabilityDebounced = React.useMemo(() => {
-    let timeoutId: NodeJS.Timeout | null = null;
+  const checkSubdomainAvailabilityDebounced = (subdomain: string) => {
+    // Clear previous timeout
+    if (checkSubdomainTimeoutRef.current) {
+      clearTimeout(checkSubdomainTimeoutRef.current);
+    }
     
-    return (subdomain: string) => {
-      // Clear previous timeout
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      
-      // Reset states if empty
-      if (!subdomain || subdomain.trim() === '') {
-        setSubdomainAvailable(null);
-        setCheckingSubdomain(false);
-        return;
-      }
+    // Reset states if empty
+    if (!subdomain || subdomain.trim() === '') {
+      setSubdomainAvailable(null);
+      setCheckingSubdomain(false);
+      return;
+    }
 
-      // Wait for user to stop typing before making the API call
-      timeoutId = setTimeout(async () => {
-        setCheckingSubdomain(true);
+    // Wait for user to stop typing before making the API call
+    checkSubdomainTimeoutRef.current = setTimeout(async () => {
+      setCheckingSubdomain(true);
+      
+      try {
+        const result = await checkSubdomainAvailability(
+          subdomain,
+          selectedPublication?.publicationId?.toString()
+        );
         
-        try {
-          const result = await checkSubdomainAvailability(
-            subdomain,
-            selectedPublication?.publicationId?.toString()
-          );
-          
-          setSubdomainAvailable(result.available);
-          
-          if (!result.available) {
-            setDomainError('This subdomain is already taken by another publication');
-          } else if (domainError === 'This subdomain is already taken by another publication') {
-            setDomainError(null);
-          }
-        } catch (error) {
-          console.error('Error checking subdomain availability:', error);
-          setSubdomainAvailable(null);
-        } finally {
-          setCheckingSubdomain(false);
+        setSubdomainAvailable(result.available);
+        
+        if (!result.available) {
+          setDomainError('This subdomain is already taken by another publication');
+        } else if (domainError === 'This subdomain is already taken by another publication') {
+          setDomainError(null);
         }
-      }, 800); // 800ms debounce - wait for user to stop typing
-    };
-  }, [selectedPublication?.publicationId, domainError]);
+      } catch (error) {
+        console.error('Error checking subdomain availability:', error);
+        setSubdomainAvailable(null);
+      } finally {
+        setCheckingSubdomain(false);
+      }
+    }, 800); // 800ms debounce - wait for user to stop typing
+  };
 
   const handleSaveConfig = async (config: StorefrontConfiguration) => {
     if (!selectedPublication?.publicationId) return;
     
-    // Validate website URL before saving
-    if (config.websiteUrl && !validateWebsiteUrl(config.websiteUrl)) {
+    // Check if subdomain is set (required field)
+    if (!config.websiteUrl || config.websiteUrl.trim() === '') {
+      setError('Subdomain is required. Please enter a subdomain before saving.');
+      toast({
+        title: 'Subdomain Required',
+        description: 'Please enter a subdomain (e.g., yourname.localmedia.store) before saving.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Validate website URL format
+    if (!validateWebsiteUrl(config.websiteUrl)) {
       setError(domainError || 'Please fix the website URL before saving');
       return;
     }
     
     // Check subdomain availability before saving (if it's a new subdomain)
-    if (config.websiteUrl && !storefrontConfig?.websiteUrl && subdomainAvailable === false) {
+    if (!originalWebsiteUrl && subdomainAvailable === false) {
       setError('This subdomain is already taken by another publication');
       return;
     }
@@ -402,6 +413,7 @@ export const PublicationStorefront: React.FC = () => {
       const updatedConfig = await updateStorefrontConfiguration(selectedPublication.publicationId.toString(), cleanConfig);
       if (updatedConfig) {
         setStorefrontConfig(updatedConfig);
+        setOriginalWebsiteUrl(updatedConfig.websiteUrl || null); // Update original URL after save
         setHasChanges(false);
       }
     } catch (err) {
@@ -1686,9 +1698,7 @@ export const PublicationStorefront: React.FC = () => {
                   </Label>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      {storefrontConfig.websiteUrl && (
-                        <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
-                      )}
+                      <Lock className={`w-4 h-4 shrink-0 ${originalWebsiteUrl ? 'text-muted-foreground' : 'invisible'}`} />
                       <span className="text-muted-foreground whitespace-nowrap font-mono text-sm">
                         https://
                       </span>
@@ -1704,35 +1714,33 @@ export const PublicationStorefront: React.FC = () => {
                           });
                           
                           // Check subdomain availability if not already set
-                          if (!storefrontConfig.websiteUrl && subdomain) {
+                          if (!originalWebsiteUrl && subdomain) {
                             checkSubdomainAvailabilityDebounced(subdomain);
                           }
                         }}
                         placeholder="yourname"
                         className={
-                          storefrontConfig.websiteUrl 
+                          originalWebsiteUrl
                             ? 'bg-muted cursor-not-allowed opacity-75' 
                             : (domainError ? 'border-red-500' : subdomainAvailable === false ? 'border-red-500' : '')
                         }
-                        disabled={!!storefrontConfig.websiteUrl && !storefrontConfig.meta.isDraft}
-                        readOnly={!!storefrontConfig.websiteUrl && storefrontConfig.meta.isDraft}
+                        disabled={!!originalWebsiteUrl && !storefrontConfig.meta.isDraft}
+                        readOnly={!!originalWebsiteUrl && storefrontConfig.meta.isDraft}
                         required
                       />
                       <span className="text-muted-foreground whitespace-nowrap font-mono text-sm">
                         .localmedia.store
                       </span>
-                      {storefrontConfig.websiteUrl && !domainError && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(storefrontConfig.websiteUrl, '_blank')}
-                          className="shrink-0"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => originalWebsiteUrl && window.open(originalWebsiteUrl, '_blank')}
+                        className={`shrink-0 ${!originalWebsiteUrl || domainError ? 'invisible' : ''}`}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </Button>
                     </div>
-                    {checkingSubdomain && !storefrontConfig.websiteUrl ? (
+                    {checkingSubdomain && !originalWebsiteUrl ? (
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <span className="animate-spin">⏳</span>
                         Checking availability...
@@ -1742,12 +1750,12 @@ export const PublicationStorefront: React.FC = () => {
                         <span>⚠️</span>
                         {domainError}
                       </p>
-                    ) : subdomainAvailable === true && !storefrontConfig.websiteUrl ? (
+                    ) : subdomainAvailable === true && !originalWebsiteUrl ? (
                       <p className="text-xs text-green-600 flex items-center gap-1">
                         <span>✅</span>
                         Subdomain is available
                       </p>
-                    ) : storefrontConfig.websiteUrl ? (
+                    ) : originalWebsiteUrl ? (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-xs">
                           <div className="flex items-center gap-1 text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/50 px-2 py-1 rounded border border-amber-200 dark:border-amber-800">
@@ -1771,7 +1779,7 @@ export const PublicationStorefront: React.FC = () => {
                         </p>
                       </div>
                     )}
-                    {storefrontConfig.websiteUrl && !domainError && (
+                    {originalWebsiteUrl && !domainError && (
                       <div className="space-y-2">
                         <Button
                           type="button"
@@ -1787,6 +1795,12 @@ export const PublicationStorefront: React.FC = () => {
                         <p className="text-xs text-muted-foreground text-center">
                           Manually check and configure Route53 & CloudFront for this subdomain
                         </p>
+                      </div>
+                    )}
+                    {storefrontConfig.websiteUrl && !originalWebsiteUrl && !domainError && (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded text-xs">
+                        <p className="text-blue-900 dark:text-blue-100 font-medium mb-1">💡 Save first to configure DNS</p>
+                        <p className="text-blue-700 dark:text-blue-300">Click "Save Configuration" above to save your subdomain, then you can configure DNS settings.</p>
                       </div>
                     )}
                   </div>
