@@ -49,6 +49,7 @@ import { StorefrontConfiguration, validateStorefrontConfig } from '@/types/store
 import { getStorefrontConfiguration, createStorefrontConfiguration, updateStorefrontConfiguration, publishStorefrontConfiguration, createDraftStorefrontConfiguration, setupStorefrontSubdomain, checkSubdomainAvailability } from '@/api/storefront';
 import { StorefrontEditor } from './StorefrontEditor';
 import { StorefrontImageManager } from './StorefrontImageManager';
+import { API_BASE_URL } from '@/config/api';
 
 export const PublicationStorefront: React.FC = () => {
   const { selectedPublication } = usePublication();
@@ -111,7 +112,6 @@ export const PublicationStorefront: React.FC = () => {
       setError(null);
       
       // Check for both draft and live versions
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
       const authToken = localStorage.getItem('auth_token');
       const pubId = selectedPublication.publicationId.toString();
       
@@ -540,7 +540,6 @@ export const PublicationStorefront: React.FC = () => {
       
       // If draft exists, delete it first
       if (hasDraft) {
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
         const authToken = localStorage.getItem('auth_token');
         
         // Delete existing draft
@@ -613,7 +612,7 @@ export const PublicationStorefront: React.FC = () => {
       setError(null);
       
       // Fetch the specific version
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/storefront/${selectedPublication.publicationId.toString()}?isDraft=${version === 'draft'}`, {
+      const response = await fetch(`${API_BASE_URL}/storefront/${selectedPublication.publicationId.toString()}?isDraft=${version === 'draft'}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
