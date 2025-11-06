@@ -5118,6 +5118,7 @@ export const DashboardInventoryManager = () => {
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
+                    publicationHubIds={currentPublication?.hubIds}
                     pricingFields={[
                       { key: 'flatRate', label: 'Price', placeholder: '100' }
                     ]}
@@ -5184,6 +5185,7 @@ export const DashboardInventoryManager = () => {
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
+                    publicationHubIds={currentPublication?.hubIds}
                     pricingFields={[
                       { key: 'flatRate', label: 'Price', placeholder: '50' }
                     ]}
@@ -5289,6 +5291,7 @@ export const DashboardInventoryManager = () => {
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
+                    publicationHubIds={currentPublication?.hubIds}
                     pricingFields={[
                       { key: 'flatRate', label: 'Price', placeholder: '500' }
                     ]}
@@ -5452,6 +5455,7 @@ export const DashboardInventoryManager = () => {
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
+                    publicationHubIds={currentPublication?.hubIds}
                     pricingFields={[
                       { key: 'flatRate', label: 'Price', placeholder: '100' }
                     ]}
@@ -5584,6 +5588,7 @@ export const DashboardInventoryManager = () => {
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
+                    publicationHubIds={currentPublication?.hubIds}
                     pricingFields={[
                       { key: 'flatRate', label: 'Price', placeholder: '150' }
                     ]}
@@ -5772,6 +5777,7 @@ export const DashboardInventoryManager = () => {
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
+                    publicationHubIds={currentPublication?.hubIds}
                     pricingFields={[
                       { key: 'flatRate', label: 'Price', placeholder: '100' }
                     ]}
@@ -5965,6 +5971,7 @@ export const DashboardInventoryManager = () => {
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
+                    publicationHubIds={currentPublication?.hubIds}
                     pricingFields={[
                       { key: 'flatRate', label: 'Price', placeholder: '2500' }
                     ]}
@@ -6033,6 +6040,7 @@ export const DashboardInventoryManager = () => {
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
+                    publicationHubIds={currentPublication?.hubIds}
                     pricingFields={[
                       { key: 'flatRate', label: 'Price', placeholder: '100' }
                     ]}
@@ -6186,6 +6194,7 @@ export const DashboardInventoryManager = () => {
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}
                     hubPricing={editingItem.hubPricing || []}
+                    publicationHubIds={currentPublication?.hubIds}
                     pricingFields={[
                       { key: 'flatRate', label: 'Sponsorship Fee', placeholder: '2500' }
                     ]}

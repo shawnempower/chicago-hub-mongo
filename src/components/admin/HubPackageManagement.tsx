@@ -23,6 +23,7 @@ import {
 import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { PackageBuilderForm } from './PackageBuilderForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useHubContext } from '@/contexts/HubContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -36,6 +37,7 @@ const getAuthHeaders = () => {
 
 export const HubPackageManagement = () => {
   const navigate = useNavigate();
+  const { selectedHubId } = useHubContext();
   const [packages, setPackages] = useState<HubPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +54,7 @@ export const HubPackageManagement = () => {
       if (filterStatus === 'active') params.append('active_only', 'true');
       if (filterStatus === 'draft') params.append('approval_status', 'draft');
       if (filterStatus === 'archived') params.append('approval_status', 'archived');
+      if (selectedHubId) params.append('hub_id', selectedHubId);
 
       const response = await fetch(`${API_BASE_URL}/api/hub-packages?${params}`, {
         headers: getAuthHeaders()
@@ -71,7 +74,7 @@ export const HubPackageManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus, toast]);
+  }, [filterStatus, selectedHubId, toast]);
 
   useEffect(() => {
     fetchPackages();

@@ -81,7 +81,7 @@ export interface DashboardStats {
   }>;
 }
 
-export const useDashboardStats = () => {
+export const useDashboardStats = (hubId?: string | null) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +96,12 @@ export const useDashboardStats = () => {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch(`${API_BASE_URL}/admin/dashboard-stats`, {
+      // Add hubId as query parameter if provided
+      const url = hubId 
+        ? `${API_BASE_URL}/admin/dashboard-stats?hubId=${hubId}`
+        : `${API_BASE_URL}/admin/dashboard-stats`;
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +128,8 @@ export const useDashboardStats = () => {
 
   useEffect(() => {
     fetchDashboardStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hubId]); // Re-fetch when hubId changes
 
   return {
     stats,

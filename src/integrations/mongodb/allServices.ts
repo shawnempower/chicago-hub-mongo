@@ -31,6 +31,7 @@ import {
   COLLECTIONS
 } from './schemas';
 import { AreasService } from './areasService';
+import { HubsService } from './hubService';
 
 // ===== AD PACKAGES SERVICE =====
 export class AdPackagesService {
@@ -1903,6 +1904,7 @@ export let publicationFilesService: PublicationFilesService;
 export let storefrontConfigurationsService: StorefrontConfigurationsService;
 export let surveySubmissionsService: SurveySubmissionsService;
 export let areasService: AreasService;
+export let hubsService: typeof HubsService;
 
 // Initialize all services - call this after environment variables are loaded
 export const initializeServices = () => {
@@ -1922,4 +1924,5 @@ export const initializeServices = () => {
   storefrontConfigurationsService = new StorefrontConfigurationsService();
   surveySubmissionsService = new SurveySubmissionsService();
   areasService = new AreasService();
+  hubsService = HubsService; // Static class, no instantiation needed
 };

@@ -40,6 +40,7 @@ import {
   surveySubmissionsService,
   areasService
 } from '../src/integrations/mongodb/allServices';
+import { HubsService } from '../src/integrations/mongodb/hubService';
 import { hubPackagesService } from '../src/integrations/mongodb/hubPackageService';
 import { authService, initializeAuthService } from '../src/integrations/mongodb/authService';
 import { getDatabase } from '../src/integrations/mongodb/client';
@@ -474,6 +475,17 @@ app.get('/api/publications/types', async (req, res) => {
   } catch (error) {
     console.error('Error fetching publication types:', error);
     res.status(500).json({ error: 'Failed to fetch types' });
+  }
+});
+
+// Get unassigned publications (must come BEFORE /api/publications/:id)
+app.get('/api/publications/unassigned', async (req, res) => {
+  try {
+    const publications = await HubsService.getUnassignedPublications();
+    res.json({ publications });
+  } catch (error) {
+    console.error('Error fetching unassigned publications:', error);
+    res.status(500).json({ error: 'Failed to fetch unassigned publications' });
   }
 });
 
@@ -2382,13 +2394,21 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
       return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
     }
 
+    // Get optional hubId filter from query params
+    const hubId = req.query.hubId as string | undefined;
+
     // Get counts from various services
-    const [leads, publications, packages, publicationFiles] = await Promise.all([
+    const [leads, allPublications, packages, publicationFiles] = await Promise.all([
       leadInquiriesService.getAll(),
       publicationsService.getAll(),
       adPackagesService.getAll(),
       publicationFilesService.search('', {}) // Get all files with empty search query
     ]);
+
+    // Filter publications by hub if hubId is provided
+    const publications = hubId 
+      ? allPublications.filter(pub => pub.hubIds?.includes(hubId))
+      : allPublications;
 
     // Calculate detailed marketplace aggregates
     let adInventoryCount = 0;
@@ -3008,6 +3028,211 @@ app.get('/api/admin/dashboard-stats', authenticateToken, async (req: any, res) =
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
+  }
+});
+
+// ===== HUB MANAGEMENT ENDPOINTS =====
+// Get all hubs
+app.get('/api/hubs', async (req, res) => {
+  try {
+    const { status, includeInactive } = req.query;
+    
+    const filters: any = {};
+    if (status) filters.status = status;
+    if (includeInactive === 'true') filters.includeInactive = true;
+    
+    const hubs = await HubsService.getAllHubs(filters);
+    res.json({ hubs });
+  } catch (error) {
+    console.error('Error fetching hubs:', error);
+    res.status(500).json({ error: 'Failed to fetch hubs' });
+  }
+});
+
+// Get hub by ID
+app.get('/api/hubs/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const hub = await HubsService.getHubById(id);
+    
+    if (!hub) {
+      return res.status(404).json({ error: 'Hub not found' });
+    }
+    
+    res.json({ hub });
+  } catch (error) {
+    console.error('Error fetching hub:', error);
+    res.status(500).json({ error: 'Failed to fetch hub' });
+  }
+});
+
+// Get hub by slug
+app.get('/api/hubs/slug/:hubId', async (req, res) => {
+  try {
+    const { hubId } = req.params;
+    const hub = await HubsService.getHubBySlug(hubId);
+    
+    if (!hub) {
+      return res.status(404).json({ error: 'Hub not found' });
+    }
+    
+    res.json({ hub });
+  } catch (error) {
+    console.error('Error fetching hub:', error);
+    res.status(500).json({ error: 'Failed to fetch hub' });
+  }
+});
+
+// Create hub (admin only)
+app.post('/api/hubs', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+    
+    const hub = await HubsService.createHub(req.body);
+    res.status(201).json({ hub });
+  } catch (error) {
+    console.error('Error creating hub:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to create hub' });
+  }
+});
+
+// Update hub (admin only)
+app.put('/api/hubs/:id', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+    
+    const { id } = req.params;
+    const hub = await HubsService.updateHub(id, req.body);
+    
+    if (!hub) {
+      return res.status(404).json({ error: 'Hub not found' });
+    }
+    
+    res.json({ hub });
+  } catch (error) {
+    console.error('Error updating hub:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to update hub' });
+  }
+});
+
+// Delete hub (admin only)
+app.delete('/api/hubs/:id', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+    
+    const { id } = req.params;
+    const success = await HubsService.deleteHub(id);
+    
+    if (!success) {
+      return res.status(404).json({ error: 'Hub not found' });
+    }
+    
+    res.json({ success: true, message: 'Hub archived successfully' });
+  } catch (error) {
+    console.error('Error deleting hub:', error);
+    res.status(500).json({ error: 'Failed to delete hub' });
+  }
+});
+
+// Get hub statistics
+app.get('/api/hubs/:id/stats', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const stats = await HubsService.getHubStats(id);
+    res.json({ stats });
+  } catch (error) {
+    console.error('Error fetching hub stats:', error);
+    res.status(500).json({ error: 'Failed to fetch hub statistics' });
+  }
+});
+
+// Get hub publications
+app.get('/api/hubs/:hubId/publications', async (req, res) => {
+  try {
+    const { hubId } = req.params;
+    const publications = await HubsService.getHubPublications(hubId);
+    res.json({ publications });
+  } catch (error) {
+    console.error('Error fetching hub publications:', error);
+    res.status(500).json({ error: 'Failed to fetch hub publications' });
+  }
+});
+
+// Assign publication to hubs (admin only)
+app.post('/api/publications/:id/hubs', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+    
+    const { id } = req.params;
+    const { hubIds } = req.body;
+    
+    if (!Array.isArray(hubIds)) {
+      return res.status(400).json({ error: 'hubIds must be an array' });
+    }
+    
+    await HubsService.assignPublicationToHubs(id, hubIds);
+    res.json({ success: true, message: 'Publication assigned to hubs successfully' });
+  } catch (error) {
+    console.error('Error assigning publication to hubs:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to assign publication' });
+  }
+});
+
+// Remove publication from hub (admin only)
+app.delete('/api/publications/:id/hubs/:hubId', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+    
+    const { id, hubId } = req.params;
+    await HubsService.removePublicationFromHub(id, hubId);
+    res.json({ success: true, message: 'Publication removed from hub successfully' });
+  } catch (error) {
+    console.error('Error removing publication from hub:', error);
+    res.status(500).json({ error: 'Failed to remove publication from hub' });
+  }
+});
+
+// Bulk assign publications to hub (admin only)
+app.post('/api/hubs/:hubId/publications/bulk', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+    
+    const { hubId } = req.params;
+    const { publicationIds } = req.body;
+    
+    if (!Array.isArray(publicationIds)) {
+      return res.status(400).json({ error: 'publicationIds must be an array' });
+    }
+    
+    const modifiedCount = await HubsService.bulkAssignPublicationsToHub(publicationIds, hubId);
+    res.json({ success: true, modifiedCount, message: `${modifiedCount} publications assigned to hub` });
+  } catch (error) {
+    console.error('Error bulk assigning publications:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to bulk assign publications' });
   }
 });
 

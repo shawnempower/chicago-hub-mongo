@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { FrequencyInput } from './FrequencyInput';
+import { useHubs } from '@/hooks/useHubs';
 
 // Updated structure: pricing can be a single tier (object) or multiple tiers (array)
 export interface HubPrice {
@@ -62,18 +63,10 @@ interface HubPricingEditorProps {
   pricingModels?: { value: string; label: string }[];
   conditionalFields?: ConditionalField[];
   allowMultipleDefaultPricing?: boolean;
+  publicationHubIds?: string[]; // Hub IDs that this publication belongs to
   onDefaultPricingChange: (pricing: { [key: string]: number | string } | DefaultPrice[]) => void;
   onHubPricingChange: (hubPricing: HubPrice[]) => void;
 }
-
-// Available hubs
-const AVAILABLE_HUBS = [
-  { id: 'chicago-hub', name: 'Chicago Hub' },
-  { id: 'portland-hub', name: 'Portland Hub' },
-  { id: 'seattle-hub', name: 'Seattle Hub' },
-  { id: 'austin-hub', name: 'Austin Hub' },
-  { id: 'denver-hub', name: 'Denver Hub' },
-];
 
 export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
   defaultPricing,
@@ -82,9 +75,22 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
   pricingModels,
   conditionalFields,
   allowMultipleDefaultPricing = false,
+  publicationHubIds = [],
   onDefaultPricingChange,
   onHubPricingChange,
 }) => {
+  // Fetch hubs from database
+  const { hubs: allHubs, loading: hubsLoading } = useHubs({ includeInactive: true });
+  
+  // Filter hubs to only show those the publication belongs to
+  const hubs = React.useMemo(() => {
+    if (!publicationHubIds || publicationHubIds.length === 0) {
+      // If no hub IDs provided, show all hubs (backward compatibility)
+      return allHubs;
+    }
+    // Only show hubs that this publication is assigned to
+    return allHubs.filter(hub => publicationHubIds.includes(hub.hubId));
+  }, [allHubs, publicationHubIds]);
   const [expandedHubIndexes, setExpandedHubIndexes] = useState<Set<number>>(new Set());
   const hasInitialized = useRef(false);
   
@@ -176,12 +182,14 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
   };
 
   const addHubPricing = () => {
-    const defaultHub = AVAILABLE_HUBS[0];
+    if (hubs.length === 0) return; // No hubs available
+    
+    const firstHub = hubs[0];
     const defaultPricingModel = pricingModels?.[0]?.value;
 
     const newHubPrice: HubPrice = {
-      hubId: defaultHub.id,
-      hubName: defaultHub.name,
+      hubId: firstHub.hubId,
+      hubName: firstHub.basicInfo.name,
       pricing: {
         ...(defaultPricingModel && { pricingModel: defaultPricingModel }),
       },
@@ -208,12 +216,12 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
   };
 
   const updateHubSelection = (index: number, hubId: string) => {
-    const selectedHub = AVAILABLE_HUBS.find(h => h.id === hubId);
+    const selectedHub = hubs.find(h => h.hubId === hubId);
     if (!selectedHub) return;
 
     updateHubPricing(index, {
-      hubId: selectedHub.id,
-      hubName: selectedHub.name,
+      hubId: selectedHub.hubId,
+      hubName: selectedHub.basicInfo.name,
     });
   };
 
@@ -447,11 +455,17 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                             <SelectValue className="flex-1" />
                           </SelectTrigger>
                           <SelectContent>
-                            {AVAILABLE_HUBS.map((hub) => (
-                              <SelectItem key={hub.id} value={hub.id}>
-                                {hub.name}
-                              </SelectItem>
-                            ))}
+                            {hubsLoading ? (
+                              <SelectItem value="loading" disabled>Loading hubs...</SelectItem>
+                            ) : hubs.length === 0 ? (
+                              <SelectItem value="none" disabled>No hubs available</SelectItem>
+                            ) : (
+                              hubs.map((hub) => (
+                                <SelectItem key={hub.hubId} value={hub.hubId}>
+                                  {hub.basicInfo.name} {hub.status !== 'active' && `(${hub.status})`}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                         <div className="flex items-center gap-2">

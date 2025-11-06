@@ -17,16 +17,21 @@ import { Grid, List, Package as PackageIcon, Users, DollarSign, TrendingUp, Spar
 import { cn } from "@/lib/utils";
 import { useSavedPackages } from "@/hooks/useSavedPackages";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useHubContext } from "@/contexts/HubContext";
 
 const Packages = () => {
   const [searchParams] = useSearchParams();
+  const { selectedHubId } = useHubContext();
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isSurveyOpen, setIsSurveyOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<HubPackage | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [highlightedPackageId, setHighlightedPackageId] = useState<string | null>(null);
   
-  const { packages, loading } = useHubPackages({ active_only: true });
+  const { packages, loading } = useHubPackages({ 
+    active_only: true,
+    hub_id: selectedHubId || undefined
+  });
   const { savedPackages, toggleSavePackage, isSaved } = useSavedPackages();
 
   // Handle highlighting from AI recommendations

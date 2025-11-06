@@ -257,6 +257,9 @@ export interface Publication {
   _id?: string | ObjectId;
   publicationId: number; // Unique internal publication identifier
   
+  // Hub membership - tracks which hubs this publication belongs to
+  hubIds?: string[];
+  
   basicInfo: {
     publicationName: string;
     websiteUrl?: string;
@@ -1046,6 +1049,7 @@ export const COLLECTIONS = {
   SURVEY_SUBMISSIONS: 'survey_submissions',
   AD_PACKAGES: 'ad_packages',
   HUB_PACKAGES: 'hub_packages', // New comprehensive hub-level package system
+  HUBS: 'hubs', // Hub/market definitions
   ADVERTISING_INVENTORY: 'advertising_inventory',
   LEAD_INQUIRIES: 'lead_inquiries',
   USER_PROFILES: 'user_profiles',
@@ -1076,6 +1080,7 @@ export const INDEXES = {
   ],
   publications: [
     { publicationId: 1 }, // unique
+    { hubIds: 1 }, // hub membership
     { 'basicInfo.geographicCoverage': 1, 'basicInfo.primaryServiceArea': 1 },
     { 'basicInfo.publicationType': 1, 'basicInfo.contentType': 1 },
     { 'distributionChannels.website.metrics.monthlyVisitors': -1 },
@@ -1108,6 +1113,13 @@ export const INDEXES = {
     { 'marketing.tags': 1 },
     { deletedAt: 1 },
     { 'metadata.createdAt': -1 }
+  ],
+  hubs: [
+    { hubId: 1 }, // unique
+    { 'basicInfo.name': 1 },
+    { status: 1, createdAt: -1 },
+    { 'geography.primaryCity': 1 },
+    { 'geography.state': 1 }
   ],
   lead_inquiries: [
     { userId: 1 },

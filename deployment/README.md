@@ -21,6 +21,22 @@ deployment/
     └── CURRENT_PRODUCTION_SETUP.md    # Current production configuration
 ```
 
+## ⚠️ Pre-Deployment Required: Hub System Migration
+
+**Before deploying to production**, you must apply database changes for the hub system:
+
+```bash
+# 1. Verify production database state
+MONGODB_DB_NAME=chicago-hub npm run verify:production
+
+# 2. Run migration (after backup!)
+MONGODB_DB_NAME=chicago-hub npm run migrate:hubs
+```
+
+**See:** [`/DEPLOYMENT_CHECKLIST.md`](../DEPLOYMENT_CHECKLIST.md) and [`/docs/HUB_PRODUCTION_DEPLOYMENT.md`](../docs/HUB_PRODUCTION_DEPLOYMENT.md)
+
+---
+
 ## 🎯 Quick Deployment
 
 ### Frontend (AWS Amplify)

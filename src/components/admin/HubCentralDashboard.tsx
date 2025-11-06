@@ -8,7 +8,8 @@ import { HubPackageManagement } from './HubPackageManagement';
 import { HubDataQuality } from './HubDataQuality';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
-import { usePublicationsFull } from '@/hooks/usePublications';
+import { useHubContext } from '@/contexts/HubContext';
+import { useHubPublications } from '@/hooks/useHubs';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
 import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
@@ -19,8 +20,9 @@ interface HubCentralDashboardProps {
 }
 
 export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashboardProps) => {
-  const { stats, loading, error } = useDashboardStats();
-  const { publications, loading: loadingPubs } = usePublicationsFull();
+  const { selectedHub, selectedHubId } = useHubContext();
+  const { stats, loading, error } = useDashboardStats(selectedHubId);
+  const { publications, loading: loadingPubs } = useHubPublications(selectedHubId);
   const [pricingTimeframe, setPricingTimeframe] = useState<'day' | 'month' | 'quarter'>('month');
 
   // Helper to convert monthly values to selected timeframe
@@ -57,13 +59,13 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
           <div 
             className="rounded-xl p-6 border shadow-sm"
             style={{
-              backgroundColor: '#0066cc1A', // Chicago blue at 10% opacity
+              backgroundColor: `${selectedHub?.branding?.primaryColor || '#0066cc'}1A`, // Hub color at 10% opacity
             }}
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <h1 className="text-3xl font-bold mb-2">
-                  Chicago Hub
+                  {selectedHub?.basicInfo.name || 'Loading...'}
                 </h1>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span>
@@ -75,7 +77,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                   </span>
                   <span className="text-border">|</span>
                   <span>
-                    <strong className="font-semibold">ID</strong> chicago-hub
+                    <strong className="font-semibold">ID</strong> {selectedHub?.hubId || 'N/A'}
                   </span>
                 </div>
               </div>
@@ -520,48 +522,48 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {stats?.hubPricingInsights?.['chicago-hub'] ? (
+                  {selectedHubId && stats?.hubPricingInsights?.[selectedHubId] ? (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Website Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalWebsiteAdValue)).toLocaleString()}${getTimeframeLabel()}`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights[selectedHubId].totalWebsiteAdValue || 0)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Newsletter Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalNewsletterAdValue)).toLocaleString()}${getTimeframeLabel()}`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights[selectedHubId].totalNewsletterAdValue || 0)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Print Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalPrintAdValue)).toLocaleString()}${getTimeframeLabel()}`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights[selectedHubId].totalPrintAdValue || 0)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Podcast Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalPodcastAdValue)).toLocaleString()}${getTimeframeLabel()}`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights[selectedHubId].totalPodcastAdValue || 0)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Streaming Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalStreamingAdValue)).toLocaleString()}${getTimeframeLabel()}`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights[selectedHubId].totalStreamingAdValue || 0)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs">Radio Ads</span>
                         <span className="font-semibold text-sm">
                           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalRadioAdValue)).toLocaleString()}${getTimeframeLabel()}`}
+                            `$${Math.round(convertToTimeframe(stats.hubPricingInsights[selectedHubId].totalRadioAdValue || 0)).toLocaleString()}${getTimeframeLabel()}`}
                         </span>
                       </div>
                       <div className="pt-2 border-t">
@@ -592,7 +594,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                           </span>
                           <span className="font-bold text-sm text-green-600">
                             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                              `$${Math.round(convertToTimeframe(stats.hubPricingInsights['chicago-hub'].totalInventoryValue)).toLocaleString()}${getTimeframeLabel()}`}
+                              `$${Math.round(convertToTimeframe(stats.hubPricingInsights[selectedHubId].totalInventoryValue || 0)).toLocaleString()}${getTimeframeLabel()}`}
                           </span>
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-1">
@@ -602,7 +604,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                     </>
                   ) : (
                     <div className="text-center py-4 text-muted-foreground text-xs">
-                      <p>No Chicago Hub pricing data available</p>
+                      <p>No pricing data available for {selectedHub?.basicInfo.name || 'this hub'}</p>
                     </div>
                   )}
                 </div>

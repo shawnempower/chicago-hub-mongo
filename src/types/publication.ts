@@ -75,6 +75,9 @@ export interface PublicationFrontend {
   _id?: string;
   publicationId: number;
   
+  // Hub membership - tracks which hubs this publication belongs to
+  hubIds?: string[];
+  
   basicInfo: {
     publicationName: string;
     websiteUrl?: string;
