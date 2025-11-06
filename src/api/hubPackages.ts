@@ -1,7 +1,6 @@
 // API client for hub packages
 import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { API_BASE_URL } from '@/config/api';
 
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {
