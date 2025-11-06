@@ -35,7 +35,8 @@ frontend:
         - key: 'Cache-Control'
           value: 'no-cache, no-store, must-revalidate'
   # SPA redirect rules for client-side routing
-  redirects:
-    - source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|ttf|map|json)$)([^.]+$)/>'
+  # Serve index.html for all routes that don't match a file
+  customRules:
+    - source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>'
       target: '/index.html'
       status: '200'
