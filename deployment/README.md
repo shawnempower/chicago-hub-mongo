@@ -1,0 +1,158 @@
+# 🚀 Chicago Hub - Deployment Configuration
+
+This directory contains all deployment-related configuration files and documentation for the Chicago Hub application.
+
+## 📁 Directory Structure
+
+```
+deployment/
+├── README.md                          # This file - deployment overview
+├── deploy-to-ecs.sh                   # Automated ECS deployment script
+├── docker/                            # Docker configuration
+│   ├── Dockerfile                     # Development Docker image
+│   └── Dockerfile.production          # Production Docker image (ECS Fargate)
+├── aws/                               # AWS infrastructure configuration
+│   ├── amplify.yml                    # AWS Amplify build configuration
+│   ├── ecs-task-definition.json       # ECS Fargate task definition
+│   └── chicago-hub-ssm-policy.json    # IAM policy for SSM Parameter Store
+└── docs/                              # Deployment documentation
+    ├── PRODUCTION_DEPLOYMENT_GUIDE.md # Backend (ECS) deployment guide
+    ├── AMPLIFY_DEPLOYMENT_GUIDE.md    # Frontend (Amplify) deployment guide
+    └── CURRENT_PRODUCTION_SETUP.md    # Current production configuration
+```
+
+## 🎯 Quick Deployment
+
+### Frontend (AWS Amplify)
+The frontend deploys automatically on push to `main` branch. No manual steps required.
+
+**Documentation:** [`docs/AMPLIFY_DEPLOYMENT_GUIDE.md`](./docs/AMPLIFY_DEPLOYMENT_GUIDE.md)
+
+### Backend (AWS ECS)
+Use the automated deployment script:
+
+```bash
+cd /path/to/chicago-hub
+./deployment/deploy-to-ecs.sh
+```
+
+**Documentation:** [`docs/PRODUCTION_DEPLOYMENT_GUIDE.md`](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md)
+
+## 📦 Docker Images
+
+### Development Image
+- **File:** `docker/Dockerfile`
+- **Purpose:** Local development and testing
+- **Build:** `docker build -f deployment/docker/Dockerfile -t chicago-hub:dev .`
+
+### Production Image
+- **File:** `docker/Dockerfile.production`
+- **Purpose:** AWS ECS Fargate deployment
+- **Platform:** `linux/amd64` (required for ECS)
+- **Build:** Automated by `deploy-to-ecs.sh`
+
+## ☁️ AWS Infrastructure
+
+### Amplify Configuration
+- **File:** `aws/amplify.yml`
+- **Purpose:** Defines build steps and environment variables for frontend
+- **Auto-deploys:** On push to `main` branch
+
+### ECS Task Definition
+- **File:** `aws/ecs-task-definition.json`
+- **Purpose:** Defines container configuration, resources, and environment
+- **Secrets:** Pulled from AWS Systems Manager Parameter Store
+
+### IAM Policy
+- **File:** `aws/chicago-hub-ssm-policy.json`
+- **Purpose:** Grants ECS tasks permission to read SSM parameters
+- **Usage:** Attach to ECS Task Execution Role
+
+## 🔒 Secrets Management
+
+All sensitive environment variables are stored in **AWS Systems Manager Parameter Store** under the `/chicago-hub/*` namespace:
+
+- `/chicago-hub/jwt-secret`
+- `/chicago-hub/mongodb-uri`
+- `/chicago-hub/mongodb-db-name`
+- `/chicago-hub/aws-access-key-id`
+- `/chicago-hub/aws-secret-access-key`
+- `/chicago-hub/s3-bucket`
+- `/chicago-hub/mailgun-api-key`
+- `/chicago-hub/mailgun-domain`
+- `/chicago-hub/storefront-*` (CloudFront/Route53 configuration)
+
+See [`docs/PRODUCTION_DEPLOYMENT_GUIDE.md`](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md) for details on setting up SSM parameters.
+
+## 🏗️ Current Production Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Production Setup                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  Frontend (AWS Amplify)                                      │
+│  └─ https://main.dbn59dj42j2z3.amplifyapp.com              │
+│     │                                                         │
+│     └──> API calls to: https://hubapi.empowerlocal.co       │
+│                         │                                     │
+│                         ▼                                     │
+│  Backend (AWS ECS Fargate)                                   │
+│  ├─ Load Balancer: chicago-hub-api-clean                    │
+│  ├─ Service: chicago-hub-service                            │
+│  ├─ Task: chicago-hub-api:2                                 │
+│  └─ Container: Port 3001                                     │
+│     │                                                         │
+│     └──> Database: MongoDB Atlas                             │
+│     └──> Storage: AWS S3                                     │
+│     └──> Email: Mailgun                                      │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+See [`docs/CURRENT_PRODUCTION_SETUP.md`](./docs/CURRENT_PRODUCTION_SETUP.md) for complete details.
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [PRODUCTION_DEPLOYMENT_GUIDE.md](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md) | Complete backend deployment guide |
+| [AMPLIFY_DEPLOYMENT_GUIDE.md](./docs/AMPLIFY_DEPLOYMENT_GUIDE.md) | Frontend deployment and configuration |
+| [CURRENT_PRODUCTION_SETUP.md](./docs/CURRENT_PRODUCTION_SETUP.md) | Current production architecture and config |
+
+## 🔧 Environment Variables
+
+For local development, use `env.template` in the project root:
+
+```bash
+cp env.template .env
+# Edit .env with your local values
+```
+
+For production, all environment variables are managed through:
+- **Frontend:** AWS Amplify environment variables
+- **Backend:** AWS Systems Manager Parameter Store
+
+## 🆘 Troubleshooting
+
+### Common Deployment Issues
+
+1. **Docker platform mismatch**
+   - Error: "Manifest does not contain descriptor matching platform 'linux/amd64'"
+   - Solution: Use `deploy-to-ecs.sh` or build with `--platform linux/amd64`
+
+2. **ECS task fails to start**
+   - Check CloudWatch logs for the task
+   - Verify SSM parameters are set correctly
+   - Ensure IAM policy is attached to Task Execution Role
+
+3. **Amplify build fails**
+   - Check build logs in Amplify console
+   - Verify `VITE_API_BASE_URL` environment variable is set
+
+See deployment guides for detailed troubleshooting steps.
+
+## 📞 Support
+
+For deployment issues or questions, consult the documentation files or contact the DevOps team.
+

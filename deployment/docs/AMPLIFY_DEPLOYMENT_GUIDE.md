@@ -24,7 +24,7 @@ This guide covers the AWS Amplify deployment setup for the Chicago Hub frontend,
 - `src/api/leads.ts` - Lead management
 - `src/components/dashboard/DocumentManager.tsx` - Document management
 
-### 3. Amplify Configuration (`amplify.yml`)
+### 3. Amplify Configuration (`deployment/aws/amplify.yml`)
 - Added environment variable: `VITE_API_BASE_URL`
 - Points to custom domain: `https://hubapi.empowerlocal.co`
 
@@ -33,7 +33,7 @@ This guide covers the AWS Amplify deployment setup for the Chicago Hub frontend,
 The Chicago Hub is configured for **automatic deployment**:
 
 1. **Push to GitHub**: Any commit to the `main` branch triggers a deployment
-2. **Build Process**: Amplify uses the `amplify.yml` configuration
+2. **Build Process**: Amplify uses the `deployment/aws/amplify.yml` configuration
 3. **Environment Variables**: Automatically injected during build
 4. **Deploy Time**: Typically 3-5 minutes
 

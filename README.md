@@ -25,7 +25,7 @@ const annualRevenue = calculateRevenue(ad, 'year', frequency);
 ```
 
 ### Documentation
-- **Pricing Formulas**: [`pricing-formulas.html`](./pricing-formulas.html) - Interactive web guide with navigation
+- **Pricing Formulas**: [`public/pricing-formulas.html`](./public/pricing-formulas.html) - Interactive web guide with navigation
 - **Quick Start**: [`PRICING_QUICK_START.md`](./PRICING_QUICK_START.md) - Get started in 5 minutes
 - **Full Documentation**: [`PRICE_FORECASTING_INDEX.md`](./PRICE_FORECASTING_INDEX.md) - Complete documentation index
 - **Developer Reference**: [`QUICK_REFERENCE.md`](./QUICK_REFERENCE.md) - Quick lookup guide
@@ -168,13 +168,14 @@ The frontend automatically detects the environment:
 ## 📚 Documentation
 
 ### General Documentation
-- [Current Production Setup](./CURRENT_PRODUCTION_SETUP.md)
-- [Deployment Guide](./PRODUCTION_DEPLOYMENT_GUIDE.md)
-- [Environment Variables Guide](./ENV_MANAGEMENT_GUIDE.md)
+- [Deployment Overview](./deployment/README.md) - All deployment configuration and guides
+- [Current Production Setup](./deployment/docs/CURRENT_PRODUCTION_SETUP.md)
+- [Production Deployment Guide](./deployment/docs/PRODUCTION_DEPLOYMENT_GUIDE.md)
+- [Amplify Deployment Guide](./deployment/docs/AMPLIFY_DEPLOYMENT_GUIDE.md)
 
 ### Pricing & Revenue Calculation
 
-**🌐 [Pricing Formulas Web Page](./pricing-formulas.html)** - **Start here!** Single-page interactive reference with navigation
+**🌐 [Pricing Formulas Web Page](./public/pricing-formulas.html)** - **Start here!** Single-page interactive reference with navigation
 
 **📄 Markdown Documentation:**
 - **[Pricing Documentation Index](./PRICING_DOCUMENTATION_INDEX.md)** - Complete guide to all documentation
@@ -204,7 +205,13 @@ The application is configured for automatic deployment:
 - **Frontend**: Deployed to AWS Amplify on push to `main` branch
 - **Backend**: Deployed to AWS ECS with Docker containers
 
-See deployment guides for detailed instructions.
+**Quick Deploy:**
+```bash
+# Backend deployment
+./deployment/deploy-to-ecs.sh
+```
+
+See [deployment directory](./deployment/README.md) for detailed instructions and configuration.
 
 ## 🤝 Contributing
 

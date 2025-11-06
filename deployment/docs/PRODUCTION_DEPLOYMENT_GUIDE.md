@@ -36,7 +36,7 @@ This error occurs when Docker builds images for the local platform (e.g., arm64 
 ```bash
 # Build production image with EXPLICIT platform targeting (REQUIRED for ECS Fargate)
 # This prevents the recurring "Manifest does not contain descriptor matching platform 'linux/amd64'" error
-docker buildx build --platform linux/amd64 -f Dockerfile.production -t chicago-hub-api:latest . --load
+docker buildx build --platform linux/amd64 -f deployment/docker/Dockerfile.production -t chicago-hub-api:latest . --load
 
 # Tag for ECR
 docker tag chicago-hub-api:latest 947442015939.dkr.ecr.us-east-2.amazonaws.com/chicago-hub-api:latest
@@ -61,14 +61,14 @@ aws ssm put-parameter --name "/chicago-hub/mailgun-domain" --value "your-domain.
 
 ## Step 3: Update ECS Task Definition
 
-1. Update `ecs-task-definition.json` with your actual values:
+1. Update `deployment/aws/ecs-task-definition.json` with your actual values:
    - Replace `YOUR_ACCOUNT_ID` with your AWS account ID
    - Replace `YOUR_ECR_REPOSITORY_URI` with your ECR repository URI
    - Update `FRONTEND_URL` with your actual frontend URL
 
 2. Register the task definition:
 ```bash
-aws ecs register-task-definition --cli-input-json file://ecs-task-definition.json
+aws ecs register-task-definition --cli-input-json file://deployment/aws/ecs-task-definition.json
 ```
 
 ## Step 4: Create ECS Service

@@ -29,7 +29,9 @@ echo ""
 # Step 1: Build Docker image with EXPLICIT platform targeting
 echo "📦 Step 1: Building Docker image for linux/amd64 platform..."
 echo "   ⚠️  Using docker buildx to prevent platform compatibility issues"
-docker buildx build --platform linux/amd64 -f Dockerfile.production -t chicago-hub-api:latest . --load
+# Navigate to project root (script is in deployment/ subdirectory)
+cd "$(dirname "$0")/.."
+docker buildx build --platform linux/amd64 -f deployment/docker/Dockerfile.production -t chicago-hub-api:latest . --load
 
 if [ $? -ne 0 ]; then
     echo "❌ Docker build failed"
@@ -66,7 +68,7 @@ echo "✅ Image pushed to ECR successfully"
 
 # Step 5: Register new task definition
 echo "📋 Step 5: Registering new task definition..."
-TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://ecs-task-definition.json --profile "$AWS_PROFILE" --query 'taskDefinition.taskDefinitionArn' --output text)
+TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://deployment/aws/ecs-task-definition.json --profile "$AWS_PROFILE" --query 'taskDefinition.taskDefinitionArn' --output text)
 
 if [ $? -ne 0 ]; then
     echo "❌ Task definition registration failed"

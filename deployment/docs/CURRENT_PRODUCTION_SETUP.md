@@ -7,7 +7,7 @@ This document describes the current production configuration for the Chicago Hub
 
 ### Frontend (AWS Amplify)
 - **Domain**: `https://main.dbn59dj42j2z3.amplifyapp.com`
-- **Configuration**: `amplify.yml` with environment variable `VITE_API_BASE_URL`
+- **Configuration**: `deployment/aws/amplify.yml` with environment variable `VITE_API_BASE_URL`
 - **API Endpoint**: `https://hubapi.empowerlocal.co/api`
 
 ### Backend (AWS ECS)
