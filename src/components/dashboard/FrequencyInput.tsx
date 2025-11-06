@@ -163,47 +163,40 @@ export const FrequencyInput: React.FC<FrequencyInputProps> = ({
   const getBorderClass = () => {
     if (!touched || isValid === null) return '';
     return isValid 
-      ? 'border-green-500 focus-visible:ring-green-500' 
-      : 'border-red-500 focus-visible:ring-red-500';
+      ? 'focus-visible:border-green-500 focus-visible:ring-green-500' 
+      : 'focus-visible:border-red-500 focus-visible:ring-red-500';
   };
 
-  // Compact mode: simplified layout for inline use in pricing rows
+  // Compact mode: simplified layout for inline use in pricing rows (no label, matches pricing tier style)
   if (compact) {
     return (
-      <div className={className}>
-        <Label className="text-xs mb-1 block">{label}</Label>
-        <div className="relative">
-          <Input
-            type="text"
-            value={internalValue}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder={placeholder}
-            disabled={disabled}
-            className={cn(
-              'transition-colors',
-              getBorderClass()
-            )}
-            aria-invalid={touched && !isValid}
-            aria-describedby={errorMessage ? 'frequency-error' : undefined}
-            title={errorMessage || (isValid ? 'Valid frequency format' : '')}
-          />
-          
-          {/* Validation icon inside input */}
-          {touched && isValid !== null && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-              {isValid ? (
-                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-100">
-                  <Check className="w-3 h-3 text-green-600" />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-red-100">
-                  <X className="w-3 h-3 text-red-600" />
-                </div>
-              )}
-            </div>
+      <div className={cn('relative', className)}>
+        <Input
+          type="text"
+          value={internalValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          disabled={disabled}
+          className={cn(
+            'border-0 bg-transparent shadow-none hover:bg-gray-100 focus:border focus:bg-background focus:shadow-sm transition-colors',
+            getBorderClass()
           )}
-        </div>
+          aria-invalid={touched && !isValid}
+          aria-describedby={errorMessage ? 'frequency-error' : undefined}
+          title={errorMessage || (isValid ? 'Valid frequency format' : '')}
+        />
+        
+        {/* Validation icon inside input */}
+        {touched && isValid !== null && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            {isValid ? (
+              <Check className="w-4 h-4 text-green-600" />
+            ) : (
+              <X className="w-4 h-4 text-red-600" />
+            )}
+          </div>
+        )}
       </div>
     );
   }

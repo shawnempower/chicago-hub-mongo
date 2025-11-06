@@ -434,11 +434,26 @@ app.get('/api/publications', async (req, res) => {
     if (contentType) filters.contentType = contentType as string;
     if (verificationStatus) filters.verificationStatus = verificationStatus as string;
 
+    // Check if service is initialized
+    if (!publicationsService) {
+      console.error('PublicationsService is not initialized');
+      return res.status(500).json({ error: 'Publications service not initialized' });
+    }
+
     const publications = await publicationsService.getAll(filters);
     res.json(publications);
   } catch (error) {
     console.error('Error fetching publications:', error);
-    res.status(500).json({ error: 'Failed to fetch publications' });
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        error: 'Failed to fetch publications',
+        details: error.message 
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch publications' });
+    }
   }
 });
 

@@ -38,6 +38,7 @@ export const PublicationProvider: React.FC<PublicationProviderProps> = ({ childr
   const loadPublications = async () => {
     try {
       setLoading(true);
+      setError(null);
       const publications = await getPublications();
       setAvailablePublications(publications);
       
@@ -53,7 +54,9 @@ export const PublicationProvider: React.FC<PublicationProviderProps> = ({ childr
       }
     } catch (err) {
       console.error('Error loading publications:', err);
-      setError('Failed to load publications');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load publications';
+      setError(errorMessage);
+      // Don't clear publications on error - keep existing data if available
     } finally {
       setLoading(false);
     }

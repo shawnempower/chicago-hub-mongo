@@ -30,15 +30,63 @@ export const getPublications = async (filters?: {
     if (filters?.verificationStatus) params.append('verificationStatus', filters.verificationStatus);
 
     const url = `${API_BASE_URL}/publications${params.toString() ? '?' + params.toString() : ''}`;
-    const response = await fetch(url);
     
-    if (!response.ok) {
-      throw new Error('Failed to fetch publications');
-    }
+    // Add timeout and better error handling for large responses
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('Publications API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        throw new Error(`Failed to fetch publications: ${response.status} ${response.statusText}`);
+      }
 
-    return await response.json();
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Unexpected response type:', contentType, text.substring(0, 100));
+        throw new Error('Server returned non-JSON response');
+      }
+
+      const data = await response.json();
+      
+      // Validate response is an array
+      if (!Array.isArray(data)) {
+        console.error('Invalid response format:', typeof data, data);
+        throw new Error('Invalid response format: expected array');
+      }
+
+      return data;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error) {
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timed out. Please try again.');
+        }
+        throw fetchError;
+      }
+      throw new Error('Network error while fetching publications');
+    }
   } catch (error) {
     console.error('Error fetching publications:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error('Failed to fetch publications');
   }
 };

@@ -2770,7 +2770,10 @@ export const DashboardInventoryManager = () => {
                 
                 return (
                 <div key={index} className="relative">
-                  <div className="group border border-gray-200 rounded-lg shadow-sm p-4 bg-white transition-shadow duration-200 hover:shadow-md">
+                  <div 
+                    className="group border border-gray-200 rounded-lg shadow-sm p-4 bg-white transition-shadow duration-200 hover:shadow-md cursor-pointer"
+                    onClick={() => openEditDialog(opportunity, 'website', index)}
+                  >
                     {/* Title and Badges */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -2813,7 +2816,10 @@ export const DashboardInventoryManager = () => {
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0"
-                          onClick={() => openEditDialog(opportunity, 'website', index)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(opportunity, 'website', index);
+                          }}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -2821,7 +2827,10 @@ export const DashboardInventoryManager = () => {
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                          onClick={() => cloneWebsiteOpportunity(index)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cloneWebsiteOpportunity(index);
+                          }}
                           title="Clone this ad"
                         >
                           <Copy className="w-4 h-4" />
@@ -2830,7 +2839,10 @@ export const DashboardInventoryManager = () => {
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => removeWebsiteOpportunity(index)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeWebsiteOpportunity(index);
+                          }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -3029,7 +3041,11 @@ export const DashboardInventoryManager = () => {
                             const impressions = ad.performanceMetrics?.impressionsPerMonth || 0;
                             
                             return (
-                            <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
+                            <div 
+                              key={adIndex} 
+                              className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md cursor-pointer"
+                              onClick={() => openEditDialog(ad, 'podcast-ad', index, adIndex)}
+                            >
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
@@ -3044,7 +3060,10 @@ export const DashboardInventoryManager = () => {
                                     variant="ghost" 
                                     size="sm"
                                     className="h-6 w-6 p-0"
-                                    onClick={() => openEditDialog(ad, 'podcast-ad', index, adIndex)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEditDialog(ad, 'podcast-ad', index, adIndex);
+                                    }}
                                   >
                                     <Edit className="w-3 h-3" />
                                   </Button>
@@ -3052,7 +3071,10 @@ export const DashboardInventoryManager = () => {
                                     variant="ghost" 
                                     size="sm"
                                     className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    onClick={() => clonePodcastOpportunity(index, adIndex)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      clonePodcastOpportunity(index, adIndex);
+                                    }}
                                     title="Clone this ad"
                                   >
                                     <Copy className="w-3 h-3" />
@@ -3061,7 +3083,10 @@ export const DashboardInventoryManager = () => {
                                     variant="ghost" 
                                     size="sm"
                                     className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => removePodcastOpportunity(index, adIndex)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removePodcastOpportunity(index, adIndex);
+                                    }}
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
@@ -3628,7 +3653,11 @@ export const DashboardInventoryManager = () => {
                             const adRevenue = calculateRevenue(adWithMetrics, 'month', channel.frequency);
                             
                             return (
-                            <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
+                            <div 
+                              key={adIndex} 
+                              className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md cursor-pointer"
+                              onClick={() => openEditDialog(ad, 'streaming-ad', index, adIndex)}
+                            >
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
@@ -3648,7 +3677,10 @@ export const DashboardInventoryManager = () => {
                                   variant="ghost" 
                                   size="sm"
                                   className="h-6 w-6 p-0"
-                                  onClick={() => openEditDialog(ad, 'streaming-ad', index, adIndex)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditDialog(ad, 'streaming-ad', index, adIndex);
+                                  }}
                                 >
                                   <Edit className="w-3 h-3" />
                                 </Button>
@@ -3656,7 +3688,10 @@ export const DashboardInventoryManager = () => {
                                   variant="ghost" 
                                   size="sm"
                                   className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                  onClick={() => cloneStreamingOpportunity(index, adIndex)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    cloneStreamingOpportunity(index, adIndex);
+                                  }}
                                   title="Clone this ad"
                                 >
                                   <Copy className="w-3 h-3" />
@@ -3665,11 +3700,14 @@ export const DashboardInventoryManager = () => {
                                   variant="ghost" 
                                   size="sm"
                                   className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => removeStreamingOpportunity(index, adIndex)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeStreamingOpportunity(index, adIndex);
+                                  }}
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </Button>
-                                </div>
+                              </div>
                               </div>
                               <div className="space-y-2">
                                 <div className="grid grid-cols-2 gap-x-4">
@@ -3868,7 +3906,11 @@ export const DashboardInventoryManager = () => {
                               const impressions = ad.performanceMetrics?.impressionsPerMonth || 0;
                               
                               return (
-                              <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
+                              <div 
+                                key={adIndex} 
+                                className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md cursor-pointer"
+                                onClick={() => openEditDialog(ad, 'print-ad', index, adIndex)}
+                              >
                                 <div className="flex items-center justify-between mb-3">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
@@ -3883,7 +3925,10 @@ export const DashboardInventoryManager = () => {
                                     variant="ghost" 
                                     size="sm"
                                     className="h-6 w-6 p-0"
-                                    onClick={() => openEditDialog(ad, 'print-ad', index, adIndex)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEditDialog(ad, 'print-ad', index, adIndex);
+                                    }}
                                   >
                                     <Edit className="w-3 h-3" />
                                   </Button>
@@ -3891,7 +3936,10 @@ export const DashboardInventoryManager = () => {
                                     variant="ghost" 
                                     size="sm"
                                     className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    onClick={() => clonePrintOpportunity(index, adIndex)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      clonePrintOpportunity(index, adIndex);
+                                    }}
                                     title="Clone this ad"
                                   >
                                     <Copy className="w-3 h-3" />
@@ -3900,7 +3948,10 @@ export const DashboardInventoryManager = () => {
                                     variant="ghost" 
                                     size="sm"
                                     className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => removePrintOpportunity(index, adIndex)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removePrintOpportunity(index, adIndex);
+                                    }}
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
@@ -4340,7 +4391,11 @@ export const DashboardInventoryManager = () => {
                         const impressions = ad.performanceMetrics?.impressionsPerMonth || 0;
                         
                         return (
-                        <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
+                        <div 
+                          key={adIndex} 
+                          className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md cursor-pointer"
+                          onClick={() => openEditDialog(ad, 'newsletter', index, adIndex)}
+                        >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
@@ -4378,7 +4433,10 @@ export const DashboardInventoryManager = () => {
                               variant="ghost" 
                               size="sm"
                               className="h-6 w-6 p-0"
-                              onClick={() => openEditDialog(ad, 'newsletter', index, adIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditDialog(ad, 'newsletter', index, adIndex);
+                              }}
                             >
                               <Edit className="w-3 h-3" />
                             </Button>
@@ -4386,7 +4444,10 @@ export const DashboardInventoryManager = () => {
                               variant="ghost" 
                               size="sm"
                               className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => cloneNewsletterOpportunity(index, adIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cloneNewsletterOpportunity(index, adIndex);
+                              }}
                               title="Clone this ad"
                             >
                               <Copy className="w-3 h-3" />
@@ -4395,7 +4456,10 @@ export const DashboardInventoryManager = () => {
                               variant="ghost" 
                               size="sm"
                               className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => removeNewsletterOpportunity(index, adIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeNewsletterOpportunity(index, adIndex);
+                              }}
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
@@ -4603,7 +4667,11 @@ export const DashboardInventoryManager = () => {
                         const impressions = ad.performanceMetrics?.impressionsPerMonth || 0;
                         
                         return (
-                        <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
+                        <div 
+                          key={adIndex} 
+                          className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md cursor-pointer"
+                          onClick={() => openEditDialog(ad, 'social-media-ad', index, adIndex)}
+                        >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
@@ -4618,7 +4686,10 @@ export const DashboardInventoryManager = () => {
                               variant="ghost" 
                               size="sm"
                               className="h-6 w-6 p-0"
-                              onClick={() => openEditDialog(ad, 'social-media-ad', index, adIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditDialog(ad, 'social-media-ad', index, adIndex);
+                              }}
                             >
                               <Edit className="w-3 h-3" />
                             </Button>
@@ -4626,7 +4697,10 @@ export const DashboardInventoryManager = () => {
                               variant="ghost" 
                               size="sm"
                               className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => cloneSocialMediaOpportunity(index, adIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cloneSocialMediaOpportunity(index, adIndex);
+                              }}
                               title="Clone this ad"
                             >
                               <Copy className="w-3 h-3" />
@@ -4635,7 +4709,10 @@ export const DashboardInventoryManager = () => {
                               variant="ghost" 
                               size="sm"
                               className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => removeSocialMediaOpportunity(index, adIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeSocialMediaOpportunity(index, adIndex);
+                              }}
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
@@ -4834,7 +4911,11 @@ export const DashboardInventoryManager = () => {
                         const viewersPerSpot = ad.performanceMetrics?.audienceSize || 0;
                         
                         return (
-                        <div key={adIndex} className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md">
+                        <div 
+                          key={adIndex} 
+                          className="group border border-gray-200 rounded-lg p-3 bg-white transition-shadow duration-200 hover:shadow-md cursor-pointer"
+                          onClick={() => openEditDialog(ad, 'television-ad', index, adIndex)}
+                        >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h5 className="text-sm font-semibold text-gray-900">{ad.name}</h5>
@@ -4849,7 +4930,10 @@ export const DashboardInventoryManager = () => {
                               variant="ghost" 
                               size="sm"
                               className="h-6 w-6 p-0"
-                              onClick={() => openEditDialog(ad, 'television-ad', index, adIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditDialog(ad, 'television-ad', index, adIndex);
+                              }}
                             >
                               <Edit className="w-3 h-3" />
                             </Button>
@@ -4857,7 +4941,10 @@ export const DashboardInventoryManager = () => {
                               variant="ghost" 
                               size="sm"
                               className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => cloneTelevisionOpportunity(index, adIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cloneTelevisionOpportunity(index, adIndex);
+                              }}
                               title="Clone this ad"
                             >
                               <Copy className="w-3 h-3" />
@@ -4866,7 +4953,10 @@ export const DashboardInventoryManager = () => {
                               variant="ghost" 
                               size="sm"
                               className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => removeTelevisionOpportunity(index, adIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeTelevisionOpportunity(index, adIndex);
+                              }}
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
@@ -4965,7 +5055,7 @@ export const DashboardInventoryManager = () => {
 
       {/* Edit Dialog */}
       <Dialog open={editingItem !== null} onOpenChange={(open) => !open && closeEditDialog()}>
-        <DialogContent className="w-auto max-w-6xl max-h-[90vh] flex flex-col overflow-x-hidden p-0">
+        <DialogContent className="w-[900px] max-w-[calc(100vw-2rem)] max-h-[90vh] flex flex-col overflow-x-hidden p-0">
           <DialogHeader className="flex-shrink-0 px-6 pt-4 pb-3 border-b bg-gray-50">
             <DialogTitle className="text-base font-sans">
               {editingType === 'radio-show' ? 'Edit Radio Show' :

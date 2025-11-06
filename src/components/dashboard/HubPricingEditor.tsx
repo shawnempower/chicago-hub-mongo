@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, ChevronDown, ChevronUp, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { FrequencyInput } from './FrequencyInput';
 
 // Updated structure: pricing can be a single tier (object) or multiple tiers (array)
@@ -81,6 +86,16 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
   onHubPricingChange,
 }) => {
   const [expandedHubIndexes, setExpandedHubIndexes] = useState<Set<number>>(new Set());
+  const hasInitialized = useRef(false);
+  
+  // Initialize all hub pricing accordions as expanded by default
+  useEffect(() => {
+    if (hubPricing.length > 0 && !hasInitialized.current) {
+      const allIndexes = new Set(hubPricing.map((_, index) => index));
+      setExpandedHubIndexes(allIndexes);
+      hasInitialized.current = true;
+    }
+  }, [hubPricing.length]);
   
   const defaultPricingArray: DefaultPrice[] = Array.isArray(defaultPricing) 
     ? defaultPricing 
@@ -357,38 +372,34 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                     )}
                     <td className="px-4 py-2">
                       {total !== null && total > 0 ? (
-                        <div className="flex items-center gap-2">
-                          <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                            <span className="text-sm font-semibold text-gray-400">
-                              ${total.toLocaleString()}
-                            </span>
-                          </div>
-                          <TooltipProvider delayDuration={300}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button type="button" className="inline-flex items-center">
-                                  <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs p-3" sideOffset={8}>
-                                <p className="text-xs mb-2">Total (Base Price × Frequency)</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                        <span className="text-sm font-normal text-gray-500">
+                          ${total.toLocaleString()}
+                        </span>
                       ) : null}
                     </td>
                     <td className="px-4 py-2">
                       {allowMultipleDefaultPricing && defaultPricingArray.length > 1 ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => removeDefaultPricing(defaultIndex)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                              onClick={() => removeDefaultPricing(defaultIndex)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       ) : null}
                     </td>
                   </tr>
@@ -426,7 +437,7 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                 <thead>
                   {/* Top Header with Hub Selector and Controls */}
                   <tr style={{ backgroundColor: '#FAFAFA' }} className="border-b">
-                    <td colSpan={columnCount} className="px-4 py-2">
+                    <td colSpan={columnCount} className="px-4 py-1">
                       <div className="flex items-center justify-between">
                         <Select
                           value={hubPrice.hubId}
@@ -448,15 +459,6 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => removeHubPricing(hubIndex)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
                             onClick={() => toggleHubExpanded(hubIndex)}
                             className="h-8 px-2 hover:bg-gray-200 transition-colors"
                           >
@@ -469,6 +471,16 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                         </div>
                       </div>
                     </td>
+                  </tr>
+                  {/* Hidden header row to match column structure with standard pricing */}
+                  <tr style={{ backgroundColor: '#FAFAFA' }} className="h-0 invisible">
+                    <th className="text-left px-4 py-0 text-[12px] font-normal text-gray-700"></th>
+                    <th className="text-left px-4 py-0 text-[12px] font-normal text-gray-700"></th>
+                    {conditionalFields && conditionalFields.length > 0 && (
+                      <th className="text-left px-4 py-0 text-[12px] font-normal text-gray-700"></th>
+                    )}
+                    <th className="text-left px-4 py-0 text-[12px] font-normal text-gray-700"></th>
+                    <th className="w-12"></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white">
@@ -546,43 +558,39 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                           )}
                         <td className="px-4 py-2">
                           {total !== null && total > 0 ? (
-                            <div className="flex items-center gap-2">
-                              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                                <span className="text-sm font-semibold text-gray-700">
-                                  ${total.toLocaleString()}
-                                </span>
-                              </div>
-                              <TooltipProvider delayDuration={300}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button type="button" className="inline-flex items-center">
-                                      <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-xs p-3" sideOffset={8}>
-                                    <p className="text-xs mb-2">Total (Base Price × Frequency)</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
+                            <span className="text-sm font-normal text-gray-500">
+                              ${total.toLocaleString()}
+                            </span>
                           ) : null}
                         </td>
                         <td className="px-4 py-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => {
-                              if (pricingTiers.length === 1) {
-                                removeHubPricing(hubIndex);
-                              } else {
-                                removeTierFromHub(hubIndex, tierIndex);
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                onClick={() => {
+                                  if (pricingTiers.length === 1) {
+                                    removeHubPricing(hubIndex);
+                                  } else {
+                                    removeTierFromHub(hubIndex, tierIndex);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     );
@@ -592,14 +600,26 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                   <tfoot className="bg-white">
                     <tr className="border-t">
                       <td colSpan={columnCount} className="px-4 py-2">
-                        <button
-                          type="button"
-                          onClick={() => addTierToHub(hubIndex)}
-                          className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                          Add Price
-                        </button>
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => addTierToHub(hubIndex)}
+                            className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add Price
+                          </button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => removeHubPricing(hubIndex)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Hub
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   </tfoot>

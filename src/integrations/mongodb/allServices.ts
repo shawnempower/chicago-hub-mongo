@@ -904,12 +904,25 @@ export class PublicationsService {
         query['metadata.verificationStatus'] = filters.verificationStatus;
       }
 
+      // Ensure database connection is ready
+      const db = getDatabase();
+      await db.admin().ping().catch(() => {
+        throw new Error('Database connection not ready');
+      });
+
       return await this.collection
         .find(query)
         .sort({ 'basicInfo.publicationName': 1 })
         .toArray();
     } catch (error) {
       console.error('Error fetching publications:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+      }
       throw error;
     }
   }

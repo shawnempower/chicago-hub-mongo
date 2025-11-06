@@ -252,8 +252,24 @@ export const subdomainService = (): SubdomainService | null => {
       console.warn('⚠️  AWS credentials not configured. Subdomain service disabled.');
       _subdomainService = null;
     } else {
-      _subdomainService = new SubdomainService();
-      console.log('✅ Subdomain service initialized');
+      // Check if STOREFRONT config is available before instantiating
+      const config = getConfig();
+      const missingConfig = Object.entries(config)
+        .filter(([key, value]) => key !== 'DNS_TTL' && !value)
+        .map(([key]) => `STOREFRONT_${key}`);
+      
+      if (missingConfig.length > 0) {
+        console.warn(`⚠️  STOREFRONT configuration incomplete (missing: ${missingConfig.join(', ')}). Subdomain service disabled.`);
+        _subdomainService = null;
+      } else {
+        try {
+          _subdomainService = new SubdomainService();
+          console.log('✅ Subdomain service initialized');
+        } catch (error) {
+          console.error('❌ Failed to initialize subdomain service:', error);
+          _subdomainService = null;
+        }
+      }
     }
   }
   return _subdomainService;
