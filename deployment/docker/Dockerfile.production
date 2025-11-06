@@ -9,7 +9,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
 
 # Production stage
 # Explicitly specify linux/amd64 platform for ECS Fargate compatibility
@@ -27,7 +27,7 @@ WORKDIR /app
 
 # Copy package files and install production dependencies
 COPY package*.json ./
-RUN npm ci --only=production && npm install tsx && npm cache clean --force
+RUN npm ci --only=production --legacy-peer-deps && npm install tsx --legacy-peer-deps && npm cache clean --force
 
 # Copy source code
 COPY --chown=chicago-hub:nodejs . .
