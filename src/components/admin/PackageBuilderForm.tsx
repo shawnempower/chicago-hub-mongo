@@ -472,7 +472,7 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
   const fetchPublications = useCallback(async () => {
     setLoadingPublications(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/publications`, {
+      const response = await fetch(`${API_BASE_URL}/publications`, {
         headers: getAuthHeaders()
       });
       if (!response.ok) throw new Error('Failed to fetch publications');
@@ -705,8 +705,8 @@ export const PackageBuilderForm = ({ onSuccess, onCancel, existingPackage }: Pac
     try {
       const isEditing = !!existingPackage;
       const url = isEditing 
-        ? `${API_BASE_URL}/api/admin/hub-packages/${existingPackage._id}`
-        : `${API_BASE_URL}/api/admin/hub-packages`;
+        ? `${API_BASE_URL}/admin/hub-packages/${existingPackage._id}`
+        : `${API_BASE_URL}/admin/hub-packages`;
       
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',

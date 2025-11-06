@@ -58,7 +58,7 @@ export const PackageDiscoveryTool = () => {
       if (inventoryFilters.minVisitors) params.append('min_visitors', inventoryFilters.minVisitors);
 
       const response = await fetch(
-        `${API_BASE_URL}/api/admin/package-discovery/inventory?${params}`,
+        `${API_BASE_URL}/admin/package-discovery/inventory?${params}`,
         { headers: getAuthHeaders() }
       );
 
@@ -85,7 +85,7 @@ export const PackageDiscoveryTool = () => {
   const generateRecommendations = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/admin/package-discovery/recommend`, {
+      const response = await fetch(`${API_BASE_URL}/admin/package-discovery/recommend`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({

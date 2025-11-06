@@ -55,7 +55,7 @@ export const HubPackageManagement = () => {
       if (filterStatus === 'archived') params.append('approval_status', 'archived');
       if (selectedHubId) params.append('hub_id', selectedHubId);
 
-      const response = await fetch(`${API_BASE_URL}/api/hub-packages?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/hub-packages?${params}`, {
         headers: getAuthHeaders()
       });
 
@@ -83,7 +83,7 @@ export const HubPackageManagement = () => {
     if (!confirm(`Are you sure you want to delete "${packageName}"?`)) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/hub-packages/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/hub-packages/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -110,7 +110,7 @@ export const HubPackageManagement = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/hub-packages/seed-starters`, {
+      const response = await fetch(`${API_BASE_URL}/admin/hub-packages/seed-starters`, {
         method: 'POST',
         headers: getAuthHeaders()
       });
