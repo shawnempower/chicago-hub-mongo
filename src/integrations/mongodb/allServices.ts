@@ -4,6 +4,7 @@ import {
   AdPackage,
   AdvertisingInventory,
   LeadInquiry,
+  LeadNote,
   UserProfile,
   ConversationThread,
   AssistantConversation,
@@ -130,11 +131,27 @@ export class AdPackagesService {
 export class LeadInquiriesService {
   private collection = getDatabase().collection<LeadInquiry>(COLLECTIONS.LEAD_INQUIRIES);
 
-  async getAll(filters?: { status?: string; assignedTo?: string }): Promise<LeadInquiry[]> {
+  async getAll(filters?: { 
+    status?: string; 
+    assignedTo?: string;
+    hubId?: string;
+    publicationId?: string;
+    leadSource?: string;
+    includeArchived?: boolean;
+  }): Promise<LeadInquiry[]> {
     try {
       const query: Filter<LeadInquiry> = {};
+      
       if (filters?.status) query.status = filters.status as any;
       if (filters?.assignedTo) query.assignedTo = filters.assignedTo;
+      if (filters?.hubId) query.hubId = filters.hubId;
+      if (filters?.publicationId) query.publicationId = filters.publicationId;
+      if (filters?.leadSource) query.leadSource = filters.leadSource as any;
+      
+      // By default, exclude archived leads unless explicitly requested
+      if (!filters?.includeArchived) {
+        query.archivedAt = { $exists: false } as any;
+      }
       
       return await this.collection.find(query).sort({ createdAt: -1 }).toArray();
     } catch (error) {
@@ -148,6 +165,52 @@ export class LeadInquiriesService {
       return await this.collection.findOne({ _id: new ObjectId(id) });
     } catch (error) {
       console.error('Error fetching lead inquiry by ID:', error);
+      throw error;
+    }
+  }
+
+  async getByHubId(hubId: string, filters?: {
+    status?: string;
+    leadSource?: string;
+    includeArchived?: boolean;
+  }): Promise<LeadInquiry[]> {
+    try {
+      const query: Filter<LeadInquiry> = { hubId };
+      
+      if (filters?.status) query.status = filters.status as any;
+      if (filters?.leadSource) query.leadSource = filters.leadSource as any;
+      
+      // By default, exclude archived leads
+      if (!filters?.includeArchived) {
+        query.archivedAt = { $exists: false } as any;
+      }
+      
+      return await this.collection.find(query).sort({ createdAt: -1 }).toArray();
+    } catch (error) {
+      console.error('Error fetching leads by hub ID:', error);
+      throw error;
+    }
+  }
+
+  async getByPublicationId(publicationId: string, filters?: {
+    status?: string;
+    leadSource?: string;
+    includeArchived?: boolean;
+  }): Promise<LeadInquiry[]> {
+    try {
+      const query: Filter<LeadInquiry> = { publicationId };
+      
+      if (filters?.status) query.status = filters.status as any;
+      if (filters?.leadSource) query.leadSource = filters.leadSource as any;
+      
+      // By default, exclude archived leads
+      if (!filters?.includeArchived) {
+        query.archivedAt = { $exists: false } as any;
+      }
+      
+      return await this.collection.find(query).sort({ createdAt: -1 }).toArray();
+    } catch (error) {
+      console.error('Error fetching leads by publication ID:', error);
       throw error;
     }
   }
@@ -184,11 +247,82 @@ export class LeadInquiriesService {
     }
   }
 
+  async archive(id: string): Promise<LeadInquiry | null> {
+    try {
+      const updateData = { 
+        archivedAt: new Date(),
+        updatedAt: new Date()
+      };
+      await this.collection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updateData }
+      );
+      return await this.getById(id);
+    } catch (error) {
+      console.error('Error archiving lead inquiry:', error);
+      throw error;
+    }
+  }
+
+  async unarchive(id: string): Promise<LeadInquiry | null> {
+    try {
+      const updateData = { 
+        updatedAt: new Date()
+      };
+      await this.collection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updateData, $unset: { archivedAt: '' } }
+      );
+      return await this.getById(id);
+    } catch (error) {
+      console.error('Error unarchiving lead inquiry:', error);
+      throw error;
+    }
+  }
+
   async getByUserId(userId: string): Promise<LeadInquiry[]> {
     try {
       return await this.collection.find({ userId }).sort({ createdAt: -1 }).toArray();
     } catch (error) {
       console.error('Error fetching leads by user ID:', error);
+      throw error;
+    }
+  }
+
+  async getStats(hubId?: string): Promise<{
+    total: number;
+    byStatus: Record<string, number>;
+    bySource: Record<string, number>;
+    archived: number;
+  }> {
+    try {
+      const query: Filter<LeadInquiry> = {};
+      if (hubId) query.hubId = hubId;
+
+      const allLeads = await this.collection.find(query).toArray();
+      
+      const stats = {
+        total: allLeads.filter(l => !l.archivedAt).length,
+        byStatus: {} as Record<string, number>,
+        bySource: {} as Record<string, number>,
+        archived: allLeads.filter(l => l.archivedAt).length,
+      };
+
+      // Count by status
+      allLeads.filter(l => !l.archivedAt).forEach(lead => {
+        const status = lead.status || 'new';
+        stats.byStatus[status] = (stats.byStatus[status] || 0) + 1;
+      });
+
+      // Count by source
+      allLeads.filter(l => !l.archivedAt).forEach(lead => {
+        const source = lead.leadSource;
+        stats.bySource[source] = (stats.bySource[source] || 0) + 1;
+      });
+
+      return stats;
+    } catch (error) {
+      console.error('Error fetching lead stats:', error);
       throw error;
     }
   }
@@ -1926,3 +2060,7 @@ export const initializeServices = () => {
   areasService = new AreasService();
   hubsService = HubsService; // Static class, no instantiation needed
 };
+
+// Import and export leadNotesService
+import { leadNotesService } from './leadNotesService';
+export { leadNotesService };

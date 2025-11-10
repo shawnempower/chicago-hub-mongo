@@ -95,21 +95,76 @@ export interface AdvertisingInventory {
 export interface LeadInquiry {
   _id?: string | ObjectId;
   userId?: string;
+  
+  // Lead Source - tracks where the lead came from
+  leadSource: 'storefront_form' | 'ai_chat' | 'manual_entry' | 'other';
+  
+  // Hub and Publication Association
+  hubId: string; // Required - which hub this lead belongs to
+  publicationId?: string; // Optional - specific publication if applicable
+  
+  // Contact Information
   contactName: string;
   contactEmail: string;
   contactPhone?: string;
   businessName: string;
   websiteUrl?: string;
+  
+  // Lead Details
   budgetRange?: string;
   timeline?: string;
   marketingGoals?: string[];
   interestedOutlets?: string[];
   interestedPackages?: number[];
-  conversationContext?: Record<string, any>;
+  
+  // Enhanced fields for different form types
+  message?: string; // General message/notes from any form
+  targetLaunchDate?: Date; // When they want to launch campaign
+  campaignGoals?: string | string[]; // Can be single string or array
+  
+  // Flexible storage for form-specific data
+  conversationContext?: {
+    formType?: string; // "storefront_basic", "storefront_detailed", "ai_chat", etc.
+    rawFormData?: Record<string, any>; // Original form data preserved
+    [key: string]: any; // Additional custom fields
+  };
+  
+  // Lead Management
   status?: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'closed_won' | 'closed_lost';
   assignedTo?: string;
   followUpDate?: Date;
-  notes?: string;
+  
+  // Archiving
+  archivedAt?: Date;
+  
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ===== LEAD NOTES SCHEMA =====
+export interface LeadNote {
+  _id?: string | ObjectId;
+  leadId: string; // Reference to lead
+  
+  // Author Information
+  authorId: string; // User ID who created the note
+  authorName: string; // Display name of author
+  
+  // Note Content
+  noteContent: string;
+  noteType: 'note' | 'status_change' | 'assignment' | 'system';
+  
+  // Additional Context
+  metadata?: {
+    previousStatus?: string;
+    newStatus?: string;
+    previousAssignee?: string;
+    newAssignee?: string;
+    [key: string]: any;
+  };
+  
+  // Timestamps
   createdAt: Date;
   updatedAt: Date;
 }
@@ -1052,6 +1107,7 @@ export const COLLECTIONS = {
   HUBS: 'hubs', // Hub/market definitions
   ADVERTISING_INVENTORY: 'advertising_inventory',
   LEAD_INQUIRIES: 'lead_inquiries',
+  LEAD_NOTES: 'lead_notes', // Lead notes and activity history
   USER_PROFILES: 'user_profiles',
   CONVERSATION_THREADS: 'conversation_threads',
   ASSISTANT_CONVERSATIONS: 'assistant_conversations',
@@ -1123,10 +1179,20 @@ export const INDEXES = {
   ],
   lead_inquiries: [
     { userId: 1 },
+    { hubId: 1 }, // Filter by hub
+    { publicationId: 1 }, // Filter by publication
+    { leadSource: 1 }, // Filter by source
     { status: 1 },
     { createdAt: -1 },
     { assignedTo: 1 },
-    { followUpDate: 1 }
+    { followUpDate: 1 },
+    { archivedAt: 1 } // Filter archived leads
+  ],
+  lead_notes: [
+    { leadId: 1, createdAt: -1 }, // Get notes for a lead, chronologically
+    { authorId: 1 },
+    { noteType: 1 },
+    { createdAt: -1 }
   ],
   user_profiles: [
     { userId: 1 }, // unique

@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { UserCheck, Send } from "lucide-react";
 import { useAuth } from "@/contexts/CustomAuthContext";
+import { useHubContext } from "@/contexts/HubContext";
+import { usePublication } from "@/contexts/PublicationContext";
+import { leadsApi } from "@/api/leads";
 import { useToast } from "@/hooks/use-toast";
 
 interface AdminHandoffButtonProps {
@@ -14,6 +17,8 @@ interface AdminHandoffButtonProps {
 
 export function AdminHandoffButton({ conversationContext, triggerKeywords = [] }: AdminHandoffButtonProps) {
   const { user } = useAuth();
+  const { selectedHubId } = useHubContext();
+  const { selectedPublication } = usePublication();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,26 +34,32 @@ export function AdminHandoffButton({ conversationContext, triggerKeywords = [] }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !selectedHubId) return;
 
     setIsSubmitting(true);
     
     try {
-      // Save the handoff request to the database
-      const { error } = await supabase
-        .from('user_interactions')
-        .insert({
-          user_id: user.id,
-          interaction_type: 'admin_handoff_request',
-          metadata: {
-            form_data: formData,
-            conversation_context: conversationContext,
-            trigger_keywords: triggerKeywords,
-            timestamp: new Date().toISOString()
-          }
-        });
-
-      if (error) throw error;
+      // Create lead with AI chat source
+      await leadsApi.create({
+        leadSource: 'ai_chat',
+        hubId: selectedHubId,
+        publicationId: selectedPublication?._id,
+        userId: user.id,
+        businessName: formData.companyName,
+        contactName: formData.contactPerson,
+        contactEmail: formData.email,
+        contactPhone: formData.phone || undefined,
+        budgetRange: formData.budget || undefined,
+        timeline: formData.timeline || undefined,
+        message: formData.specificNeeds, // Map to new message field
+        conversationContext: {
+          formType: 'ai_chat_handoff',
+          context: conversationContext,
+          triggerKeywords,
+          specificNeeds: formData.specificNeeds,
+          timestamp: new Date().toISOString()
+        }
+      });
 
       toast({
         title: "Request Submitted",

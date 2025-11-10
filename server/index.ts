@@ -25,6 +25,7 @@ import {
   initializeServices,
   adPackagesService,
   leadInquiriesService,
+  leadNotesService,
   userProfilesService,
   conversationThreadsService,
   assistantConversationsService,
@@ -3236,8 +3237,82 @@ app.post('/api/hubs/:hubId/publications/bulk', authenticateToken, async (req: an
   }
 });
 
+// ===== PUBLIC LEAD SUBMISSION =====
+
+// Public storefront lead submission (no auth required)
+app.post('/api/storefront-lead', async (req, res) => {
+  try {
+    const { 
+      name, 
+      email, 
+      company, 
+      phone, 
+      budgetRange, 
+      campaignGoals, 
+      targetLaunchDate, 
+      message,
+      hubId,
+      publicationId 
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !company) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: name, email, and company are required' 
+      });
+    }
+
+    // Map form fields to lead schema
+    const leadData = {
+      leadSource: 'storefront_form' as const,
+      hubId: hubId || 'chicago-hub', // Default to chicago-hub if not provided
+      publicationId,
+      
+      // Contact information
+      contactName: name,
+      contactEmail: email,
+      businessName: company,
+      contactPhone: phone,
+      
+      // Lead details
+      budgetRange,
+      marketingGoals: campaignGoals ? [campaignGoals] : undefined, // Convert to array
+      timeline: targetLaunchDate,
+      message,
+      targetLaunchDate: targetLaunchDate ? new Date(targetLaunchDate) : undefined,
+      campaignGoals, // Keep original format
+      
+      // Store original form data for reference
+      conversationContext: {
+        formType: 'storefront_basic',
+        rawFormData: req.body,
+        submittedAt: new Date().toISOString(),
+      },
+      
+      status: 'new' as const,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const lead = await leadInquiriesService.create(leadData);
+    
+    console.log(`✅ New storefront lead created: ${lead._id} from ${company}`);
+    
+    res.status(201).json({ 
+      success: true, 
+      leadId: lead._id,
+      message: 'Thank you for your interest! We will contact you soon.' 
+    });
+  } catch (error) {
+    console.error('Error creating storefront lead:', error);
+    res.status(500).json({ error: 'Failed to submit lead. Please try again.' });
+  }
+});
+
+// ===== ADMIN LEAD MANAGEMENT =====
+
 // Lead Inquiry endpoints
-// Get all leads (admin only)
+// Get all leads (admin only) with filtering
 app.get('/api/admin/leads', authenticateToken, async (req: any, res) => {
   try {
     // Check if user is admin
@@ -3246,7 +3321,17 @@ app.get('/api/admin/leads', authenticateToken, async (req: any, res) => {
       return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
     }
 
-    const leads = await leadInquiriesService.getAll();
+    // Extract filter parameters
+    const { hubId, publicationId, status, leadSource, includeArchived } = req.query;
+    
+    const filters: any = {};
+    if (hubId) filters.hubId = hubId as string;
+    if (publicationId) filters.publicationId = publicationId as string;
+    if (status) filters.status = status as string;
+    if (leadSource) filters.leadSource = leadSource as string;
+    if (includeArchived === 'true') filters.includeArchived = true;
+
+    const leads = await leadInquiriesService.getAll(filters);
     res.json({ leads });
   } catch (error) {
     console.error('Error fetching leads:', error);
@@ -3254,7 +3339,42 @@ app.get('/api/admin/leads', authenticateToken, async (req: any, res) => {
   }
 });
 
-// Update lead status (admin only)
+// Get lead by ID (admin only)
+app.get('/api/admin/leads/:id', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    const { id } = req.params;
+    const lead = await leadInquiriesService.getById(id);
+    
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+
+    res.json({ lead });
+  } catch (error) {
+    console.error('Error fetching lead:', error);
+    res.status(500).json({ error: 'Failed to fetch lead' });
+  }
+});
+
+// Create new lead
+app.post('/api/admin/leads', authenticateToken, async (req: any, res) => {
+  try {
+    const leadData = req.body;
+    const lead = await leadInquiriesService.create(leadData);
+    res.status(201).json({ lead });
+  } catch (error) {
+    console.error('Error creating lead:', error);
+    res.status(500).json({ error: 'Failed to create lead' });
+  }
+});
+
+// Update lead (admin only)
 app.put('/api/admin/leads/:id', authenticateToken, async (req: any, res) => {
   try {
     // Check if user is admin
@@ -3275,6 +3395,427 @@ app.put('/api/admin/leads/:id', authenticateToken, async (req: any, res) => {
   } catch (error) {
     console.error('Error updating lead:', error);
     res.status(500).json({ error: 'Failed to update lead' });
+  }
+});
+
+// Archive a lead (admin only)
+app.put('/api/admin/leads/:id/archive', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    const { id } = req.params;
+    const lead = await leadInquiriesService.archive(id);
+    
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+
+    res.json({ lead });
+  } catch (error) {
+    console.error('Error archiving lead:', error);
+    res.status(500).json({ error: 'Failed to archive lead' });
+  }
+});
+
+// Unarchive a lead (admin only)
+app.put('/api/admin/leads/:id/unarchive', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    const { id } = req.params;
+    const lead = await leadInquiriesService.unarchive(id);
+    
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+
+    res.json({ lead });
+  } catch (error) {
+    console.error('Error unarchiving lead:', error);
+    res.status(500).json({ error: 'Failed to unarchive lead' });
+  }
+});
+
+// Get lead stats (admin only)
+app.get('/api/admin/leads-stats', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    const { hubId } = req.query;
+    const stats = await leadInquiriesService.getStats(hubId as string | undefined);
+    res.json({ stats });
+  } catch (error) {
+    console.error('Error fetching lead stats:', error);
+    res.status(500).json({ error: 'Failed to fetch lead stats' });
+  }
+});
+
+// ===== LEAD NOTES ENDPOINTS =====
+
+// Get all notes for a lead (admin only)
+app.get('/api/admin/leads/:id/notes', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    const { id } = req.params;
+    const notes = await leadNotesService.getByLeadId(id);
+    res.json({ notes });
+  } catch (error) {
+    console.error('Error fetching lead notes:', error);
+    res.status(500).json({ error: 'Failed to fetch lead notes' });
+  }
+});
+
+// Add a note to a lead (admin only)
+app.post('/api/admin/leads/:id/notes', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    const { id } = req.params;
+    const { noteContent, noteType, metadata } = req.body;
+
+    // Get author name from profile
+    const authorName = profile.firstName && profile.lastName 
+      ? `${profile.firstName} ${profile.lastName}`
+      : profile.firstName || profile.lastName || 'Unknown';
+
+    const note = await leadNotesService.create({
+      leadId: id,
+      authorId: req.user.id,
+      authorName,
+      noteContent,
+      noteType: noteType || 'note',
+      metadata
+    });
+
+    res.status(201).json({ note });
+  } catch (error) {
+    console.error('Error creating lead note:', error);
+    res.status(500).json({ error: 'Failed to create lead note' });
+  }
+});
+
+// Update a note (admin only, can only update own notes)
+app.put('/api/admin/leads/:leadId/notes/:noteId', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    const { noteId } = req.params;
+    const { noteContent, metadata } = req.body;
+
+    // Get existing note to verify ownership
+    const existingNote = await leadNotesService.getById(noteId);
+    if (!existingNote) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+
+    // Only allow editing own notes
+    if (existingNote.authorId !== req.user.id) {
+      return res.status(403).json({ error: 'Can only edit your own notes' });
+    }
+
+    const note = await leadNotesService.update(noteId, {
+      noteContent,
+      metadata,
+      updatedAt: new Date()
+    });
+
+    res.json({ note });
+  } catch (error) {
+    console.error('Error updating lead note:', error);
+    res.status(500).json({ error: 'Failed to update lead note' });
+  }
+});
+
+// Delete a note (admin only, can only delete own notes)
+app.delete('/api/admin/leads/:leadId/notes/:noteId', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    const { noteId } = req.params;
+
+    // Get existing note to verify ownership
+    const existingNote = await leadNotesService.getById(noteId);
+    if (!existingNote) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+
+    // Only allow deleting own notes
+    if (existingNote.authorId !== req.user.id) {
+      return res.status(403).json({ error: 'Can only delete your own notes' });
+    }
+
+    const deleted = await leadNotesService.delete(noteId);
+    
+    if (!deleted) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting lead note:', error);
+    res.status(500).json({ error: 'Failed to delete lead note' });
+  }
+});
+
+// Delete all leads for development (admin only)
+app.delete('/api/admin/seed-leads', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    // Delete all leads and notes
+    const db = getDatabase();
+    const leadsResult = await db.collection('lead_inquiries').deleteMany({});
+    const notesResult = await db.collection('lead_notes').deleteMany({});
+    
+    res.json({ 
+      message: 'All leads deleted successfully',
+      deletedLeads: leadsResult.deletedCount,
+      deletedNotes: notesResult.deletedCount
+    });
+  } catch (error) {
+    console.error('Error deleting leads:', error);
+    res.status(500).json({ error: 'Failed to delete leads' });
+  }
+});
+
+// Seed fake leads (development only - admin only)
+app.post('/api/admin/seed-leads', authenticateToken, async (req: any, res) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+
+    // Find Chicago News Weekly publication by publicationId 1064
+    const publications = await publicationsService.getAll();
+    
+    // Try to find by publicationId 1064 first (Chicago News Weekly)
+    let chicagoNewsWeekly = publications.find(p => p.publicationId === 1064);
+    
+    // Fallback to name search if not found by ID
+    if (!chicagoNewsWeekly) {
+      chicagoNewsWeekly = publications.find(p => 
+        p.basicInfo.publicationName.toLowerCase().includes('chicago') && 
+        p.basicInfo.publicationName.toLowerCase().includes('news') &&
+        p.basicInfo.publicationName.toLowerCase().includes('weekly')
+      );
+    }
+    
+    const publicationId = chicagoNewsWeekly?._id?.toString();
+
+    const fakeLeads = [
+      {
+        leadSource: 'storefront_form' as const,
+        hubId: 'chicago-hub',
+        publicationId, // Assigned to Chicago News Weekly
+        contactName: 'Sarah Johnson',
+        contactEmail: 'sarah.johnson@techinnovations.com',
+        contactPhone: '(312) 555-0123',
+        businessName: 'Tech Innovations LLC',
+        websiteUrl: 'https://techinnovations.com',
+        budgetRange: '$5,000 - $10,000/month',
+        timeline: 'Start in 2-3 weeks',
+        marketingGoals: ['Increase brand awareness', 'Generate leads', 'Target local audience'],
+        interestedOutlets: ['Chicago News Weekly'],
+        status: 'new' as const,
+      },
+      {
+        leadSource: 'ai_chat' as const,
+        hubId: 'chicago-hub',
+        publicationId, // Assigned to Chicago News Weekly
+        contactName: 'Michael Chen',
+        contactEmail: 'michael@localbrewco.com',
+        contactPhone: '(773) 555-0456',
+        businessName: 'Local Brew Co.',
+        websiteUrl: 'https://localbrewco.com',
+        budgetRange: '$2,000 - $5,000/month',
+        timeline: 'Immediate',
+        marketingGoals: ['Promote events', 'Build community presence', 'Drive sales and revenue'],
+        conversationContext: {
+          topic: 'Event promotion for new brewery opening',
+          interests: ['Chicago News Weekly', 'Food & beverage publications'],
+        },
+        status: 'contacted' as const,
+      },
+      {
+        leadSource: 'storefront_form' as const,
+        hubId: 'chicago-hub',
+        // No publication assignment - hub-level only
+        contactName: 'Jennifer Martinez',
+        contactEmail: 'jmartinez@greenenergyplus.com',
+        contactPhone: '(847) 555-0789',
+        businessName: 'Green Energy Plus',
+        websiteUrl: 'https://greenenergyplus.com',
+        budgetRange: '$15,000 - $25,000/month',
+        timeline: 'Q2 2025',
+        marketingGoals: ['Launch new product/service', 'Increase brand awareness', 'Target local audience'],
+        interestedOutlets: ['Crain\'s Chicago Business', 'Chicago Sun-Times'],
+        status: 'qualified' as const,
+      },
+      {
+        leadSource: 'manual_entry' as const,
+        hubId: 'chicago-hub',
+        publicationId, // Assigned to Chicago News Weekly
+        contactName: 'David Kim',
+        contactEmail: 'david@chicagoeats.com',
+        contactPhone: '(312) 555-0234',
+        businessName: 'Chicago Eats Restaurant Group',
+        websiteUrl: 'https://chicagoeats.com',
+        budgetRange: '$8,000 - $12,000/month',
+        timeline: 'Start next month',
+        marketingGoals: ['Promote events', 'Drive sales and revenue', 'Build community presence'],
+        interestedOutlets: ['Chicago News Weekly'],
+        status: 'proposal_sent' as const,
+      },
+      {
+        leadSource: 'ai_chat' as const,
+        hubId: 'chicago-hub',
+        contactName: 'Amanda Foster',
+        contactEmail: 'amanda@fitnessfirst.com',
+        contactPhone: '(630) 555-0567',
+        businessName: 'Fitness First Chicago',
+        websiteUrl: 'https://fitnessfirstchicago.com',
+        budgetRange: '$3,000 - $7,000/month',
+        timeline: 'Start in 1 month',
+        marketingGoals: ['Generate leads', 'Target local audience', 'Increase brand awareness'],
+        conversationContext: {
+          topic: 'Multi-location fitness center expansion campaign',
+          interests: ['Health & wellness publications', 'Community newspapers'],
+        },
+        status: 'closed_won' as const,
+      },
+      {
+        leadSource: 'storefront_form' as const,
+        hubId: 'chicago-hub',
+        contactName: 'Robert Thompson',
+        contactEmail: 'rthompson@lawfirm.com',
+        contactPhone: '(312) 555-0890',
+        businessName: 'Thompson & Associates Law',
+        websiteUrl: 'https://thompsonlaw.com',
+        budgetRange: '$10,000 - $15,000/month',
+        timeline: 'Flexible',
+        marketingGoals: ['Increase brand awareness', 'Generate leads'],
+        status: 'closed_lost' as const,
+      },
+      {
+        leadSource: 'ai_chat' as const,
+        hubId: 'chicago-hub',
+        contactName: 'Emily Rodriguez',
+        contactEmail: 'emily@creativestudio.com',
+        contactPhone: '(773) 555-0123',
+        businessName: 'Creative Studio Chicago',
+        websiteUrl: 'https://creativestudiochi.com',
+        budgetRange: '$4,000 - $8,000/month',
+        timeline: 'Start ASAP',
+        marketingGoals: ['Launch new product/service', 'Target local audience', 'Build community presence'],
+        conversationContext: {
+          topic: 'Design studio rebranding campaign',
+          interests: ['Arts & culture publications', 'Business journals'],
+        },
+        status: 'new' as const,
+      },
+    ];
+
+    const createdLeads = [];
+    
+    for (const leadData of fakeLeads) {
+      const lead = await leadInquiriesService.create(leadData);
+      createdLeads.push(lead);
+      
+      // Add initial notes for some leads
+      if (lead._id) {
+        if (leadData.status === 'contacted') {
+          await leadNotesService.create({
+            leadId: lead._id.toString(),
+            authorId: req.user.id,
+            authorName: profile.firstName && profile.lastName 
+              ? `${profile.firstName} ${profile.lastName}`
+              : 'Admin',
+            noteContent: 'Initial contact made via phone. Left voicemail with callback number.',
+            noteType: 'note',
+          });
+        }
+        
+        if (leadData.status === 'proposal_sent') {
+          await leadNotesService.create({
+            leadId: lead._id.toString(),
+            authorId: req.user.id,
+            authorName: profile.firstName && profile.lastName 
+              ? `${profile.firstName} ${profile.lastName}`
+              : 'Admin',
+            noteContent: 'Sent comprehensive media kit and proposal via email.',
+            noteType: 'note',
+          });
+        }
+        
+        if (leadData.status === 'closed_won') {
+          await leadNotesService.create({
+            leadId: lead._id.toString(),
+            authorId: req.user.id,
+            authorName: profile.firstName && profile.lastName 
+              ? `${profile.firstName} ${profile.lastName}`
+              : 'Admin',
+            noteContent: 'Contract signed! 6-month campaign starting next month.',
+            noteType: 'note',
+          });
+        }
+        
+        if (leadData.status === 'closed_lost') {
+          await leadNotesService.create({
+            leadId: lead._id.toString(),
+            authorId: req.user.id,
+            authorName: profile.firstName && profile.lastName 
+              ? `${profile.firstName} ${profile.lastName}`
+              : 'Admin',
+            noteContent: 'Client decided to go with a different agency. Budget constraints cited.',
+            noteType: 'note',
+          });
+        }
+      }
+    }
+
+    res.json({ 
+      success: true,
+      count: createdLeads.length,
+      leads: createdLeads
+    });
+  } catch (error) {
+    console.error('Error seeding leads:', error);
+    res.status(500).json({ error: 'Failed to seed leads' });
   }
 });
 

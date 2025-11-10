@@ -1,0 +1,371 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lead Inquiry Schema",
+  "description": "Schema for managing leads from various sources (storefront forms, AI chat, manual entry)",
+  "type": "object",
+  "required": ["leadSource", "hubId", "contactName", "contactEmail", "businessName", "createdAt", "updatedAt"],
+  "properties": {
+    "_id": {
+      "type": ["string", "object"],
+      "description": "MongoDB ObjectId"
+    },
+    "userId": {
+      "type": "string",
+      "description": "Optional user ID if lead submitted by logged-in user"
+    },
+    "leadSource": {
+      "type": "string",
+      "enum": ["storefront_form", "ai_chat", "manual_entry", "other"],
+      "description": "Source where the lead originated",
+      "examples": ["storefront_form"]
+    },
+    "hubId": {
+      "type": "string",
+      "description": "Hub identifier this lead belongs to (e.g., 'chicago-hub')",
+      "examples": ["chicago-hub", "nyc-hub", "la-hub"]
+    },
+    "publicationId": {
+      "type": "string",
+      "description": "Optional MongoDB ObjectId of specific publication if lead is publication-specific"
+    },
+    "contactName": {
+      "type": "string",
+      "description": "Primary contact person name",
+      "minLength": 1,
+      "examples": ["John Doe", "Jane Smith"]
+    },
+    "contactEmail": {
+      "type": "string",
+      "format": "email",
+      "description": "Contact email address",
+      "examples": ["john@example.com"]
+    },
+    "contactPhone": {
+      "type": "string",
+      "description": "Optional contact phone number",
+      "examples": ["(555) 123-4567", "5551234567"]
+    },
+    "businessName": {
+      "type": "string",
+      "description": "Company or business name",
+      "minLength": 1,
+      "examples": ["Acme Corp", "Local Restaurant"]
+    },
+    "websiteUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "Optional business website URL",
+      "examples": ["https://example.com"]
+    },
+    "budgetRange": {
+      "type": "string",
+      "description": "Expected advertising budget range",
+      "examples": ["under-5k", "$5-10K/month", "5k-10k", "$10K-25K/month"]
+    },
+    "timeline": {
+      "type": "string",
+      "description": "When they want to start or campaign duration",
+      "examples": ["Next month", "Q1 2025", "ASAP", "2-3 months"]
+    },
+    "marketingGoals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of marketing objectives",
+      "examples": [["brand-awareness", "lead-generation"], ["foot-traffic"]]
+    },
+    "interestedOutlets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of outlet IDs or names they're interested in"
+    },
+    "interestedPackages": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "description": "Array of package IDs they're interested in"
+    },
+    "message": {
+      "type": "string",
+      "description": "General message or notes from any form submission",
+      "examples": ["Looking to increase brand awareness in Chicago", "Need help with digital advertising"]
+    },
+    "targetLaunchDate": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date string for when they want to launch their campaign",
+      "examples": ["2025-12-01", "2025-11-13"]
+    },
+    "campaignGoals": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ],
+      "description": "Campaign goals - can be single string or array",
+      "examples": ["lead-generation", ["brand-awareness", "foot-traffic"]]
+    },
+    "conversationContext": {
+      "type": "object",
+      "description": "Flexible storage for form-specific data and original submission",
+      "properties": {
+        "formType": {
+          "type": "string",
+          "description": "Type of form that submitted this lead",
+          "enum": ["storefront_basic", "storefront_detailed", "ai_chat_handoff", "manual_phone_call", "manual_email", "other"],
+          "examples": ["storefront_basic", "ai_chat_handoff"]
+        },
+        "rawFormData": {
+          "type": "object",
+          "description": "Original form payload preserved as-is",
+          "additionalProperties": true
+        },
+        "context": {
+          "type": "string",
+          "description": "For AI chat leads - conversation summary"
+        },
+        "triggerKeywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "For AI chat leads - keywords that triggered handoff"
+        },
+        "specificNeeds": {
+          "type": "string",
+          "description": "Specific needs mentioned by the lead"
+        },
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when form was submitted"
+        },
+        "referralSource": {
+          "type": "string",
+          "description": "For manual entries - where they heard about us"
+        },
+        "callDate": {
+          "type": "string",
+          "format": "date",
+          "description": "For phone call leads - date of call"
+        }
+      },
+      "additionalProperties": true,
+      "examples": [
+        {
+          "formType": "storefront_basic",
+          "rawFormData": {
+            "name": "John Doe",
+            "email": "john@example.com",
+            "company": "Acme Corp",
+            "budgetRange": "5k-10k"
+          },
+          "submittedAt": "2025-11-10T14:30:00Z"
+        },
+        {
+          "formType": "ai_chat_handoff",
+          "context": "User asked about reaching millennials in Chicago",
+          "triggerKeywords": ["millennials", "social media", "digital"],
+          "specificNeeds": "Target 25-35 age group with social media ads"
+        }
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["new", "contacted", "qualified", "proposal_sent", "closed_won", "closed_lost"],
+      "default": "new",
+      "description": "Current lead status in the sales pipeline",
+      "examples": ["new", "contacted", "closed_won"]
+    },
+    "assignedTo": {
+      "type": "string",
+      "description": "User ID of sales rep assigned to this lead"
+    },
+    "followUpDate": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Scheduled follow-up date/time",
+      "examples": ["2025-11-15T10:00:00Z"]
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when lead was archived (null for active leads)"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when lead was created"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when lead was last updated"
+    }
+  },
+  "examples": [
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "leadSource": "storefront_form",
+      "hubId": "chicago-hub",
+      "publicationId": "507f1f77bcf86cd799439012",
+      "contactName": "Sarah Johnson",
+      "contactEmail": "sarah@techinnovations.com",
+      "contactPhone": "(312) 555-0123",
+      "businessName": "Tech Innovations LLC",
+      "websiteUrl": "https://techinnovations.com",
+      "budgetRange": "$5-10K/month",
+      "timeline": "Next quarter",
+      "marketingGoals": ["brand-awareness", "lead-generation"],
+      "message": "Looking to increase our visibility in the Chicago tech community",
+      "targetLaunchDate": "2025-12-01",
+      "campaignGoals": "lead-generation",
+      "conversationContext": {
+        "formType": "storefront_basic",
+        "rawFormData": {
+          "name": "Sarah Johnson",
+          "email": "sarah@techinnovations.com",
+          "company": "Tech Innovations LLC",
+          "phone": "3125550123",
+          "budgetRange": "5k-10k",
+          "campaignGoals": "lead-generation",
+          "targetLaunchDate": "2025-12-01",
+          "message": "Looking to increase our visibility in the Chicago tech community"
+        },
+        "submittedAt": "2025-11-10T14:30:00Z"
+      },
+      "status": "new",
+      "createdAt": "2025-11-10T14:30:00Z",
+      "updatedAt": "2025-11-10T14:30:00Z"
+    },
+    {
+      "_id": "507f1f77bcf86cd799439013",
+      "leadSource": "ai_chat",
+      "hubId": "chicago-hub",
+      "publicationId": "507f1f77bcf86cd799439012",
+      "contactName": "Michael Chen",
+      "contactEmail": "mike@localbrewco.com",
+      "contactPhone": "(312) 555-0456",
+      "businessName": "Local Brew Co.",
+      "budgetRange": "$2-5K/month",
+      "timeline": "ASAP",
+      "message": "Interested in promoting our new brewery location",
+      "conversationContext": {
+        "formType": "ai_chat_handoff",
+        "context": "User inquired about reaching craft beer enthusiasts in Chicago neighborhoods",
+        "triggerKeywords": ["craft beer", "local audience", "neighborhood marketing"],
+        "specificNeeds": "Want to target Logan Square and Wicker Park areas",
+        "submittedAt": "2025-11-10T15:45:00Z"
+      },
+      "status": "contacted",
+      "createdAt": "2025-11-10T15:45:00Z",
+      "updatedAt": "2025-11-11T10:00:00Z"
+    },
+    {
+      "_id": "507f1f77bcf86cd799439014",
+      "leadSource": "manual_entry",
+      "hubId": "chicago-hub",
+      "contactName": "David Kim",
+      "contactEmail": "david@chicagoeats.com",
+      "contactPhone": "(312) 555-0789",
+      "businessName": "Chicago Eats Restaurant Group",
+      "websiteUrl": "https://chicagoeats.com",
+      "budgetRange": "$8-12K/month",
+      "timeline": "2-3 months",
+      "marketingGoals": ["foot-traffic", "brand-awareness"],
+      "message": "Expanding to 3 new locations, need comprehensive marketing",
+      "conversationContext": {
+        "formType": "manual_phone_call",
+        "referralSource": "existing-customer",
+        "callDate": "2025-11-10",
+        "notes": "Owner called directly, very interested in multi-location package"
+      },
+      "status": "proposal_sent",
+      "assignedTo": "user123",
+      "followUpDate": "2025-11-15T14:00:00Z",
+      "createdAt": "2025-11-10T16:30:00Z",
+      "updatedAt": "2025-11-12T09:15:00Z"
+    }
+  ],
+  "definitions": {
+    "LeadNote": {
+      "title": "Lead Note Schema",
+      "description": "Notes and activity timeline for leads",
+      "type": "object",
+      "required": ["leadId", "authorId", "authorName", "noteContent", "noteType", "createdAt", "updatedAt"],
+      "properties": {
+        "_id": {
+          "type": ["string", "object"],
+          "description": "MongoDB ObjectId"
+        },
+        "leadId": {
+          "type": "string",
+          "description": "Reference to parent lead"
+        },
+        "authorId": {
+          "type": "string",
+          "description": "User ID who created the note"
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Display name of the author"
+        },
+        "noteContent": {
+          "type": "string",
+          "description": "The actual note text",
+          "minLength": 1
+        },
+        "noteType": {
+          "type": "string",
+          "enum": ["note", "status_change", "assignment", "system"],
+          "description": "Type of note entry",
+          "examples": ["note", "status_change"]
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional context for the note",
+          "properties": {
+            "previousStatus": {
+              "type": "string",
+              "description": "For status_change notes"
+            },
+            "newStatus": {
+              "type": "string",
+              "description": "For status_change notes"
+            },
+            "previousAssignee": {
+              "type": "string",
+              "description": "For assignment notes"
+            },
+            "newAssignee": {
+              "type": "string",
+              "description": "For assignment notes"
+            }
+          },
+          "additionalProperties": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When note was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When note was last updated"
+        }
+      }
+    }
+  }
+}
+

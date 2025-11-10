@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/CustomAuthContext';
-// MongoDB services removed - using API calls instead
+import { useHubContext } from '@/contexts/HubContext';
+import { usePublication } from '@/contexts/PublicationContext';
+import { leadsApi, type LeadSource } from '@/api/leads';
 import { useToast } from '@/hooks/use-toast';
 
 interface LeadData {
@@ -15,10 +17,14 @@ interface LeadData {
   interestedPackages?: number[];
   interestedOutlets?: string[];
   conversationContext?: any;
+  leadSource?: LeadSource; // Optional - can be overridden
+  publicationId?: string; // Optional - can be overridden
 }
 
 export const useLeadCapture = () => {
   const { user } = useAuth();
+  const { selectedHubId } = useHubContext();
+  const { selectedPublication } = usePublication();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -32,18 +38,32 @@ export const useLeadCapture = () => {
       return null;
     }
 
+    if (!selectedHubId) {
+      toast({
+        title: "Hub Required",
+        description: "Please select a hub before submitting.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
     setLoading(true);
     try {
-      // For now, just simulate success - will be replaced with API call later
-      console.log('Lead data submitted:', leadData);
-      const data = { success: true };
+      // Create lead with proper tracking
+      const lead = await leadsApi.create({
+        ...leadData,
+        leadSource: leadData.leadSource || 'storefront_form',
+        hubId: selectedHubId,
+        publicationId: leadData.publicationId || selectedPublication?._id,
+        userId: user.id,
+      });
 
       toast({
         title: "Information Submitted",
         description: "Thank you! We'll be in touch soon to discuss your marketing goals.",
       });
 
-      return data;
+      return lead;
     } catch (error) {
       console.error('Error submitting lead:', error);
       toast({
