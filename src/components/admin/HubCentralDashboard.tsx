@@ -11,8 +11,10 @@ import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
 import { useHubPublications } from '@/hooks/useHubs';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
-import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle } from 'lucide-react';
+import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle, Download } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+import { exportHubInventoryToCSV } from '@/utils/hubInventoryExport';
+import { toast } from '@/components/ui/use-toast';
 
 interface HubCentralDashboardProps {
   activeTab: string;
@@ -51,6 +53,42 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
     }
   };
 
+  // Handle CSV export
+  const handleExportInventory = () => {
+    if (!selectedHub || !selectedHubId) {
+      toast({
+        title: 'No hub selected',
+        description: 'Please select a hub to export inventory.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (publications.length === 0) {
+      toast({
+        title: 'No data available',
+        description: 'No publications found for this hub.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      exportHubInventoryToCSV(publications, selectedHubId, selectedHub.basicInfo.name);
+      toast({
+        title: 'Export successful',
+        description: `Inventory data for ${selectedHub.basicInfo.name} has been downloaded.`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: 'Export failed',
+        description: 'There was an error exporting the inventory data.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const renderContent = () => {
     if (activeTab === 'overview') {
       return (
@@ -80,6 +118,27 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                     <strong className="font-semibold">ID</strong> {selectedHub?.hubId || 'N/A'}
                   </span>
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportInventory}
+                        disabled={loadingPubs || publications.length === 0}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Export CSV
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Export all inventory and pricing for this hub</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </div>
