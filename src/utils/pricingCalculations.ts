@@ -43,7 +43,10 @@ const FREQUENCY_TO_MONTHLY: Record<string, number> = {
   'bi-weekly': 2.17,
   'monthly': 1,
   'quarterly': 0.33,
-  'irregular': 2
+  'irregular': 2,
+  // Event-specific frequencies
+  'annual': 0.083,       // 1 time per year = ~0.083 per month
+  'bi-annually': 0.167   // 2 times per year = ~0.167 per month
 };
 
 // ===== HELPER FUNCTIONS =====
@@ -171,8 +174,8 @@ export function normalizeToDaily(
   const monthlyImpressions = metrics?.impressionsPerMonth || ad.monthlyImpressions || 0;
   const dailyImpressions = monthlyImpressions / DAYS_PER_MONTH;
 
-  // Calculate daily flat rate
-  const dailyFlatRate = normalizePricingToDaily(pricing);
+  // Calculate daily flat rate (pass frequency for events)
+  const dailyFlatRate = normalizePricingToDaily(pricing, channelFrequency);
 
   return {
     dailyOccurrences,
@@ -184,8 +187,9 @@ export function normalizeToDaily(
 
 /**
  * Convert pricing models to daily base rate
+ * For flat rates with frequency (e.g., events), adjusts based on occurrence rate
  */
-function normalizePricingToDaily(pricing: StandardPricing): number {
+function normalizePricingToDaily(pricing: StandardPricing, channelFrequency?: string): number {
   const { flatRate, pricingModel } = pricing;
 
   if (!flatRate) return 0;
@@ -193,6 +197,15 @@ function normalizePricingToDaily(pricing: StandardPricing): number {
   switch (pricingModel) {
     case 'monthly':
     case 'flat':
+      // For flat rates with frequency (e.g., events), flatRate = price per occurrence
+      // Monthly revenue = flatRate * occurrences per month
+      if (channelFrequency) {
+        const occurrencesPerMonth = inferOccurrencesFromFrequency(channelFrequency);
+        // Calculate: (flatRate per occurrence * occurrences per month) / days per month
+        // Example: Annual event at $10,000/event = ($10,000 * 0.083 events/month) / 30 days = $27.77/day
+        return (flatRate * occurrencesPerMonth) / DAYS_PER_MONTH;
+      }
+      // Default: assume flatRate is already monthly
       return flatRate / DAYS_PER_MONTH;
 
     case 'per_week':
@@ -319,8 +332,8 @@ export function formatPricingModel(model?: string): string {
   if (!model) return 'N/A';
 
   const modelMap: Record<string, string> = {
-    'flat': '/month',
-    'flat_rate': '/month',
+    'flat': '/occurrence',
+    'flat_rate': '/occurrence',
     'per_week': '/week',
     'per_day': '/day',
     'cpm': '/1000 impressions',

@@ -6299,13 +6299,25 @@ export const DashboardInventoryManager = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="frequency">Frequency</Label>
-                      <Input
-                        id="frequency"
-                        value={editingItem.frequency || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, frequency: e.target.value })}
-                        placeholder="Weekly, Monthly"
-                      />
+                      <Label htmlFor="frequency">Frequency *</Label>
+                      <Select 
+                        value={editingItem.frequency || ''} 
+                        onValueChange={(value) => setEditingItem({ ...editingItem, frequency: value })}
+                      >
+                        <SelectTrigger className={!editingItem.frequency ? 'border-orange-300' : ''}>
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {!editingItem.frequency && (
+                        <p className="text-xs text-orange-600 mt-1">⚠️ Required for accurate revenue forecasting</p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="circulation">Total Circulation</Label>
@@ -6767,13 +6779,30 @@ export const DashboardInventoryManager = () => {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="platform">Platform</Label>
-                      <Input
-                        id="platform"
-                        value={editingItem.platform || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, platform: e.target.value })}
-                        placeholder="Facebook, Instagram, Twitter"
-                      />
+                      <Label htmlFor="platform">Platform *</Label>
+                      <Select 
+                        value={editingItem.platform || ''} 
+                        onValueChange={(value) => setEditingItem({ ...editingItem, platform: value })}
+                      >
+                        <SelectTrigger className={!editingItem.platform ? 'border-orange-300' : ''}>
+                          <SelectValue placeholder="Select platform" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="facebook">Facebook</SelectItem>
+                          <SelectItem value="instagram">Instagram</SelectItem>
+                          <SelectItem value="twitter">Twitter/X</SelectItem>
+                          <SelectItem value="linkedin">LinkedIn</SelectItem>
+                          <SelectItem value="youtube">YouTube</SelectItem>
+                          <SelectItem value="tiktok">TikTok</SelectItem>
+                          <SelectItem value="pinterest">Pinterest</SelectItem>
+                          <SelectItem value="snapchat">Snapchat</SelectItem>
+                          <SelectItem value="threads">Threads</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {!editingItem.platform && (
+                        <p className="text-xs text-orange-600 mt-1">⚠️ Platform required</p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="handle">Handle</Label>
@@ -6832,16 +6861,6 @@ export const DashboardInventoryManager = () => {
                       />
                       <FieldError error={fieldErrors['engagementRate']} />
                     </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="specifications">Specifications</Label>
-                    <Input
-                      id="specifications"
-                      value={editingItem.specifications || ''}
-                      onChange={(e) => setEditingItem({ ...editingItem, specifications: e.target.value })}
-                      placeholder="e.g., Image, Carousel, or Video, 1080x1080 (1:1 ratio), JPG, PNG, MP4"
-                    />
                   </div>
                   
                   <div className="flex items-center space-x-2">
