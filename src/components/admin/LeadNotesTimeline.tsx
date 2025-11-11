@@ -20,6 +20,7 @@ import {
 interface LeadNotesTimelineProps {
   leadId: string;
   currentUserId?: string;
+  showComposer?: boolean;
 }
 
 const getNoteIcon = (noteType: LeadNote['noteType']) => {
@@ -52,7 +53,11 @@ const getNoteTypeColor = (noteType: LeadNote['noteType']) => {
   }
 };
 
-export const LeadNotesTimeline = ({ leadId, currentUserId }: LeadNotesTimelineProps) => {
+export const LeadNotesTimeline = ({
+  leadId,
+  currentUserId,
+  showComposer = true,
+}: LeadNotesTimelineProps) => {
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [newNoteContent, setNewNoteContent] = useState('');
@@ -190,37 +195,36 @@ export const LeadNotesTimeline = ({ leadId, currentUserId }: LeadNotesTimelinePr
 
   return (
     <div className="space-y-4">
-      {/* Add New Note */}
-      <Card>
-        <CardContent className="pt-6">
-          <h3 className="text-sm font-semibold mb-3">Add Note</h3>
-          <Textarea
-            placeholder="Write a note about this lead..."
-            value={newNoteContent}
-            onChange={(e) => setNewNoteContent(e.target.value)}
-            rows={3}
-            className="mb-3"
-          />
-          <Button 
-            onClick={handleAddNote} 
-            disabled={addingNote || !newNoteContent.trim()}
-            size="sm"
-          >
-            {addingNote ? 'Adding...' : 'Add Note'}
-          </Button>
-        </CardContent>
-      </Card>
+      {showComposer && (
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="text-sm font-semibold mb-3">Add Note</h3>
+            <Textarea
+              placeholder="Write a note about this lead..."
+              value={newNoteContent}
+              onChange={(e) => setNewNoteContent(e.target.value)}
+              rows={3}
+              className="mb-3"
+            />
+            <Button
+              onClick={handleAddNote}
+              disabled={addingNote || !newNoteContent.trim()}
+              size="sm"
+            >
+              {addingNote ? 'Adding...' : 'Add Note'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Notes Timeline */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold">Activity Timeline</h3>
         
         {notes.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center text-muted-foreground">
-              No notes yet. Add the first note above.
-            </CardContent>
-          </Card>
+          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-muted-foreground">
+            No notes yet. Add the first note above.
+          </div>
         ) : (
           notes.map((note) => (
             <Card key={note._id} className="relative">

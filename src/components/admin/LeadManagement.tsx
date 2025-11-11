@@ -4,7 +4,6 @@ import { leadsApi, type Lead, type LeadFilters, type LeadSource, type LeadStatus
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
@@ -25,11 +24,10 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Building2,
   Calendar,
+  Check,
   ChevronDown,
   Database,
-  Filter,
   Globe,
   Mail,
   Phone,
@@ -41,24 +39,26 @@ import { API_BASE_URL } from '@/config/api';
 import { getPublications } from '@/api/publications';
 import type { PublicationFrontend as Publication } from '@/types/publication';
 
-type SortKey = 'businessName' | 'contactName' | 'contactEmail' | 'budgetRange' | 'status' | 'createdAt';
+type SortKey = 'businessName' | 'contactName' | 'budgetRange' | 'status' | 'createdAt';
 
 export const LeadManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [seeding, setSeeding] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(() => new Set());
   const [notesDrafts, setNotesDrafts] = useState<Record<string, string>>({});
+  const [notePanelModes, setNotePanelModes] = useState<Record<string, 'add' | 'timeline'>>({});
   const [timelineRefreshKeys, setTimelineRefreshKeys] = useState<Record<string, number>>({});
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [statusFilterDraft, setStatusFilterDraft] = useState<string[]>([]);
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
+  const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
+  const [publicationPopoverOpen, setPublicationPopoverOpen] = useState(false);
   const { toast } = useToast();
   const { selectedHubId } = useHubContext();
 
@@ -315,6 +315,10 @@ export const LeadManagement = () => {
         ...prev,
         [leadId]: (prev[leadId] ?? 0) + 1,
       }));
+      setNotePanelModes(prev => ({
+        ...prev,
+        [leadId]: 'timeline',
+      }));
 
       toast({
         title: 'Note Saved',
@@ -397,7 +401,11 @@ export const LeadManagement = () => {
         next.add(lead._id!);
         setNotesDrafts(current => ({
           ...current,
-          [lead._id!]: current[lead._id!] ?? ((lead as any).notes ?? ''),
+          [lead._id!]: current[lead._id!] ?? '',
+        }));
+        setNotePanelModes(current => ({
+          ...current,
+          [lead._id!]: current[lead._id!] ?? 'timeline',
         }));
       }
 
@@ -440,8 +448,6 @@ export const LeadManagement = () => {
         return lead.businessName || '';
       case 'contactName':
         return lead.contactName || '';
-      case 'contactEmail':
-        return lead.contactEmail || '';
       case 'budgetRange':
         return lead.budgetRange || '';
       case 'status':
@@ -525,6 +531,42 @@ export const LeadManagement = () => {
 
   const hasActiveStatusFilters = statusFilter.length > 0;
   const visibleCount = filteredLeads.length;
+  const filterTriggerClass =
+    'justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200 h-9 flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium';
+  const selectedSourceValue = filters.leadSource ?? 'all';
+  const selectedPublicationValue = filters.publicationId ?? 'all';
+  const [sourceDraft, setSourceDraft] = useState<string>(selectedSourceValue);
+  const [publicationDraft, setPublicationDraft] = useState<string>(selectedPublicationValue);
+
+  const sourceOptions = [
+    { value: 'all', label: 'All Sources' },
+    { value: 'storefront_form', label: 'Web Form' },
+    { value: 'ai_chat', label: 'AI Chat' },
+    { value: 'manual_entry', label: 'Manual Entry' },
+    { value: 'other', label: 'Other' },
+  ] as const;
+
+  const publicationOptions = [
+    { value: 'all', label: 'All Publications' },
+    { value: 'hub-level', label: 'Hub-Level Only' },
+    ...publications
+      .map(pub => ({
+        value: pub._id?.toString() || '',
+        label: pub.basicInfo?.publicationName || 'Unnamed Publication',
+      }))
+      .filter(option => option.value),
+  ];
+
+  const getSourceFilterLabel = () => {
+    const option = sourceOptions.find(item => item.value === selectedSourceValue);
+    return option?.label ?? 'All Sources';
+  };
+
+  const getPublicationFilterLabel = () => {
+    if (selectedPublicationValue === 'all') return 'All Publications';
+    const option = publicationOptions.find(item => item.value === selectedPublicationValue);
+    return option?.label ?? 'All Publications';
+  };
 
   if (loading) {
     return <div>Loading leads...</div>;
@@ -533,7 +575,7 @@ export const LeadManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold">Lead Management</h2>
+        <h2 className="text-xl font-semibold font-sans text-slate-900">Lead Management</h2>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={seedTestLeads} disabled={seeding}>
             <Database className="mr-2 h-4 w-4" />
@@ -546,10 +588,6 @@ export const LeadManagement = () => {
             </Button>
           )}
           <div className="hidden h-8 border-l border-border md:block" />
-          <Button variant={showFilters ? 'default' : 'outline'} size="sm" onClick={() => setShowFilters(!showFilters)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
           <Button
             variant={showArchived ? 'default' : 'outline'}
             size="sm"
@@ -564,163 +602,228 @@ export const LeadManagement = () => {
         </div>
       </div>
 
-      {showFilters && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium">Status</label>
-                <Select
-                  value={filters.status || 'all'}
-                  onValueChange={value =>
-                    setFilters(prev => ({
-                      ...prev,
-                      status: value === 'all' ? undefined : (value as LeadStatus),
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    {statusOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium">Source</label>
-                <Select
-                  value={filters.leadSource || 'all'}
-                  onValueChange={value =>
-                    setFilters(prev => ({
-                      ...prev,
-                      leadSource: value === 'all' ? undefined : (value as LeadSource),
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Sources" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sources</SelectItem>
-                    <SelectItem value="storefront_form">Web Form</SelectItem>
-                    <SelectItem value="ai_chat">AI Chat</SelectItem>
-                    <SelectItem value="manual_entry">Manual Entry</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium">Publication</label>
-                <Select
-                  value={filters.publicationId || 'all'}
-                  onValueChange={value =>
-                    setFilters(prev => ({
-                      ...prev,
-                      publicationId: value === 'all' ? undefined : value,
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Publications" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Publications</SelectItem>
-                    <SelectItem value="hub-level">Hub-Level Only</SelectItem>
-                    {publications.map(pub => (
-                      <SelectItem key={pub._id?.toString()} value={pub._id?.toString() || ''}>
-                        {pub.basicInfo?.publicationName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium">Search</label>
-                <div className="relative">
-                  <Input placeholder="Search leads…" value={searchTerm} onChange={event => setSearchTerm(event.target.value)} />
-                  {searchTerm && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0"
-                      onClick={() => setSearchTerm('')}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Inline filters rendered within table header */}
 
       <Card className="bg-white">
         <CardHeader className="border-b">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-lg font-semibold">
+            <CardTitle className="text-base font-semibold font-sans text-slate-900">
               All Leads ({visibleCount}
               {hasActiveStatusFilters ? ` of ${leads.length}` : ''})
             </CardTitle>
-            <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium ${
-                    statusFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
-                  }`}
-                >
-                  {getStatusFilterLabel()}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 space-y-4">
-                <div className="space-y-3">
-                  {statusOptions.map(option => {
-                    const checked = statusFilterDraft.includes(option.value);
-                    return (
-                      <label key={option.value} className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={() => {
-                            setStatusFilterDraft(prev =>
-                              checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
-                            );
-                          }}
-                        />
-                        <span>{option.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-                <div className="flex items-center justify-between border-t pt-3">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
+                <PopoverTrigger asChild>
                   <Button
-                    type="button"
+                    variant="outline"
+                    className={`${filterTriggerClass} ${
+                      statusFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                    }`}
+                  >
+                    {getStatusFilterLabel()}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 space-y-4">
+                  <div className="space-y-3">
+                    {statusOptions.map(option => {
+                      const checked = statusFilterDraft.includes(option.value);
+                      return (
+                        <label key={option.value} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => {
+                              setStatusFilterDraft(prev =>
+                                checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
+                              );
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStatusFilter([]);
+                        setStatusFilterDraft([]);
+                        setStatusPopoverOpen(false);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                    <Button size="sm" onClick={applyStatusFilter}>
+                      Apply
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              <Popover
+                open={sourcePopoverOpen}
+                onOpenChange={open => {
+                  setSourcePopoverOpen(open);
+                  if (open) {
+                    setSourceDraft(selectedSourceValue);
+                  }
+                }}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`${filterTriggerClass} min-w-[150px] ${
+                      selectedSourceValue !== 'all' ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                    }`}
+                  >
+                    {sourceOptions.find(option => option.value === sourceDraft)?.label ??
+                      getSourceFilterLabel()}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2">
+                  <div className="max-h-56 overflow-y-auto space-y-1">
+                    {sourceOptions.map(option => {
+                      const selected = sourceDraft === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setSourceDraft(option.value);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted ${
+                            selected ? 'text-primary' : ''
+                          }`}
+                        >
+                          {option.label}
+                          {selected && <Check className="h-4 w-4" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between border-t pt-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setFilters(prev => ({ ...prev, leadSource: undefined }));
+                        setSourcePopoverOpen(false);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setFilters(prev => ({
+                          ...prev,
+                          leadSource: sourceDraft === 'all' ? undefined : (sourceDraft as LeadSource),
+                        }));
+                        setSourcePopoverOpen(false);
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              <Popover
+                open={publicationPopoverOpen}
+                onOpenChange={open => {
+                  setPublicationPopoverOpen(open);
+                  if (open) {
+                    setPublicationDraft(selectedPublicationValue);
+                  }
+                }}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`${filterTriggerClass} min-w-[170px] ${
+                      selectedPublicationValue !== 'all' ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                    }`}
+                  >
+                    {publicationOptions.find(option => option.value === publicationDraft)?.label ??
+                      getPublicationFilterLabel()}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2">
+                  <div className="max-h-56 overflow-y-auto space-y-1">
+                    {publicationOptions.map(option => {
+                      const selected = publicationDraft === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setPublicationDraft(option.value);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted ${
+                            selected ? 'text-primary' : ''
+                          }`}
+                        >
+                          {option.label}
+                          {selected && <Check className="h-4 w-4" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between border-t pt-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setFilters(prev => ({ ...prev, publicationId: undefined }));
+                        setPublicationPopoverOpen(false);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setFilters(prev => ({
+                          ...prev,
+                          publicationId: publicationDraft === 'all' ? undefined : publicationDraft,
+                        }));
+                        setPublicationPopoverOpen(false);
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              <div className="relative min-w-[200px]">
+                <Input
+                  placeholder="Search leads…"
+                  value={searchTerm}
+                  onChange={event => setSearchTerm(event.target.value)}
+                  className={`${filterTriggerClass} pr-9 ${
+                    searchTerm ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                  }`}
+                />
+                {searchTerm && (
+                  <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      setStatusFilter([]);
-                      setStatusFilterDraft([]);
-                      setStatusPopoverOpen(false);
-                    }}
+                    className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0"
+                    onClick={() => setSearchTerm('')}
                   >
-                    Clear
+                    <X className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" onClick={applyStatusFilter}>
-                    Apply
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+                )}
+              </div>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -732,7 +835,7 @@ export const LeadManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[26%]">
+                  <TableHead className="w-[32%]">
                     <button
                       type="button"
                       onClick={() => handleSort('businessName')}
@@ -742,7 +845,7 @@ export const LeadManagement = () => {
                       {renderSortIcon('businessName')}
                     </button>
                   </TableHead>
-                  <TableHead className="w-[18%]">
+                  <TableHead className="w-[22%]">
                     <button
                       type="button"
                       onClick={() => handleSort('contactName')}
@@ -752,17 +855,7 @@ export const LeadManagement = () => {
                       {renderSortIcon('contactName')}
                     </button>
                   </TableHead>
-                  <TableHead className="w-[22%]">
-                    <button
-                      type="button"
-                      onClick={() => handleSort('contactEmail')}
-                      className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
-                    >
-                      Email
-                      {renderSortIcon('contactEmail')}
-                    </button>
-                  </TableHead>
-                  <TableHead className="w-[14%]">
+                  <TableHead className="w-[18%]">
                     <button
                       type="button"
                       onClick={() => handleSort('budgetRange')}
@@ -772,8 +865,8 @@ export const LeadManagement = () => {
                       {renderSortIcon('budgetRange')}
                     </button>
                   </TableHead>
-                  <TableHead className="w-[10%]">Publication</TableHead>
-                  <TableHead className="w-[10%] text-right">
+                  <TableHead className="w-[14%]">Publication</TableHead>
+                  <TableHead className="w-[14%] text-right">
                     <button
                       type="button"
                       onClick={() => handleSort('status')}
@@ -829,21 +922,15 @@ export const LeadManagement = () => {
                           </div>
                         </TableCell>
                         <TableCell className="text-sm font-medium">{lead.contactName}</TableCell>
-                        <TableCell>
-                          <a
-                            href={`mailto:${lead.contactEmail}`}
-                            className="text-sm text-primary hover:underline"
-                            onClick={event => event.stopPropagation()}
-                          >
-                            {lead.contactEmail}
-                          </a>
-                        </TableCell>
                         <TableCell className="text-sm">{formatBudgetRange(lead.budgetRange)}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                            <Building2 className="mr-1 h-3 w-3" />
-                            {getPublicationName(lead.publicationId)}
-                          </Badge>
+                        <TableCell className="text-sm">
+                          {lead.publicationId ? (
+                            <span className="text-slate-700">{getPublicationName(lead.publicationId)}</span>
+                          ) : (
+                            <Badge variant="outline" className="bg-slate-100 text-slate-700">
+                              Hub-Level
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div
@@ -880,37 +967,37 @@ export const LeadManagement = () => {
                       </TableRow>
                       {isExpanded && (
                         <TableRow className="bg-muted/40">
-                          <TableCell colSpan={6}>
-                            <div className="space-y-6 p-6">
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex items-center gap-3">
+                          <TableCell colSpan={5}>
+                              <div className="space-y-6 p-6">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Source</span>
                                   <Badge variant="outline" className={getSourceBadgeColor(lead.leadSource)}>
                                     {getSourceLabel(lead.leadSource)}
                                   </Badge>
-                                  {lead.timeline && (
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      <Calendar className="h-3.5 w-3.5" />
-                                      <span>{lead.timeline}</span>
-                                    </div>
+                                  {lead.archivedAt && (
+                                    <Badge variant="outline" className="border-dashed">
+                                      Archived
+                                    </Badge>
                                   )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {lead.archivedAt ? (
-                                    <Button size="sm" variant="outline" onClick={() => unarchiveLead(id)}>
-                                      <ArchiveRestore className="mr-2 h-4 w-4" />
-                                      Restore
-                                    </Button>
-                                  ) : (
-                                    <Button size="sm" variant="outline" onClick={() => archiveLead(id)}>
-                                      <Archive className="mr-2 h-4 w-4" />
-                                      Archive
-                                    </Button>
-                                  )}
-                                </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {lead.archivedAt ? (
+                                      <Button size="sm" variant="outline" onClick={() => unarchiveLead(id)}>
+                                        <ArchiveRestore className="mr-2 h-4 w-4" />
+                                        Restore
+                                      </Button>
+                                    ) : (
+                                      <Button size="sm" variant="outline" onClick={() => archiveLead(id)}>
+                                        <Archive className="mr-2 h-4 w-4" />
+                                        Archive
+                                      </Button>
+                                    )}
+                                  </div>
                               </div>
 
                               <div className="grid gap-6 md:grid-cols-2">
-                                <div className="space-y-4">
+                                <div className="grid gap-4 md:grid-rows-2">
                                   <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                       Marketing Goals
@@ -926,6 +1013,54 @@ export const LeadManagement = () => {
                                         </div>
                                       ) : (
                                         <p className="text-sm text-muted-foreground">No marketing goals provided.</p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      Timeline
+                                    </p>
+                                    <div className="mt-3 flex items-center gap-3 text-sm">
+                                      <Calendar className="h-4 w-4 text-slate-400" />
+                                      <span>{lead.timeline ?? 'No timeline provided.'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="grid gap-4 md:grid-rows-2">
+                                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                                        <User className="h-5 w-5" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-semibold text-slate-900">{lead.contactName}</p>
+                                        <p className="text-xs text-slate-500">Primary Contact</p>
+                                      </div>
+                                    </div>
+                                    <div className="mt-5 space-y-3 text-sm">
+                                      <div className="flex items-start gap-3">
+                                        <Mail className="mt-0.5 h-4 w-4 text-slate-400" />
+                                        <a
+                                          href={`mailto:${lead.contactEmail}`}
+                                          className="break-words text-primary hover:underline"
+                                          onClick={event => event.stopPropagation()}
+                                        >
+                                          {lead.contactEmail}
+                                        </a>
+                                      </div>
+                                      {lead.contactPhone && (
+                                        <div className="flex items-start gap-3">
+                                          <Phone className="mt-0.5 h-4 w-4 text-slate-400" />
+                                          <a
+                                            href={`tel:${lead.contactPhone}`}
+                                            className="text-slate-900 hover:text-primary"
+                                            onClick={event => event.stopPropagation()}
+                                          >
+                                            {lead.contactPhone}
+                                          </a>
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -952,77 +1087,86 @@ export const LeadManagement = () => {
                                     </div>
                                   </div>
                                 </div>
-
-                                <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 shadow-sm">
-                                  <div className="flex items-start gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-600">
-                                      <User className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-semibold text-slate-900">{lead.contactName}</p>
-                                      <p className="text-xs text-slate-500">Primary Contact</p>
-                                    </div>
-                                  </div>
-                                  <div className="mt-5 space-y-3 text-sm">
-                                    <div className="flex items-start gap-3">
-                                      <Mail className="mt-0.5 h-4 w-4 text-slate-400" />
-                                      <a
-                                        href={`mailto:${lead.contactEmail}`}
-                                        className="break-words text-primary hover:underline"
-                                        onClick={event => event.stopPropagation()}
-                                      >
-                                        {lead.contactEmail}
-                                      </a>
-                                    </div>
-                                    {lead.contactPhone && (
-                                      <div className="flex items-start gap-3">
-                                        <Phone className="mt-0.5 h-4 w-4 text-slate-400" />
-                                        <a
-                                          href={`tel:${lead.contactPhone}`}
-                                          className="text-slate-900 hover:text-primary"
-                                          onClick={event => event.stopPropagation()}
-                                        >
-                                          {lead.contactPhone}
-                                        </a>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
                               </div>
 
-                              <div className="grid gap-6 md:grid-cols-2">
-                                <div className="space-y-3">
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes</p>
-                                  <Textarea
-                                    value={currentNote}
-                                    disabled={Boolean(lead.archivedAt)}
-                                    onClick={event => event.stopPropagation()}
-                                    onChange={event => {
-                                      event.stopPropagation();
-                                      setNotesDrafts(prev => ({
-                                        ...prev,
-                                        [id]: event.target.value,
-                                      }));
-                                    }}
-                                    placeholder="Add notes about this lead..."
-                                    className="min-h-[120px]"
-                                  />
-                                  <div className="flex justify-end">
-                                    <Button
-                                      size="sm"
-                                      disabled={Boolean(lead.archivedAt)}
+                              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                                <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
+                                  <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-slate-100 p-1">
+                                    <button
+                                      type="button"
                                       onClick={event => {
                                         event.stopPropagation();
-                                        updateLeadNotes(id);
+                                        setNotePanelModes(prev => ({
+                                          ...prev,
+                                          [id]: 'add',
+                                        }));
                                       }}
+                                      className={`px-3 py-1 text-xs transition-colors ${
+                                        (notePanelModes[id] ?? 'timeline') === 'add'
+                                          ? 'rounded-md bg-white text-slate-900 shadow'
+                                          : 'text-slate-600'
+                                      }`}
                                     >
-                                      Save Notes
-                                    </Button>
+                                      Add Note
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={event => {
+                                        event.stopPropagation();
+                                        setNotePanelModes(prev => ({
+                                          ...prev,
+                                          [id]: 'timeline',
+                                        }));
+                                      }}
+                                      className={`px-3 py-1 text-xs transition-colors ${
+                                        (notePanelModes[id] ?? 'timeline') === 'timeline'
+                                          ? 'rounded-md bg-white text-slate-900 shadow'
+                                          : 'text-slate-600'
+                                      }`}
+                                    >
+                                      Activity
+                                    </button>
                                   </div>
                                 </div>
-                                <div>
-                                  <LeadNotesTimeline key={`${id}-${timelineKey}`} leadId={id} />
-                                </div>
+
+                                {(notePanelModes[id] ?? 'timeline') === 'add' ? (
+                                  <div className="mt-4 space-y-3">
+                                    <Textarea
+                                      value={currentNote}
+                                      disabled={Boolean(lead.archivedAt)}
+                                      onClick={event => event.stopPropagation()}
+                                      onChange={event => {
+                                        event.stopPropagation();
+                                        setNotesDrafts(prev => ({
+                                          ...prev,
+                                          [id]: event.target.value,
+                                        }));
+                                      }}
+                                      placeholder="Add a note about this lead..."
+                                      className="min-h-[140px]"
+                                    />
+                                    <div className="flex justify-end">
+                                      <Button
+                                        size="sm"
+                                        disabled={Boolean(lead.archivedAt) || !currentNote.trim()}
+                                        onClick={event => {
+                                          event.stopPropagation();
+                                          updateLeadNotes(id);
+                                        }}
+                                      >
+                                        Save Note
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="mt-4">
+                                    <LeadNotesTimeline
+                                      key={`${id}-${timelineKey}`}
+                                      leadId={id}
+                                      showComposer={false}
+                                    />
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </TableCell>
