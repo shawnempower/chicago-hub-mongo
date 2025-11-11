@@ -41,14 +41,8 @@ interface InventoryRow {
   hubAvailable: boolean;
   hubPricingModel?: string;
   hubFlatRate?: number;
-  hubCpm?: number;
-  hubPerSend?: number;
-  hubMonthly?: number;
   hubDiscount?: number;
   hubMinimumCommitment?: string;
-  
-  // Calculated Hub Revenue
-  estimatedMonthlyRevenueHub?: number;
   
   // Frequency/Timing
   frequency?: string;
@@ -73,6 +67,30 @@ interface InventoryRow {
 function getHubPricing(hubPricingArray: HubPricing[] | undefined, hubId: string): HubPricing | undefined {
   if (!hubPricingArray) return undefined;
   return hubPricingArray.find(hp => hp.hubId === hubId);
+}
+
+/**
+ * Extract display values from hub pricing (handles both single pricing and tiered pricing)
+ */
+function getHubPricingDisplayValues(hubPricing: HubPricing | undefined): {
+  pricingModel?: string;
+  flatRate?: number;
+  frequency?: string;
+} {
+  if (!hubPricing || !hubPricing.pricing) {
+    return {};
+  }
+  
+  const lowestTier = getLowestTierPricing(hubPricing.pricing);
+  if (!lowestTier) {
+    return {};
+  }
+  
+  return {
+    pricingModel: lowestTier.pricingModel,
+    flatRate: lowestTier.flatRate,
+    frequency: lowestTier.frequency,
+  };
 }
 
 /**
@@ -108,6 +126,51 @@ function getFrequencyMultiplier(frequency?: string): number {
 }
 
 /**
+ * Parse pricing tier frequency to get commitment multiplier (e.g., '4x' -> 4)
+ */
+function parseCommitmentMultiplier(frequency?: string): number {
+  if (!frequency) return 1;
+  const match = frequency.match(/^(\d+)x$/i);
+  return match ? parseInt(match[1], 10) : 1;
+}
+
+/**
+ * Get the 1x (lowest tier) pricing from pricing tiers
+ * Used for monthly revenue calculations to get per-insertion cost
+ */
+function getLowestTierPricing(pricing: any): any {
+  if (!pricing) return null;
+  
+  // If pricing is an array of tiers
+  if (Array.isArray(pricing)) {
+    // Find the 1x tier or lowest frequency tier
+    const onexTier = pricing.find(p => {
+      const freq = (p.pricing?.frequency || p.frequency || '').toLowerCase();
+      return freq === '1x' || freq.includes('one time') || freq === 'onetime';
+    });
+    
+    if (onexTier) {
+      return onexTier.pricing || onexTier;
+    }
+    
+    // Otherwise find lowest multiplier
+    const sortedTiers = [...pricing].sort((a, b) => {
+      const freqA = (a.pricing?.frequency || a.frequency || '');
+      const freqB = (b.pricing?.frequency || b.frequency || '');
+      const multA = parseCommitmentMultiplier(freqA);
+      const multB = parseCommitmentMultiplier(freqB);
+      return multA - multB;
+    });
+    
+    const lowestTier = sortedTiers[0];
+    return lowestTier?.pricing || lowestTier;
+  }
+  
+  // Single pricing object
+  return pricing;
+}
+
+/**
  * Calculate estimated monthly reach based on audience metrics
  */
 function calculateMonthlyReach(
@@ -128,11 +191,12 @@ function calculateMonthlyReach(
     case 'website':
       return metrics.monthlyVisitors || metrics.monthlyImpressions || 0;
     
-    case 'newsletter':
+    case 'newsletter': {
       // Reach is subscribers * sends per month * open rate (assume 25% if not specified)
       const subscribers = metrics.subscribers || 0;
       const sendsPerMonth = getFrequencyMultiplier(frequency);
       return Math.round(subscribers * sendsPerMonth * 0.25);
+    }
     
     case 'print':
       return metrics.circulation || 0;
@@ -161,18 +225,11 @@ function calculateMonthlyReach(
 
 /**
  * Calculate estimated monthly revenue based on pricing model
+ * For tiered pricing (1x, 4x, etc.), uses the 1x tier to get per-insertion cost
  */
 function calculateMonthlyRevenue(
   channel: string,
-  pricing: {
-    pricingModel?: string;
-    flatRate?: number;
-    cpm?: number;
-    perSend?: number;
-    monthly?: number;
-    perSpot?: number;
-    weekly?: number;
-  },
+  pricing: any, // Can be single object or array of tiers
   metrics: {
     monthlyImpressions?: number;
     subscribers?: number;
@@ -180,72 +237,96 @@ function calculateMonthlyRevenue(
   },
   frequency?: string
 ): number {
-  if (!pricing || !pricing.pricingModel) return 0;
+  if (!pricing) return 0;
   
-  const model = pricing.pricingModel.toLowerCase();
+  // Get the lowest tier pricing (1x) for per-insertion calculations
+  const lowestTierPricing = getLowestTierPricing(pricing);
+  if (!lowestTierPricing) return 0;
+  
+  const pricingModel = lowestTierPricing.pricingModel;
+  if (!pricingModel) return 0;
+  
+  const model = pricingModel.toLowerCase();
   const freqMultiplier = getFrequencyMultiplier(frequency);
   
   // Handle different pricing models
   switch (model) {
-    case 'cpm':
+    case 'cpm': {
       // CPM = cost per 1000 impressions
       const impressions = metrics.monthlyImpressions || 0;
-      return (pricing.cpm || pricing.flatRate || 0) * (impressions / 1000);
+      return (lowestTierPricing.cpm || lowestTierPricing.flatRate || 0) * (impressions / 1000);
+    }
     
-    case 'cpv':
+    case 'cpv': {
       // CPV = cost per 100 views (streaming video standard)
       const views = metrics.averageViews || 0;
-      return (pricing.flatRate || 0) * (views / 100);
+      return (lowestTierPricing.flatRate || 0) * (views / 100);
+    }
     
     case 'per_send':
-    case 'persend':
+    case 'persend': {
       // Newsletter: price per send * sends per month
-      const perSend = pricing.perSend || pricing.flatRate || 0;
+      const perSend = lowestTierPricing.perSend || lowestTierPricing.flatRate || 0;
       return perSend * freqMultiplier;
+    }
     
     case 'per_spot':
-    case 'perspot':
+    case 'perspot': {
       // Radio/Podcast: price per spot * frequency
-      const perSpot = pricing.perSpot || pricing.flatRate || 0;
+      const perSpot = lowestTierPricing.perSpot || lowestTierPricing.flatRate || 0;
       return perSpot * freqMultiplier;
+    }
     
     case 'per_episode':
       // Podcast/Streaming: price per episode * frequency
-      return (pricing.flatRate || 0) * freqMultiplier;
+      return (lowestTierPricing.flatRate || 0) * freqMultiplier;
+    
+    case 'per_ad':
+      // Print/Event: price per ad * frequency
+      return (lowestTierPricing.flatRate || 0) * freqMultiplier;
     
     case 'weekly':
       // Weekly rate * 4 weeks
-      return (pricing.weekly || pricing.flatRate || 0) * 4;
+      return (lowestTierPricing.weekly || lowestTierPricing.flatRate || 0) * 4;
     
     case 'monthly':
     case 'flat':
     case 'flat_rate':
-      // Already monthly
-      return pricing.monthly || pricing.flatRate || 0;
+      // For flat rates with publication frequency, multiply by frequency
+      // Example: Event at $1000 with annual frequency = $1000 * 0.083 = ~$83/month
+      if (frequency) {
+        return (lowestTierPricing.monthly || lowestTierPricing.flatRate || 0) * freqMultiplier;
+      }
+      // Otherwise already monthly
+      return lowestTierPricing.monthly || lowestTierPricing.flatRate || 0;
     
     case 'per_day':
       // Daily rate * 30 days
-      return (pricing.flatRate || 0) * 30;
+      return (lowestTierPricing.flatRate || 0) * 30;
     
     case 'per_week':
       // Weekly rate * 4 weeks
-      return (pricing.flatRate || 0) * 4;
+      return (lowestTierPricing.flatRate || 0) * 4;
     
     // For print, use frequency-based pricing
     case 'frequency_based':
       if (channel.toLowerCase() === 'print') {
-        // Use the most common rate if available
-        const printPricing = pricing as any;
-        const rate = printPricing.thirteenTimes || printPricing.twelveTimes || 
-                     printPricing.fourTimes || printPricing.oneTime || pricing.flatRate || 0;
-        // Estimate based on 1 ad per month
-        return rate;
+        // Legacy format - prefer lowest frequency for conservative estimate
+        const printPricing = lowestTierPricing as any;
+        const rate = printPricing.oneTime || printPricing.fourTimes || 
+                     printPricing.thirteenTimes || printPricing.twelveTimes || 
+                     lowestTierPricing.flatRate || 0;
+        // Multiply by publication frequency to get monthly revenue
+        return rate * freqMultiplier;
       }
-      return pricing.flatRate || 0;
+      return lowestTierPricing.flatRate || 0;
     
     default:
-      // Default to flat rate if available
-      return pricing.flatRate || pricing.monthly || 0;
+      // Default: if there's a flat rate and frequency, multiply them
+      if (lowestTierPricing.flatRate && frequency) {
+        return lowestTierPricing.flatRate * freqMultiplier;
+      }
+      return lowestTierPricing.flatRate || lowestTierPricing.monthly || 0;
   }
 }
 
@@ -283,13 +364,13 @@ export function exportHubInventoryToCSV(
           monthlyVisitors,
         });
         
-        const hubRevenue = hubPricing ? calculateMonthlyRevenue('website', {
-          pricingModel: hubPricing.pricing?.pricingModel || ad.pricing?.pricingModel,
-          flatRate: hubPricing.pricing?.flatRate,
-          cpm: hubPricing.pricing?.cpm,
-        }, {
-          monthlyImpressions,
-        }) : 0;
+        const hubRevenue = hubPricing ? calculateMonthlyRevenue('website', 
+          hubPricing.pricing || ad.pricing,
+          {
+            monthlyImpressions,
+          }) : 0;
+        
+        const hubPricingDisplay = getHubPricingDisplayValues(hubPricing);
         
         rows.push({
           ...pubInfo,
@@ -303,12 +384,10 @@ export function exportHubInventoryToCSV(
           monthlyVisitors,
           estimatedMonthlyReach: reach,
           hubAvailable: hubPricing?.available ?? ad.available ?? true,
-          hubPricingModel: hubPricing?.pricing?.pricingModel,
-          hubFlatRate: hubPricing?.pricing?.flatRate,
-          hubCpm: hubPricing?.pricing?.cpm,
+          hubPricingModel: hubPricingDisplay.pricingModel,
+          hubFlatRate: hubPricingDisplay.flatRate,
           hubDiscount: hubPricing?.discount,
           hubMinimumCommitment: hubPricing?.minimumCommitment,
-          estimatedMonthlyRevenueHub: hubRevenue,
           available: ad.available ?? true,
         });
       });
@@ -325,14 +404,13 @@ export function exportHubInventoryToCSV(
             subscribers: newsletter.subscribers,
           }, newsletter.frequency);
           
-          const hubRevenue = hubPricing ? calculateMonthlyRevenue('newsletter', {
-            pricingModel: hubPricing.pricing?.pricingModel || ad.pricing?.pricingModel,
-            flatRate: hubPricing.pricing?.flatRate,
-            perSend: hubPricing.pricing?.perSend,
-            monthly: hubPricing.pricing?.monthly,
-          }, {
-            subscribers: newsletter.subscribers,
-          }, newsletter.frequency) : 0;
+          const hubRevenue = hubPricing ? calculateMonthlyRevenue('newsletter',
+            hubPricing.pricing || ad.pricing,
+            {
+              subscribers: newsletter.subscribers,
+            }, newsletter.frequency) : 0;
+          
+          const hubPricingDisplay = getHubPricingDisplayValues(hubPricing);
           
           rows.push({
             ...pubInfo,
@@ -349,12 +427,10 @@ export function exportHubInventoryToCSV(
             openRate: newsletter.openRate,
             clickThroughRate: newsletter.clickThroughRate,
             hubAvailable: hubPricing?.available ?? ad.available ?? true,
-            hubPricingModel: hubPricing?.pricing?.pricingModel,
-            hubPerSend: hubPricing?.pricing?.perSend,
-            hubMonthly: hubPricing?.pricing?.monthly,
+            hubPricingModel: hubPricingDisplay.pricingModel,
+            hubFlatRate: hubPricingDisplay.flatRate,
             hubDiscount: hubPricing?.discount,
             hubMinimumCommitment: hubPricing?.minimumCommitment,
-            estimatedMonthlyRevenueHub: hubRevenue,
             available: ad.available ?? true,
           });
         });
@@ -377,10 +453,11 @@ export function exportHubInventoryToCSV(
             circulation: printPub.circulation,
           }, printPub.frequency);
           
-          const hubRevenue = hubPricing ? calculateMonthlyRevenue('print', {
-            pricingModel: hubPricing.pricing?.pricingModel || 'frequency_based',
-            flatRate: hubPricing.pricing?.flatRate,
-          }, {}, printPub.frequency) : 0;
+          const hubRevenue = hubPricing ? calculateMonthlyRevenue('print',
+            hubPricing.pricing || ad.pricing,
+            {}, printPub.frequency) : 0;
+          
+          const hubPricingDisplay = getHubPricingDisplayValues(hubPricing);
           
           rows.push({
             ...pubInfo,
@@ -394,11 +471,10 @@ export function exportHubInventoryToCSV(
             frequency: printPub.frequency,
             notes: printPricingNote,
             hubAvailable: hubPricing?.available ?? ad.available ?? true,
-            hubPricingModel: hubPricing?.pricing?.pricingModel,
-            hubFlatRate: hubPricing?.pricing?.flatRate,
+            hubPricingModel: hubPricingDisplay.pricingModel,
+            hubFlatRate: hubPricingDisplay.flatRate,
             hubDiscount: hubPricing?.discount,
             hubMinimumCommitment: hubPricing?.minimumCommitment,
-            estimatedMonthlyRevenueHub: hubRevenue,
             available: ad.available ?? true,
           });
         });
@@ -419,10 +495,11 @@ export function exportHubInventoryToCSV(
             attendees: event.averageAttendance,
           }, event.frequency);
           
-          const hubRevenue = hubPricing ? calculateMonthlyRevenue('events', {
-            pricingModel: hubPricing.pricing?.pricingModel || pricing?.pricingModel,
-            flatRate: hubPricing.pricing?.flatRate,
-          }, {}, event.frequency) : 0;
+          const hubRevenue = hubPricing ? calculateMonthlyRevenue('events',
+            hubPricing.pricing || pricing,
+            {}, event.frequency) : 0;
+          
+          const hubPricingDisplay = getHubPricingDisplayValues(hubPricing);
           
           rows.push({
             ...pubInfo,
@@ -435,11 +512,10 @@ export function exportHubInventoryToCSV(
             eventDate: event.date,
             specifications: opp.benefits?.join(' | '),
             hubAvailable: hubPricing?.available ?? opp.available ?? true,
-            hubPricingModel: hubPricing?.pricing?.pricingModel,
-            hubFlatRate: hubPricing?.pricing?.flatRate,
+            hubPricingModel: hubPricingDisplay.pricingModel,
+            hubFlatRate: hubPricingDisplay.flatRate,
             hubDiscount: hubPricing?.discount,
             hubMinimumCommitment: hubPricing?.minimumCommitment,
-            estimatedMonthlyRevenueHub: hubRevenue,
             available: opp.available ?? true,
           });
         });
@@ -457,10 +533,11 @@ export function exportHubInventoryToCSV(
             followers: social.followers,
           }, ad.pricing?.frequency || 'weekly');
           
-          const hubRevenue = hubPricing ? calculateMonthlyRevenue('social media', {
-            pricingModel: hubPricing.pricing?.pricingModel || ad.pricing?.pricingModel,
-            flatRate: hubPricing.pricing?.flatRate,
-          }, {}, ad.pricing?.frequency || 'weekly') : 0;
+          const hubRevenue = hubPricing ? calculateMonthlyRevenue('social media',
+            hubPricing.pricing || ad.pricing,
+            {}, ad.pricing?.frequency || 'weekly') : 0;
+          
+          const hubPricingDisplay = getHubPricingDisplayValues(hubPricing);
           
           rows.push({
             ...pubInfo,
@@ -472,11 +549,10 @@ export function exportHubInventoryToCSV(
             estimatedMonthlyReach: reach,
             specifications: formatSpecifications(ad.specifications),
             hubAvailable: hubPricing?.available ?? ad.available ?? true,
-            hubPricingModel: hubPricing?.pricing?.pricingModel,
-            hubFlatRate: hubPricing?.pricing?.flatRate,
+            hubPricingModel: hubPricingDisplay.pricingModel,
+            hubFlatRate: hubPricingDisplay.flatRate,
             hubDiscount: hubPricing?.discount,
             hubMinimumCommitment: hubPricing?.minimumCommitment,
-            estimatedMonthlyRevenueHub: hubRevenue,
             available: ad.available ?? true,
           });
         });
@@ -496,13 +572,13 @@ export function exportHubInventoryToCSV(
             subscribers: podcastAudience,
           }, podcast.frequency);
           
-          const hubRevenue = hubPricing ? calculateMonthlyRevenue('podcast', {
-            pricingModel: hubPricing.pricing?.pricingModel || ad.pricing?.pricingModel,
-            flatRate: hubPricing.pricing?.flatRate,
-            cpm: hubPricing.pricing?.cpm,
-          }, {
-            subscribers: podcastAudience,
-          }, podcast.frequency) : 0;
+          const hubRevenue = hubPricing ? calculateMonthlyRevenue('podcast',
+            hubPricing.pricing || ad.pricing,
+            {
+              subscribers: podcastAudience,
+            }, podcast.frequency) : 0;
+          
+          const hubPricingDisplay = getHubPricingDisplayValues(hubPricing);
           
           rows.push({
             ...pubInfo,
@@ -515,12 +591,10 @@ export function exportHubInventoryToCSV(
             subscribers: podcastAudience,
             estimatedMonthlyReach: reach,
             hubAvailable: hubPricing?.available ?? ad.available ?? true,
-            hubPricingModel: hubPricing?.pricing?.pricingModel,
-            hubFlatRate: hubPricing?.pricing?.flatRate,
-            hubCpm: hubPricing?.pricing?.cpm,
+            hubPricingModel: hubPricingDisplay.pricingModel,
+            hubFlatRate: hubPricingDisplay.flatRate,
             hubDiscount: hubPricing?.discount,
             hubMinimumCommitment: hubPricing?.minimumCommitment,
-            estimatedMonthlyRevenueHub: hubRevenue,
             available: ad.available ?? true,
           });
         });
@@ -541,12 +615,13 @@ export function exportHubInventoryToCSV(
             subscribers: stream.subscribers,
           }, ad.pricing?.frequency || stream.frequency);
           
-          const hubRevenue = hubPricing ? calculateMonthlyRevenue('streaming video', {
-            pricingModel: hubPricing.pricing?.pricingModel || ad.pricing?.pricingModel,
-            flatRate: hubPricing.pricing?.flatRate,
-          }, {
-            averageViews,
-          }, ad.pricing?.frequency || stream.frequency) : 0;
+          const hubRevenue = hubPricing ? calculateMonthlyRevenue('streaming video',
+            hubPricing.pricing || ad.pricing,
+            {
+              averageViews,
+            }, ad.pricing?.frequency || stream.frequency) : 0;
+          
+          const hubPricingDisplay = getHubPricingDisplayValues(hubPricing);
           
           rows.push({
             ...pubInfo,
@@ -561,11 +636,10 @@ export function exportHubInventoryToCSV(
             estimatedMonthlyReach: reach,
             frequency: ad.pricing?.frequency || stream.frequency,
             hubAvailable: hubPricing?.available ?? ad.available ?? true,
-            hubPricingModel: hubPricing?.pricing?.pricingModel,
-            hubFlatRate: hubPricing?.pricing?.flatRate,
+            hubPricingModel: hubPricingDisplay.pricingModel,
+            hubFlatRate: hubPricingDisplay.flatRate,
             hubDiscount: hubPricing?.discount,
             hubMinimumCommitment: hubPricing?.minimumCommitment,
-            estimatedMonthlyRevenueHub: hubRevenue,
             available: ad.available ?? true,
           });
         });
@@ -583,12 +657,13 @@ export function exportHubInventoryToCSV(
             subscribers: station.listeners,
           }, ad.pricing?.frequency);
           
-          const hubRevenue = hubPricing ? calculateMonthlyRevenue('radio', {
-            pricingModel: hubPricing.pricing?.pricingModel || ad.pricing?.pricingModel,
-            flatRate: hubPricing.pricing?.flatRate,
-          }, {
-            subscribers: station.listeners,
-          }, ad.pricing?.frequency) : 0;
+          const hubRevenue = hubPricing ? calculateMonthlyRevenue('radio',
+            hubPricing.pricing || ad.pricing,
+            {
+              subscribers: station.listeners,
+            }, ad.pricing?.frequency) : 0;
+          
+          const hubPricingDisplay = getHubPricingDisplayValues(hubPricing);
           
           rows.push({
             ...pubInfo,
@@ -601,11 +676,10 @@ export function exportHubInventoryToCSV(
             subscribers: station.listeners,
             estimatedMonthlyReach: reach,
             hubAvailable: hubPricing?.available ?? ad.available ?? true,
-            hubPricingModel: hubPricing?.pricing?.pricingModel,
-            hubFlatRate: hubPricing?.pricing?.flatRate,
+            hubPricingModel: hubPricingDisplay.pricingModel,
+            hubFlatRate: hubPricingDisplay.flatRate,
             hubDiscount: hubPricing?.discount,
             hubMinimumCommitment: hubPricing?.minimumCommitment,
-            estimatedMonthlyRevenueHub: hubRevenue,
             available: ad.available ?? true,
           });
         });
@@ -662,15 +736,9 @@ function convertToCSV(rows: InventoryRow[], hubName: string): string {
     // Hub-Specific Pricing
     'Hub Available',
     'Hub Pricing Model',
-    'Hub Flat Rate',
-    'Hub CPM',
-    'Hub Per Send',
-    'Hub Monthly',
+    'Hub Rate',
     'Hub Discount %',
     'Hub Min Commitment',
-    
-    // Calculated Hub Revenue
-    'Est. Monthly Revenue (Hub)',
     
     // Frequency/Timing
     'Frequency',
@@ -727,14 +795,8 @@ function convertToCSV(rows: InventoryRow[], hubName: string): string {
       row.hubAvailable ? 'Yes' : 'No',
       escapeCsvValue(row.hubPricingModel),
       row.hubFlatRate || '',
-      row.hubCpm || '',
-      row.hubPerSend || '',
-      row.hubMonthly || '',
       row.hubDiscount || '',
       escapeCsvValue(row.hubMinimumCommitment),
-      
-      // Calculated Hub Revenue
-      row.estimatedMonthlyRevenueHub ? `$${Math.round(row.estimatedMonthlyRevenueHub).toLocaleString()}` : '',
       
       // Frequency/Timing
       escapeCsvValue(row.frequency),
