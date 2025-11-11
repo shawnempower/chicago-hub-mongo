@@ -1,5 +1,8 @@
 # API routes - proxy to Chicago Hub backend
 /api/* http://empowerlocal-api-lb-1173133034.us-east-2.elb.amazonaws.com/chicago-hub/api/:splat 200
 
+# Static HTML files - serve directly (before SPA fallback)
+/pricing-formulas.html /pricing-formulas.html 200
+
 # SPA fallback - serve index.html for all non-API routes
 /*    /index.html   200

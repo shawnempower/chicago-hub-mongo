@@ -525,6 +525,7 @@
                 <h3>Reference</h3>
                 <ul>
                     <li><a href="#frequency-table">Frequency Tables</a></li>
+                    <li><a href="#data-quality">Data Quality</a></li>
                     <li><a href="#edge-cases">Edge Cases</a></li>
                     <li><a href="#troubleshooting">Troubleshooting</a></li>
                 </ul>
@@ -1540,6 +1541,278 @@ Final Package Price:     $4,597/month
                         <div class="calc">(CPM × Impressions) ÷ 1,000</div>
                         <div class="result">($15 × 100,000) ÷ 1,000 = $1,500</div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Data Quality Section -->
+            <section id="data-quality" class="content-section">
+                <h2>✅ Data Quality Guidelines</h2>
+                <p>Accurate revenue forecasting and pricing calculations require high-quality data. This section outlines data quality requirements across all inventory types.</p>
+
+                <h3>Data Quality Tiers</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Quality Level</th>
+                            <th>Variance</th>
+                            <th>Requirements</th>
+                            <th>Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-success">Guaranteed</span></td>
+                            <td>±5%</td>
+                            <td>Contractually guaranteed metrics, verified performance data</td>
+                            <td>Premium inventory with established track record</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-warning">Estimated</span></td>
+                            <td>±15%</td>
+                            <td>Historical averages, industry benchmarks, estimated metrics</td>
+                            <td>New inventory or unverified performance data</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Revenue Confidence Intervals</h3>
+                <p>Based on data quality, provide confidence intervals for revenue forecasts:</p>
+
+                <div class="example-grid">
+                    <div class="example-card">
+                        <h4>Guaranteed Metrics (±5%)</h4>
+                        <p>Expected: $1,299/month</p>
+                        <div class="calc">
+Conservative: $1,299 × 0.95 = $1,234<br>
+Expected: $1,299<br>
+Optimistic: $1,299 × 1.05 = $1,364
+                        </div>
+                        <div class="result">Range: $1,234 - $1,364</div>
+                    </div>
+
+                    <div class="example-card">
+                        <h4>Estimated Metrics (±15%)</h4>
+                        <p>Expected: $450/month</p>
+                        <div class="calc">
+Conservative: $450 × 0.85 = $383<br>
+Expected: $450<br>
+Optimistic: $450 × 1.15 = $518
+                        </div>
+                        <div class="result">Range: $383 - $518</div>
+                    </div>
+                </div>
+
+                <h3>Critical Data Fields by Channel Type</h3>
+
+                <h4>📧 Newsletter & Email</h4>
+                <div class="alert alert-danger">
+                    <strong>🔴 Critical (Required):</strong>
+                    <ul>
+                        <li><code>pricing.flatRate</code> - Base price per send</li>
+                        <li><code>pricing.pricingModel</code> - Usually "per_send"</li>
+                        <li><code>performanceMetrics.occurrencesPerMonth</code> - Number of sends per month</li>
+                    </ul>
+                </div>
+                <div class="alert alert-info">
+                    <strong>ℹ️ Recommended:</strong>
+                    <ul>
+                        <li><code>performanceMetrics.subscribers</code> - List size</li>
+                        <li><code>performanceMetrics.openRate</code> - Email open rate</li>
+                        <li><code>performanceMetrics.guaranteed</code> - Data quality indicator</li>
+                    </ul>
+                </div>
+
+                <h4>📰 Print Publications</h4>
+                <div class="alert alert-danger">
+                    <strong>🔴 Critical (Required):</strong>
+                    <ul>
+                        <li><code>pricing.flatRate</code> - Base price per ad</li>
+                        <li><code>pricing.pricingModel</code> - Usually "per_ad"</li>
+                        <li><code>performanceMetrics.occurrencesPerMonth</code> - Publication frequency</li>
+                    </ul>
+                </div>
+                <div class="alert alert-info">
+                    <strong>ℹ️ Recommended:</strong>
+                    <ul>
+                        <li><code>performanceMetrics.circulation</code> - Print run size</li>
+                        <li><code>performanceMetrics.readershipMultiplier</code> - Readers per copy</li>
+                    </ul>
+                </div>
+
+                <h4>🌐 Website Display Ads</h4>
+                <div class="alert alert-danger">
+                    <strong>🔴 Critical (Required):</strong>
+                    <ul>
+                        <li><code>pricing.flatRate</code> - CPM rate or flat rate</li>
+                        <li><code>pricing.pricingModel</code> - Usually "cpm" or "monthly"</li>
+                        <li><code>performanceMetrics.impressionsPerMonth</code> - For CPM pricing</li>
+                    </ul>
+                </div>
+                <div class="alert alert-info">
+                    <strong>ℹ️ Recommended:</strong>
+                    <ul>
+                        <li><code>performanceMetrics.clickThroughRate</code> - CTR for performance tracking</li>
+                        <li><code>performanceMetrics.pageViews</code> - Total site traffic</li>
+                    </ul>
+                </div>
+
+                <h4>📺 Television Advertising</h4>
+                <div class="alert alert-danger">
+                    <strong>🔴 Critical (Required):</strong>
+                    <ul>
+                        <li><code>stationId</code> - Unique station identifier</li>
+                        <li><code>callSign</code> - FCC call sign (e.g., WLS-TV)</li>
+                        <li><code>channel</code> - Channel number</li>
+                        <li><code>network</code> - Network affiliation</li>
+                        <li><code>pricing.flatRate</code> - Per spot rate</li>
+                        <li><code>pricing.pricingModel</code> - per_spot, weekly, or monthly</li>
+                        <li><code>adFormat</code> - Spot type (30_second_spot, etc.)</li>
+                        <li><code>daypart</code> - Time slot (prime_time, daytime, etc.)</li>
+                    </ul>
+                </div>
+                <div class="alert alert-info">
+                    <strong>ℹ️ Recommended:</strong>
+                    <ul>
+                        <li><code>performanceMetrics.occurrencesPerMonth</code> - For per_spot pricing</li>
+                        <li><code>performanceMetrics.audienceSize</code> - Viewer count</li>
+                        <li><code>specifications</code> - Technical requirements</li>
+                    </ul>
+                </div>
+
+                <h4>🎥 Streaming Video</h4>
+                <div class="alert alert-danger">
+                    <strong>🔴 Critical (Required):</strong>
+                    <ul>
+                        <li><code>channel.frequency</code> - Publishing frequency (daily, weekly, etc.)</li>
+                        <li><code>channel.averageViews</code> - Average views per video (for CPV/CPM)</li>
+                        <li><code>pricing.flatRate</code> - CPV rate or flat rate</li>
+                        <li><code>pricing.pricingModel</code> - cpv, cpm, per_spot, or monthly</li>
+                    </ul>
+                </div>
+                <div class="alert alert-warning">
+                    <strong>⚠️ Important:</strong>
+                    <ul>
+                        <li><code>channel.platform</code> - Platform array (YouTube, Twitch, etc.)</li>
+                        <li><code>spotsPerShow</code> - Number of ad spots per video (defaults to 1)</li>
+                    </ul>
+                </div>
+                <div class="alert alert-info">
+                    <strong>ℹ️ Recommended:</strong>
+                    <ul>
+                        <li><code>channel.subscribers</code> - Channel subscriber count</li>
+                        <li><code>position</code> - Ad position (pre-roll, mid-roll, post-roll)</li>
+                    </ul>
+                </div>
+
+                <h3>Data Validation Rules</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Validation Rule</th>
+                            <th>Impact if Missing</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>pricing.flatRate</code></td>
+                            <td>Must be > 0 (unless pricingModel = "contact")</td>
+                            <td>🔴 Cannot calculate any pricing or revenue</td>
+                        </tr>
+                        <tr>
+                            <td><code>pricing.pricingModel</code></td>
+                            <td>Must be valid model type</td>
+                            <td>🔴 Cannot determine calculation method</td>
+                        </tr>
+                        <tr>
+                            <td><code>occurrencesPerMonth</code></td>
+                            <td>Required for occurrence-based models</td>
+                            <td>🔴 Revenue shows $0 for per_send, per_ad, per_spot</td>
+                        </tr>
+                        <tr>
+                            <td><code>impressionsPerMonth</code></td>
+                            <td>Required for CPM/CPV models</td>
+                            <td>🔴 Revenue shows $0 for cpm, cpv, cpd</td>
+                        </tr>
+                        <tr>
+                            <td><code>channel.frequency</code></td>
+                            <td>Required for streaming video</td>
+                            <td>🔴 Cannot calculate monthly occurrences</td>
+                        </tr>
+                        <tr>
+                            <td><code>channel.averageViews</code></td>
+                            <td>Required for streaming CPV/CPM</td>
+                            <td>🔴 Cannot calculate impressions</td>
+                        </tr>
+                        <tr>
+                            <td><code>frequency</code> (commitment)</td>
+                            <td>Optional, defaults to "1x"</td>
+                            <td>⚠️ Shows single purchase price only</td>
+                        </tr>
+                        <tr>
+                            <td><code>hubPricing</code></td>
+                            <td>Optional array</td>
+                            <td>ℹ️ Uses default pricing instead</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Best Practices</h3>
+                <div class="visual-box">
+                    <h4>1. Always Set Guaranteed Flag</h4>
+                    <p>Mark metrics as guaranteed (true/false) to indicate data quality:</p>
+                    <pre><code>"performanceMetrics": {
+  "impressionsPerMonth": 200000,
+  "guaranteed": true  // ← Use ±5% variance
+}</code></pre>
+
+                    <h4>2. Provide All Relevant Metrics</h4>
+                    <p>More data = better forecasting. Include optional fields when available:</p>
+                    <pre><code>"performanceMetrics": {
+  "occurrencesPerMonth": 4.33,
+  "subscribers": 12000,
+  "openRate": 0.45,
+  "clickThroughRate": 0.03,
+  "guaranteed": true
+}</code></pre>
+
+                    <h4>3. Use Consistent Frequency Formats</h4>
+                    <p>For publication frequency: "daily", "weekly", "bi-weekly", "monthly", "quarterly"</p>
+                    <p>For commitment frequency: "1x", "4x", "12x", "26x", "52x", "One time"</p>
+
+                    <h4>4. Include Hub-Specific Pricing</h4>
+                    <p>Add hubPricing array for volume discounts and partnerships:</p>
+                    <pre><code>"hubPricing": [
+  {
+    "hubId": "chicago-hub",
+    "hubName": "Chicago Hub",
+    "pricing": {
+      "flatRate": 250,  // Discounted from $300
+      "pricingModel": "per_send"
+    },
+    "discount": 16.67,
+    "available": true
+  }
+]</code></pre>
+                </div>
+
+                <h3>Common Data Quality Issues</h3>
+                <div class="alert alert-warning">
+                    <strong>Issue: Revenue Shows $0</strong><br>
+                    <strong>Cause:</strong> Missing occurrencesPerMonth or impressionsPerMonth<br>
+                    <strong>Fix:</strong> Add the appropriate metric based on pricing model
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>Issue: Commitment Total Not Showing</strong><br>
+                    <strong>Cause:</strong> Missing flatRate or pricingModel = "contact"<br>
+                    <strong>Fix:</strong> Add flatRate value (contact pricing never shows totals)
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>Issue: Hub Pricing Not Applied</strong><br>
+                    <strong>Cause:</strong> Missing hubPricing entry or mismatched hubId<br>
+                    <strong>Fix:</strong> Ensure hubPricing array has matching hubId and available = true
                 </div>
             </section>
 
