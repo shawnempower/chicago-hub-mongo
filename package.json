@@ -31,6 +31,8 @@
     "copy:db-to-staging": "tsx scripts/copyDatabaseToStaging.ts",
     "migrate:hubs": "tsx scripts/migrateToHubsCollection.ts",
     "migrate:hubs:dry-run": "tsx scripts/migrateToHubsCollection.ts --dry-run",
+    "fix:event-pricing": "tsx scripts/fixEventPricingModels.ts",
+    "fix:event-pricing:live": "tsx scripts/fixEventPricingModels.ts --live",
     "verify:production": "tsx scripts/verifyProductionReadiness.ts",
     "docker:build": "docker build -f deployment/docker/Dockerfile.production -t chicago-hub-api:latest .",
     "docker:run": "docker run -p 3001:3001 --env-file .env chicago-hub-api:latest",

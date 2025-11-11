@@ -142,7 +142,7 @@ export const DashboardInventoryManager = () => {
     switch(model) {
       // Website models
       case 'flat_rate': return 'Flat Rate';
-      case 'flat': return '/month';
+      case 'flat': return '/occurrence';  // Used by events for per-occurrence pricing
       case 'per_week': return '/week';
       case 'per_day': return '/day';
       case 'cpm': return '/1000 impressions';
@@ -156,7 +156,7 @@ export const DashboardInventoryManager = () => {
       case 'per_line': return '/line';
       
       // Podcast models
-      case 'cpd': return '/1000 downloads';  // Cost per thousand downloads
+      case 'cpd': return '/1000 downloads';
       case 'per_episode': return '/episode';
       
       // Radio models
@@ -165,16 +165,15 @@ export const DashboardInventoryManager = () => {
       // Social media models
       case 'per_post': return '/post';
       case 'per_story': return '/story';
-      case 'monthly': return '/month';
+      case 'monthly': return '/month';  // Monthly recurring pricing
       
       // Streaming models
-      case 'cpv': return '/1000 views';  // Cost per thousand views
+      case 'cpv': return '/1000 views';
       case 'per_video': return '/video';
       
       // General
       case 'contact': return 'Contact for pricing';
       
-      // If we get something unexpected, return it as-is
       default: return model;
     }
   };
@@ -5124,7 +5123,7 @@ export const DashboardInventoryManager = () => {
                     ]}
                     pricingModels={[
                       { value: 'flat_rate', label: 'Flat Rate' },
-                      { value: 'flat', label: '/month' },
+                      { value: 'monthly', label: '/month' },
                       { value: 'per_week', label: '/week' },
                       { value: 'per_day', label: '/day' },
                       { value: 'cpm', label: '/1000 impressions' },
