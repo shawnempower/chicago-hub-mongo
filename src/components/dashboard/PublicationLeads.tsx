@@ -1,18 +1,48 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { leadsApi, type Lead, type LeadStatus } from '@/api/leads';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
-import { ExternalLink, Mail, Phone, Globe, TrendingUp, Users, CheckCircle, XCircle, MapPin, Archive, ArchiveRestore } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Calendar,
+  Check,
+  CheckCircle,
+  ChevronDown,
+  Globe,
+  Mail,
+  MapPin,
+  Phone,
+  TrendingUp,
+  User,
+  Users,
+  X,
+  XCircle,
+} from 'lucide-react';
 import { LeadNotesTimeline } from '@/components/admin/LeadNotesTimeline';
 
 interface PublicationLeadsProps {
   publicationId: string;
 }
+
+type SortKey = 'businessName' | 'contactName' | 'budgetRange' | 'status' | 'createdAt';
 
 export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -32,38 +62,63 @@ export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
     closedLost: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(() => new Set());
+  const [notesDrafts, setNotesDrafts] = useState<Record<string, string>>({});
+  const [notePanelModes, setNotePanelModes] = useState<Record<string, 'add' | 'timeline'>>({});
+  const [timelineRefreshKeys, setTimelineRefreshKeys] = useState<Record<string, number>>({});
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [statusFilterDraft, setStatusFilterDraft] = useState<string[]>([]);
+  const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
   const { toast } = useToast();
+
+  const statusOptions = [
+    { value: 'new', label: 'New' },
+    { value: 'contacted', label: 'Contacted' },
+    { value: 'qualified', label: 'Qualified' },
+    { value: 'proposal_sent', label: 'Proposal Sent' },
+    { value: 'closed_won', label: 'Closed Won' },
+    { value: 'closed_lost', label: 'Closed Lost' },
+  ] as const;
 
   useEffect(() => {
     fetchLeads();
-  }, [publicationId]);
+  }, [publicationId, showArchived]);
+
+  useEffect(() => {
+    if (statusPopoverOpen) {
+      setStatusFilterDraft(statusFilter);
+    }
+  }, [statusPopoverOpen, statusFilter]);
 
   const fetchLeads = async () => {
     try {
       setLoading(true);
       const response = await leadsApi.getAll({
         publicationId,
-        includeArchived: false,
+        includeArchived: showArchived,
       });
       setLeads(response.leads);
 
-      // Calculate stats
+      // Calculate stats (excluding archived)
+      const activeLeads = response.leads.filter(l => !l.archivedAt);
       const newStats = {
-        total: response.leads.length,
-        new: response.leads.filter(l => l.status === 'new').length,
-        contacted: response.leads.filter(l => l.status === 'contacted').length,
-        qualified: response.leads.filter(l => l.status === 'qualified').length,
-        closedWon: response.leads.filter(l => l.status === 'closed_won').length,
-        closedLost: response.leads.filter(l => l.status === 'closed_lost').length,
+        total: activeLeads.length,
+        new: activeLeads.filter(l => l.status === 'new').length,
+        contacted: activeLeads.filter(l => l.status === 'contacted').length,
+        qualified: activeLeads.filter(l => l.status === 'qualified').length,
+        closedWon: activeLeads.filter(l => l.status === 'closed_won').length,
+        closedLost: activeLeads.filter(l => l.status === 'closed_lost').length,
       };
       setStats(newStats);
     } catch (error) {
       console.error('Error fetching leads:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch leads",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to fetch leads',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -72,19 +127,32 @@ export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
 
   const updateLeadStatus = async (leadId: string, status: LeadStatus) => {
     try {
+      const previousLead = leads.find(lead => lead._id === leadId);
       await leadsApi.update(leadId, { status });
+
+      if (previousLead && previousLead.status !== status) {
+        await leadsApi.addNote(leadId, {
+          noteContent: `Status changed from "${previousLead.status}" to "${status}"`,
+          noteType: 'status_change',
+          metadata: {
+            previousStatus: previousLead.status,
+            newStatus: status,
+          },
+        });
+      }
+
       await fetchLeads();
 
       toast({
-        title: "Status Updated",
-        description: "Lead status has been updated successfully",
+        title: 'Status Updated',
+        description: 'Lead status has been updated successfully',
       });
     } catch (error) {
       console.error('Error updating lead status:', error);
       toast({
-        title: "Error",
-        description: "Failed to update lead status",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update lead status',
+        variant: 'destructive',
       });
     }
   };
@@ -93,16 +161,17 @@ export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
     try {
       await leadsApi.archive(leadId);
       await fetchLeads();
+
       toast({
-        title: "Success",
-        description: "Lead has been archived",
+        title: 'Lead Archived',
+        description: 'Lead has been archived successfully',
       });
     } catch (error) {
       console.error('Error archiving lead:', error);
       toast({
-        title: "Error",
-        description: "Failed to archive lead",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to archive lead',
+        variant: 'destructive',
       });
     }
   };
@@ -111,16 +180,60 @@ export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
     try {
       await leadsApi.unarchive(leadId);
       await fetchLeads();
+
       toast({
-        title: "Success",
-        description: "Lead has been restored",
+        title: 'Lead Restored',
+        description: 'Lead has been restored successfully',
       });
     } catch (error) {
       console.error('Error restoring lead:', error);
       toast({
-        title: "Error",
-        description: "Failed to restore lead",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to restore lead',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const updateLeadNotes = async (leadId: string) => {
+    const note = (notesDrafts[leadId] ?? '').trim();
+
+    if (!note) {
+      toast({
+        title: 'Note Required',
+        description: 'Please enter a note before saving.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await leadsApi.addNote(leadId, { noteContent: note, noteType: 'note' });
+
+      setNotesDrafts(prev => ({
+        ...prev,
+        [leadId]: '',
+      }));
+
+      setTimelineRefreshKeys(prev => ({
+        ...prev,
+        [leadId]: (prev[leadId] ?? 0) + 1,
+      }));
+      setNotePanelModes(prev => ({
+        ...prev,
+        [leadId]: 'timeline',
+      }));
+
+      toast({
+        title: 'Note Saved',
+        description: 'Your note was added to the timeline.',
+      });
+    } catch (error) {
+      console.error('Error adding lead note:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save the note',
+        variant: 'destructive',
       });
     }
   };
@@ -131,22 +244,173 @@ export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
       'chicago-hub': 'Chicago Hub',
       'nyc-hub': 'NYC Hub',
       'la-hub': 'LA Hub',
-      // Add more hub mappings as needed
     };
     return hubNames[hubId] || hubId;
   };
 
-  const getStatusColor = (status?: LeadStatus) => {
+  const getStatusStyles = (status?: LeadStatus | null) => {
     switch (status) {
-      case 'new': return 'bg-blue-500';
-      case 'contacted': return 'bg-yellow-500';
-      case 'qualified': return 'bg-green-500';
-      case 'proposal_sent': return 'bg-purple-500';
-      case 'closed_won': return 'bg-emerald-500';
-      case 'closed_lost': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case 'new':
+        return { background: 'bg-blue-50 hover:bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' };
+      case 'contacted':
+        return { background: 'bg-amber-50 hover:bg-amber-100', text: 'text-amber-700', border: 'border-amber-300' };
+      case 'qualified':
+        return { background: 'bg-emerald-50 hover:bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300' };
+      case 'proposal_sent':
+        return { background: 'bg-purple-50 hover:bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' };
+      case 'closed_won':
+        return { background: 'bg-teal-50 hover:bg-teal-100', text: 'text-teal-700', border: 'border-teal-300' };
+      case 'closed_lost':
+        return { background: 'bg-rose-50 hover:bg-rose-100', text: 'text-rose-700', border: 'border-rose-300' };
+      default:
+        return { background: 'bg-slate-100 hover:bg-slate-200', text: 'text-slate-700', border: 'border-slate-300' };
     }
   };
+
+  const toggleRow = (lead: Lead) => {
+    if (!lead._id) return;
+
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+
+      if (next.has(lead._id!)) {
+        next.delete(lead._id!);
+      } else {
+        next.add(lead._id!);
+        setNotesDrafts(current => ({
+          ...current,
+          [lead._id!]: current[lead._id!] ?? '',
+        }));
+        setNotePanelModes(current => ({
+          ...current,
+          [lead._id!]: current[lead._id!] ?? 'timeline',
+        }));
+      }
+
+      return next;
+    });
+  };
+
+  const getStatusLabel = (status?: LeadStatus | null) => {
+    return statusOptions.find(option => option.value === status)?.label ?? status ?? 'Unknown';
+  };
+
+  const formatBudgetRange = (range?: string | null) => {
+    if (!range) return '—';
+    return range.replace(/\/\s*month/gi, '/mo').replace(/\bper\s+month\b/gi, 'per mo').replace(/\bmonth\b/gi, 'mo');
+  };
+
+  const getStatusFilterLabel = () => {
+    if (statusFilter.length === 0) {
+      return 'Status';
+    }
+
+    const labels = statusFilter
+      .map(value => statusOptions.find(option => option.value === value)?.label)
+      .filter(Boolean) as string[];
+
+    if (labels.length === 1) return labels[0];
+    if (labels.length === statusOptions.length) return 'All Statuses';
+    if (labels.length <= 2) return labels.join(', ');
+    return `${labels.slice(0, 2).join(', ')} +${labels.length - 2}`;
+  };
+
+  const applyStatusFilter = () => {
+    setStatusFilter(statusFilterDraft);
+    setStatusPopoverOpen(false);
+  };
+
+  const getSortValue = (lead: Lead, key: SortKey) => {
+    switch (key) {
+      case 'businessName':
+        return lead.businessName || '';
+      case 'contactName':
+        return lead.contactName || '';
+      case 'budgetRange':
+        return lead.budgetRange || '';
+      case 'status':
+        return lead.status || '';
+      case 'createdAt':
+        return lead.createdAt || '';
+      default:
+        return '';
+    }
+  };
+
+  const sortedLeads = useMemo(() => {
+    if (!sortConfig) return leads;
+
+    const { key, direction } = sortConfig;
+
+    return [...leads].sort((a, b) => {
+      const aValue = getSortValue(a, key);
+      const bValue = getSortValue(b, key);
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.localeCompare(bValue, undefined, { sensitivity: 'base' });
+        return direction === 'asc' ? comparison : -comparison;
+      }
+
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      return 0;
+    });
+  }, [leads, sortConfig]);
+
+  const filteredLeads = useMemo(() => {
+    return sortedLeads.filter(lead => {
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        const matchesSearch =
+          lead.businessName?.toLowerCase().includes(search) ||
+          lead.contactName?.toLowerCase().includes(search) ||
+          lead.contactEmail?.toLowerCase().includes(search) ||
+          getHubName(lead.hubId).toLowerCase().includes(search);
+
+        if (!matchesSearch) {
+          return false;
+        }
+      }
+
+      if (statusFilter.length > 0 && !statusFilter.includes(lead.status ?? '')) {
+        return false;
+      }
+
+      if (!showArchived && lead.archivedAt) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [sortedLeads, searchTerm, statusFilter, showArchived]);
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig(prev => {
+      if (prev && prev.key === key) {
+        const nextDirection = prev.direction === 'asc' ? 'desc' : 'asc';
+        return { key, direction: nextDirection };
+      }
+
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="h-3.5 w-3.5" />;
+    }
+
+    return sortConfig.direction === 'asc' ? (
+      <ArrowUp className="h-3.5 w-3.5" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5" />
+    );
+  };
+
+  const hasActiveStatusFilters = statusFilter.length > 0;
+  const visibleCount = filteredLeads.length;
+  const filterTriggerClass =
+    'justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200 h-9 flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium';
 
   if (loading) {
     return <div>Loading leads...</div>;
@@ -158,299 +422,538 @@ export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Leads
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Total Leads</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
               <Users className="h-4 w-4 text-muted-foreground mr-2" />
-              <span className="text-2xl font-bold">{stats.total}</span>
+              <span className="text-2xl font-bold font-sans">{stats.total}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              New
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground font-sans">New</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
               <div className="h-3 w-3 rounded-full bg-blue-500 mr-2" />
-              <span className="text-2xl font-bold">{stats.new}</span>
+              <span className="text-2xl font-bold font-sans">{stats.new}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Contacted
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Contacted</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
               <div className="h-3 w-3 rounded-full bg-yellow-500 mr-2" />
-              <span className="text-2xl font-bold">{stats.contacted}</span>
+              <span className="text-2xl font-bold font-sans">{stats.contacted}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Qualified
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Qualified</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
               <TrendingUp className="h-4 w-4 text-green-500 mr-2" />
-              <span className="text-2xl font-bold">{stats.qualified}</span>
+              <span className="text-2xl font-bold font-sans">{stats.qualified}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Won
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Won</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
               <CheckCircle className="h-4 w-4 text-emerald-500 mr-2" />
-              <span className="text-2xl font-bold">{stats.closedWon}</span>
+              <span className="text-2xl font-bold font-sans">{stats.closedWon}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Lost
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Lost</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
               <XCircle className="h-4 w-4 text-red-500 mr-2" />
-              <span className="text-2xl font-bold">{stats.closedLost}</span>
+              <span className="text-2xl font-bold font-sans">{stats.closedLost}</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Leads List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Leads for this Publication</CardTitle>
-          <CardDescription>
-            View and manage leads associated with this publication
-          </CardDescription>
+      {/* Leads Table */}
+      <Card className="bg-white">
+        <CardHeader className="border-b">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-base font-semibold font-sans text-slate-900">
+              All Leads ({visibleCount}
+              {hasActiveStatusFilters ? ` of ${leads.length}` : ''})
+            </CardTitle>
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`${filterTriggerClass} ${
+                      statusFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                    }`}
+                  >
+                    {getStatusFilterLabel()}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 space-y-4">
+                  <div className="space-y-3">
+                    {statusOptions.map(option => {
+                      const checked = statusFilterDraft.includes(option.value);
+                      return (
+                        <label key={option.value} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => {
+                              setStatusFilterDraft(prev =>
+                                checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
+                              );
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStatusFilter([]);
+                        setStatusFilterDraft([]);
+                        setStatusPopoverOpen(false);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                    <Button size="sm" onClick={applyStatusFilter}>
+                      Apply
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className={filterTriggerClass}>
+                    <Archive className="mr-2 h-4 w-4" />
+                    <span className="flex-1">{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
+                    {showArchived && <Check className="h-4 w-4" />}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setShowArchived(prev => !prev);
+                    }}
+                  >
+                    <Archive className="mr-2 h-4 w-4" />
+                    <span className="flex-1">{showArchived ? 'Hide Archived' : 'Show Archived'}</span>
+                    {showArchived && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <div className="relative min-w-[200px]">
+                <Input
+                  placeholder="Search leads…"
+                  value={searchTerm}
+                  onChange={event => setSearchTerm(event.target.value)}
+                  className={`${filterTriggerClass} pr-9 ${
+                    searchTerm ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                  }`}
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0"
+                    onClick={() => setSearchTerm('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {leads.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No leads yet for this publication.</p>
-              <p className="text-sm mt-2">
+            <div className="p-6 text-center">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">No leads yet for this publication.</p>
+              <p className="text-sm text-muted-foreground mt-2">
                 Leads will appear here when potential customers inquire about this publication.
               </p>
             </div>
+          ) : filteredLeads.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">No leads match the current filters.</div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Leads List */}
-              <div className="space-y-4">
-                {leads.map((lead) => (
-                  <Card
-                    key={lead._id}
-                    className={`cursor-pointer transition-colors ${
-                      selectedLead?._id === lead._id ? 'ring-2 ring-primary' : ''
-                    }`}
-                    onClick={() => setSelectedLead(lead)}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{lead.businessName}</CardTitle>
-                        <Badge className={getStatusColor(lead.status)}>
-                          {lead.status?.replace('_', ' ').toUpperCase() || 'NEW'}
-                        </Badge>
-                      </div>
-                      <CardDescription className="text-sm">
-                        {lead.contactName} • {lead.contactEmail}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2 text-sm">
-                        <div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[32%]">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('businessName')}
+                      className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                    >
+                      Lead
+                      {renderSortIcon('businessName')}
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-[22%]">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('contactName')}
+                      className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                    >
+                      Point of Contact
+                      {renderSortIcon('contactName')}
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-[18%]">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('budgetRange')}
+                      className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                    >
+                      Budget
+                      {renderSortIcon('budgetRange')}
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-[14%]">Hub</TableHead>
+                  <TableHead className="w-[14%] text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('status')}
+                      className="ml-auto flex items-center justify-end gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                    >
+                      Status
+                      {renderSortIcon('status')}
+                    </button>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLeads.map(lead => {
+                  const id = lead._id!;
+                  const isExpanded = expandedRows.has(id);
+                  const statusStyles = getStatusStyles(lead.status);
+                  const statusLabel = getStatusLabel(lead.status);
+                  const currentNote = notesDrafts[id] ?? '';
+                  const timelineKey = timelineRefreshKeys[id] ?? 0;
+
+                  return (
+                    <Fragment key={id}>
+                      <TableRow
+                        className="cursor-pointer"
+                        data-state={isExpanded ? 'selected' : undefined}
+                        onClick={() => toggleRow(lead)}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 shrink-0"
+                              onClick={event => {
+                                event.stopPropagation();
+                                toggleRow(lead);
+                              }}
+                              aria-label={isExpanded ? 'Collapse lead details' : 'Expand lead details'}
+                            >
+                              <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </Button>
+                            <div>
+                              <p className="text-sm font-medium">{lead.businessName}</p>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <span>{formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true })}</span>
+                                {lead.archivedAt && (
+                                  <Badge variant="outline" className="border-dashed">
+                                    Archived
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">{lead.contactName}</TableCell>
+                        <TableCell className="text-sm">{formatBudgetRange(lead.budgetRange)}</TableCell>
+                        <TableCell className="text-sm">
                           <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
                             <MapPin className="h-3 w-3 mr-1" />
                             {getHubName(lead.hubId)}
                           </Badge>
-                        </div>
-                        {lead.budgetRange && (
-                          <p><span className="font-medium">Budget:</span> {lead.budgetRange}</p>
-                        )}
-                        <p className="text-muted-foreground">
-                          {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true })}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Lead Details */}
-              {selectedLead ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Lead Details</h3>
-                    {selectedLead.archivedAt ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => unarchiveLead(selectedLead._id!)}
-                      >
-                        <ArchiveRestore className="h-4 w-4 mr-2" />
-                        Restore
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => archiveLead(selectedLead._id!)}
-                      >
-                        <Archive className="h-4 w-4 mr-2" />
-                        Archive
-                      </Button>
-                    )}
-                  </div>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{selectedLead.businessName}</CardTitle>
-                      <CardDescription>
-                        {selectedLead.archivedAt && (
-                          <Badge variant="outline" className="bg-gray-100 mr-2">
-                            <Archive className="h-3 w-3 mr-1" />
-                            Archived
-                          </Badge>
-                        )}
-                        Quick Actions
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Contact Information */}
-                      <div>
-                        <label className="text-sm font-medium">Contact</label>
-                        <div className="text-sm space-y-2 mt-2">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4 text-muted-foreground" />
-                            <a
-                              href={`mailto:${selectedLead.contactEmail}`}
-                              className="text-blue-600 hover:underline"
-                            >
-                              {selectedLead.contactEmail}
-                            </a>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div
+                            onClick={event => event.stopPropagation()}
+                            onKeyDown={event => event.stopPropagation()}
+                            className="flex justify-end"
+                          >
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  disabled={Boolean(lead.archivedAt)}
+                                  className={`flex w-fit items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus:outline-none ${
+                                    lead.archivedAt ? 'cursor-not-allowed opacity-60' : ''
+                                  } ${statusStyles.background} ${statusStyles.text} ${statusStyles.border}`}
+                                >
+                                  {statusLabel}
+                                  <ChevronDown className="h-3 w-3" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-44">
+                                {statusOptions.map(option => (
+                                  <DropdownMenuItem
+                                    key={option.value}
+                                    onSelect={() => updateLeadStatus(id, option.value as LeadStatus)}
+                                  >
+                                    {option.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                          {selectedLead.contactPhone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              <a
-                                href={`tel:${selectedLead.contactPhone}`}
-                                className="text-blue-600 hover:underline"
-                              >
-                                {selectedLead.contactPhone}
-                              </a>
-                            </div>
-                          )}
-                          {selectedLead.websiteUrl && (
-                            <div className="flex items-center gap-2">
-                              <Globe className="h-4 w-4 text-muted-foreground" />
-                              <a
-                                href={selectedLead.websiteUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
-                              >
-                                {selectedLead.websiteUrl}
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && (
+                        <TableRow className="bg-muted/40">
+                          <TableCell colSpan={5}>
+                            <div className="space-y-6 p-6">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                    Source
+                                  </span>
+                                  <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                                    {lead.leadSource === 'storefront_form'
+                                      ? 'Web Form'
+                                      : lead.leadSource === 'ai_chat'
+                                        ? 'AI Chat'
+                                        : lead.leadSource === 'manual_entry'
+                                          ? 'Manual'
+                                          : 'Other'}
+                                  </Badge>
+                                  {lead.archivedAt && (
+                                    <Badge variant="outline" className="border-dashed">
+                                      Archived
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {lead.archivedAt ? (
+                                    <Button size="sm" variant="outline" onClick={() => unarchiveLead(id)}>
+                                      <ArchiveRestore className="mr-2 h-4 w-4" />
+                                      Restore
+                                    </Button>
+                                  ) : (
+                                    <Button size="sm" variant="outline" onClick={() => archiveLead(id)}>
+                                      <Archive className="mr-2 h-4 w-4" />
+                                      Archive
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
 
-                      {/* Hub */}
-                      <div>
-                        <label className="text-sm font-medium">Hub</label>
-                        <div className="mt-2">
-                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {getHubName(selectedLead.hubId)}
-                          </Badge>
-                        </div>
-                      </div>
+                              <div className="grid gap-6 md:grid-cols-2">
+                                <div className="grid gap-4 grid-rows-[auto_auto]">
+                                  <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      Marketing Goals
+                                    </p>
+                                    <div className="mt-3">
+                                      {lead.marketingGoals && lead.marketingGoals.length > 0 ? (
+                                        <div className="flex flex-wrap gap-2">
+                                          {lead.marketingGoals.map((goal, index) => (
+                                            <Badge key={index} variant="outline" className="rounded-full px-3 py-1 text-xs">
+                                              {goal}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">No marketing goals provided.</p>
+                                      )}
+                                    </div>
+                                  </div>
 
-                      {/* Marketing Goals */}
-                      {selectedLead.marketingGoals && selectedLead.marketingGoals.length > 0 && (
-                        <div>
-                          <label className="text-sm font-medium">Marketing Goals</label>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {selectedLead.marketingGoals.map((goal, index) => (
-                              <Badge key={index} variant="outline">{goal}</Badge>
-                            ))}
-                          </div>
-                        </div>
+                                  <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Timeline</p>
+                                    <div className="mt-3 flex items-center gap-3 text-sm">
+                                      <Calendar className="h-4 w-4 text-slate-400" />
+                                      <span>{lead.timeline ?? 'No timeline provided.'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="grid gap-4 grid-rows-[auto_auto]">
+                                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                                        <User className="h-5 w-5" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-semibold text-slate-900">{lead.contactName}</p>
+                                        <p className="text-xs text-slate-500">Primary Contact</p>
+                                      </div>
+                                    </div>
+                                    <div className="mt-5 space-y-3 text-sm">
+                                      <div className="flex items-start gap-3">
+                                        <Mail className="mt-0.5 h-4 w-4 text-slate-400" />
+                                        <a
+                                          href={`mailto:${lead.contactEmail}`}
+                                          className="break-words text-primary hover:underline"
+                                          onClick={event => event.stopPropagation()}
+                                        >
+                                          {lead.contactEmail}
+                                        </a>
+                                      </div>
+                                      {lead.contactPhone && (
+                                        <div className="flex items-start gap-3">
+                                          <Phone className="mt-0.5 h-4 w-4 text-slate-400" />
+                                          <a
+                                            href={`tel:${lead.contactPhone}`}
+                                            className="text-slate-900 hover:text-primary"
+                                            onClick={event => event.stopPropagation()}
+                                          >
+                                            {lead.contactPhone}
+                                          </a>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Website</p>
+                                    <div className="mt-3 flex items-start gap-3 text-sm">
+                                      <Globe className="mt-0.5 h-4 w-4 text-slate-400" />
+                                      {lead.websiteUrl ? (
+                                        <a
+                                          href={lead.websiteUrl}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-primary hover:underline"
+                                          onClick={event => event.stopPropagation()}
+                                        >
+                                          {lead.websiteUrl}
+                                        </a>
+                                      ) : (
+                                        <span className="text-muted-foreground">No website provided.</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                                <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
+                                  <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-slate-100 p-1">
+                                    <button
+                                      type="button"
+                                      onClick={event => {
+                                        event.stopPropagation();
+                                        setNotePanelModes(prev => ({
+                                          ...prev,
+                                          [id]: 'add',
+                                        }));
+                                      }}
+                                      className={`px-3 py-1 text-xs transition-colors ${
+                                        (notePanelModes[id] ?? 'timeline') === 'add'
+                                          ? 'rounded-md bg-white text-slate-900 shadow'
+                                          : 'text-slate-600'
+                                      }`}
+                                    >
+                                      Add Note
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={event => {
+                                        event.stopPropagation();
+                                        setNotePanelModes(prev => ({
+                                          ...prev,
+                                          [id]: 'timeline',
+                                        }));
+                                      }}
+                                      className={`px-3 py-1 text-xs transition-colors ${
+                                        (notePanelModes[id] ?? 'timeline') === 'timeline'
+                                          ? 'rounded-md bg-white text-slate-900 shadow'
+                                          : 'text-slate-600'
+                                      }`}
+                                    >
+                                      Activity
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {(notePanelModes[id] ?? 'timeline') === 'add' ? (
+                                  <div className="mt-4 space-y-3">
+                                    <Textarea
+                                      value={currentNote}
+                                      disabled={Boolean(lead.archivedAt)}
+                                      onClick={event => event.stopPropagation()}
+                                      onChange={event => {
+                                        event.stopPropagation();
+                                        setNotesDrafts(prev => ({
+                                          ...prev,
+                                          [id]: event.target.value,
+                                        }));
+                                      }}
+                                      placeholder="Add a note about this lead..."
+                                      className="min-h-[140px]"
+                                    />
+                                    <div className="flex justify-end">
+                                      <Button
+                                        size="sm"
+                                        disabled={Boolean(lead.archivedAt) || !currentNote.trim()}
+                                        onClick={event => {
+                                          event.stopPropagation();
+                                          updateLeadNotes(id);
+                                        }}
+                                      >
+                                        Save Note
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="mt-4">
+                                    <LeadNotesTimeline key={`${id}-${timelineKey}`} leadId={id} showComposer={false} />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       )}
-
-                      {/* Update Status */}
-                      <div>
-                        <label className="text-sm font-medium">Update Status</label>
-                        <Select
-                          value={selectedLead.status || 'new'}
-                          onValueChange={(value) =>
-                            updateLeadStatus(selectedLead._id!, value as LeadStatus)
-                          }
-                          disabled={!!selectedLead.archivedAt}
-                        >
-                          <SelectTrigger className="mt-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="contacted">Contacted</SelectItem>
-                            <SelectItem value="qualified">Qualified</SelectItem>
-                            <SelectItem value="proposal_sent">Proposal Sent</SelectItem>
-                            <SelectItem value="closed_won">Closed Won</SelectItem>
-                            <SelectItem value="closed_lost">Closed Lost</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Lead Notes Timeline */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Notes & Activity</CardTitle>
-                      <CardDescription>Timeline of all interactions and updates</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <LeadNotesTimeline leadId={selectedLead._id!} />
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <p>Select a lead to view details</p>
-                </div>
-              )}
-            </div>
+                    </Fragment>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
     </div>
   );
 };
-

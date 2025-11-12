@@ -30,6 +30,7 @@ import {
   Database,
   Globe,
   Mail,
+  MoreHorizontal,
   Phone,
   User,
   X,
@@ -57,7 +58,11 @@ export const LeadManagement = () => {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [statusFilterDraft, setStatusFilterDraft] = useState<string[]>([]);
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<string[]>([]);
+  const [sourceFilterDraft, setSourceFilterDraft] = useState<string[]>([]);
   const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
+  const [publicationFilter, setPublicationFilter] = useState<string[]>([]);
+  const [publicationFilterDraft, setPublicationFilterDraft] = useState<string[]>([]);
   const [publicationPopoverOpen, setPublicationPopoverOpen] = useState(false);
   const { toast } = useToast();
   const { selectedHubId } = useHubContext();
@@ -107,6 +112,18 @@ export const LeadManagement = () => {
       setStatusFilterDraft(statusFilter);
     }
   }, [statusPopoverOpen, statusFilter]);
+
+  useEffect(() => {
+    if (sourcePopoverOpen) {
+      setSourceFilterDraft(sourceFilter);
+    }
+  }, [sourcePopoverOpen, sourceFilter]);
+
+  useEffect(() => {
+    if (publicationPopoverOpen) {
+      setPublicationFilterDraft(publicationFilter);
+    }
+  }, [publicationPopoverOpen, publicationFilter]);
 
   const fetchData = async () => {
     try {
@@ -442,6 +459,16 @@ export const LeadManagement = () => {
     setStatusPopoverOpen(false);
   };
 
+  const applySourceFilter = () => {
+    setSourceFilter(sourceFilterDraft);
+    setSourcePopoverOpen(false);
+  };
+
+  const applyPublicationFilter = () => {
+    setPublicationFilter(publicationFilterDraft);
+    setPublicationPopoverOpen(false);
+  };
+
   const getSortValue = (lead: Lead, key: SortKey) => {
     switch (key) {
       case 'businessName':
@@ -498,13 +525,30 @@ export const LeadManagement = () => {
         return false;
       }
 
+      if (sourceFilter.length > 0 && !sourceFilter.includes(lead.leadSource ?? '')) {
+        return false;
+      }
+
+      if (publicationFilter.length > 0) {
+        if (lead.publicationId) {
+          if (!publicationFilter.includes(lead.publicationId)) {
+            return false;
+          }
+        } else {
+          // Hub-level lead (no publicationId)
+          if (!publicationFilter.includes('hub-level')) {
+            return false;
+          }
+        }
+      }
+
       if (!showArchived && lead.archivedAt) {
         return false;
       }
 
       return true;
     });
-  }, [sortedLeads, searchTerm, statusFilter, showArchived]);
+  }, [sortedLeads, searchTerm, statusFilter, sourceFilter, publicationFilter, showArchived]);
 
   const handleSort = (key: SortKey) => {
     setSortConfig(prev => {
@@ -529,17 +573,12 @@ export const LeadManagement = () => {
     );
   };
 
-  const hasActiveStatusFilters = statusFilter.length > 0;
+  const hasActiveFilters = statusFilter.length > 0 || sourceFilter.length > 0 || publicationFilter.length > 0;
   const visibleCount = filteredLeads.length;
   const filterTriggerClass =
     'justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200 h-9 flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium';
-  const selectedSourceValue = filters.leadSource ?? 'all';
-  const selectedPublicationValue = filters.publicationId ?? 'all';
-  const [sourceDraft, setSourceDraft] = useState<string>(selectedSourceValue);
-  const [publicationDraft, setPublicationDraft] = useState<string>(selectedPublicationValue);
 
   const sourceOptions = [
-    { value: 'all', label: 'All Sources' },
     { value: 'storefront_form', label: 'Web Form' },
     { value: 'ai_chat', label: 'AI Chat' },
     { value: 'manual_entry', label: 'Manual Entry' },
@@ -547,7 +586,6 @@ export const LeadManagement = () => {
   ] as const;
 
   const publicationOptions = [
-    { value: 'all', label: 'All Publications' },
     { value: 'hub-level', label: 'Hub-Level Only' },
     ...publications
       .map(pub => ({
@@ -558,14 +596,33 @@ export const LeadManagement = () => {
   ];
 
   const getSourceFilterLabel = () => {
-    const option = sourceOptions.find(item => item.value === selectedSourceValue);
-    return option?.label ?? 'All Sources';
+    if (sourceFilter.length === 0) {
+      return 'Source';
+    }
+
+    const labels = sourceFilter
+      .map(value => sourceOptions.find(option => option.value === value)?.label)
+      .filter(Boolean) as string[];
+
+    if (labels.length === 1) return labels[0];
+    if (labels.length === sourceOptions.length) return 'All Sources';
+    if (labels.length <= 2) return labels.join(', ');
+    return `${labels.slice(0, 2).join(', ')} +${labels.length - 2}`;
   };
 
   const getPublicationFilterLabel = () => {
-    if (selectedPublicationValue === 'all') return 'All Publications';
-    const option = publicationOptions.find(item => item.value === selectedPublicationValue);
-    return option?.label ?? 'All Publications';
+    if (publicationFilter.length === 0) {
+      return 'Publication';
+    }
+
+    const labels = publicationFilter
+      .map(value => publicationOptions.find(option => option.value === value)?.label)
+      .filter(Boolean) as string[];
+
+    if (labels.length === 1) return labels[0];
+    if (labels.length === publicationOptions.length) return 'All Publications';
+    if (labels.length <= 2) return labels.join(', ');
+    return `${labels.slice(0, 2).join(', ')} +${labels.length - 2}`;
   };
 
   if (loading) {
@@ -577,17 +634,6 @@ export const LeadManagement = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold font-sans text-slate-900">Lead Management</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={seedTestLeads} disabled={seeding}>
-            <Database className="mr-2 h-4 w-4" />
-            {seeding ? 'Creating…' : 'Add Test Leads'}
-          </Button>
-          {leads.length > 0 && (
-            <Button variant="outline" size="sm" onClick={deleteAllLeads} disabled={seeding}>
-              <X className="mr-2 h-4 w-4" />
-              Clear All Leads
-            </Button>
-          )}
-          <div className="hidden h-8 border-l border-border md:block" />
           <Button
             variant={showArchived ? 'default' : 'outline'}
             size="sm"
@@ -596,9 +642,27 @@ export const LeadManagement = () => {
               setFilters(prev => ({ ...prev, includeArchived: !showArchived }));
             }}
           >
-            <Archive className="mr-2 h-4 w-4" />
             {showArchived ? 'Hide Archived' : 'Show Archived'}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={seeding}>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={seedTestLeads} disabled={seeding}>
+                <Database className="mr-2 h-4 w-4" />
+                {seeding ? 'Creating…' : 'Add Test Leads'}
+              </DropdownMenuItem>
+              {leads.length > 0 && (
+                <DropdownMenuItem onClick={deleteAllLeads} disabled={seeding}>
+                  <X className="mr-2 h-4 w-4" />
+                  Clear All Leads
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -609,7 +673,7 @@ export const LeadManagement = () => {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base font-semibold font-sans text-slate-900">
               All Leads ({visibleCount}
-              {hasActiveStatusFilters ? ` of ${leads.length}` : ''})
+              {hasActiveFilters ? ` of ${leads.length}` : ''})
             </CardTitle>
             <div className="flex items-center gap-2 overflow-x-auto">
               <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
@@ -663,140 +727,102 @@ export const LeadManagement = () => {
                 </PopoverContent>
               </Popover>
 
-              <Popover
-                open={sourcePopoverOpen}
-                onOpenChange={open => {
-                  setSourcePopoverOpen(open);
-                  if (open) {
-                    setSourceDraft(selectedSourceValue);
-                  }
-                }}
-              >
+              <Popover open={sourcePopoverOpen} onOpenChange={setSourcePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={`${filterTriggerClass} min-w-[150px] ${
-                      selectedSourceValue !== 'all' ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                    className={`${filterTriggerClass} ${
+                      sourceFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
                     }`}
                   >
-                    {sourceOptions.find(option => option.value === sourceDraft)?.label ??
-                      getSourceFilterLabel()}
+                    {getSourceFilterLabel()}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-56 p-2">
-                  <div className="max-h-56 overflow-y-auto space-y-1">
+                <PopoverContent className="w-64 space-y-4">
+                  <div className="space-y-3">
                     {sourceOptions.map(option => {
-                      const selected = sourceDraft === option.value;
+                      const checked = sourceFilterDraft.includes(option.value);
                       return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => {
-                            setSourceDraft(option.value);
-                          }}
-                          className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted ${
-                            selected ? 'text-primary' : ''
-                          }`}
-                        >
-                          {option.label}
-                          {selected && <Check className="h-4 w-4" />}
-                        </button>
+                        <label key={option.value} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => {
+                              setSourceFilterDraft(prev =>
+                                checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
+                              );
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
                       );
                     })}
                   </div>
-                  <div className="mt-3 flex items-center justify-between border-t pt-3">
+                  <div className="flex items-center justify-between border-t pt-3">
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setFilters(prev => ({ ...prev, leadSource: undefined }));
+                        setSourceFilter([]);
+                        setSourceFilterDraft([]);
                         setSourcePopoverOpen(false);
                       }}
                     >
                       Clear
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setFilters(prev => ({
-                          ...prev,
-                          leadSource: sourceDraft === 'all' ? undefined : (sourceDraft as LeadSource),
-                        }));
-                        setSourcePopoverOpen(false);
-                      }}
-                    >
+                    <Button size="sm" onClick={applySourceFilter}>
                       Apply
                     </Button>
                   </div>
                 </PopoverContent>
               </Popover>
 
-              <Popover
-                open={publicationPopoverOpen}
-                onOpenChange={open => {
-                  setPublicationPopoverOpen(open);
-                  if (open) {
-                    setPublicationDraft(selectedPublicationValue);
-                  }
-                }}
-              >
+              <Popover open={publicationPopoverOpen} onOpenChange={setPublicationPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={`${filterTriggerClass} min-w-[170px] ${
-                      selectedPublicationValue !== 'all' ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                    className={`${filterTriggerClass} ${
+                      publicationFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
                     }`}
                   >
-                    {publicationOptions.find(option => option.value === publicationDraft)?.label ??
-                      getPublicationFilterLabel()}
+                    {getPublicationFilterLabel()}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-56 p-2">
-                  <div className="max-h-56 overflow-y-auto space-y-1">
+                <PopoverContent className="w-64 space-y-4">
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
                     {publicationOptions.map(option => {
-                      const selected = publicationDraft === option.value;
+                      const checked = publicationFilterDraft.includes(option.value);
                       return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => {
-                            setPublicationDraft(option.value);
-                          }}
-                          className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted ${
-                            selected ? 'text-primary' : ''
-                          }`}
-                        >
-                          {option.label}
-                          {selected && <Check className="h-4 w-4" />}
-                        </button>
+                        <label key={option.value} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => {
+                              setPublicationFilterDraft(prev =>
+                                checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
+                              );
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
                       );
                     })}
                   </div>
-                  <div className="mt-3 flex items-center justify-between border-t pt-3">
+                  <div className="flex items-center justify-between border-t pt-3">
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setFilters(prev => ({ ...prev, publicationId: undefined }));
+                        setPublicationFilter([]);
+                        setPublicationFilterDraft([]);
                         setPublicationPopoverOpen(false);
                       }}
                     >
                       Clear
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setFilters(prev => ({
-                          ...prev,
-                          publicationId: publicationDraft === 'all' ? undefined : publicationDraft,
-                        }));
-                        setPublicationPopoverOpen(false);
-                      }}
-                    >
+                    <Button size="sm" onClick={applyPublicationFilter}>
                       Apply
                     </Button>
                   </div>
@@ -997,7 +1023,7 @@ export const LeadManagement = () => {
                               </div>
 
                               <div className="grid gap-6 md:grid-cols-2">
-                                <div className="grid gap-4 md:grid-rows-2">
+                                <div className="grid gap-4 grid-rows-[auto_auto]">
                                   <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                       Marketing Goals
@@ -1028,7 +1054,7 @@ export const LeadManagement = () => {
                                   </div>
                                 </div>
 
-                                <div className="grid gap-4 md:grid-rows-2">
+                                <div className="grid gap-4 grid-rows-[auto_auto]">
                                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 shadow-sm">
                                     <div className="flex items-start gap-3">
                                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-600">

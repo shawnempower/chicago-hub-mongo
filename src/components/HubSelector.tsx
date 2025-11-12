@@ -46,12 +46,12 @@ export const HubSelector: React.FC = () => {
     );
   }
 
-  const currentHub = hubs.find(h => h.hubId === selectedHubId) || hubs[0];
-  const hubInitial = currentHub.basicInfo.name.charAt(0).toUpperCase();
-  const hubColor = currentHub.branding?.primaryColor || '#0066cc';
-
   // If only one hub, show static display
   if (hubs.length === 1) {
+    const currentHub = hubs.find(h => h.hubId === selectedHubId) || hubs[0];
+    const hubInitial = currentHub.basicInfo.name.charAt(0).toUpperCase();
+    const hubColor = currentHub.branding?.primaryColor || '#0066cc';
+    
     return (
       <div className="flex items-center border border-border rounded-lg overflow-hidden h-9">
         <div className="px-3 h-full flex items-center whitespace-nowrap text-xs font-medium" style={{ backgroundColor: '#EDEAE1', color: '#6C685D' }}>
@@ -80,15 +80,7 @@ export const HubSelector: React.FC = () => {
         <div className="w-px h-full bg-border" />
         <Select value={selectedHubId || undefined} onValueChange={setSelectedHubId}>
           <SelectTrigger className="h-9 border-0 bg-white shadow-none focus:ring-0 min-w-[160px]">
-          <div className="flex items-center gap-1.5">
-            <div 
-              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-semibold"
-              style={{ backgroundColor: hubColor }}
-            >
-              {hubInitial}
-            </div>
             <SelectValue />
-          </div>
         </SelectTrigger>
         <SelectContent>
           {hubs.map((hub) => (
