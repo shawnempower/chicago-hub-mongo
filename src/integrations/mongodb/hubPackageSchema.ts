@@ -15,6 +15,9 @@ export const PACKAGE_CATEGORIES: Array<{ id: PackageCategory; label: string; des
   { id: 'custom', label: 'Custom', description: 'Custom-built packages' }
 ];
 
+// Publication frequency types for constraint enforcement
+export type PublicationFrequencyType = 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'custom';
+
 export interface HubPackageInventoryItem {
   channel: 'website' | 'print' | 'newsletter' | 'social' | 'podcast' | 'radio' | 'streaming' | 'events';
   itemPath: string; // Path to find item in publication object (e.g., "distributionChannels.website.advertisingOpportunities[0]")
@@ -22,6 +25,20 @@ export interface HubPackageInventoryItem {
   quantity: number; // How many units/runs
   duration?: string; // "4 weeks", "1 month"
   frequency?: string; // "weekly", "one-time", "monthly"
+  
+  // BUILDER: Source identification for nested items (newsletters, radio shows, podcasts)
+  sourceName?: string; // e.g., "The Stay Ready Playbook" for a newsletter, "Morning Drive" for a radio show
+  
+  // BUILDER: Frequency constraint tracking
+  currentFrequency?: number; // Current frequency selection (e.g., 12x, 6x, 4x, 1x)
+  maxFrequency?: number; // Maximum allowed frequency based on publication schedule
+  publicationFrequencyType?: PublicationFrequencyType; // Type of publication for constraint logic
+  
+  // Campaign-specific calculated metrics (from LLM)
+  monthlyImpressions?: number; // Calculated impressions per month (for CPM pricing)
+  monthlyCost?: number; // Cost per month
+  campaignCost?: number; // Total cost for entire campaign
+  
   specifications?: {
     size?: string;
     format?: string;
@@ -34,6 +51,7 @@ export interface HubPackageInventoryItem {
     standardPrice: number;
     hubPrice: number; // Discounted
     pricingModel: string; // "per_week", "cpm", "per_post", "flat"
+    totalCost?: number; // Total cost for this item (campaign duration)
   };
 }
 
@@ -44,6 +62,11 @@ export interface HubPackagePublication {
   publicationTotal: number; // Total cost from this publication
   monthlyImpressions?: number;
   monthlyReach?: number;
+  sizeScore?: number; // For proportional/size-weighted algorithm
+  sizeJustification?: string; // Explanation of size score
+  
+  // BUILDER: Publication frequency metadata
+  publicationFrequencyType?: PublicationFrequencyType; // Inherited from publication schedule
 }
 
 export interface HubPackagePricingTier {
@@ -275,6 +298,21 @@ export interface HubPackage {
     approvedAt?: Date;
     version: number; // For versioning
     internalNotes?: string;
+    
+    // BUILDER: Package creation metadata
+    builderInfo?: {
+      creationMethod: 'builder' | 'manual'; // How this package was created
+      buildMode?: 'budget-first' | 'specification-first'; // Which builder flow was used
+      originalBudget?: number; // Budget constraint if used
+      originalDuration?: number; // Duration in months
+      filtersUsed?: {
+        geography?: string[]; // Geographic filters applied
+        channels?: string[]; // Channel filters applied
+        publications?: number[]; // Specific publication IDs if selected
+      };
+      frequencyStrategy?: 'standard' | 'reduced' | 'minimum' | 'custom'; // Initial frequency strategy
+      lastBuilderEdit?: Date; // When package was last edited in builder
+    };
   };
 
   // Legacy compatibility

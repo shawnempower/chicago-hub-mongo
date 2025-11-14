@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { getDatabase, getDatabaseName } from './client';
 import { User, UserSession, UserProfile, COLLECTIONS } from './schemas';
 import { ObjectId } from 'mongodb';
+import { createLogger } from '../../utils/logger';
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
@@ -12,6 +13,9 @@ const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
 // Password configuration
 const SALT_ROUNDS = 12;
+
+// Logger instance
+const logger = createLogger('AuthService');
 
 export interface AuthUser {
   id: string;
@@ -62,7 +66,6 @@ export class AuthService {
         createdAt: user.createdAt
       };
     } catch (error) {
-      console.error('Error fetching user profile for admin status:', error);
       // Return without admin flag if profile fetch fails
       return {
         id: user._id?.toString() || '',
@@ -158,7 +161,6 @@ export class AuthService {
       
       return { user, token };
     } catch (error) {
-      console.error('Error in signUp:', error);
       return { user: {} as AuthUser, token: '', error: 'Failed to create account' };
     }
   }
@@ -166,26 +168,26 @@ export class AuthService {
   // Sign in user
   async signIn(email: string, password: string): Promise<{ user: AuthUser; token: string; error?: string }> {
     try {
-      console.log('🔍 SignIn attempt for email:', email.toLowerCase());
-      console.log('🔍 Using database:', getDatabaseName());
+      logger.debug('🔍 SignIn attempt for email', email.toLowerCase());
+      logger.debug('🔍 Using database', getDatabaseName());
       
       // Find user
       const user = await this.usersCollection.findOne({ email: email.toLowerCase() });
       if (!user) {
-        console.log('❌ User not found in database');
+        logger.debug('❌ User not found in database');
         return { user: {} as AuthUser, token: '', error: 'Invalid email or password' };
       }
 
-      console.log('✅ User found:', user.email);
+      logger.debug('✅ User found', user.email);
       
       // Verify password
       const isValidPassword = await this.verifyPassword(password, user.passwordHash);
       if (!isValidPassword) {
-        console.log('❌ Password verification failed');
+        logger.debug('❌ Password verification failed');
         return { user: {} as AuthUser, token: '', error: 'Invalid email or password' };
       }
 
-      console.log('✅ Password verified successfully');
+      logger.debug('✅ Password verified successfully');
 
       // Update last login
       await this.usersCollection.updateOne(
@@ -210,7 +212,6 @@ export class AuthService {
       
       return { user: authUser, token };
     } catch (error) {
-      console.error('Error in signIn:', error);
       return { user: {} as AuthUser, token: '', error: 'Failed to sign in' };
     }
   }
@@ -223,7 +224,6 @@ export class AuthService {
       
       return await this.userToAuthUser(user);
     } catch (error) {
-      console.error('Error in getUserById:', error);
       return null;
     }
   }
@@ -236,7 +236,6 @@ export class AuthService {
       
       return await this.userToAuthUser(user);
     } catch (error) {
-      console.error('Error in getUserByEmail:', error);
       return null;
     }
   }
@@ -249,7 +248,6 @@ export class AuthService {
 
       return await this.getUserById(decoded.userId);
     } catch (error) {
-      console.error('Error in getUserByToken:', error);
       return null;
     }
   }
@@ -268,7 +266,6 @@ export class AuthService {
 
       await this.sessionsCollection.insertOne(session);
     } catch (error) {
-      console.error('Error creating session:', error);
     }
   }
 
@@ -277,7 +274,6 @@ export class AuthService {
     try {
       await this.sessionsCollection.deleteOne({ token });
     } catch (error) {
-      console.error('Error in signOut:', error);
     }
   }
 
@@ -286,7 +282,6 @@ export class AuthService {
     try {
       await this.sessionsCollection.deleteMany({ userId });
     } catch (error) {
-      console.error('Error in signOutAllSessions:', error);
     }
   }
 
@@ -300,7 +295,6 @@ export class AuthService {
       
       return !!session;
     } catch (error) {
-      console.error('Error in validateSession:', error);
       return false;
     }
   }
@@ -312,7 +306,6 @@ export class AuthService {
         expiresAt: { $lt: new Date() }
       });
     } catch (error) {
-      console.error('Error cleaning up expired sessions:', error);
     }
   }
 
@@ -345,7 +338,6 @@ export class AuthService {
         user: await this.userToAuthUser(user)
       };
     } catch (error) {
-      console.error('Error generating password reset token:', error);
       return { success: false, error: 'Failed to generate reset token' };
     }
   }
@@ -387,7 +379,6 @@ export class AuthService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error resetting password:', error);
       return { success: false, error: 'Failed to reset password' };
     }
   }
@@ -416,7 +407,6 @@ export class AuthService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error verifying email:', error);
       return { success: false, error: 'Failed to verify email' };
     }
   }
@@ -441,7 +431,6 @@ export class AuthService {
       const updatedUser = await this.getUserById(userId);
       return { success: true, user: updatedUser || undefined };
     } catch (error) {
-      console.error('Error updating profile:', error);
       return { success: false, error: 'Failed to update profile' };
     }
   }

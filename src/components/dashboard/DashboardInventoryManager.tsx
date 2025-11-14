@@ -136,13 +136,18 @@ export const DashboardInventoryManager = () => {
   const [deleteItemType, setDeleteItemType] = useState<string>('');
 
   // Helper function to format pricing model labels
-  const formatPricingModel = (model: string) => {
+  const formatPricingModel = (model: string, channel?: string) => {
     if (!model) return 'N/A';
     
     switch(model) {
       // Website models
       case 'flat_rate': return 'Flat Rate';
-      case 'flat': return '/occurrence';  // Used by events for per-occurrence pricing
+      case 'flat': 
+        // Context-dependent: website ads use flat for monthly, events use it for per-occurrence
+        if (channel === 'event' || channel === 'events') {
+          return '/occurrence';
+        }
+        return '/month';  // Default for website ads and other channels
       case 'per_week': return '/week';
       case 'per_day': return '/day';
       case 'cpm': return '/1000 impressions';
@@ -238,7 +243,7 @@ export const DashboardInventoryManager = () => {
   };
 
   // Helper component to render pricing display
-  const renderPricingDisplay = (pricing: any) => {
+  const renderPricingDisplay = (pricing: any, channel?: string) => {
     // Helper to get price value and field name from pricing object
     const getPriceInfo = (pricingObj: any) => {
       if (!pricingObj) return { value: null, field: null };
@@ -296,7 +301,7 @@ export const DashboardInventoryManager = () => {
                       : 'N/A'}
                 </span>
                 <span className="text-gray-600">
-                  {formatPricingModel(pricingModel)}
+                  {formatPricingModel(pricingModel, channel)}
                 </span>
               </div>
             );
@@ -320,7 +325,7 @@ export const DashboardInventoryManager = () => {
                   : 'N/A'}
             </span>
             <span className="text-gray-600">
-              {formatPricingModel(pricingObj.pricingModel)}
+              {formatPricingModel(pricingObj.pricingModel, channel)}
             </span>
           </div>
         );
@@ -341,7 +346,7 @@ export const DashboardInventoryManager = () => {
               return (
                 <div key={idx} className="flex items-center gap-2 text-xs">
                   <span className="font-medium text-gray-900">${item.value}</span>
-                  <span className="text-gray-600">{formatPricingModel(pricingModel)}</span>
+                  <span className="text-gray-600">{formatPricingModel(pricingModel, channel)}</span>
                 </div>
               );
             })}
@@ -355,7 +360,7 @@ export const DashboardInventoryManager = () => {
         return (
           <div className="flex items-center gap-2 text-xs">
             <span className="font-medium text-gray-900">${item.value}</span>
-            <span className="text-gray-600">{formatPricingModel(pricingModel)}</span>
+            <span className="text-gray-600">{formatPricingModel(pricingModel, channel)}</span>
           </div>
         );
       } else {
@@ -2886,7 +2891,7 @@ export const DashboardInventoryManager = () => {
                       {(adRevenue > 0 || impressions > 0 || opportunity.pricing) && (
                         <div className="bg-green-50 border border-green-200 rounded p-2">
                           <div className="flex items-center justify-between mb-1">
-                            <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                            <p className="text-xs font-medium text-green-700">Monthly Potential</p>
                             <p className="text-sm font-bold text-green-800">
                               {adRevenue > 0 ? `$${Math.round(adRevenue).toLocaleString()}` : 'Not calculated'}
                             </p>
@@ -2913,7 +2918,7 @@ export const DashboardInventoryManager = () => {
                             </Badge>
                           )}
                         </div>
-                        {renderPricingDisplay(opportunity.pricing)}
+                        {renderPricingDisplay(opportunity.pricing, 'website')}
                       </div>
                     </div>
                   </div>
@@ -3101,7 +3106,7 @@ export const DashboardInventoryManager = () => {
                                   <div className="bg-green-50 border border-green-200 rounded p-2">
                                     {adRevenue > 0 && (
                                       <div className="flex items-center justify-between mb-1">
-                                        <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                        <p className="text-xs font-medium text-green-700">Monthly Potential</p>
                                         <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
                                       </div>
                                     )}
@@ -3131,7 +3136,7 @@ export const DashboardInventoryManager = () => {
                                       </Badge>
                                     )}
                                   </div>
-                                  {renderPricingDisplay(ad.pricing)}
+                                  {renderPricingDisplay(ad.pricing, 'podcast')}
                                 </div>
                               </div>
                             </div>
@@ -3414,7 +3419,7 @@ export const DashboardInventoryManager = () => {
                                         <div className="bg-green-50 border border-green-200 rounded p-2">
                                           {showRevenue > 0 && (
                                             <div className="flex items-center justify-between mb-1">
-                                              <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                              <p className="text-xs font-medium text-green-700">Monthly Potential</p>
                                               <p className="text-sm font-bold text-green-800">${Math.round(showRevenue).toLocaleString()}</p>
                                             </div>
                                           )}
@@ -3724,7 +3729,7 @@ export const DashboardInventoryManager = () => {
                                   <div className="bg-green-50 border border-green-200 rounded p-2">
                                     {adRevenue > 0 && (
                                       <div className="flex items-center justify-between mb-1">
-                                        <p className="text-xs font-medium text-green-700">Est. Monthly Revenue</p>
+                                        <p className="text-xs font-medium text-green-700">Est. Monthly Potential</p>
                                         <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
                                       </div>
                                     )}
@@ -3754,7 +3759,7 @@ export const DashboardInventoryManager = () => {
                                       </Badge>
                                     )}
                                   </div>
-                                  {renderPricingDisplay(ad.pricing)}
+                                  {renderPricingDisplay(ad.pricing, 'streaming')}
                                 </div>
                               </div>
                             </div>
@@ -3972,7 +3977,7 @@ export const DashboardInventoryManager = () => {
                                     <div className="bg-green-50 border border-green-200 rounded p-2">
                                       {adRevenue > 0 && (
                                         <div className="flex items-center justify-between mb-1">
-                                          <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                          <p className="text-xs font-medium text-green-700">Monthly Potential</p>
                                           <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
                                         </div>
                                       )}
@@ -4002,7 +4007,7 @@ export const DashboardInventoryManager = () => {
                                         </Badge>
                                       )}
                                     </div>
-                                    {renderPricingDisplay(ad.pricing)}
+                                    {renderPricingDisplay(ad.pricing, 'print')}
                                   </div>
                                 </div>
                               </div>
@@ -4237,7 +4242,7 @@ export const DashboardInventoryManager = () => {
                             <div className="bg-green-50 border border-green-200 rounded p-2 mt-2">
                               {adRevenue > 0 && (
                                 <div className="flex items-center justify-between mb-1">
-                                  <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                  <p className="text-xs font-medium text-green-700">Monthly Potential</p>
                                   <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
                                 </div>
                               )}
@@ -4269,7 +4274,7 @@ export const DashboardInventoryManager = () => {
                                 </Badge>
                               )}
                             </div>
-                            {renderPricingDisplay(opportunity.pricing)}
+                            {renderPricingDisplay(opportunity.pricing, 'event')}
                           </div>
                         </div>
                         );
@@ -4491,7 +4496,7 @@ export const DashboardInventoryManager = () => {
                               <div className="bg-green-50 border border-green-200 rounded p-2">
                                 {adRevenue > 0 && (
                                   <div className="flex items-center justify-between mb-1">
-                                    <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                    <p className="text-xs font-medium text-green-700">Monthly Potential</p>
                                     <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
                                   </div>
                                 )}
@@ -4733,7 +4738,7 @@ export const DashboardInventoryManager = () => {
                               <div className="bg-green-50 border border-green-200 rounded p-2">
                                 {adRevenue > 0 && (
                                   <div className="flex items-center justify-between mb-1">
-                                    <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                    <p className="text-xs font-medium text-green-700">Monthly Potential</p>
                                     <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
                                   </div>
                                 )}
@@ -4977,7 +4982,7 @@ export const DashboardInventoryManager = () => {
                               <div className="bg-green-50 border border-green-200 rounded p-2">
                                 {adRevenue > 0 && (
                                   <div className="flex items-center justify-between mb-1">
-                                    <p className="text-xs font-medium text-green-700">Monthly Revenue</p>
+                                    <p className="text-xs font-medium text-green-700">Monthly Potential</p>
                                     <p className="text-sm font-bold text-green-800">${Math.round(adRevenue).toLocaleString()}</p>
                                   </div>
                                 )}

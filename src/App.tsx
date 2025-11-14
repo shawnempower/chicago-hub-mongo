@@ -14,6 +14,9 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import HubCentral from "./pages/HubCentral";
+import CampaignBuilder from "./pages/CampaignBuilder";
+import CampaignList from "./pages/CampaignList";
+import CampaignDetail from "./pages/CampaignDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +37,9 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/hubcentral" element={<HubCentral />} />
+              <Route path="/campaigns" element={<CampaignList />} />
+              <Route path="/campaigns/new" element={<CampaignBuilder />} />
+              <Route path="/campaigns/:id" element={<CampaignDetail />} />
               <Route path="/auth" element={<Auth />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

@@ -2064,3 +2064,7 @@ export const initializeServices = () => {
 // Import and export leadNotesService
 import { leadNotesService } from './leadNotesService';
 export { leadNotesService };
+
+// Import and export campaignsService
+import { campaignsService } from './campaignService';
+export { campaignsService };

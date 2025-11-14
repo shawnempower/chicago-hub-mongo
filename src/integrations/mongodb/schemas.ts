@@ -1094,6 +1094,80 @@ export interface SurveySubmissionUpdate extends Partial<Omit<SurveySubmission, '
   updatedAt: Date;
 }
 
+// ===== ALGORITHM CONFIGS SCHEMA =====
+// Stores editable algorithm configurations that override code defaults
+export interface AlgorithmConfig {
+  _id?: string | ObjectId;
+  algorithmId: string; // 'all-inclusive', 'budget-friendly', 'little-guys', 'proportional'
+  name: string;
+  description: string;
+  icon?: string;
+  
+  // LLM Configuration
+  llmConfig?: {
+    model?: {
+      maxTokens?: number;
+      temperature?: number;
+    };
+    pressForward?: {
+      enforceAllOutlets?: boolean;
+      prioritizeSmallOutlets?: boolean;
+      allowBudgetExceeding?: boolean;
+      maxBudgetExceedPercent?: number;
+    };
+    selection?: {
+      maxPublications?: number;
+      minPublications?: number;
+      diversityWeight?: number;
+    };
+    output?: {
+      includeRationale?: boolean;
+      verboseLogging?: boolean;
+      includeAlternatives?: boolean;
+    };
+  };
+  
+  // Constraints
+  constraints?: {
+    strictBudget?: boolean;
+    maxBudgetExceedPercent?: number;
+    maxPublications?: number;
+    minPublications?: number;
+    maxPublicationPercent?: number;
+    minPublicationSpend?: number;
+    targetPublicationsMin?: number;
+    targetPublicationsMax?: number;
+    pruningPassesMax?: number;
+  };
+  
+  // Scoring Rules
+  scoring?: {
+    sizeWeight?: number;
+    diversityWeight?: number;
+    costEfficiencyWeight?: number;
+    reachWeight?: number;
+    engagementWeight?: number;
+  };
+  
+  // Prompt Instructions (optional override)
+  promptInstructions?: string;
+  
+  // Status
+  isActive?: boolean;
+  isDefault?: boolean; // Whether this is the default algorithm
+  
+  // Audit
+  createdBy?: string;
+  updatedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AlgorithmConfigInsert extends Omit<AlgorithmConfig, '_id' | 'createdAt' | 'updatedAt'> {}
+export interface AlgorithmConfigUpdate extends Partial<Omit<AlgorithmConfig, '_id' | 'algorithmId' | 'createdAt'>> {
+  updatedAt: Date;
+}
+
 // Collection Names
 export const COLLECTIONS = {
   USERS: 'users',
@@ -1105,6 +1179,7 @@ export const COLLECTIONS = {
   AD_PACKAGES: 'ad_packages',
   HUB_PACKAGES: 'hub_packages', // New comprehensive hub-level package system
   HUBS: 'hubs', // Hub/market definitions
+  CAMPAIGNS: 'campaigns', // AI-powered campaign builder
   ADVERTISING_INVENTORY: 'advertising_inventory',
   LEAD_INQUIRIES: 'lead_inquiries',
   LEAD_NOTES: 'lead_notes', // Lead notes and activity history
@@ -1118,6 +1193,8 @@ export const COLLECTIONS = {
   ASSISTANT_INSTRUCTIONS: 'assistant_instructions',
   ANALYTICS_EVENTS: 'analytics_events',
   MEDIA_ENTITIES: 'media_entities', // Unified media collection
+  ALGORITHM_CONFIGS: 'algorithm_configs', // Editable algorithm configs (overrides)
+  PRUNING_AUDITS: 'pruning_audits', // Stores pre/post pruning snapshots for campaign generation
 } as const;
 
 // MongoDB Indexes Configuration
@@ -1176,6 +1253,17 @@ export const INDEXES = {
     { status: 1, createdAt: -1 },
     { 'geography.primaryCity': 1 },
     { 'geography.state': 1 }
+  ],
+  campaigns: [
+    { campaignId: 1 }, // unique
+    { hubId: 1 }, // Filter by hub
+    { status: 1 }, // Filter by status
+    { 'metadata.createdBy': 1 }, // Filter by creator
+    { 'basicInfo.advertiserName': 1 }, // Search by advertiser
+    { 'timeline.startDate': 1 }, // Sort/filter by date
+    { 'timeline.endDate': 1 },
+    { 'metadata.createdAt': -1 }, // Recently created
+    { deletedAt: 1 } // Soft delete filter
   ],
   lead_inquiries: [
     { userId: 1 },
@@ -1258,5 +1346,14 @@ export const INDEXES = {
     { sortOrder: 1 },
     { name: 1 },
     { createdAt: -1 }
+  ],
+  pruning_audits: [
+    { createdAt: -1 },
+    { 'request.hubId': 1 },
+    { algorithmId: 1 }
+  ],
+  algorithm_configs: [
+    { algorithmId: 1 }, // unique
+    { updatedAt: -1 }
   ]
 };

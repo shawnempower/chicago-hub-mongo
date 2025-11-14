@@ -484,7 +484,7 @@ export const RadioShowEditor = forwardRef<{ openShowDialog: (show: RadioShow) =>
                                   <div className="flex items-end gap-2">
                                     <div className="flex-1">
                                       <p className="text-xs font-semibold text-green-600">
-                                        Monthly Revenue: ${monthlyRevenue.toLocaleString()}
+                                        Monthly Potential: ${monthlyRevenue.toLocaleString()}
                                       </p>
                                     </div>
                                     <Button

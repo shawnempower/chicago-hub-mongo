@@ -120,17 +120,57 @@ export class HubPackagesService {
   async update(id: string, updates: HubPackageUpdate, updatedBy: string): Promise<HubPackage | null> {
     try {
       const now = new Date();
+      
+      // Get current package to increment version
+      const currentPackage = await this.getById(id);
+      if (!currentPackage) {
+        throw new Error('Package not found');
+      }
+
+      // Build the update object, separating nested objects from flat fields
+      const { metadata, analytics, components, ...flatUpdates } = updates as any;
+      
       const updateData: any = {
-        ...updates,
-        'analytics.lastModified': now,
-        'metadata.updatedBy': updatedBy,
-        'metadata.updatedAt': now
+        ...flatUpdates,
       };
 
-      // Increment version
-      const currentPackage = await this.getById(id);
-      if (currentPackage) {
-        updateData['metadata.version'] = (currentPackage.metadata.version || 1) + 1;
+      // Handle components - explicitly replace the entire object
+      if (components) {
+        updateData.components = components;
+      }
+
+      // Handle metadata - merge with existing and add system fields
+      if (metadata) {
+        updateData.metadata = {
+          ...currentPackage.metadata, // Keep existing metadata
+          ...metadata, // Apply updates
+          updatedBy, // System fields override
+          updatedAt: now,
+          version: (currentPackage.metadata.version || 1) + 1
+        };
+      } else {
+        // If no metadata provided, still update system fields
+        updateData.metadata = {
+          ...currentPackage.metadata,
+          updatedBy,
+          updatedAt: now,
+          version: (currentPackage.metadata.version || 1) + 1
+        };
+      }
+
+      // Handle analytics - merge with existing
+      if (analytics) {
+        updateData.analytics = {
+          ...currentPackage.analytics,
+          ...analytics,
+          lastModified: now
+        };
+      } else {
+        // If no analytics provided, still update lastModified
+        updateData.analytics = {
+          ...currentPackage.analytics,
+          lastModified: now
+        };
       }
 
       await this.collection.updateOne(

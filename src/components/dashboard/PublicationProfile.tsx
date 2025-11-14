@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { updatePublication } from '@/api/publications';
-import { getPublicationBrandColor } from '@/config/publicationBrandColors';
+import { getPublicationBrandColor, prefetchBrandColors } from '@/config/publicationBrandColors';
 import { 
   Edit3,
   Save,
@@ -77,6 +77,13 @@ export const PublicationProfile: React.FC = () => {
       setDifferentiators(Array.isArray(diffs) ? diffs : []);
     }
   }, [selectedPublication, isEditing]);
+
+  // Prefetch brand colors when component mounts (lazy loading)
+  useEffect(() => {
+    if (selectedPublication) {
+      prefetchBrandColors([selectedPublication.publicationId]);
+    }
+  }, [selectedPublication?.publicationId]);
 
   if (!selectedPublication) {
     return (

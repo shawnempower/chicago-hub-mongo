@@ -5,6 +5,7 @@ import { UserManagement } from './UserManagement';
 import { PublicationsImport } from './PublicationsImport';
 import SurveyManagement from './SurveyManagement';
 import { HubManagement } from './HubManagement';
+import { AlgorithmManagement } from './AlgorithmManagement';
 import { ErrorBoundary } from '../ErrorBoundary';
 
 export const AdminDashboard = () => {
@@ -15,15 +16,16 @@ export const AdminDashboard = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Manage users, hubs, surveys, imports, and assistant</p>
+          <p className="text-sm text-muted-foreground">Manage users, hubs, surveys, algorithms, imports, and assistant</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="hubs">Hubs</TabsTrigger>
           <TabsTrigger value="surveys">Surveys</TabsTrigger>
+          <TabsTrigger value="algorithms">Algorithms</TabsTrigger>
           <TabsTrigger value="import">Import</TabsTrigger>
           <TabsTrigger value="assistant">Assistant</TabsTrigger>
         </TabsList>
@@ -41,6 +43,12 @@ export const AdminDashboard = () => {
         <TabsContent value="surveys">
           <ErrorBoundary>
             <SurveyManagement />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="algorithms">
+          <ErrorBoundary>
+            <AlgorithmManagement />
           </ErrorBoundary>
         </TabsContent>
 

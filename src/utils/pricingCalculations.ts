@@ -63,7 +63,7 @@ export function parseCommitmentMultiplier(frequency?: string): number {
 /**
  * Infer occurrences from publication frequency
  */
-function inferOccurrencesFromFrequency(frequency?: string): number {
+export function inferOccurrencesFromFrequency(frequency?: string): number {
   return FREQUENCY_TO_MONTHLY[frequency || ''] || 1;
 }
 

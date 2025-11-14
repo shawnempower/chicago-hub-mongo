@@ -6,19 +6,29 @@ This directory contains all deployment-related configuration files and documenta
 
 ```
 deployment/
-├── README.md                          # This file - deployment overview
-├── deploy-to-ecs.sh                   # Automated ECS deployment script
-├── docker/                            # Docker configuration
-│   ├── Dockerfile                     # Development Docker image
-│   └── Dockerfile.production          # Production Docker image (ECS Fargate)
-├── aws/                               # AWS infrastructure configuration
-│   ├── amplify.yml                    # AWS Amplify build configuration
-│   ├── ecs-task-definition.json       # ECS Fargate task definition
-│   └── chicago-hub-ssm-policy.json    # IAM policy for SSM Parameter Store
-└── docs/                              # Deployment documentation
-    ├── PRODUCTION_DEPLOYMENT_GUIDE.md # Backend (ECS) deployment guide
-    ├── AMPLIFY_DEPLOYMENT_GUIDE.md    # Frontend (Amplify) deployment guide
-    └── CURRENT_PRODUCTION_SETUP.md    # Current production configuration
+├── README.md                              # This file - deployment overview
+├── deploy-all-production.sh               # Deploy EVERYTHING to production (frontend + backend)
+├── deploy-all-staging.sh                  # Deploy EVERYTHING to staging (frontend + backend)
+├── deploy-backend-production.sh           # Production backend (ECS) deployment
+├── deploy-backend-staging.sh              # Staging backend (ECS) deployment
+├── deploy-frontend-production.sh          # Production frontend (Amplify) deployment
+├── deploy-frontend-staging.sh             # Staging frontend (Amplify) deployment
+├── deploy-to-ecs.sh                       # Legacy: Production ECS deployment
+├── deploy-staging.sh                      # Legacy: Staging ECS deployment
+├── docker/                                # Docker configuration
+│   ├── Dockerfile                         # Development Docker image
+│   └── Dockerfile.production              # Production Docker image (ECS Fargate)
+├── aws/                                   # AWS infrastructure configuration
+│   ├── amplify.yml                        # Production Amplify build configuration
+│   ├── amplify-staging.yml                # Staging Amplify build configuration
+│   ├── ecs-task-definition.json           # Production ECS task definition
+│   ├── ecs-task-definition-staging.json   # Staging ECS task definition
+│   └── chicago-hub-ssm-policy.json        # IAM policy for SSM Parameter Store
+└── docs/                                  # Deployment documentation
+    ├── PRODUCTION_DEPLOYMENT_GUIDE.md     # Backend (ECS) deployment guide
+    ├── AMPLIFY_DEPLOYMENT_GUIDE.md        # Frontend (Amplify) deployment guide
+    ├── STAGING_SETUP_GUIDE.md             # Staging environment setup guide
+    └── CURRENT_PRODUCTION_SETUP.md        # Current production configuration
 ```
 
 ## ⚠️ Pre-Deployment Required: Hub System Migration
@@ -39,20 +49,90 @@ MONGODB_DB_NAME=chicago-hub npm run migrate:hubs
 
 ## 🎯 Quick Deployment
 
-### Frontend (AWS Amplify)
-The frontend deploys automatically on push to `main` branch. No manual steps required.
+### 🏭 Production Environment
 
-**Documentation:** [`docs/AMPLIFY_DEPLOYMENT_GUIDE.md`](./docs/AMPLIFY_DEPLOYMENT_GUIDE.md)
-
-### Backend (AWS ECS)
-Use the automated deployment script:
-
+#### ⚡ Full Stack Deployment (Recommended)
+Deploy both backend and frontend with a single command:
 ```bash
-cd /path/to/chicago-hub
-./deployment/deploy-to-ecs.sh
+./deployment/deploy-all-production.sh
+```
+This will:
+1. Deploy backend API to ECS
+2. Deploy frontend to Amplify
+3. Show total deployment time
+4. Provide verification checklist
+
+**Or deploy individually:**
+```bash
+# Deploy backend (ECS)
+./deployment/deploy-backend-production.sh
+
+# Deploy frontend (Amplify)
+./deployment/deploy-frontend-production.sh
 ```
 
-**Documentation:** [`docs/PRODUCTION_DEPLOYMENT_GUIDE.md`](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md)
+#### Frontend Only (AWS Amplify)
+```bash
+./deployment/deploy-frontend-production.sh
+```
+- **Manual deployment** (auto-deploy from GitHub is disabled)
+- **App URL:** https://main.dbn59dj42j2z3.amplifyapp.com
+- **Documentation:** [`docs/AMPLIFY_DEPLOYMENT_GUIDE.md`](./docs/AMPLIFY_DEPLOYMENT_GUIDE.md)
+
+#### Backend Only (AWS ECS)
+```bash
+./deployment/deploy-backend-production.sh
+# Or use legacy script: ./deployment/deploy-to-ecs.sh
+```
+- **API URL:** https://hubapi.empowerlocal.co
+- **Documentation:** [`docs/PRODUCTION_DEPLOYMENT_GUIDE.md`](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md)
+
+---
+
+### 🚧 Staging Environment
+
+#### ⚡ Full Stack Deployment (Recommended)
+Deploy both backend and frontend with a single command:
+```bash
+./deployment/deploy-all-staging.sh
+```
+This will:
+1. Deploy backend API to ECS
+2. Deploy frontend to Amplify
+3. Show total deployment time
+4. Provide verification checklist
+
+**Or deploy individually:**
+```bash
+# Deploy backend (ECS)
+./deployment/deploy-backend-staging.sh
+
+# Deploy frontend (Amplify)
+./deployment/deploy-frontend-staging.sh
+```
+
+#### Frontend Only (AWS Amplify)
+```bash
+./deployment/deploy-frontend-staging.sh
+```
+- **Manual deployment** (no auto-deploy)
+- **App URL:** https://staging.d3wvz0v8d4a1r.amplifyapp.com
+
+#### Backend Only (AWS ECS)
+```bash
+./deployment/deploy-backend-staging.sh
+# Or use: ./deployment/deploy-staging.sh
+```
+- **API URL:** https://hubapi-staging.empowerlocal.co
+
+**First-time Setup:** See [`docs/STAGING_SETUP_GUIDE.md`](./docs/STAGING_SETUP_GUIDE.md) for complete staging environment setup instructions.
+
+#### Key Differences from Production
+- **Service:** `chicago-hub-service-staging` (separate from production)
+- **Image Tag:** `:staging` (vs `:latest` for production)
+- **SSM Parameters:** `/chicago-hub-staging/*` namespace
+- **Database:** `staging-chicago-hub` (separate from production)
+- **Deployment:** Manual control (no auto-deploy)
 
 ## 📦 Docker Images
 
@@ -86,7 +166,9 @@ cd /path/to/chicago-hub
 
 ## 🔒 Secrets Management
 
-All sensitive environment variables are stored in **AWS Systems Manager Parameter Store** under the `/chicago-hub/*` namespace:
+All sensitive environment variables are stored in **AWS Systems Manager Parameter Store**.
+
+### Production Parameters (`/chicago-hub/*`)
 
 - `/chicago-hub/jwt-secret`
 - `/chicago-hub/mongodb-uri`
@@ -98,7 +180,13 @@ All sensitive environment variables are stored in **AWS Systems Manager Paramete
 - `/chicago-hub/mailgun-domain`
 - `/chicago-hub/storefront-*` (CloudFront/Route53 configuration)
 
-See [`docs/PRODUCTION_DEPLOYMENT_GUIDE.md`](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md) for details on setting up SSM parameters.
+### Staging Parameters (`/chicago-hub-staging/*`)
+
+Same parameter names, but under `/chicago-hub-staging/*` namespace with staging-specific values.
+
+**Setup Guides:**
+- Production: [`docs/PRODUCTION_DEPLOYMENT_GUIDE.md`](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md)
+- Staging: [`docs/STAGING_SETUP_GUIDE.md`](./docs/STAGING_SETUP_GUIDE.md)
 
 ## 🏗️ Current Production Architecture
 
@@ -132,7 +220,8 @@ See [`docs/CURRENT_PRODUCTION_SETUP.md`](./docs/CURRENT_PRODUCTION_SETUP.md) for
 
 | Document | Description |
 |----------|-------------|
-| [PRODUCTION_DEPLOYMENT_GUIDE.md](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md) | Complete backend deployment guide |
+| [PRODUCTION_DEPLOYMENT_GUIDE.md](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md) | Complete backend production deployment guide |
+| [STAGING_SETUP_GUIDE.md](./docs/STAGING_SETUP_GUIDE.md) | Complete staging environment setup guide |
 | [AMPLIFY_DEPLOYMENT_GUIDE.md](./docs/AMPLIFY_DEPLOYMENT_GUIDE.md) | Frontend deployment and configuration |
 | [CURRENT_PRODUCTION_SETUP.md](./docs/CURRENT_PRODUCTION_SETUP.md) | Current production architecture and config |
 

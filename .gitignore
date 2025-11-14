@@ -44,3 +44,10 @@ geography.csv
 
 # Export files
 exports/
+
+# Test files and output (root directory only)
+/test-*.ts
+/test-*.json
+/campaign-analysis-*.json
+/*.pid
+.cleanup-plan.sh

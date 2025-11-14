@@ -9,30 +9,17 @@ const fetchingPromises = new Map<string, Promise<string>>();
 /**
  * Get brand color for a publication from storefront configuration
  * Uses caching to avoid repeated API calls
+ * NOTE: This function is synchronous and only returns cached colors.
+ * To fetch colors, use prefetchBrandColors() explicitly.
  * @param publicationId - The publication ID (can be string or number)
- * @returns The brand color hex code (defaults to #0066cc if not found)
+ * @returns The brand color hex code (defaults to #0066cc if not cached)
  */
 export const getPublicationBrandColor = (publicationId: string | number): string => {
   const pubIdString = String(publicationId);
   
-  // Return cached color if available
-  if (colorCache.has(pubIdString)) {
-    return colorCache.get(pubIdString)!;
-  }
-  
-  // Start fetching in background if not already fetching
-  if (!fetchingPromises.has(pubIdString)) {
-    const fetchPromise = fetchBrandColor(pubIdString);
-    fetchingPromises.set(pubIdString, fetchPromise);
-    
-    // Clean up the promise after it resolves
-    fetchPromise.finally(() => {
-      fetchingPromises.delete(pubIdString);
-    });
-  }
-  
-  // Return default color while fetching (will update on next render via cache)
-  return '#0066cc';
+  // Return cached color if available, otherwise return default
+  // This no longer automatically triggers fetching to avoid premature API calls
+  return colorCache.get(pubIdString) || '#0066cc';
 };
 
 /**

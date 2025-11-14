@@ -379,7 +379,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                     <div className="bg-white p-4 rounded-lg border">
                       <h4 className="font-semibold text-lg mb-3 flex items-center gap-2">
                         <TrendingUp className="h-5 w-5" />
-                        Monthly Revenue Scenarios
+                        Monthly Potential Scenarios
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-center">
                         <div className="p-3 bg-red-50 rounded-lg">

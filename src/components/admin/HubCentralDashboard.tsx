@@ -11,7 +11,7 @@ import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
 import { useHubPublications } from '@/hooks/useHubs';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
-import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle, Download } from 'lucide-react';
+import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle, Download, Megaphone } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { exportHubInventoryToCSV } from '@/utils/hubInventoryExport';
 import { toast } from '@/components/ui/use-toast';
@@ -441,7 +441,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 font-sans text-base">
                     <DollarSign className="h-5 w-5" />
-                    Default Pricing
+                    Default Potential
                     <TooltipProvider delayDuration={200}>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -544,7 +544,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 font-sans text-base">
                     <TrendingUp className="h-5 w-5" />
-                    Hub Pricing
+                    Hub Potential
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -831,6 +831,88 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
     
     if (activeTab === 'packages') {
       return <HubPackageManagement />;
+    }
+    
+    if (activeTab === 'campaigns') {
+      return (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Campaign Builder</CardTitle>
+              <CardDescription>
+                Create AI-powered campaigns with intelligent inventory selection
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">🚀 AI-Powered Campaign Builder</h4>
+                <p className="text-sm text-blue-800 mb-4">
+                  The Campaign Builder uses AI to automatically select optimal publication inventory 
+                  based on your budget, goals, and target audience. It follows Press Forward principles 
+                  to support the entire local news ecosystem.
+                </p>
+                <ul className="text-sm text-blue-800 space-y-1 mb-4">
+                  <li>✓ Intelligent inventory selection using OpenAI</li>
+                  <li>✓ Multi-channel coverage (print, digital, newsletter, radio, podcast)</li>
+                  <li>✓ Automatic cost calculations with hub discounts</li>
+                  <li>✓ Professional insertion order generation</li>
+                  <li>✓ Performance estimates (reach, impressions, CPM)</li>
+                </ul>
+              </div>
+
+              <div className="pt-4 space-y-3">
+                <div className="flex gap-3">
+                  <Button 
+                    size="lg" 
+                    onClick={() => window.location.href = '/campaigns/new'}
+                  >
+                    <Megaphone className="mr-2 h-5 w-5" />
+                    Create New Campaign
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    onClick={() => window.location.href = '/campaigns'}
+                  >
+                    View All Campaigns
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Launch the 5-step Campaign Builder wizard or view existing campaigns
+                </p>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h4 className="font-semibold mb-2">How It Works:</h4>
+                <ol className="text-sm text-muted-foreground space-y-2 ml-4 list-decimal">
+                  <li>Enter campaign details (name, advertiser, goals, budget, timeline)</li>
+                  <li>Select desired channels (print, website, newsletter, etc.)</li>
+                  <li>Choose "Include all outlets" for Press Forward ecosystem support</li>
+                  <li>AI analyzes requirements and selects optimal inventory</li>
+                  <li>Review selections, pricing, and performance estimates</li>
+                  <li>Create campaign and generate professional insertion order</li>
+                </ol>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h4 className="font-semibold mb-2">Example Use Case:</h4>
+                <div className="bg-gray-50 rounded-lg p-4 text-sm">
+                  <p className="font-medium mb-2">Summer Brand Awareness Campaign</p>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>• Budget: $50,000/month for 6 months</li>
+                    <li>• Channels: Print, Website, Newsletter, Radio, Podcast</li>
+                    <li>• Target: All Chicago residents</li>
+                    <li>• Approach: Include all outlets (Press Forward)</li>
+                  </ul>
+                  <p className="mt-3 text-muted-foreground">
+                    → AI selects ~25 publications, 150+ ad placements, estimates 500K-750K reach
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
     }
     
     return null;

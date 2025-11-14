@@ -45,16 +45,23 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [, forceRender] = useState(0);
+  const [brandColorsFetched, setBrandColorsFetched] = useState(false);
 
-  // Only prefetch brand color for the currently selected publication (lazy loading)
+  // Reset brand colors fetched flag when publication changes
   useEffect(() => {
-    if (selectedPublication) {
+    setBrandColorsFetched(false);
+  }, [selectedPublication?.publicationId]);
+
+  // Only prefetch brand colors when the dropdown is opened (true lazy loading)
+  useEffect(() => {
+    if (open && selectedPublication && !brandColorsFetched) {
       prefetchBrandColors([selectedPublication.publicationId]).then(() => {
+        setBrandColorsFetched(true);
         forceRender(prev => prev + 1);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPublication?.publicationId]);
+  }, [open, selectedPublication?.publicationId]);
 
   // Filter publications based on search
   const filteredPublications = useMemo(() => {
