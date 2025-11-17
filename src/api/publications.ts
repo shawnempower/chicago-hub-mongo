@@ -38,9 +38,7 @@ export const getPublications = async (filters?: {
     try {
       const response = await fetch(url, {
         signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-        }
+        headers: getAuthHeaders()
       });
       
       clearTimeout(timeoutId);

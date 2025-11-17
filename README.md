@@ -62,10 +62,70 @@ const annualRevenue = calculateRevenue(ad, 'year', frequency);
 
 **Result**: Every pricing calculation in the platform is now standardized, accurate, and validated!
 
-## 🚀 Live Application
+## 🚀 Environments
+
+### Production Environment
+
+The production environment is the live system serving real users and data.
 
 - **Frontend**: https://main.dbn59dj42j2z3.amplifyapp.com
+  - Hosted on AWS Amplify
+  - Manual deployment (auto-deploy disabled)
+  
 - **API**: https://hubapi.empowerlocal.co
+  - Hosted on AWS ECS Fargate
+  - Service: `chicago-hub-service`
+  - Container port: 3001
+  
+- **Database**: MongoDB Atlas (`chicago-hub`)
+- **Storage**: AWS S3
+- **Email**: Mailgun
+- **Secrets**: AWS Systems Manager Parameter Store (`/chicago-hub/*`)
+
+**Deploy Production:**
+```bash
+# Deploy everything (backend + frontend)
+./deployment/deploy-all-production.sh
+
+# Or deploy individually
+./deployment/deploy-backend-production.sh   # API only
+./deployment/deploy-frontend-production.sh  # Frontend only
+```
+
+### Staging Environment
+
+The staging environment is an isolated testing environment that mirrors production configuration.
+
+- **Frontend**: https://staging.d3wvz0v8d4a1r.amplifyapp.com
+  - Hosted on AWS Amplify (separate app)
+  - Manual deployment only
+  
+- **API**: https://hubapi-staging.empowerlocal.co
+  - Hosted on AWS ECS Fargate
+  - Service: `chicago-hub-service-staging`
+  - Image tag: `:staging` (vs `:latest` for production)
+  
+- **Database**: MongoDB Atlas (`staging-chicago-hub`) - **separate from production**
+- **Storage**: AWS S3 (same bucket, different paths/permissions)
+- **Secrets**: AWS Systems Manager Parameter Store (`/chicago-hub-staging/*`)
+
+**Deploy Staging:**
+```bash
+# Deploy everything (backend + frontend)
+./deployment/deploy-all-staging.sh
+
+# Or deploy individually
+./deployment/deploy-backend-staging.sh   # API only
+./deployment/deploy-frontend-staging.sh  # Frontend only
+```
+
+**Key Differences:**
+- Separate databases ensure staging tests don't affect production data
+- Separate ECS services prevent deployment conflicts
+- Separate SSM parameter namespaces for environment-specific configuration
+- Same AWS infrastructure but isolated resources
+
+**First-time Setup:** See [Staging Setup Guide](./deployment/docs/STAGING_SETUP_GUIDE.md)
 
 ## 🛠 Technology Stack
 
@@ -163,7 +223,10 @@ See `env.template` for required environment variables:
 
 The frontend automatically detects the environment:
 - **Development**: Uses `http://localhost:3001/api`
+- **Staging**: Uses `https://hubapi-staging.empowerlocal.co/api`
 - **Production**: Uses `https://hubapi.empowerlocal.co/api`
+
+The API endpoint is configured via the `VITE_API_BASE_URL` environment variable in Amplify.
 
 ## 📚 Documentation
 
@@ -200,16 +263,37 @@ npm run test:coverage
 
 ## 🚀 Deployment
 
-The application is configured for automatic deployment:
+The application supports both staging and production deployments with isolated infrastructure:
 
-- **Frontend**: Deployed to AWS Amplify on push to `main` branch
-- **Backend**: Deployed to AWS ECS with Docker containers
+### Quick Deploy Commands
 
-**Quick Deploy:**
+**Production (Full Stack):**
 ```bash
-# Backend deployment
-./deployment/deploy-to-ecs.sh
+./deployment/deploy-all-production.sh
 ```
+
+**Staging (Full Stack):**
+```bash
+./deployment/deploy-all-staging.sh
+```
+
+**Individual Services:**
+```bash
+# Backend only
+./deployment/deploy-backend-production.sh   # Production API
+./deployment/deploy-backend-staging.sh      # Staging API
+
+# Frontend only
+./deployment/deploy-frontend-production.sh  # Production frontend
+./deployment/deploy-frontend-staging.sh     # Staging frontend
+```
+
+### Deployment Details
+
+- **Frontend**: Manual deployment to AWS Amplify (auto-deploy disabled)
+- **Backend**: Docker containers deployed to AWS ECS Fargate
+- **Environments**: Completely isolated staging and production infrastructure
+- **Secrets**: Managed via AWS Systems Manager Parameter Store
 
 See [deployment directory](./deployment/README.md) for detailed instructions and configuration.
 

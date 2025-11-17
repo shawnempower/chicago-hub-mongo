@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LeadManagement } from './LeadManagement';
 import { HubPackageManagement } from './HubPackageManagement';
 import { HubDataQuality } from './HubDataQuality';
+import { HubTeamManagement } from './HubTeamManagement';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
@@ -831,6 +832,10 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
     
     if (activeTab === 'packages') {
       return <HubPackageManagement />;
+    }
+    
+    if (activeTab === 'team') {
+      return <HubTeamManagement />;
     }
     
     if (activeTab === 'campaigns') {

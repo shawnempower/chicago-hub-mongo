@@ -1,9 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { authService } from '../../src/integrations/mongodb/authService';
-import { emailService } from '../emailService';
 import { authenticateToken } from '../middleware/authenticate';
 
 const router = Router();
+
+// Lazy load email service to avoid loading before env vars
+async function getEmailService() {
+  const { emailService } = await import('../emailService');
+  return emailService;
+}
 
 // Sign up
 router.post('/signup', async (req: Request, res: Response) => {
@@ -27,6 +32,7 @@ router.post('/signup', async (req: Request, res: Response) => {
     }
 
     // Send welcome email
+    const emailService = await getEmailService();
     if (emailService && result.user) {
       try {
         await emailService.sendWelcomeEmail({
@@ -112,6 +118,7 @@ router.post('/request-password-reset', async (req: Request, res: Response) => {
     }
 
     // Send password reset email if user exists and token was generated
+    const emailService = await getEmailService();
     if (emailService && result.resetToken && result.user) {
       try {
         await emailService.sendPasswordResetEmail({

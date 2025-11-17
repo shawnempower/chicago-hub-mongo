@@ -11,20 +11,43 @@ const router = Router();
 /**
  * Admin Routes
  * 
- * Admin-only endpoints for managing users, leads, surveys, and algorithm configurations.
+ * Admin and hub-user endpoints for managing users, leads, surveys, packages, and algorithm configurations.
  */
+
+// Helper function to check if user is admin
+function isUserAdmin(user: any): boolean {
+  return user.isAdmin === true || user.role === 'admin';
+}
+
+// Helper function to check if user has access to a hub
+function canAccessHub(user: any, hubId: string): boolean {
+  if (isUserAdmin(user)) return true;
+  const assignedHubIds = user.permissions?.assignedHubIds || [];
+  return assignedHubIds.includes(hubId);
+}
 
 // ===== DASHBOARD STATS =====
 
-// Get dashboard statistics (admin only)
+// Get dashboard statistics (admin or hub user)
 router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const { hubId } = req.query;
+    
+    // Check permissions
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    if (!isAdmin) {
+      // Non-admin users must have hub access
+      if (!hubId) {
+        return res.status(400).json({ error: 'hubId parameter is required for non-admin users' });
+      }
+      
+      // Check if user has access to the requested hub
+      if (!assignedHubIds.includes(hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
+    }
     const db = getDatabase();
     const publicationsCollection = db.collection(COLLECTIONS.PUBLICATIONS);
     const leadsCollection = db.collection(COLLECTIONS.LEAD_INQUIRIES);
@@ -581,15 +604,21 @@ router.put('/users/:userId/admin', authenticateToken, async (req: any, res: Resp
 
 // ===== LEAD MANAGEMENT =====
 
-// Get all leads with filtering (admin only)
+// Get all leads with filtering (admin or hub user)
 router.get('/leads', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin (isAdmin is on the user object, not the profile)
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const { hubId, publicationId, status, leadSource, includeArchived } = req.query;
+    
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      // Non-admin users must provide hubId and have access to it
+      if (!hubId) {
+        return res.status(400).json({ error: 'hubId parameter is required for non-admin users' });
+      }
+      if (!canAccessHub(req.user, hubId as string)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
+    }
     
     const filters: any = {};
     if (hubId) filters.hubId = hubId;
@@ -605,19 +634,21 @@ router.get('/leads', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// Get single lead by ID (admin only)
+// Get single lead by ID (admin or hub user)
 router.get('/leads/:leadId', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const { leadId } = req.params;
     const lead = await leadInquiriesService.getById(leadId);
     
     if (!lead) {
       return res.status(404).json({ error: 'Lead not found' });
+    }
+    
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!lead.hubId || !canAccessHub(req.user, lead.hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
     }
     
     res.json({ lead });
@@ -626,12 +657,14 @@ router.get('/leads/:leadId', authenticateToken, async (req: any, res: Response) 
   }
 });
 
-// Create new lead (admin only)
+// Create new lead (admin or hub user)
 router.post('/leads', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!req.body.hubId || !canAccessHub(req.user, req.body.hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
     }
     
     const leadData = {
@@ -646,15 +679,24 @@ router.post('/leads', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// Update lead (admin only)
+// Update lead (admin or hub user)
 router.put('/leads/:leadId', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { leadId } = req.params;
+    
+    // Get existing lead to check permissions
+    const existingLead = await leadInquiriesService.getById(leadId);
+    if (!existingLead) {
+      return res.status(404).json({ error: 'Lead not found' });
     }
     
-    const { leadId } = req.params;
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!existingLead.hubId || !canAccessHub(req.user, existingLead.hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
+    }
+    
     const lead = await leadInquiriesService.update(leadId, req.body);
     
     if (!lead) {
@@ -667,15 +709,24 @@ router.put('/leads/:leadId', authenticateToken, async (req: any, res: Response) 
   }
 });
 
-// Archive lead (admin only)
+// Archive lead (admin or hub user)
 router.put('/leads/:leadId/archive', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { leadId } = req.params;
+    
+    // Get existing lead to check permissions
+    const existingLead = await leadInquiriesService.getById(leadId);
+    if (!existingLead) {
+      return res.status(404).json({ error: 'Lead not found' });
     }
     
-    const { leadId } = req.params;
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!existingLead.hubId || !canAccessHub(req.user, existingLead.hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
+    }
+    
     const lead = await leadInquiriesService.archive(leadId);
     
     if (!lead) {
@@ -688,15 +739,24 @@ router.put('/leads/:leadId/archive', authenticateToken, async (req: any, res: Re
   }
 });
 
-// Unarchive lead (admin only)
+// Unarchive lead (admin or hub user)
 router.put('/leads/:leadId/unarchive', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { leadId } = req.params;
+    
+    // Get existing lead to check permissions
+    const existingLead = await leadInquiriesService.getById(leadId);
+    if (!existingLead) {
+      return res.status(404).json({ error: 'Lead not found' });
     }
     
-    const { leadId } = req.params;
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!existingLead.hubId || !canAccessHub(req.user, existingLead.hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
+    }
+    
     const lead = await leadInquiriesService.unarchive(leadId);
     
     if (!lead) {
@@ -709,15 +769,21 @@ router.put('/leads/:leadId/unarchive', authenticateToken, async (req: any, res: 
   }
 });
 
-// Get lead statistics (admin only)
+// Get lead statistics (admin or hub user)
 router.get('/leads-stats', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { hubId } = req.query;
+    
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!hubId) {
+        return res.status(400).json({ error: 'hubId parameter is required for non-admin users' });
+      }
+      if (!canAccessHub(req.user, hubId as string)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
     }
     
-    const { hubId } = req.query;
     const stats = await leadInquiriesService.getStats(hubId as string | undefined);
     res.json({ stats });
   } catch (error) {
@@ -725,15 +791,24 @@ router.get('/leads-stats', authenticateToken, async (req: any, res: Response) =>
   }
 });
 
-// Get all notes for a lead (admin only)
+// Get all notes for a lead (admin or hub user)
 router.get('/leads/:leadId/notes', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { leadId } = req.params;
+    
+    // Get lead to check permissions
+    const lead = await leadInquiriesService.getById(leadId);
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
     }
     
-    const { leadId } = req.params;
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!lead.hubId || !canAccessHub(req.user, lead.hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
+    }
+    
     const notes = await leadNotesService.getByLeadId(leadId);
     res.json({ notes });
   } catch (error) {
@@ -741,15 +816,24 @@ router.get('/leads/:leadId/notes', authenticateToken, async (req: any, res: Resp
   }
 });
 
-// Add a note to a lead (admin only)
+// Add a note to a lead (admin or hub user)
 router.post('/leads/:leadId/notes', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { leadId } = req.params;
+    
+    // Get lead to check permissions
+    const lead = await leadInquiriesService.getById(leadId);
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
     }
     
-    const { leadId } = req.params;
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!lead.hubId || !canAccessHub(req.user, lead.hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
+    }
+    
     const noteData = {
       ...req.body,
       leadId,
@@ -764,12 +848,22 @@ router.post('/leads/:leadId/notes', authenticateToken, async (req: any, res: Res
   }
 });
 
-// Update a lead note (admin only)
+// Update a lead note (admin or hub user)
 router.put('/leads/:leadId/notes/:noteId', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { leadId } = req.params;
+    
+    // Get lead to check permissions
+    const lead = await leadInquiriesService.getById(leadId);
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+    
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!lead.hubId || !canAccessHub(req.user, lead.hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
     }
     
     const { noteId } = req.params;
@@ -785,12 +879,22 @@ router.put('/leads/:leadId/notes/:noteId', authenticateToken, async (req: any, r
   }
 });
 
-// Delete a lead note (admin only)
+// Delete a lead note (admin or hub user)
 router.delete('/leads/:leadId/notes/:noteId', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { leadId } = req.params;
+    
+    // Get lead to check permissions
+    const lead = await leadInquiriesService.getById(leadId);
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+    
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!lead.hubId || !canAccessHub(req.user, lead.hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
     }
     
     const { noteId } = req.params;
@@ -816,18 +920,18 @@ router.get('/surveys', authenticateToken, async (req: any, res: Response) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
     
-    const { status, sortBy = 'submittedAt', sortOrder = 'desc' } = req.query;
+    const { status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
     
     const db = getDatabase();
     const query: any = {};
-    if (status) query.status = status;
+    if (status) query['application.status'] = status;
     
-    const surveys = await db.collection('survey_submissions')
+    const submissions = await db.collection('survey_submissions')
       .find(query)
       .sort({ [sortBy as string]: sortOrder === 'asc' ? 1 : -1 })
       .toArray();
     
-    res.json({ surveys });
+    res.json({ submissions });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch surveys' });
   }
@@ -842,14 +946,40 @@ router.get('/surveys/stats', authenticateToken, async (req: any, res: Response) 
     }
     
     const db = getDatabase();
-    const stats = await db.collection('survey_submissions').aggregate([
+    const collection = db.collection('survey_submissions');
+    
+    // Get total count
+    const total = await collection.countDocuments();
+    
+    // Get counts by status
+    const statusAggregation = await collection.aggregate([
       {
         $group: {
-          _id: '$status',
+          _id: '$application.status',
           count: { $sum: 1 }
         }
       }
     ]).toArray();
+    
+    // Convert to Record<string, number>
+    const byStatus: Record<string, number> = {};
+    statusAggregation.forEach((item: any) => {
+      const status = item._id || 'new';
+      byStatus[status] = item.count;
+    });
+    
+    // Get recent count (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const recentCount = await collection.countDocuments({
+      createdAt: { $gte: sevenDaysAgo }
+    });
+    
+    const stats = {
+      total,
+      byStatus,
+      recentCount
+    };
     
     res.json({ stats });
   } catch (error) {
@@ -888,7 +1018,7 @@ router.put('/surveys/:id/status', authenticateToken, async (req: any, res: Respo
     }
     
     const { id } = req.params;
-    const { status, notes } = req.body;
+    const { status, reviewNotes } = req.body;
     
     if (!status) {
       return res.status(400).json({ error: 'Status is required' });
@@ -899,10 +1029,11 @@ router.put('/surveys/:id/status', authenticateToken, async (req: any, res: Respo
       { _id: id },
       {
         $set: {
-          status,
-          reviewedAt: new Date(),
-          reviewedBy: req.user.id,
-          ...(notes && { reviewNotes: notes })
+          'application.status': status,
+          'application.reviewedAt': new Date(),
+          'application.reviewedBy': req.user.id,
+          ...(reviewNotes && { 'application.reviewNotes': reviewNotes }),
+          updatedAt: new Date()
         }
       }
     );

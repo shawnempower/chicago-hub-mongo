@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { authAPI, AuthResponse } from '@/api/auth';
 
+export type UserRole = 'admin' | 'hub_user' | 'publication_user' | 'standard';
+
 export interface User {
   id: string;
   email: string;
@@ -8,7 +10,13 @@ export interface User {
   lastName?: string;
   companyName?: string;
   isEmailVerified: boolean;
-  isAdmin?: boolean;
+  isAdmin?: boolean; // Keep for backward compatibility
+  role?: UserRole; // New role-based system
+  permissions?: {
+    assignedHubIds?: string[];
+    assignedPublicationIds?: string[];
+    canInviteUsers?: boolean;
+  };
   lastLoginAt?: string;
   createdAt: string;
 }
@@ -28,6 +36,7 @@ interface AuthContextType {
     lastName?: string;
     companyName?: string;
   }) => Promise<{ error: any }>;
+  refreshUser: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -146,13 +155,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const response = await authAPI.getCurrentUser();
+      if (response.user) {
+        setUser(response.user);
+        return { success: true };
+      }
+      return { success: false, error: 'Failed to refresh user data' };
+    } catch (error) {
+      console.error('Refresh user error:', error);
+      return { success: false, error: 'Failed to refresh user data' };
+    }
+  };
+
   const value: AuthContextType = {
     user,
     loading,
     signUp,
     signIn,
     signOut,
-    updateProfile
+    updateProfile,
+    refreshUser
   };
 
   return (

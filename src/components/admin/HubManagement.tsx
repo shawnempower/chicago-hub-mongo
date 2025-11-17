@@ -38,7 +38,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { HubForm } from './HubForm';
 import { HubPublicationsManager } from './HubPublicationsManager';
-import { Plus, Pencil, Trash2, Eye, Building2, Newspaper } from 'lucide-react';
+import { ResourceUserManagement } from '@/components/permissions';
+import { Plus, Pencil, Trash2, Eye, Building2, Newspaper, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const HubManagement: React.FC = () => {
@@ -49,6 +50,8 @@ export const HubManagement: React.FC = () => {
   const [hubToDelete, setHubToDelete] = useState<Hub | null>(null);
   const [showAssignPublications, setShowAssignPublications] = useState(false);
   const [hubForAssignment, setHubForAssignment] = useState<Hub | null>(null);
+  const [showUserManagement, setShowUserManagement] = useState(false);
+  const [hubForUserManagement, setHubForUserManagement] = useState<Hub | null>(null);
 
   const handleCreate = () => {
     setSelectedHub(null);
@@ -90,6 +93,11 @@ export const HubManagement: React.FC = () => {
     refetch();
     setShowAssignPublications(false);
     setHubForAssignment(null);
+  };
+
+  const handleManageUsers = (hub: Hub) => {
+    setHubForUserManagement(hub);
+    setShowUserManagement(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -219,6 +227,14 @@ export const HubManagement: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handleManageUsers(hub)}
+                          title="Manage Users"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleAssignPublications(hub)}
                           title="Assign Publications"
                         >
@@ -309,6 +325,28 @@ export const HubManagement: React.FC = () => {
             <HubPublicationsManager 
               hub={hubForAssignment} 
               onUpdate={handleAssignmentUpdate}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* User Management Dialog */}
+      <Dialog open={showUserManagement} onOpenChange={setShowUserManagement}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Manage Users - {hubForUserManagement?.basicInfo.name}
+            </DialogTitle>
+            <DialogDescription>
+              Invite users and manage access to this hub. Users with hub access can manage all publications within it.
+            </DialogDescription>
+          </DialogHeader>
+          {hubForUserManagement && (
+            <ResourceUserManagement
+              resourceType="hub"
+              resourceId={hubForUserManagement.hubId}
+              resourceName={hubForUserManagement.basicInfo.name}
+              canManageUsers={true}
             />
           )}
         </DialogContent>

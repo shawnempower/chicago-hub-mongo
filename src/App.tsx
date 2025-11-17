@@ -17,6 +17,7 @@ import HubCentral from "./pages/HubCentral";
 import CampaignBuilder from "./pages/CampaignBuilder";
 import CampaignList from "./pages/CampaignList";
 import CampaignDetail from "./pages/CampaignDetail";
+import AcceptInvitation from "./pages/AcceptInvitation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/campaigns/new" element={<CampaignBuilder />} />
               <Route path="/campaigns/:id" element={<CampaignDetail />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

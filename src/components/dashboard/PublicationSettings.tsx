@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { ResourceUserManagement } from '@/components/permissions';
 import { 
   Settings, 
   Save,
@@ -116,6 +117,14 @@ export const PublicationSettings: React.FC = () => {
           {saving ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
+
+      {/* User Management Section - MOVED TO TOP */}
+      <ResourceUserManagement
+        resourceType="publication"
+        resourceId={selectedPublication.publicationId.toString()}
+        resourceName={selectedPublication.basicInfo?.publicationName || 'Publication'}
+        canManageUsers={true}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Visibility Settings */}

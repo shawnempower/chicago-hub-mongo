@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { userProfilesService } from '../../src/integrations/mongodb/allServices';
 import { HubsService } from '../../src/integrations/mongodb/hubService';
-import { authenticateToken } from '../middleware/authenticate';
+import { authenticateToken, requireHubAccess } from '../middleware/authenticate';
 
 const router = Router();
 

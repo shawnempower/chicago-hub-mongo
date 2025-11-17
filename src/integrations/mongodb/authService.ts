@@ -2,9 +2,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { getDatabase, getDatabaseName } from './client';
-import { User, UserSession, UserProfile, COLLECTIONS } from './schemas';
+import { User, UserSession, UserProfile, COLLECTIONS, UserRole } from './schemas';
 import { ObjectId } from 'mongodb';
 import { createLogger } from '../../utils/logger';
+import { permissionsService } from './permissionsService';
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
@@ -24,7 +25,13 @@ export interface AuthUser {
   lastName?: string;
   companyName?: string;
   isEmailVerified: boolean;
-  isAdmin?: boolean;
+  isAdmin?: boolean; // Keep for backward compatibility
+  role?: UserRole; // New role-based system
+  permissions?: {
+    assignedHubIds?: string[];
+    assignedPublicationIds?: string[];
+    canInviteUsers?: boolean;
+  };
   lastLoginAt?: Date;
   createdAt: Date;
 }
@@ -48,25 +55,53 @@ export class AuthService {
   private sessionsCollection = getDatabase().collection<UserSession>(COLLECTIONS.USER_SESSIONS);
   private profilesCollection = getDatabase().collection<UserProfile>(COLLECTIONS.USER_PROFILES);
 
-  // Helper to convert User to AuthUser with admin flag from profile
+  // Helper to convert User to AuthUser with admin flag from profile and permissions
   private async userToAuthUser(user: User): Promise<AuthUser> {
     try {
-      // Get user profile to check admin status
-      const profile = await this.profilesCollection.findOne({ userId: user._id?.toString() });
+      const userId = user._id?.toString() || '';
+      
+      // Get user profile to check admin status (for backward compatibility)
+      const profile = await this.profilesCollection.findOne({ userId });
+      
+      // Get user permissions
+      const userPermissions = await permissionsService.getPermissions(userId);
+      
+      // Determine if user is admin (check both old and new ways)
+      const isAdmin = profile?.isAdmin || user.role === 'admin' || userPermissions?.role === 'admin';
+      
+      // Build permissions object for frontend
+      let permissions;
+      if (userPermissions) {
+        // Get hub IDs
+        const hubIds = userPermissions.hubAccess?.map(access => access.hubId) || [];
+        
+        // Get publication IDs (from permissions or fetch from access junction)
+        const publicationIds = userPermissions.individualPublicationIds || 
+          await permissionsService.getUserPublications(userId);
+        
+        permissions = {
+          assignedHubIds: hubIds,
+          assignedPublicationIds: publicationIds,
+          canInviteUsers: userPermissions.canInviteUsers || false
+        };
+      }
       
       return {
-        id: user._id?.toString() || '',
+        id: userId,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         companyName: user.companyName,
         isEmailVerified: user.isEmailVerified,
-        isAdmin: profile?.isAdmin || false,
+        isAdmin, // Keep for backward compatibility
+        role: userPermissions?.role || user.role || (isAdmin ? 'admin' : 'standard'),
+        permissions,
         lastLoginAt: user.lastLoginAt,
         createdAt: user.createdAt
       };
     } catch (error) {
-      // Return without admin flag if profile fetch fails
+      logger.error('Error converting user to AuthUser:', error);
+      // Return basic user info on error
       return {
         id: user._id?.toString() || '',
         email: user.email,
@@ -75,6 +110,7 @@ export class AuthService {
         companyName: user.companyName,
         isEmailVerified: user.isEmailVerified,
         isAdmin: false,
+        role: 'standard',
         lastLoginAt: user.lastLoginAt,
         createdAt: user.createdAt
       };

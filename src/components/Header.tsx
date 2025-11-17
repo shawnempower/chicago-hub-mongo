@@ -24,6 +24,9 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
   
   const isHubCentral = location.pathname === '/hubcentral';
   
+  // Check if user has hub access (admin or has assigned hubs)
+  const hasHubAccess = isAdmin || (user?.permissions?.assignedHubIds && user.permissions.assignedHubIds.length > 0);
+  
   return (
     <header className="sticky top-0 z-40 backdrop-blur-[20px] border-b border-border" style={{ backgroundColor: 'hsl(42 30% 95% / 0.3)' }}>
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -55,14 +58,19 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
               ) : (
                 /* Hubs Button and Publication Selector when NOT on Hub Central */
                 <>
-                  <Button
-                    onClick={() => navigate('/hubcentral')}
-                    variant="outline"
-                    className="h-9 px-3 text-sm font-medium"
-                  >
-                    <Globe className="h-4 w-4 mr-1" />
-                    Hubs
-                  </Button>
+                  {hasHubAccess && (
+                    <Button
+                      onClick={() => {
+                        console.log('🔘 Hubs button clicked, navigating to /hubcentral');
+                        navigate('/hubcentral');
+                      }}
+                      variant="outline"
+                      className="h-9 px-3 text-sm font-medium"
+                    >
+                      <Globe className="h-4 w-4 mr-1" />
+                      Hubs
+                    </Button>
+                  )}
                   <PublicationSelector compact={true} />
                 </>
               )}

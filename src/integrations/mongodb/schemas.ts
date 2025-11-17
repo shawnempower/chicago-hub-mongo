@@ -13,9 +13,16 @@ export interface User {
   passwordResetToken?: string;
   passwordResetExpires?: Date;
   lastLoginAt?: Date;
+  role?: UserRole; // Optional: 'admin', 'hub_user', 'publication_user', 'standard'
   createdAt: Date;
   updatedAt: Date;
 }
+
+// User role enumeration
+export type UserRole = 'admin' | 'hub_user' | 'publication_user' | 'standard';
+
+// Access scope types for scalability
+export type AccessScope = 'all' | 'hub_level' | 'group_level' | 'individual';
 
 export interface UserSession {
   _id?: string | ObjectId;
@@ -26,6 +33,80 @@ export interface UserSession {
   createdAt: Date;
   userAgent?: string;
   ipAddress?: string;
+}
+
+// ===== USER PERMISSIONS SCHEMA =====
+// Scalable permission model supporting bulk access (e.g., 200+ publications)
+export interface UserPermissions {
+  _id?: string | ObjectId;
+  userId: string; // Reference to User._id
+  role: UserRole;
+  
+  // Scalable access control
+  accessScope: AccessScope;
+  
+  // Hub-level access (most scalable for 100+ publications)
+  // When a user has hub access, they automatically have access to all publications in that hub
+  hubAccess?: Array<{
+    hubId: string;
+    accessLevel: 'full' | 'limited'; // 'full' = all pubs in hub, 'limited' = specific pubs
+  }>;
+  
+  // Group-level access (for publication networks/groups)
+  publicationGroupIds?: string[]; // Groups they have access to
+  
+  // Individual publication access (for specific assignments)
+  // Only used when not hub/group level
+  individualPublicationIds?: string[];
+  
+  // Permissions metadata
+  canInviteUsers?: boolean; // Whether they can invite others to their resources
+  canManageGroups?: boolean; // Whether they can create/manage publication groups
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy?: string; // Who assigned these permissions
+}
+
+// Publication groups for managing bulk access (e.g., "Tribune Network", "Block Club Network")
+export interface PublicationGroup {
+  _id?: string | ObjectId;
+  groupId: string; // Unique identifier (e.g., "tribune-network")
+  name: string; // Display name (e.g., "Chicago Tribune Network")
+  description?: string;
+  publicationIds: string[]; // Publications in this group
+  hubId?: string; // Optional hub association
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// User-Publication access junction for performance and reporting
+// This denormalized table helps with quick permission checks
+export interface UserPublicationAccess {
+  _id?: string | ObjectId;
+  userId: string;
+  publicationId: string;
+  grantedVia: 'direct' | 'hub' | 'group'; // How they got access
+  grantedViaId?: string; // Hub ID or Group ID
+  grantedAt: Date;
+  grantedBy: string;
+}
+
+// User invitations for email-based access provisioning
+export interface UserInvitation {
+  _id?: string | ObjectId;
+  invitedEmail: string;
+  invitedBy: string; // userId who sent invitation
+  invitedByName: string; // Name of user who sent invitation
+  invitationToken: string; // unique token for accepting
+  resourceType: 'hub' | 'publication';
+  resourceId: string;
+  resourceName: string;
+  isExistingUser: boolean; // Whether user account already exists
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+  expiresAt: Date; // Invitations expire after 7 days
+  acceptedAt?: Date;
+  createdAt: Date;
 }
 
 // ===== AD PACKAGES SCHEMA =====
@@ -1172,6 +1253,10 @@ export interface AlgorithmConfigUpdate extends Partial<Omit<AlgorithmConfig, '_i
 export const COLLECTIONS = {
   USERS: 'users',
   USER_SESSIONS: 'user_sessions',
+  USER_PERMISSIONS: 'user_permissions', // Role-based access control
+  PUBLICATION_GROUPS: 'publication_groups', // Publication groupings for bulk access
+  USER_PUBLICATION_ACCESS: 'user_publication_access', // Junction table for access tracking
+  USER_INVITATIONS: 'user_invitations', // Email-based user invitations
   PUBLICATIONS: 'publications',
   PUBLICATION_FILES: 'publication_files',
   STOREFRONT_CONFIGURATIONS: 'storefront_configurations',
@@ -1203,11 +1288,42 @@ export const INDEXES = {
     { email: 1 }, // unique
     { emailVerificationToken: 1 },
     { passwordResetToken: 1 },
+    { role: 1 },
     { createdAt: -1 }
   ],
   user_sessions: [
     { userId: 1 },
     { token: 1 }, // unique
+    { expiresAt: 1 },
+    { createdAt: -1 }
+  ],
+  user_permissions: [
+    { userId: 1 }, // unique
+    { role: 1 },
+    { accessScope: 1 },
+    { 'hubAccess.hubId': 1 },
+    { publicationGroupIds: 1 },
+    { individualPublicationIds: 1 }
+  ],
+  publication_groups: [
+    { groupId: 1 }, // unique
+    { hubId: 1 },
+    { createdBy: 1 },
+    { createdAt: -1 }
+  ],
+  user_publication_access: [
+    { userId: 1, publicationId: 1 }, // compound index for quick lookups
+    { userId: 1 },
+    { publicationId: 1 },
+    { grantedVia: 1 },
+    { grantedAt: -1 }
+  ],
+  user_invitations: [
+    { invitationToken: 1 }, // unique
+    { invitedEmail: 1 },
+    { invitedBy: 1 },
+    { status: 1 },
+    { resourceType: 1, resourceId: 1 },
     { expiresAt: 1 },
     { createdAt: -1 }
   ],

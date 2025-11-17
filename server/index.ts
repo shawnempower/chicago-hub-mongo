@@ -1,14 +1,24 @@
 import dotenv from 'dotenv';
 
 // Load environment variables FIRST before any other imports
+console.log('🔧 Loading environment variables...');
 dotenv.config();
+console.log('✅ Environment variables loaded');
+console.log('📧 Mailgun env vars:', {
+  MAILGUN_API_KEY: process.env.MAILGUN_API_KEY ? 'SET' : 'NOT SET',
+  MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN ? 'SET' : 'NOT SET',
+  MAILGUN_FROM_EMAIL: process.env.MAILGUN_FROM_EMAIL ? 'SET' : 'NOT SET',
+});
 
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { connectToDatabase, setupGracefulShutdown } from '../src/integrations/mongodb/client';
+
+console.log('📧 About to import emailService...');
 import { emailService } from './emailService';
+console.log('📧 emailService imported:', !!emailService);
 import { s3Service } from './s3Service';
 import { StorefrontImageService } from './storefrontImageService';
 import { subdomainService } from './subdomainService';
@@ -52,6 +62,7 @@ import storefrontRouter from './routes/storefront';
 import hubPackagesRouter from './routes/hub-packages';
 import hubsRouter from './routes/hubs';
 import adminRouter from './routes/admin';
+import permissionsRouter from './routes/permissions';
 import { authenticateToken } from './middleware/authenticate';
 import { createLogger } from '../src/utils/logger';
 
@@ -149,6 +160,7 @@ const upload = multer({
 // ===== ROUTE REGISTRATION =====
 // Register route modules with appropriate prefixes
 app.use('/api/auth', authRouter);
+app.use('/api/permissions', permissionsRouter); // User permissions and invitations
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/builder', builderRouter); // Admin-only package builder routes
 app.use('/api/publications', publicationsRouter);

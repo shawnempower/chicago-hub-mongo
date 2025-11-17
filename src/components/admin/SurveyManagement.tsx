@@ -206,10 +206,11 @@ const SurveyManagement: React.FC = () => {
         throw new Error('Failed to fetch survey submissions');
       }
       const data = await response.json();
-      setSubmissions(data.submissions);
+      setSubmissions(Array.isArray(data.submissions) ? data.submissions : []);
     } catch (err: any) {
       setError(err.message);
       toast.error(err.message);
+      setSubmissions([]); // Ensure submissions is always an array even on error
     } finally {
       setLoading(false);
     }
@@ -312,6 +313,9 @@ const SurveyManagement: React.FC = () => {
   };
 
   const filteredAndSearchedSubmissions = useMemo(() => {
+    if (!Array.isArray(submissions)) {
+      return [];
+    }
     return submissions.filter(submission => {
       const contact = submission.contactInformation;
       const matchesSearch = searchTerm === '' ||

@@ -5,9 +5,10 @@
  * Provides hub selection state and filtering capabilities
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { Hub } from '@/integrations/mongodb/hubSchema';
 import { useHubs } from '@/hooks/useHubs';
+import { useAuth } from './CustomAuthContext';
 
 interface HubContextType {
   selectedHub: Hub | null;
@@ -22,9 +23,31 @@ interface HubContextType {
 const HubContext = createContext<HubContextType | undefined>(undefined);
 
 export const HubProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { hubs, loading, error } = useHubs({ status: 'active' });
+  const { hubs: allHubs, loading, error } = useHubs({ status: 'active' });
+  const { user } = useAuth();
   const [selectedHubId, setSelectedHubId] = useState<string | null>(null);
   const [selectedHub, setSelectedHub] = useState<Hub | null>(null);
+
+  // Filter hubs based on user permissions (if not admin)
+  const hubs = useMemo(() => {
+    // Admins see all hubs
+    if (user?.isAdmin || user?.role === 'admin') {
+      return allHubs;
+    }
+
+    // If user has no permissions data, show all (backward compatible)
+    if (!user?.permissions?.assignedHubIds) {
+      return allHubs;
+    }
+
+    // Filter to only assigned hubs
+    const assignedHubIds = user.permissions.assignedHubIds;
+    if (assignedHubIds.length === 0) {
+      return allHubs; // No filtering if empty array (backward compatible)
+    }
+
+    return allHubs.filter(hub => assignedHubIds.includes(hub.hubId));
+  }, [allHubs, user]);
 
   // Auto-select first hub on load
   useEffect(() => {

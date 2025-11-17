@@ -1,7 +1,8 @@
 import { Router, Response } from 'express';
 import { publicationsService, userProfilesService, publicationFilesService } from '../../src/integrations/mongodb/allServices';
 import { HubsService } from '../../src/integrations/mongodb/hubService';
-import { authenticateToken } from '../middleware/authenticate';
+import { authenticateToken, requirePublicationAccess } from '../middleware/authenticate';
+import { permissionsService } from '../../src/integrations/mongodb/permissionsService';
 import { s3Service } from '../s3Service';
 import multer from 'multer';
 
@@ -22,8 +23,8 @@ const upload = multer({
  * updates, and retrieving categories/types.
  */
 
-// Get all publications with optional filters (public)
-router.get('/', async (req, res) => {
+// Get all publications with optional filters (requires authentication, filtered by permissions)
+router.get('/', authenticateToken, async (req: any, res) => {
   try {
     const { geographicCoverage, publicationType, contentType, verificationStatus } = req.query;
     
@@ -39,8 +40,53 @@ router.get('/', async (req, res) => {
       return res.status(500).json({ error: 'Publications service not initialized' });
     }
 
-    const publications = await publicationsService.getAll(filters);
-    res.json(publications);
+    // Fetch all publications (will filter by permissions below)
+    const allPublications = await publicationsService.getAll(filters);
+    
+    // Filter by user permissions
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    
+    if (isAdmin) {
+      // Admins see all publications
+      return res.json(allPublications);
+    }
+    
+    // Non-admin users: filter by their assigned publications and hubs
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    const assignedPublicationIds = req.user.permissions?.assignedPublicationIds || [];
+    
+    // If user has no permissions, check the database directly
+    let actualAssignedHubIds = assignedHubIds;
+    let actualAssignedPublicationIds = assignedPublicationIds;
+    
+    if (assignedHubIds.length === 0 && assignedPublicationIds.length === 0) {
+      // Fetch from database (in case JWT is outdated)
+      const userPermissions = await permissionsService.getPermissions(req.user.id);
+      if (userPermissions) {
+        actualAssignedHubIds = userPermissions.hubAccess?.map(h => h.hubId) || [];
+        actualAssignedPublicationIds = await permissionsService.getUserPublications(req.user.id);
+      }
+    }
+    
+    // Filter publications
+    const filteredPublications = allPublications.filter((pub: any) => {
+      // Check direct publication assignment
+      if (actualAssignedPublicationIds.includes(pub.publicationId?.toString()) || 
+          actualAssignedPublicationIds.includes(pub._id?.toString())) {
+        return true;
+      }
+      
+      // Check hub-level access
+      if (pub.hubIds && Array.isArray(pub.hubIds)) {
+        if (pub.hubIds.some((hubId: string) => actualAssignedHubIds.includes(hubId))) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
+    
+    res.json(filteredPublications);
   } catch (error) {
     console.error('Error fetching publications:', error);
     if (error instanceof Error) {

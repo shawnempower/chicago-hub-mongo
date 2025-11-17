@@ -1,11 +1,11 @@
-import { AdminRoute } from '@/components/admin/AdminRoute';
+import { HubRoute } from '@/components/admin/HubRoute';
 import { HubCentralDashboard } from '@/components/admin/HubCentralDashboard';
 import { Header } from '@/components/Header';
 import SurveyForm from '@/components/SurveyForm';
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, Package, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Megaphone, UserPlus } from 'lucide-react';
 
 const HubCentral = () => {
   const [isSurveyOpen, setIsSurveyOpen] = useState(false);
@@ -22,10 +22,11 @@ const HubCentral = () => {
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'packages', label: 'Packages', icon: Package },
     { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
+    { id: 'team', label: 'Team', icon: UserPlus },
   ];
 
   return (
-    <AdminRoute>
+    <HubRoute>
       <div className="min-h-screen bg-background">
         <Header 
           onAssistantClick={() => {}} // Assistant is floating widget now
@@ -72,7 +73,7 @@ const HubCentral = () => {
         
         <SurveyForm open={isSurveyOpen} onOpenChange={setIsSurveyOpen} />
       </div>
-    </AdminRoute>
+    </HubRoute>
   );
 };
 

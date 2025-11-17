@@ -2,12 +2,20 @@ import { useState, useEffect } from 'react';
 import { adminApi } from '@/api/admin';
 import type { UserProfile } from '@/types/common';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/config/api';
-import { Shield } from 'lucide-react';
+import { Shield, Users, Building2, FileText } from 'lucide-react';
+import { permissionsAPI } from '@/api/permissions';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function UserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -231,7 +239,15 @@ export function UserManagement() {
                 </div>
                 <div className="flex items-center gap-2">
                   {user.isAdmin && (
-                    <Badge variant="destructive">Admin</Badge>
+                    <Badge variant="destructive" className="gap-1">
+                      <Shield className="h-3 w-3" />
+                      Admin
+                    </Badge>
+                  )}
+                  {user.role && user.role !== 'standard' && !user.isAdmin && (
+                    <Badge variant="secondary">
+                      {user.role === 'hub_user' ? 'Hub User' : user.role === 'publication_user' ? 'Publication User' : user.role}
+                    </Badge>
                   )}
                   <Button
                     onClick={() => toggleAdminStatus(user)}
@@ -249,27 +265,70 @@ export function UserManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                {user.email && (
-                  <div><strong>Email:</strong> {user.email}</div>
-                )}
-                <div><strong>User ID:</strong> {user.userId}</div>
-                {user.companyName && (
-                  <div><strong>Company:</strong> {user.companyName}</div>
-                )}
-                {user.industry && (
-                  <div><strong>Industry:</strong> {user.industry}</div>
-                )}
-                {user.role && (
-                  <div><strong>Role:</strong> {user.role}</div>
-                )}
-                {user.profileCompletionScore !== undefined && user.profileCompletionScore > 0 && (
-                  <div><strong>Profile Completion:</strong> {user.profileCompletionScore}%</div>
-                )}
-                <div>
-                  <strong>Created:</strong> {' '}
-                  {new Date(user.createdAt).toLocaleDateString()}
+              <div className="space-y-4">
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  {user.email && (
+                    <div><strong>Email:</strong> {user.email}</div>
+                  )}
+                  <div><strong>User ID:</strong> {user.userId}</div>
+                  {user.companyName && (
+                    <div><strong>Company:</strong> {user.companyName}</div>
+                  )}
+                  {user.industry && (
+                    <div><strong>Industry:</strong> {user.industry}</div>
+                  )}
+                  {user.role && (
+                    <div><strong>System Role:</strong> {user.role}</div>
+                  )}
+                  {user.profileCompletionScore !== undefined && user.profileCompletionScore > 0 && (
+                    <div><strong>Profile Completion:</strong> {user.profileCompletionScore}%</div>
+                  )}
+                  <div>
+                    <strong>Created:</strong> {' '}
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </div>
                 </div>
+                
+                {!user.isAdmin && (
+                  <div className="pt-4 border-t space-y-3">
+                    <p className="text-sm font-medium">Access & Permissions</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="justify-start gap-2"
+                        onClick={async () => {
+                          // TODO: Open dialog to assign user to hubs
+                          toast({
+                            title: 'Coming Soon',
+                            description: 'Hub assignment interface will be available soon'
+                          });
+                        }}
+                      >
+                        <Building2 className="h-4 w-4" />
+                        Assign Hubs
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="justify-start gap-2"
+                        onClick={async () => {
+                          // TODO: Open dialog to assign user to publications
+                          toast({
+                            title: 'Coming Soon',
+                            description: 'Publication assignment interface will be available soon'
+                          });
+                        }}
+                      >
+                        <FileText className="h-4 w-4" />
+                        Assign Publications
+                      </Button>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      💡 Tip: Use the "User Management" features in individual Hub or Publication pages to assign access
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
