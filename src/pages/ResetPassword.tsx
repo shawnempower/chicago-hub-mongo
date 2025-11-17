@@ -45,7 +45,7 @@ export default function ResetPassword() {
       await authAPI.resetPassword(token, password);
       setSuccess(true);
       setTimeout(() => {
-        navigate('/login');
+        navigate('/auth');
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'Failed to reset password');
@@ -134,7 +134,7 @@ export default function ResetPassword() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/auth')}
               className="flex-1"
               disabled={loading}
             >

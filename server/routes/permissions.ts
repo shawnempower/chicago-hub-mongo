@@ -160,7 +160,8 @@ router.get('/publication/:publicationId/users', authenticateToken, async (req: a
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const userIds = await permissionsService.getPublicationUsers(publicationId);
+    // Only get users with direct publication access (not hub users)
+    const userIds = await permissionsService.getDirectPublicationUsers(publicationId);
     
     // Fetch user details
     const users = await Promise.all(

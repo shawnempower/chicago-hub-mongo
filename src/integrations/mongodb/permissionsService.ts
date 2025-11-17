@@ -468,6 +468,25 @@ export class PermissionsService {
   }
 
   /**
+   * Get users who have DIRECT access to a publication (excludes hub users)
+   */
+  async getDirectPublicationUsers(publicationId: string): Promise<string[]> {
+    try {
+      const accessRecords = await this.accessJunctionCollection
+        .find({ 
+          publicationId,
+          grantedVia: 'direct'
+        })
+        .toArray();
+      
+      return accessRecords.map(record => record.userId);
+    } catch (error) {
+      logger.error('Error getting direct publication users:', error);
+      return [];
+    }
+  }
+
+  /**
    * Create a publication group for managing bulk access
    */
   async createPublicationGroup(
@@ -583,6 +602,7 @@ export const permissionsService = {
     permissionsService.instance.updateUserRole(userId, role, updatedBy),
   getHubUsers: (hubId: string) => permissionsService.instance.getHubUsers(hubId),
   getPublicationUsers: (publicationId: string) => permissionsService.instance.getPublicationUsers(publicationId),
+  getDirectPublicationUsers: (publicationId: string) => permissionsService.instance.getDirectPublicationUsers(publicationId),
   createPublicationGroup: (groupId: string, name: string, publicationIds: string[], createdBy: string, hubId?: string, description?: string) =>
     permissionsService.instance.createPublicationGroup(groupId, name, publicationIds, createdBy, hubId, description),
   assignUserToPublicationGroup: (userId: string, groupId: string, assignedBy: string) =>
