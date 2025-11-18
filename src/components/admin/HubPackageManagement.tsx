@@ -17,7 +17,8 @@ import {
   Copy,
   Download,
   ChevronLeft,
-  FileText
+  FileText,
+  FileSpreadsheet
 } from 'lucide-react';
 import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -26,7 +27,7 @@ import { API_BASE_URL } from '@/config/api';
 import { PackageBuilder } from './PackageBuilder/PackageBuilder';
 import { PackageResults } from './PackageBuilder/PackageResults';
 import { ErrorBoundary } from './PackageBuilder/ErrorBoundary';
-import { BuilderFilters, BuilderResult } from '@/services/packageBuilderService';
+import { BuilderFilters, BuilderResult, packageBuilderService } from '@/services/packageBuilderService';
 import { downloadPackageCSV, downloadPackageInsertionOrder } from '@/utils/packageExport';
 import { calculateItemCost } from '@/utils/inventoryPricing';
 import { packagesApi } from '@/api/packages';
@@ -521,6 +522,217 @@ export const HubPackageManagement = () => {
     }
   };
 
+  const handleExportAllInventory = async () => {
+    if (!selectedHubId) {
+      toast({
+        title: 'No Hub Selected',
+        description: 'Please select a hub to export inventory',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      toast({
+        title: 'Exporting...',
+        description: 'Fetching all publications and inventory data'
+      });
+
+      // Fetch all publications for the hub - use all channels
+      const allChannels = ['newsletter', 'print', 'website', 'social', 'podcast', 'radio', 'streaming', 'events'];
+      const publications = await packageBuilderService.fetchPublicationsForBuilder(
+        selectedHubId,
+        allChannels
+      );
+
+      // Extract all inventory from all publications
+      const allInventory: any[] = [];
+      for (const pub of publications) {
+        const items = packageBuilderService.extractInventoryFromPublication(pub, allChannels, 'standard');
+        items.forEach(item => {
+          allInventory.push({
+            publicationName: pub.basicInfo.publicationName,
+            publicationId: pub.publicationId,
+            ...item
+          });
+        });
+      }
+
+      // Prepare CSV data
+      const rows: string[][] = [];
+      
+      // Header row - similar to package export format
+      rows.push([
+        'Publication',
+        'Publication ID',
+        'Channel',
+        'Source Name',
+        'Item Name',
+        'Item Path',
+        'Pricing Model',
+        'Unit Price',
+        'Standard Frequency',
+        'Monthly Cost (Standard)',
+        'Max Frequency',
+        'Audience Metric',
+        'Audience Value',
+        'Estimated Monthly Impressions',
+        'Specifications'
+      ]);
+
+      // Add data rows for each inventory item
+      allInventory.forEach(item => {
+        const frequency = item.currentFrequency || item.quantity || 1;
+        const unitPrice = item.itemPricing?.hubPrice || 0;
+        const monthlyCost = unitPrice * frequency;
+        
+        // Format specifications
+        const specs = item.specifications 
+          ? Object.entries(item.specifications)
+              .filter(([_, value]) => value)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join('; ')
+          : '';
+
+        // Extract audience metrics based on channel
+        let audienceMetric = '';
+        let audienceValue = '';
+        let estimatedImpressions = '';
+        
+        if (item.audienceMetrics) {
+          const metrics = item.audienceMetrics;
+          const channel = item.channel?.toLowerCase() || '';
+          
+          // Determine primary metric and value based on channel
+          if (channel === 'website') {
+            if (metrics.monthlyVisitors) {
+              audienceMetric = 'Monthly Visitors';
+              audienceValue = metrics.monthlyVisitors.toLocaleString();
+              estimatedImpressions = metrics.monthlyImpressions?.toLocaleString() || metrics.monthlyVisitors.toLocaleString();
+            } else if (metrics.monthlyImpressions) {
+              audienceMetric = 'Monthly Impressions';
+              audienceValue = metrics.monthlyImpressions.toLocaleString();
+              estimatedImpressions = metrics.monthlyImpressions.toLocaleString();
+            }
+          } else if (channel === 'newsletter') {
+            if (metrics.subscribers) {
+              audienceMetric = 'Subscribers';
+              audienceValue = metrics.subscribers.toLocaleString();
+              // Estimate impressions as subscribers * frequency * open rate (assume 25%)
+              estimatedImpressions = Math.round(metrics.subscribers * frequency * 0.25).toLocaleString();
+            }
+          } else if (channel === 'print') {
+            if (metrics.circulation) {
+              audienceMetric = 'Circulation';
+              audienceValue = metrics.circulation.toLocaleString();
+              estimatedImpressions = (metrics.circulation * frequency).toLocaleString();
+            }
+          } else if (channel === 'social') {
+            if (metrics.followers) {
+              audienceMetric = 'Followers';
+              audienceValue = metrics.followers.toLocaleString();
+              // Estimate impressions as followers * frequency * 10% reach
+              estimatedImpressions = Math.round(metrics.followers * frequency * 0.1).toLocaleString();
+            }
+          } else if (channel === 'podcast') {
+            if (metrics.averageListeners) {
+              audienceMetric = 'Avg Listeners';
+              audienceValue = metrics.averageListeners.toLocaleString();
+              estimatedImpressions = (metrics.averageListeners * frequency).toLocaleString();
+            } else if (metrics.subscribers) {
+              audienceMetric = 'Subscribers';
+              audienceValue = metrics.subscribers.toLocaleString();
+              estimatedImpressions = (metrics.subscribers * frequency).toLocaleString();
+            }
+          } else if (channel === 'radio') {
+            if (metrics.listeners || metrics.averageListeners) {
+              audienceMetric = 'Listeners';
+              const listenerCount = metrics.listeners || metrics.averageListeners;
+              audienceValue = listenerCount.toLocaleString();
+              estimatedImpressions = (listenerCount * frequency).toLocaleString();
+            }
+          } else if (channel === 'streaming') {
+            if (metrics.averageViews) {
+              audienceMetric = 'Avg Views';
+              audienceValue = metrics.averageViews.toLocaleString();
+              estimatedImpressions = (metrics.averageViews * frequency).toLocaleString();
+            } else if (metrics.subscribers) {
+              audienceMetric = 'Subscribers';
+              audienceValue = metrics.subscribers.toLocaleString();
+              estimatedImpressions = (metrics.subscribers * frequency).toLocaleString();
+            }
+          } else if (channel === 'events') {
+            if (metrics.averageAttendance) {
+              audienceMetric = 'Avg Attendance';
+              audienceValue = metrics.averageAttendance.toLocaleString();
+              estimatedImpressions = (metrics.averageAttendance * frequency).toLocaleString();
+            } else if (metrics.expectedAttendees) {
+              audienceMetric = 'Expected Attendees';
+              audienceValue = metrics.expectedAttendees.toLocaleString();
+              estimatedImpressions = (metrics.expectedAttendees * frequency).toLocaleString();
+            }
+          }
+        }
+
+        rows.push([
+          item.publicationName || '',
+          item.publicationId?.toString() || '',
+          item.channel || '',
+          item.sourceName || '',
+          item.itemName || '',
+          item.itemPath || '',
+          item.itemPricing?.pricingModel || '',
+          unitPrice.toFixed(2),
+          frequency.toString(),
+          monthlyCost.toFixed(2),
+          item.maxFrequency?.toString() || '',
+          audienceMetric,
+          audienceValue,
+          estimatedImpressions,
+          specs
+        ]);
+      });
+
+      // Convert to CSV string
+      const csvContent = rows.map(row => 
+        row.map(cell => {
+          // Escape quotes and wrap in quotes if contains comma, quote, or newline
+          const escaped = cell.replace(/"/g, '""');
+          return /[",\n]/.test(cell) ? `"${escaped}"` : escaped;
+        }).join(',')
+      ).join('\n');
+
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      const timestamp = new Date().toISOString().split('T')[0];
+      link.setAttribute('href', url);
+      link.setAttribute('download', `full_inventory_export_${timestamp}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: 'Export Successful',
+        description: `Exported ${allInventory.length} items from ${publications.length} publications`
+      });
+    } catch (error) {
+      console.error('Error exporting full inventory:', error);
+      toast({
+        title: 'Export Failed',
+        description: 'There was an error exporting the full inventory',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDuplicate = async (pkg: HubPackage) => {
     setLoading(true);
     try {
@@ -728,6 +940,14 @@ export const HubPackageManagement = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleExportAllInventory}
+            disabled={loading || !selectedHubId}
+          >
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Export All Inventory
+          </Button>
           <Button onClick={() => setViewState('builder')}>
             <Plus className="mr-2 h-4 w-4" />
             New Package

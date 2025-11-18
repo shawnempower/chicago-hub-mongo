@@ -144,7 +144,8 @@ export class PackageBuilderService {
       hubPrice: number,
       pricingModel: string = 'flat',
       itemFrequencyString?: string,  // Frequency from the item itself (e.g., "weekly", "daily")
-      specifications?: any
+      specifications?: any,
+      audienceMetrics?: any  // Audience metrics from parent channel
     ): InventoryItemWithConstraints | null => {
       if (!channelFilters.includes(channel)) return null;
       if (hubPrice <= 0) return null;
@@ -215,6 +216,7 @@ export class PackageBuilderService {
           pricingModel
         },
         specifications,
+        audienceMetrics,  // Include audience metrics
         publicationId: publication.publicationId,
         publicationName: publication.basicInfo.publicationName
       };
@@ -244,6 +246,12 @@ export class PackageBuilderService {
 
     // Extract website inventory
     if (channels.website?.advertisingOpportunities) {
+      const websiteMetrics = {
+        monthlyVisitors: channels.website.metrics?.monthlyVisitors,
+        monthlyImpressions: channels.website.metrics?.monthlyImpressions,
+        pageViews: channels.website.metrics?.pageViews
+      };
+      
       channels.website.advertisingOpportunities.forEach((ad: any, idx: number) => {
         const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
         if (hubPricing?.pricing) {
@@ -256,7 +264,8 @@ export class PackageBuilderService {
             pricing.flatRate || pricing.rate || pricing.monthly || 0,
             pricing.pricingModel || 'flat',
             undefined,  // Website ads are typically monthly (handled by pricing model)
-            ad.specifications
+            ad.specifications,
+            websiteMetrics
           );
           if (item) items.push(item);
         }
@@ -266,6 +275,12 @@ export class PackageBuilderService {
     // Extract newsletter inventory
     if (channels.newsletters) {
       channels.newsletters.forEach((newsletter: any, nlIdx: number) => {
+        const newsletterMetrics = {
+          subscribers: newsletter.subscribers,
+          openRate: newsletter.openRate,
+          clickThroughRate: newsletter.clickThroughRate
+        };
+        
         newsletter.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
           const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
           if (hubPricing?.pricing) {
@@ -283,7 +298,8 @@ export class PackageBuilderService {
               pricing.flatRate || pricing.perSend || pricing.monthly || 0,
               pricing.pricingModel || 'per_send',
               newsletter.frequency,  // Use the newsletter's actual frequency
-              ad.specifications
+              ad.specifications,
+              newsletterMetrics
             );
             if (item) {
               // Store the source newsletter name for easy access
@@ -299,6 +315,11 @@ export class PackageBuilderService {
     if (channels.print) {
       const printPubs = Array.isArray(channels.print) ? channels.print : [channels.print];
       printPubs.forEach((printPub: any, printIdx: number) => {
+        const printMetrics = {
+          circulation: printPub.circulation,
+          distributionArea: printPub.distributionArea
+        };
+        
         printPub.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
           const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
           if (hubPricing?.pricing) {
@@ -311,7 +332,8 @@ export class PackageBuilderService {
               pricing.flatRate || pricing.perInsertion || pricing.monthly || 0,
               pricing.pricingModel || 'per_ad',
               printPub.frequency || publication.printFrequency,  // Use print publication's frequency
-              { size: ad.dimensions || ad.size, ...ad.specifications }
+              { size: ad.dimensions || ad.size, ...ad.specifications },
+              printMetrics
             );
             if (item) {
               // Store the print section/edition name if available
@@ -326,6 +348,12 @@ export class PackageBuilderService {
     // Extract social media inventory
     if (channels.socialMedia) {
       channels.socialMedia.forEach((social: any, socIdx: number) => {
+        const socialMetrics = {
+          followers: social.metrics?.followers,
+          engagementRate: social.metrics?.engagementRate,
+          averageReach: social.metrics?.averageReach
+        };
+        
         social.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
           const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
           if (hubPricing?.pricing) {
@@ -338,7 +366,8 @@ export class PackageBuilderService {
               pricing.perPost || pricing.flatRate || pricing.monthly || 0,
               pricing.pricingModel || 'per_post',
               ad.frequency,  // Use ad's frequency if specified
-              { platform: social.platform, ...ad.specifications }
+              { platform: social.platform, ...ad.specifications },
+              socialMetrics
             );
             if (item) {
               // Store the source social media platform name
@@ -353,6 +382,12 @@ export class PackageBuilderService {
     // Extract podcast inventory
     if (channels.podcasts) {
       channels.podcasts.forEach((podcast: any, podIdx: number) => {
+        const podcastMetrics = {
+          averageListeners: podcast.averageListeners,
+          subscribers: podcast.subscribers,
+          downloadsPerEpisode: podcast.downloadsPerEpisode
+        };
+        
         podcast.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
           const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
           if (hubPricing?.pricing) {
@@ -365,7 +400,8 @@ export class PackageBuilderService {
               pricing.perEpisode || pricing.flatRate || pricing.monthly || 0,
               pricing.pricingModel || 'per_episode',
               podcast.frequency,  // Use podcast's frequency (e.g., "weekly", "daily")
-              ad.specifications
+              ad.specifications,
+              podcastMetrics
             );
             if (item) {
               // Store the podcast name
@@ -380,9 +416,20 @@ export class PackageBuilderService {
     // Extract radio inventory
     if (channels.radioStations) {
       channels.radioStations.forEach((radio: any, radioIdx: number) => {
+        const radioMetrics = {
+          listeners: radio.listeners,
+          marketRank: radio.marketRank,
+          signalStrength: radio.signalStrength
+        };
+        
         // Radio can have shows with their own frequencies
         if (radio.shows && radio.shows.length > 0) {
           radio.shows.forEach((show: any, showIdx: number) => {
+            const showMetrics = {
+              ...radioMetrics,
+              averageListeners: show.averageListeners || radio.listeners
+            };
+            
             show.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
               const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
               if (hubPricing?.pricing) {
@@ -395,7 +442,8 @@ export class PackageBuilderService {
                   pricing.perSpot || pricing.flatRate || pricing.monthly || 0,
                   pricing.pricingModel || 'per_spot',
                   show.frequency,  // Use show's frequency (e.g., "daily", "weekdays", "weekly")
-                  ad.specifications
+                  ad.specifications,
+                  showMetrics
                 );
                 if (item) {
                   // Store the radio show name
@@ -420,7 +468,8 @@ export class PackageBuilderService {
               pricing.perSpot || pricing.flatRate || pricing.monthly || 0,
               pricing.pricingModel || 'per_spot',
               undefined,  // Station-level ads don't have specific frequency
-              ad.specifications
+              ad.specifications,
+              radioMetrics
             );
             if (item) {
               // Store the radio station call sign
@@ -439,6 +488,12 @@ export class PackageBuilderService {
         : [channels.streamingVideo];
       
       streaming.forEach((stream: any, streamIdx: number) => {
+        const streamingMetrics = {
+          subscribers: stream.subscribers,
+          averageViews: stream.averageViews,
+          totalReach: stream.totalReach
+        };
+        
         stream.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
           const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
           if (hubPricing?.pricing) {
@@ -451,7 +506,8 @@ export class PackageBuilderService {
               pricing.perAd || pricing.flatRate || pricing.monthly || 0,
               pricing.pricingModel || 'flat',
               stream.frequency,  // Use streaming channel's frequency
-              ad.specifications
+              ad.specifications,
+              streamingMetrics
             );
             if (item) {
               item.sourceName = stream.name || 'Streaming';
@@ -466,6 +522,12 @@ export class PackageBuilderService {
     if (channels.events) {
       const events = Array.isArray(channels.events) ? channels.events : [channels.events];
       events.forEach((event: any, eventIdx: number) => {
+        const eventMetrics = {
+          averageAttendance: event.averageAttendance,
+          expectedAttendees: event.expectedAttendees,
+          historicalAttendance: event.historicalAttendance
+        };
+        
         event.sponsorshipOpportunities?.forEach((sponsorship: any, sponsIdx: number) => {
           const hubPricing = sponsorship.hubPricing?.find((hp: any) => hp.available);
           if (hubPricing?.pricing) {
@@ -478,7 +540,8 @@ export class PackageBuilderService {
               pricing.flatRate || pricing.perEvent || pricing.annual || 0,
               pricing.pricingModel || 'flat',
               event.frequency,  // Use event's frequency (e.g., "annual", "bi-annual", "quarterly")
-              sponsorship.benefits
+              sponsorship.benefits,
+              eventMetrics
             );
             if (item) {
               item.sourceName = event.name || 'Event';
