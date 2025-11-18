@@ -12,15 +12,18 @@ import {
   DollarSign,
   Users,
   TrendingUp,
-  HelpCircle
+  HelpCircle,
+  CheckCircle2
 } from "lucide-react";
 import { calculateRevenue } from '@/utils/pricingCalculations';
-import { PublicationDataQuality } from '@/components/admin/PublicationDataQuality';
+import { PublicationDataQuality, calculateDataQuality } from '@/components/admin/PublicationDataQuality';
+import { useMemo, useRef } from "react";
 // MongoDB services removed - using API calls instead
 
 export function DashboardOverview() {
   const { selectedPublication } = usePublication();
   const navigate = useNavigate();
+  const inventoryQualityRef = useRef<HTMLDivElement>(null);
 
   if (!selectedPublication) {
     return (
@@ -67,6 +70,13 @@ export function DashboardOverview() {
   const handleQuickAction = (tab: string) => {
     navigate(`/dashboard?tab=${tab}`);
   };
+
+  const scrollToInventoryQuality = () => {
+    inventoryQualityRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Use the same calculation logic as the detailed PublicationDataQuality component
+  const inventoryQuality = useMemo(() => calculateDataQuality(selectedPublication), [selectedPublication]);
 
   // Calculate key metrics
   const calculateMetrics = () => {
@@ -246,26 +256,16 @@ export function DashboardOverview() {
     return new Intl.NumberFormat('en-US').format(num);
   };
 
+  const getQualityScoreColor = (score: number) => {
+    if (score >= 90) return 'text-green-600';
+    if (score >= 70) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
   return (
     <div className="space-y-6">
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Inventory */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Total Inventory
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{metrics.totalInventory}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across {metrics.activeChannels} {metrics.activeChannels === 1 ? 'channel' : 'channels'}
-            </p>
-          </CardContent>
-        </Card>
-
         {/* Revenue Potential */}
         <Card>
           <CardHeader className="pb-2">
@@ -340,13 +340,30 @@ export function DashboardOverview() {
             </p>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Data Quality Score - Full Width */}
-      <PublicationDataQuality 
-        publication={selectedPublication}
-        onViewDetails={() => handleQuickAction('inventory')}
-      />
+        {/* Inventory Quality */}
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={scrollToInventoryQuality}
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Inventory Quality
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-3">
+              <div className={`text-3xl font-bold ${getQualityScoreColor(inventoryQuality.score)}`}>
+                {inventoryQuality.score}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {inventoryQuality.completeItems} of {inventoryQuality.totalItems} items complete
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
@@ -400,6 +417,15 @@ export function DashboardOverview() {
             </Button>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Inventory Quality - Full Width at Bottom */}
+      <div ref={inventoryQualityRef}>
+        <PublicationDataQuality 
+          publication={selectedPublication}
+          onViewDetails={() => handleQuickAction('inventory')}
+          preCalculatedQuality={inventoryQuality}
+        />
       </div>
 
     </div>

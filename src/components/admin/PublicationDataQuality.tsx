@@ -16,7 +16,7 @@ import {
 import { Publication } from '@/integrations/mongodb/schemas';
 import { usePublication } from '@/contexts/PublicationContext';
 
-interface DataQualityIssue {
+export interface DataQualityIssue {
   severity: 'critical' | 'warning' | 'info';
   type: string;
   count: number;
@@ -24,7 +24,7 @@ interface DataQualityIssue {
   items: string[]; // Item names with issues
 }
 
-interface DataQualityScore {
+export interface DataQualityScore {
   score: number; // 0-100
   totalItems: number;
   completeItems: number;
@@ -36,6 +36,7 @@ interface DataQualityScore {
 interface Props {
   publication: Publication | any; // Accept both Publication and PublicationFrontend types
   onViewDetails?: () => void;
+  preCalculatedQuality?: DataQualityScore; // Optional: use pre-calculated quality from parent
 }
 
 /**
@@ -215,8 +216,9 @@ function analyzeInventoryItem(
 
 /**
  * Calculate comprehensive data quality score for a publication
+ * Exported so it can be used by dashboard components
  */
-function calculateDataQuality(publication: Publication | any): DataQualityScore {
+export function calculateDataQuality(publication: Publication | any): DataQualityScore {
   const allIssues: DataQualityIssue[] = [];
   let totalItems = 0;
   let completeItems = 0;
@@ -430,10 +432,12 @@ function calculateDataQuality(publication: Publication | any): DataQualityScore 
 
 export const PublicationDataQuality: React.FC<Props> = ({ 
   publication, 
-  onViewDetails 
+  onViewDetails,
+  preCalculatedQuality 
 }) => {
   const { refreshPublication } = usePublication();
-  const quality = useMemo(() => calculateDataQuality(publication), [publication]);
+  // Use pre-calculated quality if provided (ensures same data as tile), otherwise calculate
+  const quality = preCalculatedQuality || useMemo(() => calculateDataQuality(publication), [publication]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -464,7 +468,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Info className="h-5 w-5" />
-            Data Quality
+            Inventory Quality
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -482,7 +486,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center justify-between">
-          <span>Data Quality Score</span>
+          <span>Inventory Quality Score</span>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -490,7 +494,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="h-8 w-8 p-0"
-              title="Refresh data quality score"
+              title="Refresh inventory quality score"
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
@@ -653,7 +657,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
             className="flex items-center gap-2"
           >
             <ExternalLink className="h-3 w-3" />
-            Data Quality Guide
+            Inventory Quality Guide
           </Button>
         </div>
 
