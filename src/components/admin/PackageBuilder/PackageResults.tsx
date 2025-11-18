@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-  ChevronLeft,
   Download,
   Save,
   Package as PackageIcon,
@@ -18,12 +16,14 @@ import {
   ChevronUp,
   Trash2,
   X,
-  Plus
+  Plus,
+  Edit
 } from 'lucide-react';
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
 import { BuilderResult } from '@/services/packageBuilderService';
 import { LineItemsDetail } from './LineItemsDetail';
 import { calculateItemCost } from '@/utils/inventoryPricing';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
 
 interface PackageResultsProps {
   result: BuilderResult;
@@ -51,6 +51,8 @@ export function PackageResults({
   const [packageName, setPackageName] = useState(initialPackageName);
   const [expandedChannels, setExpandedChannels] = useState<Set<string>>(new Set());
   const [expandedOutlets, setExpandedOutlets] = useState<Set<number>>(new Set());
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempPackageName, setTempPackageName] = useState(initialPackageName);
   
   // Store original publications to track removed items
   const [originalPublications] = useState<HubPackagePublication[]>(() => 
@@ -310,22 +312,123 @@ export function PackageResults({
     return acc;
   }, {} as Record<string, { outlets: Set<string>; units: number; cost: number; items: any[] }>);
 
+  // Handle name edit
+  const handleNameClick = () => {
+    setTempPackageName(packageName);
+    setIsEditingName(true);
+  };
+
+  const handleNameSave = () => {
+    setPackageName(tempPackageName);
+    setIsEditingName(false);
+  };
+
+  const handleNameCancel = () => {
+    setTempPackageName(packageName);
+    setIsEditingName(false);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack}>
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Edit Parameters
-        </Button>
-      </div>
+      {/* Breadcrumbs */}
+      <Breadcrumb
+        rootLabel="Packages"
+        rootIcon={PackageIcon}
+        currentLabel={packageName || 'New Package'}
+        onBackClick={onBack}
+      />
 
       {/* Package Summary Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Package Summary</CardTitle>
+          <CardTitle className="text-base font-sans">Package Summary</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Package Name & Actions */}
+          <div className="flex items-center justify-between mb-6 pb-4 border-b">
+            <div className="flex items-center gap-3 flex-1 group">
+              {isEditingName ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <Input
+                    value={tempPackageName}
+                    onChange={(e) => setTempPackageName(e.target.value)}
+                    className="text-2xl font-medium h-auto py-1 font-sans"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleNameSave();
+                      if (e.key === 'Escape') handleNameCancel();
+                    }}
+                  />
+                  <Button size="sm" onClick={handleNameSave}>
+                    <Save className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={handleNameCancel}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div 
+                  className="flex items-center gap-2 cursor-pointer flex-1"
+                  onClick={handleNameClick}
+                >
+                  <h3 className="text-2xl font-medium font-sans">
+                    {packageName || 'Untitled Package'}
+                  </h3>
+                  <Edit className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onExportCSV}
+                disabled={loading}
+                title="Export CSV"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading}
+                title="Delete Package"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Generate Order
+              </Button>
+              
+              <Button
+                onClick={handleSave}
+                disabled={loading || !packageName.trim()}
+                size="sm"
+                className="bg-black text-white hover:bg-black/90"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
           {/* Compact Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <Card className="p-3 bg-muted/50">
@@ -335,9 +438,9 @@ export function PackageResults({
             </div>
             </Card>
             
-            <Card className="p-3 bg-primary/10 border-primary/30">
-              <div className="text-xs text-primary mb-1">{duration}-Mo Total</div>
-              <div className="text-lg font-bold text-primary">
+            <Card className="p-3">
+              <div className="text-xs text-muted-foreground mb-1">{duration}-Mo Total</div>
+              <div className="text-lg font-bold">
                 ${summary.totalCost.toLocaleString()}
               </div>
             </Card>
@@ -376,21 +479,16 @@ export function PackageResults({
         </CardContent>
       </Card>
 
-      {/* Breakdown Tabs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="channel" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="channel">By Channel</TabsTrigger>
-              <TabsTrigger value="outlet">By Outlet</TabsTrigger>
-              <TabsTrigger value="lineitems">Line Items</TabsTrigger>
-            </TabsList>
+      {/* Tabs */}
+      <Tabs defaultValue="channel" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="channel">Package By Channel</TabsTrigger>
+          <TabsTrigger value="outlet">Packages by Outlet</TabsTrigger>
+          <TabsTrigger value="lineitems">Line Items</TabsTrigger>
+        </TabsList>
 
             {/* By Channel View */}
-            <TabsContent value="channel" className="space-y-4 mt-4">
+            <TabsContent value="channel" className="space-y-4">
               {/* Detailed Channel Breakdown */}
               <div className="space-y-3">
                 {Object.entries(channelBreakdown)
@@ -411,7 +509,7 @@ export function PackageResults({
                     return (
                       <Card key={channel} className="overflow-hidden">
                         <div 
-                          className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                          className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-100 transition-colors"
                           onClick={() => toggleChannelExpand(channel)}
                         >
                           <div className="flex items-center gap-3 flex-1">
@@ -659,7 +757,7 @@ export function PackageResults({
             </TabsContent>
 
             {/* By Outlet View */}
-            <TabsContent value="outlet" className="space-y-4 mt-4">
+            <TabsContent value="outlet" className="space-y-4">
               {/* Detailed Outlet Breakdown */}
               <div className="space-y-3">
               {publications
@@ -690,7 +788,7 @@ export function PackageResults({
                     return (
                       <Card key={pub.publicationId} className="overflow-hidden">
                         <div 
-                          className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                          className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-100 transition-colors"
                           onClick={() => toggleOutletExpand(pub.publicationId)}
                         >
                           <div className="flex items-center gap-3 flex-1">
@@ -925,68 +1023,14 @@ export function PackageResults({
             </TabsContent>
 
             {/* Line Items View with Frequency Controls */}
-            <TabsContent value="lineitems" className="mt-4">
+            <TabsContent value="lineitems">
               <LineItemsDetail
                 publications={publications}
                 originalPublications={originalPublications}
                 onUpdate={onUpdatePublications}
               />
             </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* Save & Export Actions */}
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="package-name">Package Name</Label>
-            <Input
-              id="package-name"
-              placeholder="e.g., Q4 South Side Campaign"
-              value={packageName}
-              onChange={(e) => setPackageName(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              onClick={handleSave}
-              disabled={loading || !packageName.trim()}
-              className="flex-1"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Package
-                </>
-              )}
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={onExportCSV}
-              disabled={loading}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export CSV
-            </Button>
-
-            <Button
-              variant="outline"
-              disabled={loading}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Generate Order
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      </Tabs>
     </div>
   );
 }

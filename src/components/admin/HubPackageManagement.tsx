@@ -846,18 +846,62 @@ export const HubPackageManagement = () => {
             return (
             <Card 
               key={pkg._id?.toString()} 
-              className="group hover:shadow-lg transition-shadow"
+              className="group hover:shadow-lg transition-all cursor-pointer relative"
+              onClick={() => handleEdit(pkg)}
             >
               <CardHeader>
                 <div className="space-y-2">
                   <div className="flex justify-between items-start gap-2">
                     <CardTitle className="text-base">{pkg.basicInfo.name}</CardTitle>
-                    <div className="flex gap-1 flex-shrink-0">
-                      {pkg.availability.isActive ? (
-                        <Badge className="text-xs bg-green-50 text-green-600 border border-green-300">Active</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">Inactive</Badge>
-                      )}
+                    <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(pkg);
+                        }}
+                        title="Edit package"
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDuplicate(pkg);
+                        }}
+                        title="Duplicate"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadPackageCSV(pkg);
+                        }}
+                        title="Download CSV"
+                      >
+                        <Download className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(pkg._id?.toString() || '', pkg.basicInfo.name);
+                        }}
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">{pkg.basicInfo.tagline}</p>
@@ -889,46 +933,13 @@ export const HubPackageManagement = () => {
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-3 border-t">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleEdit(pkg)}
-                      title="Edit package"
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleDuplicate(pkg)}
-                      title="Duplicate"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        // Download CSV for this package
-                        downloadPackageCSV(pkg);
-                      }}
-                      title="Download CSV"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleDelete(pkg._id?.toString() || '', pkg.basicInfo.name)}
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  {/* Active Badge - Bottom Left */}
+                  <div className="flex justify-start pt-2">
+                    {pkg.availability.isActive ? (
+                      <Badge className="text-xs bg-green-50 text-green-600 border border-green-300">Active</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">Inactive</Badge>
+                    )}
                   </div>
                 </div>
               </CardContent>
