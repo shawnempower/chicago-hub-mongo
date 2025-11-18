@@ -1,6 +1,36 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@/config/api';
 
+export interface PricingModelStats {
+  avg: number;
+  median: number;
+  stdDev: number;
+  min: number;
+  max: number;
+  count: number;
+}
+
+export interface PricingModelAnalytics {
+  prices: PricingModelStats;
+  costPerReach: PricingModelStats;
+  audienceSize: PricingModelStats;
+  sampleSize: number;
+  isAlreadyNormalized?: boolean;
+}
+
+export interface ChannelPricingAnalytics {
+  [pricingModel: string]: PricingModelAnalytics;
+}
+
+export interface PricingAnalytics {
+  website: ChannelPricingAnalytics;
+  newsletter: ChannelPricingAnalytics;
+  print: ChannelPricingAnalytics;
+  podcast: ChannelPricingAnalytics;
+  radio: ChannelPricingAnalytics;
+  streaming: ChannelPricingAnalytics;
+}
+
 export interface DashboardStats {
   leads: number;
   publications: number;
@@ -79,6 +109,8 @@ export interface DashboardStats {
     totalInventoryValue: number;
     inventoryCount: number;
   }>;
+  
+  pricingAnalytics?: PricingAnalytics;
 }
 
 export const useDashboardStats = (hubId?: string | null) => {

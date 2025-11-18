@@ -7,6 +7,7 @@ import { LeadManagement } from './LeadManagement';
 import { HubPackageManagement } from './HubPackageManagement';
 import { HubDataQuality } from './HubDataQuality';
 import { HubTeamManagement } from './HubTeamManagement';
+import { HubPricingAnalytics } from './HubPricingAnalytics';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
@@ -879,6 +880,10 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
     
     if (activeTab === 'packages') {
       return <HubPackageManagement />;
+    }
+    
+    if (activeTab === 'pricing') {
+      return <HubPricingAnalytics pricingAnalytics={stats?.pricingAnalytics} loading={loading} />;
     }
     
     if (activeTab === 'team') {

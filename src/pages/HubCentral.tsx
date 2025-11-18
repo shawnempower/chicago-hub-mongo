@@ -5,7 +5,7 @@ import SurveyForm from '@/components/SurveyForm';
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, Package, Megaphone, UserPlus } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Megaphone, UserPlus, DollarSign } from 'lucide-react';
 
 const HubCentral = () => {
   const [isSurveyOpen, setIsSurveyOpen] = useState(false);
@@ -22,6 +22,7 @@ const HubCentral = () => {
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'packages', label: 'Packages', icon: Package },
     { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
+    { id: 'pricing', label: 'Pricing', icon: DollarSign },
     { id: 'team', label: 'Team', icon: UserPlus },
   ];
 

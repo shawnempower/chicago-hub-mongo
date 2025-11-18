@@ -437,12 +437,277 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
       }
     });
     
+    // === PRICING ANALYTICS COLLECTION ===
+    // Data structure: { channel: { pricingModel: { prices: [], costPerReach: [], audienceSizes: [] } } }
+    interface PricingDataPoint {
+      price: number;
+      audienceSize: number;
+    }
+    
+    const pricingAnalyticsData: Record<string, Record<string, PricingDataPoint[]>> = {
+      website: {},
+      newsletter: {},
+      print: {},
+      podcast: {},
+      radio: {},
+      streaming: {}
+    };
+    
+    // Process publications again for detailed analytics
+    publications.forEach((pub: any) => {
+      const channels = pub.distributionChannels || {};
+      
+      // Website
+      if (channels.website?.advertisingOpportunities) {
+        const monthlyVisitors = channels.website.metrics?.monthlyVisitors || 0;
+        channels.website.advertisingOpportunities.forEach((ad: any) => {
+          const pricingModel = ad.pricing?.pricingModel || 'unknown';
+          const monthlyRevenue = calculateRevenue(ad, 'month');
+          
+          if (monthlyRevenue > 0) {
+            if (!pricingAnalyticsData.website[pricingModel]) {
+              pricingAnalyticsData.website[pricingModel] = [];
+            }
+            pricingAnalyticsData.website[pricingModel].push({
+              price: monthlyRevenue,
+              audienceSize: monthlyVisitors
+            });
+          }
+        });
+      }
+      
+      // Newsletters
+      if (channels.newsletters) {
+        channels.newsletters.forEach((nl: any) => {
+          const subscribers = nl.subscribers || 0;
+          if (nl.advertisingOpportunities) {
+            nl.advertisingOpportunities.forEach((ad: any) => {
+              const pricingModel = ad.pricing?.pricingModel || 'unknown';
+              const monthlyRevenue = calculateRevenue(ad, 'month', nl.frequency);
+              
+              if (monthlyRevenue > 0) {
+                if (!pricingAnalyticsData.newsletter[pricingModel]) {
+                  pricingAnalyticsData.newsletter[pricingModel] = [];
+                }
+                pricingAnalyticsData.newsletter[pricingModel].push({
+                  price: monthlyRevenue,
+                  audienceSize: subscribers
+                });
+              }
+            });
+          }
+        });
+      }
+      
+      // Print
+      if (channels.print) {
+        channels.print.forEach((pr: any) => {
+          const circulation = pr.circulation || 0;
+          if (pr.advertisingOpportunities) {
+            pr.advertisingOpportunities.forEach((ad: any) => {
+              const pricingModel = ad.pricing?.pricingModel || 'unknown';
+              const monthlyRevenue = calculateRevenue(ad, 'month', pr.frequency);
+              
+              if (monthlyRevenue > 0) {
+                if (!pricingAnalyticsData.print[pricingModel]) {
+                  pricingAnalyticsData.print[pricingModel] = [];
+                }
+                pricingAnalyticsData.print[pricingModel].push({
+                  price: monthlyRevenue,
+                  audienceSize: circulation
+                });
+              }
+            });
+          }
+        });
+      }
+      
+      // Podcasts
+      if (channels.podcasts) {
+        channels.podcasts.forEach((pc: any) => {
+          const listeners = pc.averageListeners || 0;
+          if (pc.advertisingOpportunities) {
+            pc.advertisingOpportunities.forEach((ad: any) => {
+              const pricingModel = ad.pricing?.pricingModel || 'unknown';
+              const monthlyRevenue = calculateRevenue(ad, 'month', pc.frequency);
+              
+              if (monthlyRevenue > 0) {
+                if (!pricingAnalyticsData.podcast[pricingModel]) {
+                  pricingAnalyticsData.podcast[pricingModel] = [];
+                }
+                pricingAnalyticsData.podcast[pricingModel].push({
+                  price: monthlyRevenue,
+                  audienceSize: listeners
+                });
+              }
+            });
+          }
+        });
+      }
+      
+      // Radio
+      if (channels.radioStations) {
+        channels.radioStations.forEach((rs: any) => {
+          const listeners = rs.listeners || 0;
+          
+          // Process shows
+          if (rs.shows) {
+            rs.shows.forEach((show: any) => {
+              if (show.advertisingOpportunities) {
+                show.advertisingOpportunities.forEach((ad: any) => {
+                  const pricingModel = ad.pricing?.pricingModel || 'unknown';
+                  const monthlyRevenue = calculateRevenue(ad, 'month', show.frequency);
+                  
+                  if (monthlyRevenue > 0) {
+                    if (!pricingAnalyticsData.radio[pricingModel]) {
+                      pricingAnalyticsData.radio[pricingModel] = [];
+                    }
+                    pricingAnalyticsData.radio[pricingModel].push({
+                      price: monthlyRevenue,
+                      audienceSize: listeners
+                    });
+                  }
+                });
+              }
+            });
+          }
+          // Station-level opportunities
+          else if (rs.advertisingOpportunities) {
+            rs.advertisingOpportunities.forEach((ad: any) => {
+              const pricingModel = ad.pricing?.pricingModel || 'unknown';
+              const monthlyRevenue = calculateRevenue(ad, 'month');
+              
+              if (monthlyRevenue > 0) {
+                if (!pricingAnalyticsData.radio[pricingModel]) {
+                  pricingAnalyticsData.radio[pricingModel] = [];
+                }
+                pricingAnalyticsData.radio[pricingModel].push({
+                  price: monthlyRevenue,
+                  audienceSize: listeners
+                });
+              }
+            });
+          }
+        });
+      }
+      
+      // Streaming Video
+      if (channels.streamingVideo) {
+        channels.streamingVideo.forEach((sv: any) => {
+          const subscribers = sv.subscribers || sv.averageViews || 0;
+          if (sv.advertisingOpportunities) {
+            sv.advertisingOpportunities.forEach((ad: any) => {
+              // Add metrics if needed for CPV calculations
+              let adWithMetrics = ad;
+              if (!ad.performanceMetrics?.impressionsPerMonth && sv.averageViews && sv.frequency) {
+                const occurrencesPerMonth = inferOccurrencesFromFrequency(sv.frequency);
+                const spotsPerShow = ad.spotsPerShow || 1;
+                adWithMetrics = {
+                  ...ad,
+                  performanceMetrics: {
+                    impressionsPerMonth: sv.averageViews * occurrencesPerMonth * spotsPerShow,
+                    occurrencesPerMonth: occurrencesPerMonth * spotsPerShow,
+                    audienceSize: subscribers
+                  }
+                };
+              }
+              
+              const pricingModel = ad.pricing?.pricingModel || 'unknown';
+              const monthlyRevenue = calculateRevenue(adWithMetrics, 'month', sv.frequency);
+              
+              if (monthlyRevenue > 0) {
+                if (!pricingAnalyticsData.streaming[pricingModel]) {
+                  pricingAnalyticsData.streaming[pricingModel] = [];
+                }
+                pricingAnalyticsData.streaming[pricingModel].push({
+                  price: monthlyRevenue,
+                  audienceSize: subscribers
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+    
     // Helper to calculate totals
     const calculateTotal = (prices: number[]) => 
       prices.length > 0 ? Math.round(prices.reduce((sum, price) => sum + price, 0)) : 0;
     
     const calculateAverage = (prices: number[]) => 
       prices.length > 0 ? Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length) : 0;
+    
+    // Statistical helper functions
+    const calculateMedian = (values: number[]): number => {
+      if (values.length === 0) return 0;
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0 
+        ? (sorted[mid - 1] + sorted[mid]) / 2 
+        : sorted[mid];
+    };
+    
+    const calculateStdDev = (values: number[]): number => {
+      if (values.length === 0) return 0;
+      const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
+      const squaredDiffs = values.map(val => Math.pow(val - avg, 2));
+      const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / values.length;
+      return Math.sqrt(variance);
+    };
+    
+    const calculateStats = (values: number[]) => {
+      if (values.length === 0) {
+        return { avg: 0, median: 0, stdDev: 0, min: 0, max: 0, count: 0 };
+      }
+      return {
+        avg: values.reduce((sum, val) => sum + val, 0) / values.length,
+        median: calculateMedian(values),
+        stdDev: calculateStdDev(values),
+        min: Math.min(...values),
+        max: Math.max(...values),
+        count: values.length
+      };
+    };
+    
+    // Build pricing analytics from collected data
+    const pricingAnalytics: Record<string, any> = {};
+    
+    // Pricing models that are already normalized (don't need audience division)
+    const alreadyNormalizedModels = ['cpm', 'cpv', 'cpd', 'cpc'];
+    
+    Object.keys(pricingAnalyticsData).forEach(channel => {
+      pricingAnalytics[channel] = {};
+      
+      Object.keys(pricingAnalyticsData[channel]).forEach(model => {
+        const dataPoints = pricingAnalyticsData[channel][model];
+        
+        if (dataPoints.length > 0) {
+          const prices = dataPoints.map(dp => dp.price);
+          
+          // Calculate cost-per-reach only for models that aren't already normalized
+          // CPM/CPV/CPD models already express cost per impression/view
+          let costPerReachValues: number[] = [];
+          if (!alreadyNormalizedModels.includes(model.toLowerCase())) {
+            costPerReachValues = dataPoints
+              .filter(dp => dp.audienceSize > 0)
+              .map(dp => (dp.price / dp.audienceSize) * 1000); // Cost per 1000 reach
+          }
+          
+          // Calculate audience size statistics
+          const audienceSizes = dataPoints
+            .filter(dp => dp.audienceSize > 0)
+            .map(dp => dp.audienceSize);
+          
+          pricingAnalytics[channel][model] = {
+            prices: calculateStats(prices),
+            costPerReach: calculateStats(costPerReachValues),
+            audienceSize: calculateStats(audienceSizes),
+            sampleSize: dataPoints.length,
+            isAlreadyNormalized: alreadyNormalizedModels.includes(model.toLowerCase())
+          };
+        }
+      });
+    });
     
     // Standard pricing insights (Default Potential)
     const pricingInsights = {
@@ -493,7 +758,8 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
       contentTypes,
       audienceMetrics,
       pricingInsights,
-      hubPricingInsights
+      hubPricingInsights,
+      pricingAnalytics
     };
     
       res.json(stats);

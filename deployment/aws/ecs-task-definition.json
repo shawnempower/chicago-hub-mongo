@@ -65,6 +65,22 @@
           "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/mailgun-domain"
         },
         {
+          "name": "MAILGUN_FROM_EMAIL",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/mailgun-from-email"
+        },
+        {
+          "name": "MAILGUN_FROM_NAME",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/mailgun-from-name"
+        },
+        {
+          "name": "MAILGUN_BASE_URL",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/mailgun-base-url"
+        },
+        {
+          "name": "ADMIN_EMAIL",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/admin-email"
+        },
+        {
           "name": "STOREFRONT_DOMAIN",
           "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/storefront-domain"
         },
