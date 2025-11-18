@@ -74,14 +74,12 @@ export const LeadNotesTimeline = ({
     try {
       setLoading(true);
       const response = await leadsApi.getNotes(leadId);
-      setNotes(response.notes);
+      setNotes(response.notes || []);
     } catch (error) {
       console.error('Error fetching notes:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch notes",
-        variant: "destructive",
-      });
+      // Set empty notes array instead of showing error toast
+      // This allows the component to render gracefully even if notes can't be fetched
+      setNotes([]);
     } finally {
       setLoading(false);
     }
@@ -239,9 +237,6 @@ export const LeadNotesTimeline = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium text-sm">{note.authorName}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {note.noteType.replace('_', ' ')}
-                      </Badge>
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })}
                       </span>

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { leadsApi, type Lead, type LeadFilters, type LeadSource, type LeadStatus } from '@/api/leads';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,31 +14,23 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useHubContext } from '@/contexts/HubContext';
 import { formatDistanceToNow } from 'date-fns';
 import {
-  Archive,
-  ArchiveRestore,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Calendar,
   Check,
   ChevronDown,
   Database,
-  Globe,
-  Mail,
   MoreHorizontal,
-  Phone,
-  User,
   X,
 } from 'lucide-react';
-import { LeadNotesTimeline } from './LeadNotesTimeline';
 import { API_BASE_URL } from '@/config/api';
 import { getPublications } from '@/api/publications';
 import type { PublicationFrontend as Publication } from '@/types/publication';
+import { LeadDetail } from './LeadDetail';
 
 type SortKey = 'businessName' | 'contactName' | 'budgetRange' | 'status' | 'createdAt';
 
@@ -50,10 +42,7 @@ export const LeadManagement = () => {
   const [showArchived, setShowArchived] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [seeding, setSeeding] = useState(false);
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(() => new Set());
-  const [notesDrafts, setNotesDrafts] = useState<Record<string, string>>({});
-  const [notePanelModes, setNotePanelModes] = useState<Record<string, 'add' | 'timeline'>>({});
-  const [timelineRefreshKeys, setTimelineRefreshKeys] = useState<Record<string, number>>({});
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [statusFilterDraft, setStatusFilterDraft] = useState<string[]>([]);
@@ -96,11 +85,7 @@ export const LeadManagement = () => {
     if (leadId && leads.length > 0) {
       const match = leads.find(lead => lead._id === leadId);
       if (match?._id) {
-        setExpandedRows(prev => new Set(prev).add(match._id!));
-        setNotesDrafts(current => ({
-          ...current,
-          [match._id!]: current[match._id!] ?? (match as any).notes ?? '',
-        }));
+        setSelectedLeadId(match._id);
         searchParams.delete('leadId');
         setSearchParams(searchParams);
       }
@@ -270,87 +255,6 @@ export const LeadManagement = () => {
     }
   };
 
-  const archiveLead = async (leadId: string) => {
-    try {
-      await leadsApi.archive(leadId);
-      await fetchLeads();
-
-      toast({
-        title: 'Lead Archived',
-        description: 'Lead has been archived successfully',
-      });
-    } catch (error) {
-      console.error('Error archiving lead:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to archive lead',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const unarchiveLead = async (leadId: string) => {
-    try {
-      await leadsApi.unarchive(leadId);
-      await fetchLeads();
-
-      toast({
-        title: 'Lead Restored',
-        description: 'Lead has been restored successfully',
-      });
-    } catch (error) {
-      console.error('Error restoring lead:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to restore lead',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const updateLeadNotes = async (leadId: string) => {
-    const note = (notesDrafts[leadId] ?? '').trim();
-
-    if (!note) {
-      toast({
-        title: 'Note Required',
-        description: 'Please enter a note before saving.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      await leadsApi.addNote(leadId, { noteContent: note, noteType: 'note' });
-
-      setNotesDrafts(prev => ({
-        ...prev,
-        [leadId]: '',
-      }));
-
-      setTimelineRefreshKeys(prev => ({
-        ...prev,
-        [leadId]: (prev[leadId] ?? 0) + 1,
-      }));
-      setNotePanelModes(prev => ({
-        ...prev,
-        [leadId]: 'timeline',
-      }));
-
-      toast({
-        title: 'Note Saved',
-        description: 'Your note was added to the timeline.',
-      });
-    } catch (error) {
-      console.error('Error adding lead note:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save the note',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const getStatusStyles = (status?: LeadStatus | null) => {
     switch (status) {
       case 'new':
@@ -404,30 +308,6 @@ export const LeadManagement = () => {
     if (!publicationId) return 'Hub-Level Lead';
     const pub = publications.find(p => p._id?.toString() === publicationId);
     return pub?.basicInfo?.publicationName || 'Unknown Publication';
-  };
-
-  const toggleRow = (lead: Lead) => {
-    if (!lead._id) return;
-
-    setExpandedRows(prev => {
-      const next = new Set(prev);
-
-      if (next.has(lead._id!)) {
-        next.delete(lead._id!);
-      } else {
-        next.add(lead._id!);
-        setNotesDrafts(current => ({
-          ...current,
-          [lead._id!]: current[lead._id!] ?? '',
-        }));
-        setNotePanelModes(current => ({
-          ...current,
-          [lead._id!]: current[lead._id!] ?? 'timeline',
-        }));
-      }
-
-      return next;
-    });
   };
 
   const getStatusLabel = (status?: LeadStatus | null) => {
@@ -627,6 +507,11 @@ export const LeadManagement = () => {
 
   if (loading) {
     return <div>Loading leads...</div>;
+  }
+
+  // Show lead detail page if a lead is selected
+  if (selectedLeadId) {
+    return <LeadDetail leadId={selectedLeadId} onBack={() => setSelectedLeadId(null)} />;
   }
 
   return (
@@ -907,33 +792,17 @@ export const LeadManagement = () => {
               <TableBody>
                 {filteredLeads.map(lead => {
                   const id = lead._id!;
-                  const isExpanded = expandedRows.has(id);
                   const statusStyles = getStatusStyles(lead.status);
                   const statusLabel = getStatusLabel(lead.status);
-                  const currentNote = notesDrafts[id] ?? '';
-                  const timelineKey = timelineRefreshKeys[id] ?? 0;
 
                   return (
-                    <Fragment key={id}>
                       <TableRow
-                        className="cursor-pointer"
-                        data-state={isExpanded ? 'selected' : undefined}
-                        onClick={() => toggleRow(lead)}
+                        key={id}
+                        className="cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => setSelectedLeadId(id)}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 shrink-0"
-                              onClick={event => {
-                                event.stopPropagation();
-                                toggleRow(lead);
-                              }}
-                              aria-label={isExpanded ? 'Collapse lead details' : 'Expand lead details'}
-                            >
-                              <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                            </Button>
                             <div>
                               <p className="text-sm font-medium">{lead.businessName}</p>
                               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -991,214 +860,6 @@ export const LeadManagement = () => {
                           </div>
                         </TableCell>
                       </TableRow>
-                      {isExpanded && (
-                        <TableRow className="bg-muted/40">
-                          <TableCell colSpan={5}>
-                              <div className="space-y-6 p-6">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Source</span>
-                                  <Badge variant="outline" className={getSourceBadgeColor(lead.leadSource)}>
-                                    {getSourceLabel(lead.leadSource)}
-                                  </Badge>
-                                  {lead.archivedAt && (
-                                    <Badge variant="outline" className="border-dashed">
-                                      Archived
-                                    </Badge>
-                                  )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {lead.archivedAt ? (
-                                      <Button size="sm" variant="outline" onClick={() => unarchiveLead(id)}>
-                                        <ArchiveRestore className="mr-2 h-4 w-4" />
-                                        Restore
-                                      </Button>
-                                    ) : (
-                                      <Button size="sm" variant="outline" onClick={() => archiveLead(id)}>
-                                        <Archive className="mr-2 h-4 w-4" />
-                                        Archive
-                                      </Button>
-                                    )}
-                                  </div>
-                              </div>
-
-                              <div className="grid gap-6 md:grid-cols-2">
-                                <div className="grid gap-4 grid-rows-[auto_auto]">
-                                  <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                      Marketing Goals
-                                    </p>
-                                    <div className="mt-3">
-                                      {lead.marketingGoals && lead.marketingGoals.length > 0 ? (
-                                        <div className="flex flex-wrap gap-2">
-                                          {lead.marketingGoals.map((goal, index) => (
-                                            <Badge key={index} variant="outline" className="rounded-full px-3 py-1 text-xs">
-                                              {goal}
-                                            </Badge>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <p className="text-sm text-muted-foreground">No marketing goals provided.</p>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                      Timeline
-                                    </p>
-                                    <div className="mt-3 flex items-center gap-3 text-sm">
-                                      <Calendar className="h-4 w-4 text-slate-400" />
-                                      <span>{lead.timeline ?? 'No timeline provided.'}</span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="grid gap-4 grid-rows-[auto_auto]">
-                                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 shadow-sm">
-                                    <div className="flex items-start gap-3">
-                                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-600">
-                                        <User className="h-5 w-5" />
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-semibold text-slate-900">{lead.contactName}</p>
-                                        <p className="text-xs text-slate-500">Primary Contact</p>
-                                      </div>
-                                    </div>
-                                    <div className="mt-5 space-y-3 text-sm">
-                                      <div className="flex items-start gap-3">
-                                        <Mail className="mt-0.5 h-4 w-4 text-slate-400" />
-                                        <a
-                                          href={`mailto:${lead.contactEmail}`}
-                                          className="break-words text-primary hover:underline"
-                                          onClick={event => event.stopPropagation()}
-                                        >
-                                          {lead.contactEmail}
-                                        </a>
-                                      </div>
-                                      {lead.contactPhone && (
-                                        <div className="flex items-start gap-3">
-                                          <Phone className="mt-0.5 h-4 w-4 text-slate-400" />
-                                          <a
-                                            href={`tel:${lead.contactPhone}`}
-                                            className="text-slate-900 hover:text-primary"
-                                            onClick={event => event.stopPropagation()}
-                                          >
-                                            {lead.contactPhone}
-                                          </a>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                      Website
-                                    </p>
-                                    <div className="mt-3 flex items-start gap-3 text-sm">
-                                      <Globe className="mt-0.5 h-4 w-4 text-slate-400" />
-                                      {lead.websiteUrl ? (
-                                        <a
-                                          href={lead.websiteUrl}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="text-primary hover:underline"
-                                          onClick={event => event.stopPropagation()}
-                                        >
-                                          {lead.websiteUrl}
-                                        </a>
-                                      ) : (
-                                        <span className="text-muted-foreground">No website provided.</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-                                <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-                                  <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-slate-100 p-1">
-                                    <button
-                                      type="button"
-                                      onClick={event => {
-                                        event.stopPropagation();
-                                        setNotePanelModes(prev => ({
-                                          ...prev,
-                                          [id]: 'add',
-                                        }));
-                                      }}
-                                      className={`px-3 py-1 text-xs transition-colors ${
-                                        (notePanelModes[id] ?? 'timeline') === 'add'
-                                          ? 'rounded-md bg-white text-slate-900 shadow'
-                                          : 'text-slate-600'
-                                      }`}
-                                    >
-                                      Add Note
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={event => {
-                                        event.stopPropagation();
-                                        setNotePanelModes(prev => ({
-                                          ...prev,
-                                          [id]: 'timeline',
-                                        }));
-                                      }}
-                                      className={`px-3 py-1 text-xs transition-colors ${
-                                        (notePanelModes[id] ?? 'timeline') === 'timeline'
-                                          ? 'rounded-md bg-white text-slate-900 shadow'
-                                          : 'text-slate-600'
-                                      }`}
-                                    >
-                                      Activity
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {(notePanelModes[id] ?? 'timeline') === 'add' ? (
-                                  <div className="mt-4 space-y-3">
-                                    <Textarea
-                                      value={currentNote}
-                                      disabled={Boolean(lead.archivedAt)}
-                                      onClick={event => event.stopPropagation()}
-                                      onChange={event => {
-                                        event.stopPropagation();
-                                        setNotesDrafts(prev => ({
-                                          ...prev,
-                                          [id]: event.target.value,
-                                        }));
-                                      }}
-                                      placeholder="Add a note about this lead..."
-                                      className="min-h-[140px]"
-                                    />
-                                    <div className="flex justify-end">
-                                      <Button
-                                        size="sm"
-                                        disabled={Boolean(lead.archivedAt) || !currentNote.trim()}
-                                        onClick={event => {
-                                          event.stopPropagation();
-                                          updateLeadNotes(id);
-                                        }}
-                                      >
-                                        Save Note
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="mt-4">
-                                    <LeadNotesTimeline
-                                      key={`${id}-${timelineKey}`}
-                                      leadId={id}
-                                      showComposer={false}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </Fragment>
                   );
                 })}
               </TableBody>
