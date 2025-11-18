@@ -133,8 +133,7 @@ export function CampaignAnalysisStep({
     totalStandardPrice: 0, 
     packageDiscount: 0,
     subtotal: 0,
-    hubDiscount: 0,
-    finalPrice: 0
+    hubDiscount: 0
   };
   const estimatedPerformance = result.estimatedPerformance || { 
     reach: { min: 0, max: 0, description: '' }, 

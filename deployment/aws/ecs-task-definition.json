@@ -91,6 +91,10 @@
         {
           "name": "STOREFRONT_AWS_REGION",
           "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/storefront-aws-region"
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/anthropic-api-key"
         }
       ],
       "logConfiguration": {

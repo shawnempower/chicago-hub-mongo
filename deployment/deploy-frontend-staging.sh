@@ -49,6 +49,8 @@ if [ $? -ne 0 ]; then
 fi
 
 cd ..
+# Update ZIP_FILE path to be relative to root directory
+ZIP_FILE="staging-frontend-${TIMESTAMP}.zip"
 echo "✅ Package created: $(basename $ZIP_FILE)"
 
 # Step 3: Create deployment in Amplify
