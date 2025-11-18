@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -12,10 +12,11 @@ import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
 import { useHubPublications } from '@/hooks/useHubs';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
-import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle, Download, Megaphone } from 'lucide-react';
+import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle, Download, Megaphone, CheckCircle2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { exportHubInventoryToCSV } from '@/utils/hubInventoryExport';
 import { toast } from '@/components/ui/use-toast';
+import { calculateDataQuality } from './PublicationDataQuality';
 
 interface HubCentralDashboardProps {
   activeTab: string;
@@ -27,6 +28,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
   const { stats, loading, error } = useDashboardStats(selectedHubId);
   const { publications, loading: loadingPubs } = useHubPublications(selectedHubId);
   const [pricingTimeframe, setPricingTimeframe] = useState<'day' | 'month' | 'quarter'>('month');
+  const inventoryQualityRef = useRef<HTMLDivElement>(null);
 
   // Helper to convert monthly values to selected timeframe
   const convertToTimeframe = (monthlyValue: number): number => {
@@ -52,6 +54,37 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
       default:
         return '/mo';
     }
+  };
+
+  const scrollToInventoryQuality = () => {
+    inventoryQualityRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Calculate inventory quality score across all hub publications
+  // Uses the same calculation logic as the detailed HubDataQuality component
+  const calculateHubInventoryQuality = useMemo(() => {
+    if (!publications || publications.length === 0) {
+      return { score: 0, totalItems: 0, completeItems: 0 };
+    }
+
+    let totalItems = 0;
+    let completeItems = 0;
+
+    // Use calculateDataQuality for each publication and aggregate the results
+    publications.forEach((publication: any) => {
+      const quality = calculateDataQuality(publication);
+      totalItems += quality.totalItems;
+      completeItems += quality.completeItems;
+    });
+
+    const score = totalItems > 0 ? Math.round((completeItems / totalItems) * 100) : 0;
+    return { score, totalItems, completeItems };
+  }, [publications]);
+
+  const getQualityScoreColor = (score: number) => {
+    if (score >= 90) return 'text-green-600';
+    if (score >= 70) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   // Handle CSV export
@@ -187,21 +220,6 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
-                <Target className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-sm font-medium">Ad Inventory</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {loading ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  ) : (
-                    stats?.adInventory ?? 0
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
                 <Bot className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-sm font-medium">Conversations</CardTitle>
               </CardHeader>
@@ -215,21 +233,32 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          {/* Hub Data Quality Score */}
-          {loadingPubs ? (
-            <Card>
-              <CardContent className="flex items-center justify-center h-32">
-                <Loader2 className="h-8 w-8 animate-spin" />
+            <Card 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={scrollToInventoryQuality}
+            >
+              <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+                <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Inventory Quality</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-baseline gap-3">
+                  <div className={`text-2xl font-bold ${getQualityScoreColor(calculateHubInventoryQuality.score)}`}>
+                    {loadingPubs ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      `${calculateHubInventoryQuality.score}%`
+                    )}
+                  </div>
+                  {!loadingPubs && (
+                    <p className="text-xs text-muted-foreground">
+                      {calculateHubInventoryQuality.completeItems} of {calculateHubInventoryQuality.totalItems} items complete
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
-          ) : (
-            <HubDataQuality 
-              publications={publications} 
-              hubName="Chicago Hub"
-            />
-          )}
+          </div>
 
           {/* Marketplace Insights Section */}
           <div className="grid gap-6 md:grid-cols-2">
@@ -672,6 +701,81 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
             </Card>
           </div>
 
+          {/* Quick Actions & Recent Activity */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-sans text-base">
+                  <Package className="h-5 w-5" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start h-auto p-4"
+                  onClick={() => onTabChange('packages')}
+                >
+                  <Package className="h-4 w-4 mr-3" />
+                  <div className="text-left">
+                    <div className="font-medium">Create Package</div>
+                    <div className="text-xs text-muted-foreground">Add new advertising package</div>
+                  </div>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start h-auto p-4"
+                  onClick={() => onTabChange('leads')}
+                >
+                  <Users className="h-4 w-4 mr-3" />
+                  <div className="text-left">
+                    <div className="font-medium">Review Leads</div>
+                    <div className="text-xs text-muted-foreground">Check new inquiries</div>
+                  </div>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-sans text-base">
+                  <Users className="h-5 w-5" />
+                  Recent Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">New lead from Chicago Bakery</p>
+                      <p className="text-xs text-muted-foreground">2 minutes ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Package updated: Radio Premium</p>
+                      <p className="text-xs text-muted-foreground">1 hour ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">New outlet added: WCPT 820</p>
+                      <p className="text-xs text-muted-foreground">3 hours ago</p>
+                    </div>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" className="w-full mt-4">
+                  View All Activity
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Geographic & Content Distribution */}
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
@@ -749,78 +853,21 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
             </Card>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-sans text-base">
-                  <Users className="h-5 w-5" />
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">New lead from Chicago Bakery</p>
-                      <p className="text-xs text-muted-foreground">2 minutes ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Package updated: Radio Premium</p>
-                      <p className="text-xs text-muted-foreground">1 hour ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">New outlet added: WCPT 820</p>
-                      <p className="text-xs text-muted-foreground">3 hours ago</p>
-                    </div>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="w-full mt-4">
-                  View All Activity
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-sans text-base">
-                  <Package className="h-5 w-5" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start h-auto p-4"
-                  onClick={() => onTabChange('packages')}
-                >
-                  <Package className="h-4 w-4 mr-3" />
-                  <div className="text-left">
-                    <div className="font-medium">Create Package</div>
-                    <div className="text-xs text-muted-foreground">Add new advertising package</div>
-                  </div>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start h-auto p-4"
-                  onClick={() => onTabChange('leads')}
-                >
-                  <Users className="h-4 w-4 mr-3" />
-                  <div className="text-left">
-                    <div className="font-medium">Review Leads</div>
-                    <div className="text-xs text-muted-foreground">Check new inquiries</div>
-                  </div>
-                </Button>
-              </CardContent>
-            </Card>
+          {/* Inventory Quality - Full Width at Bottom */}
+          <div ref={inventoryQualityRef}>
+            {loadingPubs ? (
+              <Card>
+                <CardContent className="flex items-center justify-center h-32">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </CardContent>
+              </Card>
+            ) : (
+              <HubDataQuality 
+                publications={publications} 
+                hubName={selectedHub?.basicInfo.name || "Hub"}
+                preCalculatedQuality={calculateHubInventoryQuality}
+              />
+            )}
           </div>
         </div>
       );

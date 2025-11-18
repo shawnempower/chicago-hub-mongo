@@ -12,24 +12,59 @@ interface DataQualityIssue {
   items: string[]; // Format: "Publication Name - [Channel] Item Name"
 }
 
+interface HubDataQualityStats {
+  score: number;
+  totalItems: number;
+  completeItems: number;
+  issues?: any[];
+  stats?: {
+    totalItems: number;
+    totalIssues: number;
+    criticalCount: number;
+    highCount: number;
+    warningCount: number;
+    publicationCount: number;
+  };
+}
+
 interface HubDataQualityProps {
   publications: any[]; // Array of publications in the hub
   hubName?: string;
+  preCalculatedQuality?: HubDataQualityStats; // Optional: use pre-calculated quality from parent
 }
 
 /**
  * HubDataQuality Component
  * 
- * Aggregates data quality across all publications in a hub and displays:
- * - Overall hub data quality score (0-100%)
+ * Aggregates inventory quality across all publications in a hub and displays:
+ * - Overall hub inventory quality score (0-100%)
  * - Breakdown of issues by severity
  * - Publication-specific issues
  * - Expandable details for each issue type
  */
-export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hubName = "Hub" }) => {
+export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hubName = "Hub", preCalculatedQuality }) => {
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null);
 
-  const { score, issues, stats } = useMemo(() => {
+  // If pre-calculated quality is provided, use it for the score
+  const calculatedData = useMemo(() => {
+    // If we have pre-calculated data with the simple format, use it
+    if (preCalculatedQuality && !preCalculatedQuality.issues) {
+      // Calculate the full detailed issues for the detailed view
+      const fullCalculation = calculateFullHubQuality();
+      return {
+        score: preCalculatedQuality.score,
+        issues: fullCalculation.issues,
+        stats: {
+          ...fullCalculation.stats,
+          totalItems: preCalculatedQuality.totalItems,
+        }
+      };
+    }
+    // Otherwise calculate everything
+    return calculateFullHubQuality();
+  }, [publications, preCalculatedQuality]);
+
+  function calculateFullHubQuality() {
     const allIssues: DataQualityIssue[] = [];
     let totalItems = 0;
     let totalIssues = 0;
@@ -370,7 +405,9 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
         publicationCount: publications.length
       }
     };
-  }, [publications]);
+  }
+
+  const { score, issues, stats } = calculatedData;
 
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
@@ -409,7 +446,7 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
     <Card className="border-2">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold">Data Quality Score</CardTitle>
+          <CardTitle className="text-base font-semibold">Inventory Quality Score</CardTitle>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
               {stats.publicationCount} publication{stats.publicationCount !== 1 ? 's' : ''}
