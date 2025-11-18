@@ -195,7 +195,11 @@ function normalizePricingToDaily(pricing: StandardPricing, channelFrequency?: st
   if (!flatRate) return 0;
 
   switch (pricingModel) {
-    case 'monthly':
+    case 'per_month':
+    case 'monthly': // Alias for backward compatibility
+      // Standard monthly pricing (no frequency)
+      return flatRate / DAYS_PER_MONTH;
+
     case 'flat':
       // For flat rates with frequency (e.g., events), flatRate = price per occurrence
       // Monthly revenue = flatRate * occurrences per month
@@ -205,7 +209,7 @@ function normalizePricingToDaily(pricing: StandardPricing, channelFrequency?: st
         // Example: Annual event at $10,000/event = ($10,000 * 0.083 events/month) / 30 days = $27.77/day
         return (flatRate * occurrencesPerMonth) / DAYS_PER_MONTH;
       }
-      // Default: assume flatRate is already monthly
+      // Fallback: assume flatRate is already monthly
       return flatRate / DAYS_PER_MONTH;
 
     case 'per_week':
@@ -275,7 +279,8 @@ export function calculateRevenue(
       return (pricing.flatRate || 0) * totalClicks;
 
     // Time-based
-    case 'monthly':
+    case 'per_month':
+    case 'monthly': // Alias for backward compatibility
     case 'flat':
     case 'per_week':
     case 'per_day':
@@ -334,6 +339,7 @@ export function formatPricingModel(model?: string): string {
   const modelMap: Record<string, string> = {
     'flat': '/occurrence',
     'flat_rate': '/occurrence',
+    'per_month': '/month',
     'per_week': '/week',
     'per_day': '/day',
     'cpm': '/1000 impressions',
@@ -346,7 +352,7 @@ export function formatPricingModel(model?: string): string {
     'cpd': '/1000 downloads',
     'per_post': '/post',
     'per_story': '/story',
-    'monthly': '/month',
+    'monthly': '/month', // Alias for backward compatibility
     'cpv': '/1000 views',
     'per_video': '/video',
     'weekly': '/week',

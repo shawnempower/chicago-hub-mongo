@@ -85,19 +85,24 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
         // Hub pricing - calculate for each hub
         ad.hubPricing?.forEach((hub: any) => {
-          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
-          const hubRevenue = calculateRevenue(hubAd, 'month');
+          // Handle both single pricing object and array of pricing tiers
+          const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
-          if (hubRevenue > 0) {
-            pricing.push({
-              label: hub.hubName || hub.hubId,
-              hubPrice: hubRevenue,
-              pricingModel: hub.pricing?.pricingModel,
-              discount: hub.discount,
-              available: hub.available,
-              minimumCommitment: hub.minimumCommitment,
-            });
-          }
+          pricingArray.forEach((pricingTier: any) => {
+            const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
+            const hubRevenue = calculateRevenue(hubAd, 'month');
+            
+            if (hubRevenue > 0) {
+              pricing.push({
+                label: hub.hubName || hub.hubId,
+                hubPrice: hubRevenue,
+                pricingModel: pricingTier?.pricingModel,
+                discount: hub.discount,
+                available: hub.available,
+                minimumCommitment: hub.minimumCommitment,
+              });
+            }
+          });
         });
 
         if (pricing.length > 0) {
@@ -134,19 +139,24 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
         }
 
         ad.hubPricing?.forEach((hub: any) => {
-          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
-          const hubRevenue = calculateRevenue(hubAd, 'month', newsletter.frequency);
+          // Handle both single pricing object and array of pricing tiers
+          const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
-          if (hubRevenue > 0) {
-            pricing.push({
-              label: hub.hubName || hub.hubId,
-              hubPrice: hubRevenue,
-              pricingModel: hub.pricing?.pricingModel,
-              discount: hub.discount,
-              available: hub.available,
-              minimumCommitment: hub.minimumCommitment,
-            });
-          }
+          pricingArray.forEach((pricingTier: any) => {
+            const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
+            const hubRevenue = calculateRevenue(hubAd, 'month', newsletter.frequency);
+            
+            if (hubRevenue > 0) {
+              pricing.push({
+                label: hub.hubName || hub.hubId,
+                hubPrice: hubRevenue,
+                pricingModel: pricingTier?.pricingModel,
+                discount: hub.discount,
+                available: hub.available,
+                minimumCommitment: hub.minimumCommitment,
+              });
+            }
+          });
         });
 
         if (pricing.length > 0) {
@@ -204,25 +214,30 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
           }
 
           ad.hubPricing?.forEach((hub: any) => {
-            // Hub pricing may also have frequency inside pricing object
-            const hubFrequency = hub.pricing?.frequency;
-            const hubLabel = hubFrequency 
-              ? `${hub.hubName || hub.hubId} (${hubFrequency})`
-              : hub.hubName || hub.hubId;
+            // Handle both single pricing object and array of pricing tiers
+            const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
             
-            const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
-            const hubRevenue = calculateRevenue(hubAd, 'month', print.frequency);
-            
-            if (hubRevenue > 0) {
-              pricing.push({
-                label: hubLabel,
-                hubPrice: hubRevenue,
-                pricingModel: hub.pricing?.pricingModel,
-                discount: hub.discount,
-                available: hub.available,
-                minimumCommitment: hub.minimumCommitment,
-              });
-            }
+            pricingArray.forEach((pricingTier: any) => {
+              // Hub pricing may also have frequency inside pricing object
+              const hubFrequency = pricingTier?.frequency;
+              const hubLabel = hubFrequency 
+                ? `${hub.hubName || hub.hubId} (${hubFrequency})`
+                : hub.hubName || hub.hubId;
+              
+              const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
+              const hubRevenue = calculateRevenue(hubAd, 'month', print.frequency);
+              
+              if (hubRevenue > 0) {
+                pricing.push({
+                  label: hubLabel,
+                  hubPrice: hubRevenue,
+                  pricingModel: pricingTier?.pricingModel,
+                  discount: hub.discount,
+                  available: hub.available,
+                  minimumCommitment: hub.minimumCommitment,
+                });
+              }
+            });
           });
 
           if (pricing.length > 0) {
@@ -259,19 +274,24 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
         }
 
         ad.hubPricing?.forEach((hub: any) => {
-          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
-          const hubRevenue = calculateRevenue(hubAd, 'month');
+          // Handle both single pricing object and array of pricing tiers
+          const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
-          if (hubRevenue > 0) {
-            pricing.push({
-              label: hub.hubName || hub.hubId,
-              hubPrice: hubRevenue,
-              pricingModel: hub.pricing?.pricingModel,
-              discount: hub.discount,
-              available: hub.available,
-              minimumCommitment: hub.minimumCommitment,
-            });
-          }
+          pricingArray.forEach((pricingTier: any) => {
+            const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
+            const hubRevenue = calculateRevenue(hubAd, 'month');
+            
+            if (hubRevenue > 0) {
+              pricing.push({
+                label: hub.hubName || hub.hubId,
+                hubPrice: hubRevenue,
+                pricingModel: pricingTier?.pricingModel,
+                discount: hub.discount,
+                available: hub.available,
+                minimumCommitment: hub.minimumCommitment,
+              });
+            }
+          });
         });
 
         if (pricing.length > 0) {
@@ -306,19 +326,24 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
         }
 
         ad.hubPricing?.forEach((hub: any) => {
-          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
-          const hubRevenue = calculateRevenue(hubAd, 'month', event.frequency);
+          // Handle both single pricing object and array of pricing tiers
+          const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
-          if (hubRevenue > 0) {
-            pricing.push({
-              label: hub.hubName || hub.hubId,
-              hubPrice: hubRevenue,
-              pricingModel: hub.pricing?.pricingModel,
-              discount: hub.discount,
-              available: hub.available,
-              minimumCommitment: hub.minimumCommitment,
-            });
-          }
+          pricingArray.forEach((pricingTier: any) => {
+            const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
+            const hubRevenue = calculateRevenue(hubAd, 'month', event.frequency);
+            
+            if (hubRevenue > 0) {
+              pricing.push({
+                label: hub.hubName || hub.hubId,
+                hubPrice: hubRevenue,
+                pricingModel: pricingTier?.pricingModel,
+                discount: hub.discount,
+                available: hub.available,
+                minimumCommitment: hub.minimumCommitment,
+              });
+            }
+          });
         });
 
         if (pricing.length > 0) {
@@ -353,19 +378,24 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
         }
 
         ad.hubPricing?.forEach((hub: any) => {
-          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
-          const hubRevenue = calculateRevenue(hubAd, 'month', podcast.frequency);
+          // Handle both single pricing object and array of pricing tiers
+          const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
-          if (hubRevenue > 0) {
-            pricing.push({
-              label: hub.hubName || hub.hubId,
-              hubPrice: hubRevenue,
-              pricingModel: hub.pricing?.pricingModel,
-              discount: hub.discount,
-              available: hub.available,
-              minimumCommitment: hub.minimumCommitment,
-            });
-          }
+          pricingArray.forEach((pricingTier: any) => {
+            const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
+            const hubRevenue = calculateRevenue(hubAd, 'month', podcast.frequency);
+            
+            if (hubRevenue > 0) {
+              pricing.push({
+                label: hub.hubName || hub.hubId,
+                hubPrice: hubRevenue,
+                pricingModel: pricingTier?.pricingModel,
+                discount: hub.discount,
+                available: hub.available,
+                minimumCommitment: hub.minimumCommitment,
+              });
+            }
+          });
         });
 
         if (pricing.length > 0) {
@@ -404,19 +434,24 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
             }
 
             ad.hubPricing?.forEach((hub: any) => {
-              const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
-              const hubRevenue = calculateRevenue(hubAd, 'month', show.frequency);
+              // Handle both single pricing object and array of pricing tiers
+              const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
               
-              if (hubRevenue > 0) {
-                pricing.push({
-                  label: hub.hubName || hub.hubId,
-                  hubPrice: hubRevenue,
-                  pricingModel: hub.pricing?.pricingModel,
-                  discount: hub.discount,
-                  available: hub.available,
-                  minimumCommitment: hub.minimumCommitment,
-                });
-              }
+              pricingArray.forEach((pricingTier: any) => {
+                const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
+                const hubRevenue = calculateRevenue(hubAd, 'month', show.frequency);
+                
+                if (hubRevenue > 0) {
+                  pricing.push({
+                    label: hub.hubName || hub.hubId,
+                    hubPrice: hubRevenue,
+                    pricingModel: pricingTier?.pricingModel,
+                    discount: hub.discount,
+                    available: hub.available,
+                    minimumCommitment: hub.minimumCommitment,
+                  });
+                }
+              });
             });
 
             if (pricing.length > 0) {
@@ -447,19 +482,24 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
           }
 
           ad.hubPricing?.forEach((hub: any) => {
-            const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
-            const hubRevenue = calculateRevenue(hubAd, 'month');
+            // Handle both single pricing object and array of pricing tiers
+            const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
             
-            if (hubRevenue > 0) {
-              pricing.push({
-                label: hub.hubName || hub.hubId,
-                hubPrice: hubRevenue,
-                pricingModel: hub.pricing?.pricingModel,
-                discount: hub.discount,
-                available: hub.available,
-                minimumCommitment: hub.minimumCommitment,
-              });
-            }
+            pricingArray.forEach((pricingTier: any) => {
+              const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
+              const hubRevenue = calculateRevenue(hubAd, 'month');
+              
+              if (hubRevenue > 0) {
+                pricing.push({
+                  label: hub.hubName || hub.hubId,
+                  hubPrice: hubRevenue,
+                  pricingModel: pricingTier?.pricingModel,
+                  discount: hub.discount,
+                  available: hub.available,
+                  minimumCommitment: hub.minimumCommitment,
+                });
+              }
+            });
           });
 
           if (pricing.length > 0) {
@@ -495,19 +535,24 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
         }
 
         ad.hubPricing?.forEach((hub: any) => {
-          const hubAd = { ...ad, pricing: hub.pricing, hubPricing: null };
-          const hubRevenue = calculateRevenue(hubAd, 'month', streaming.frequency);
+          // Handle both single pricing object and array of pricing tiers
+          const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
-          if (hubRevenue > 0) {
-            pricing.push({
-              label: hub.hubName || hub.hubId,
-              hubPrice: hubRevenue,
-              pricingModel: hub.pricing?.pricingModel,
-              discount: hub.discount,
-              available: hub.available,
-              minimumCommitment: hub.minimumCommitment,
-            });
-          }
+          pricingArray.forEach((pricingTier: any) => {
+            const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
+            const hubRevenue = calculateRevenue(hubAd, 'month', streaming.frequency);
+            
+            if (hubRevenue > 0) {
+              pricing.push({
+                label: hub.hubName || hub.hubId,
+                hubPrice: hubRevenue,
+                pricingModel: pricingTier?.pricingModel,
+                discount: hub.discount,
+                available: hub.available,
+                minimumCommitment: hub.minimumCommitment,
+              });
+            }
+          });
         });
 
         if (pricing.length > 0) {
