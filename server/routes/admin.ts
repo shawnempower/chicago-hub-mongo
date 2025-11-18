@@ -462,14 +462,21 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
         const monthlyVisitors = channels.website.metrics?.monthlyVisitors || 0;
         channels.website.advertisingOpportunities.forEach((ad: any) => {
           const pricingModel = ad.pricing?.pricingModel || 'unknown';
-          const monthlyRevenue = calculateRevenue(ad, 'month');
           
-          if (monthlyRevenue > 0) {
+          // For CPM/CPV models, use the raw rate; for others, use calculated monthly revenue
+          let price: number;
+          if (pricingModel.toLowerCase() === 'cpm' || pricingModel.toLowerCase() === 'cpv') {
+            price = ad.pricing?.flatRate || 0; // Raw CPM/CPV rate
+          } else {
+            price = calculateRevenue(ad, 'month'); // Calculated monthly revenue
+          }
+          
+          if (price > 0) {
             if (!pricingAnalyticsData.website[pricingModel]) {
               pricingAnalyticsData.website[pricingModel] = [];
             }
             pricingAnalyticsData.website[pricingModel].push({
-              price: monthlyRevenue,
+              price: price,
               audienceSize: monthlyVisitors
             });
           }
@@ -483,14 +490,21 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
           if (nl.advertisingOpportunities) {
             nl.advertisingOpportunities.forEach((ad: any) => {
               const pricingModel = ad.pricing?.pricingModel || 'unknown';
-              const monthlyRevenue = calculateRevenue(ad, 'month', nl.frequency);
               
-              if (monthlyRevenue > 0) {
+              // For CPM models, use raw rate; for others, use calculated monthly revenue
+              let price: number;
+              if (pricingModel.toLowerCase() === 'cpm') {
+                price = ad.pricing?.flatRate || 0;
+              } else {
+                price = calculateRevenue(ad, 'month', nl.frequency);
+              }
+              
+              if (price > 0) {
                 if (!pricingAnalyticsData.newsletter[pricingModel]) {
                   pricingAnalyticsData.newsletter[pricingModel] = [];
                 }
                 pricingAnalyticsData.newsletter[pricingModel].push({
-                  price: monthlyRevenue,
+                  price: price,
                   audienceSize: subscribers
                 });
               }
@@ -506,14 +520,21 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
           if (pr.advertisingOpportunities) {
             pr.advertisingOpportunities.forEach((ad: any) => {
               const pricingModel = ad.pricing?.pricingModel || 'unknown';
-              const monthlyRevenue = calculateRevenue(ad, 'month', pr.frequency);
               
-              if (monthlyRevenue > 0) {
+              // For CPM models, use raw rate; for others, use calculated monthly revenue
+              let price: number;
+              if (pricingModel.toLowerCase() === 'cpm') {
+                price = ad.pricing?.flatRate || 0;
+              } else {
+                price = calculateRevenue(ad, 'month', pr.frequency);
+              }
+              
+              if (price > 0) {
                 if (!pricingAnalyticsData.print[pricingModel]) {
                   pricingAnalyticsData.print[pricingModel] = [];
                 }
                 pricingAnalyticsData.print[pricingModel].push({
-                  price: monthlyRevenue,
+                  price: price,
                   audienceSize: circulation
                 });
               }
@@ -529,14 +550,21 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
           if (pc.advertisingOpportunities) {
             pc.advertisingOpportunities.forEach((ad: any) => {
               const pricingModel = ad.pricing?.pricingModel || 'unknown';
-              const monthlyRevenue = calculateRevenue(ad, 'month', pc.frequency);
               
-              if (monthlyRevenue > 0) {
+              // For CPM/CPD models, use raw rate; for others, use calculated monthly revenue
+              let price: number;
+              if (pricingModel.toLowerCase() === 'cpm' || pricingModel.toLowerCase() === 'cpd') {
+                price = ad.pricing?.flatRate || 0;
+              } else {
+                price = calculateRevenue(ad, 'month', pc.frequency);
+              }
+              
+              if (price > 0) {
                 if (!pricingAnalyticsData.podcast[pricingModel]) {
                   pricingAnalyticsData.podcast[pricingModel] = [];
                 }
                 pricingAnalyticsData.podcast[pricingModel].push({
-                  price: monthlyRevenue,
+                  price: price,
                   audienceSize: listeners
                 });
               }
@@ -556,14 +584,21 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
               if (show.advertisingOpportunities) {
                 show.advertisingOpportunities.forEach((ad: any) => {
                   const pricingModel = ad.pricing?.pricingModel || 'unknown';
-                  const monthlyRevenue = calculateRevenue(ad, 'month', show.frequency);
                   
-                  if (monthlyRevenue > 0) {
+                  // For CPM models, use raw rate; for others, use calculated monthly revenue
+                  let price: number;
+                  if (pricingModel.toLowerCase() === 'cpm') {
+                    price = ad.pricing?.flatRate || 0;
+                  } else {
+                    price = calculateRevenue(ad, 'month', show.frequency);
+                  }
+                  
+                  if (price > 0) {
                     if (!pricingAnalyticsData.radio[pricingModel]) {
                       pricingAnalyticsData.radio[pricingModel] = [];
                     }
                     pricingAnalyticsData.radio[pricingModel].push({
-                      price: monthlyRevenue,
+                      price: price,
                       audienceSize: listeners
                     });
                   }
@@ -575,14 +610,21 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
           else if (rs.advertisingOpportunities) {
             rs.advertisingOpportunities.forEach((ad: any) => {
               const pricingModel = ad.pricing?.pricingModel || 'unknown';
-              const monthlyRevenue = calculateRevenue(ad, 'month');
               
-              if (monthlyRevenue > 0) {
+              // For CPM models, use raw rate; for others, use calculated monthly revenue
+              let price: number;
+              if (pricingModel.toLowerCase() === 'cpm') {
+                price = ad.pricing?.flatRate || 0;
+              } else {
+                price = calculateRevenue(ad, 'month');
+              }
+              
+              if (price > 0) {
                 if (!pricingAnalyticsData.radio[pricingModel]) {
                   pricingAnalyticsData.radio[pricingModel] = [];
                 }
                 pricingAnalyticsData.radio[pricingModel].push({
-                  price: monthlyRevenue,
+                  price: price,
                   audienceSize: listeners
                 });
               }
@@ -597,30 +639,36 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
           const subscribers = sv.subscribers || sv.averageViews || 0;
           if (sv.advertisingOpportunities) {
             sv.advertisingOpportunities.forEach((ad: any) => {
-              // Add metrics if needed for CPV calculations
-              let adWithMetrics = ad;
-              if (!ad.performanceMetrics?.impressionsPerMonth && sv.averageViews && sv.frequency) {
-                const occurrencesPerMonth = inferOccurrencesFromFrequency(sv.frequency);
-                const spotsPerShow = ad.spotsPerShow || 1;
-                adWithMetrics = {
-                  ...ad,
-                  performanceMetrics: {
-                    impressionsPerMonth: sv.averageViews * occurrencesPerMonth * spotsPerShow,
-                    occurrencesPerMonth: occurrencesPerMonth * spotsPerShow,
-                    audienceSize: subscribers
-                  }
-                };
+              const pricingModel = ad.pricing?.pricingModel || 'unknown';
+              
+              // For CPM/CPV models, use raw rate; for others, use calculated monthly revenue
+              let price: number;
+              if (pricingModel.toLowerCase() === 'cpm' || pricingModel.toLowerCase() === 'cpv') {
+                price = ad.pricing?.flatRate || 0;
+              } else {
+                // Add metrics if needed for calculations
+                let adWithMetrics = ad;
+                if (!ad.performanceMetrics?.impressionsPerMonth && sv.averageViews && sv.frequency) {
+                  const occurrencesPerMonth = inferOccurrencesFromFrequency(sv.frequency);
+                  const spotsPerShow = ad.spotsPerShow || 1;
+                  adWithMetrics = {
+                    ...ad,
+                    performanceMetrics: {
+                      impressionsPerMonth: sv.averageViews * occurrencesPerMonth * spotsPerShow,
+                      occurrencesPerMonth: occurrencesPerMonth * spotsPerShow,
+                      audienceSize: subscribers
+                    }
+                  };
+                }
+                price = calculateRevenue(adWithMetrics, 'month', sv.frequency);
               }
               
-              const pricingModel = ad.pricing?.pricingModel || 'unknown';
-              const monthlyRevenue = calculateRevenue(adWithMetrics, 'month', sv.frequency);
-              
-              if (monthlyRevenue > 0) {
+              if (price > 0) {
                 if (!pricingAnalyticsData.streaming[pricingModel]) {
                   pricingAnalyticsData.streaming[pricingModel] = [];
                 }
                 pricingAnalyticsData.streaming[pricingModel].push({
-                  price: monthlyRevenue,
+                  price: price,
                   audienceSize: subscribers
                 });
               }
@@ -682,15 +730,29 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
         const dataPoints = pricingAnalyticsData[channel][model];
         
         if (dataPoints.length > 0) {
-          const prices = dataPoints.map(dp => dp.price);
+          // For unit economics, calculate price per 1000 audience for each data point
+          // This gives us comparable metrics regardless of audience size
+          const isAlreadyNormalized = alreadyNormalizedModels.includes(model.toLowerCase());
           
-          // Calculate cost-per-reach only for models that aren't already normalized
-          // CPM/CPV/CPD models already express cost per impression/view
-          let costPerReachValues: number[] = [];
-          if (!alreadyNormalizedModels.includes(model.toLowerCase())) {
-            costPerReachValues = dataPoints
-              .filter(dp => dp.audienceSize > 0)
-              .map(dp => (dp.price / dp.audienceSize) * 1000); // Cost per 1000 reach
+          let unitPrices: number[] = [];
+          let totalPrices: number[] = [];
+          
+          if (isAlreadyNormalized) {
+            // CPM/CPV models: the price IS the unit price (already per 1000/per view)
+            // Don't normalize again!
+            unitPrices = dataPoints.map(dp => dp.price);
+            // For total price, we need to calculate estimated monthly revenue
+            // But we don't have impressions here, so show N/A or the rate itself
+            totalPrices = []; // No meaningful total for CPM without impression data
+          } else {
+            // Other models: calculate unit price (cost per 1000 audience)
+            dataPoints.forEach(dp => {
+              totalPrices.push(dp.price); // This is monthly revenue
+              if (dp.audienceSize > 0) {
+                const unitPrice = (dp.price / dp.audienceSize) * 1000;
+                unitPrices.push(unitPrice);
+              }
+            });
           }
           
           // Calculate audience size statistics
@@ -699,11 +761,14 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
             .map(dp => dp.audienceSize);
           
           pricingAnalytics[channel][model] = {
-            prices: calculateStats(prices),
-            costPerReach: calculateStats(costPerReachValues),
+            // Unit economics (price per 1000 audience) - PRIMARY METRIC
+            unitPrice: calculateStats(unitPrices),
+            // Total monthly prices (for reference)
+            totalPrice: calculateStats(totalPrices),
+            // Audience sizes
             audienceSize: calculateStats(audienceSizes),
             sampleSize: dataPoints.length,
-            isAlreadyNormalized: alreadyNormalizedModels.includes(model.toLowerCase())
+            isAlreadyNormalized
           };
         }
       });

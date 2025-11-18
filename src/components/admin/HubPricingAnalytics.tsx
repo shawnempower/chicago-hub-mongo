@@ -101,31 +101,41 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
     return Object.entries(channelData).sort((a, b) => b[1].sampleSize - a[1].sampleSize);
   }, [channelData]);
 
-  // Calculate channel summary stats
+  // Calculate channel summary stats based on unit prices
   const channelSummary = useMemo(() => {
     if (!channelData || sortedModels.length === 0) return null;
     
     let totalSamples = 0;
-    let allPrices: number[] = [];
+    let allUnitPrices: number[] = [];
     
     sortedModels.forEach(([_, data]) => {
       totalSamples += data.sampleSize;
-      // Collect all prices for overall stats
-      for (let i = 0; i < data.sampleSize; i++) {
-        allPrices.push(data.prices.avg); // Approximate with averages
+      // Collect unit prices for overall stats
+      if (data.unitPrice.count > 0) {
+        allUnitPrices.push(data.unitPrice.avg);
       }
     });
     
-    const avgPrice = allPrices.reduce((sum, p) => sum + p, 0) / allPrices.length;
-    const minPrice = Math.min(...sortedModels.map(([_, d]) => d.prices.min));
-    const maxPrice = Math.max(...sortedModels.map(([_, d]) => d.prices.max));
+    if (allUnitPrices.length === 0) {
+      return {
+        totalSamples,
+        models: sortedModels.length,
+        avgUnitPrice: 0,
+        minUnitPrice: 0,
+        maxUnitPrice: 0
+      };
+    }
+    
+    const avgUnitPrice = allUnitPrices.reduce((sum, p) => sum + p, 0) / allUnitPrices.length;
+    const minUnitPrice = Math.min(...sortedModels.filter(([_, d]) => d.unitPrice.count > 0).map(([_, d]) => d.unitPrice.min));
+    const maxUnitPrice = Math.max(...sortedModels.filter(([_, d]) => d.unitPrice.count > 0).map(([_, d]) => d.unitPrice.max));
     
     return {
       totalSamples,
       models: sortedModels.length,
-      avgPrice,
-      minPrice,
-      maxPrice
+      avgUnitPrice,
+      minUnitPrice,
+      maxUnitPrice
     };
   }, [channelData, sortedModels]);
 
@@ -170,8 +180,8 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
             Pricing Analytics by Channel
           </CardTitle>
           <CardDescription>
-            Statistical analysis of hub pricing grouped by pricing model and normalized by audience reach.
-            All prices are shown as monthly equivalents.
+            Unit economics analysis showing cost per 1000 audience reach for each pricing model.
+            Compare pricing models fairly by normalizing to audience size.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -196,27 +206,27 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Average Price
+                Avg Unit Price
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(channelSummary.avgPrice)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Per month</p>
+              <div className="text-2xl font-bold">{formatCPR(channelSummary.avgUnitPrice)}</div>
+              <p className="text-xs text-muted-foreground mt-1">Per 1000 {getAudienceMetricLabel(activeChannel).toLowerCase()}</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Price Range
+                Unit Price Range
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatCurrency(channelSummary.minPrice)}
+                {formatCPR(channelSummary.minUnitPrice)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                to {formatCurrency(channelSummary.maxPrice)}
+                to {formatCPR(channelSummary.maxUnitPrice)}
               </p>
             </CardContent>
           </Card>
@@ -280,15 +290,28 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                           <TableRow>
                             <TableHead>Pricing Model</TableHead>
                             <TableHead className="text-center">Sample Size</TableHead>
+                            <TableHead className="text-center">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                                    Audience Size
+                                    <Info className="h-3 w-3" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Average {getAudienceMetricLabel(activeChannel).toLowerCase()}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </TableHead>
                             <TableHead className="text-right">
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                                    Average
+                                    Unit Price (avg)
                                     <Info className="h-3 w-3" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Mean monthly price</p>
+                                    <p>Average price per 1000 {getAudienceMetricLabel(activeChannel).toLowerCase()}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -301,7 +324,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                                     <Info className="h-3 w-3" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Middle value of monthly prices</p>
+                                    <p>Middle unit price value (less affected by outliers)</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -314,35 +337,22 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                                     <Info className="h-3 w-3" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Standard deviation (price variability)</p>
+                                    <p>Unit price variability</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             </TableHead>
                             <TableHead className="text-right">Min</TableHead>
                             <TableHead className="text-right">Max</TableHead>
-                            <TableHead className="text-center">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger className="flex items-center gap-1 mx-auto">
-                                    Audience Metric
-                                    <Info className="h-3 w-3" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Audience measurement used for CPR calculation</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </TableHead>
                             <TableHead className="text-right">
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                                    CPR (avg)
+                                    Total (avg)
                                     <Info className="h-3 w-3" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Cost per 1000 reach (audience normalized)</p>
+                                    <p>Average total monthly price (for reference)</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -357,23 +367,6 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                               </TableCell>
                               <TableCell className="text-center">
                                 {data.sampleSize}
-                              </TableCell>
-                              <TableCell className="text-right font-semibold">
-                                {formatCurrency(data.prices.avg)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {formatCurrency(data.prices.median)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <span className={getVarianceColor(data.prices.stdDev, data.prices.avg)}>
-                                  {formatCurrency(data.prices.stdDev)}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-right text-muted-foreground">
-                                {formatCurrency(data.prices.min)}
-                              </TableCell>
-                              <TableCell className="text-right text-muted-foreground">
-                                {formatCurrency(data.prices.max)}
                               </TableCell>
                               <TableCell className="text-center">
                                 {data.audienceSize.count > 0 ? (
@@ -398,45 +391,63 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                                   </TooltipProvider>
                                 ) : (
                                   <div className="text-xs text-muted-foreground italic">
-                                    No data
+                                    {data.isAlreadyNormalized ? 'N/A' : 'No data'}
                                   </div>
                                 )}
                               </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {data.unitPrice.count > 0 ? (
+                                  formatCPR(data.unitPrice.avg)
+                                ) : (
+                                  <span className="text-muted-foreground">N/A</span>
+                                )}
+                              </TableCell>
                               <TableCell className="text-right">
-                                {data.isAlreadyNormalized ? (
+                                {data.unitPrice.count > 0 ? (
+                                  formatCPR(data.unitPrice.median)
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {data.unitPrice.count > 0 ? (
+                                  <span className={getVarianceColor(data.unitPrice.stdDev, data.unitPrice.avg)}>
+                                    {formatCPR(data.unitPrice.stdDev)}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right text-muted-foreground">
+                                {data.unitPrice.count > 0 ? formatCPR(data.unitPrice.min) : '—'}
+                              </TableCell>
+                              <TableCell className="text-right text-muted-foreground">
+                                {data.unitPrice.count > 0 ? formatCPR(data.unitPrice.max) : '—'}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {data.totalPrice.count > 0 ? (
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger>
-                                        <span className="text-muted-foreground italic text-xs">
-                                          Built-in
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p className="text-xs">
-                                          This pricing model is already normalized per impression/view
-                                        </p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                ) : data.costPerReach.count > 0 ? (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger>
-                                        <span className="font-medium">
-                                          {formatCPR(data.costPerReach.avg)}
+                                        <span className="text-sm text-muted-foreground">
+                                          {formatCurrency(data.totalPrice.avg)}
                                         </span>
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         <div className="space-y-1 text-xs">
-                                          <p>Median: {formatCPR(data.costPerReach.median)}</p>
-                                          <p>Min: {formatCPR(data.costPerReach.min)}</p>
-                                          <p>Max: {formatCPR(data.costPerReach.max)}</p>
+                                          <p className="font-semibold">Total Monthly Price:</p>
+                                          <p>Average: {formatCurrency(data.totalPrice.avg)}</p>
+                                          <p>Median: {formatCurrency(data.totalPrice.median)}</p>
+                                          <p>Min: {formatCurrency(data.totalPrice.min)}</p>
+                                          <p>Max: {formatCurrency(data.totalPrice.max)}</p>
                                         </div>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                 ) : (
-                                  <span className="text-muted-foreground">N/A</span>
+                                  <span className="text-xs text-muted-foreground italic">
+                                    N/A
+                                  </span>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -449,22 +460,22 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                     <Card className="bg-muted/50">
                       <CardContent className="pt-4">
                         <div className="text-xs space-y-2">
-                          <p className="font-semibold mb-2">Understanding the metrics:</p>
+                          <p className="font-semibold mb-2">📊 Understanding Unit Economics:</p>
                           <ul className="space-y-1 ml-4">
-                            <li><strong>Average:</strong> Mean monthly price across all inventory items</li>
-                            <li><strong>Median:</strong> Middle value when prices are sorted (less affected by outliers)</li>
-                            <li><strong>Std Dev:</strong> Measure of price variability (<span className="text-green-600">green = consistent</span>, <span className="text-yellow-600">yellow = moderate</span>, <span className="text-red-600">red = high variance</span>)</li>
-                            <li><strong>CPR:</strong> Cost per 1000 reach - normalized by channel audience size:
+                            <li><strong>Unit Price:</strong> Cost per 1000 {getAudienceMetricLabel(activeChannel).toLowerCase()} - this is the key metric for comparing pricing models fairly</li>
+                            <li><strong>Audience Size:</strong> Average {getAudienceMetricLabel(activeChannel).toLowerCase()} for inventory in this pricing model</li>
+                            <li><strong>Statistics:</strong>
                               <ul className="ml-4 mt-1">
-                                <li>• Website: per 1000 monthly visitors</li>
-                                <li>• Newsletter: per 1000 subscribers (for per_send models)</li>
-                                <li>• Print: per 1000 circulation</li>
-                                <li>• Podcast/Radio: per 1000 listeners</li>
-                                <li>• Streaming: per 1000 subscribers/viewers</li>
-                                <li>• <em>Built-in:</em> CPM/CPV/CPD models already include normalization</li>
+                                <li>• <strong>Average:</strong> Mean unit price across all items</li>
+                                <li>• <strong>Median:</strong> Middle value (less affected by outliers)</li>
+                                <li>• <strong>Std Dev:</strong> Price variability (<span className="text-green-600">green = consistent</span>, <span className="text-yellow-600">yellow = moderate</span>, <span className="text-red-600">red = high variance</span>)</li>
                               </ul>
                             </li>
+                            <li><strong>Total (avg):</strong> Average total monthly price for reference - useful to see actual costs</li>
                           </ul>
+                          <p className="mt-2 italic text-muted-foreground">
+                            💡 Example: If per_send shows $20 unit price with 50K subscribers, you're paying $20 per 1000 subscribers reached.
+                          </p>
                         </div>
                       </CardContent>
                     </Card>

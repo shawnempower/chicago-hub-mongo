@@ -11,9 +11,9 @@ export interface PricingModelStats {
 }
 
 export interface PricingModelAnalytics {
-  prices: PricingModelStats;
-  costPerReach: PricingModelStats;
-  audienceSize: PricingModelStats;
+  unitPrice: PricingModelStats;      // Price per 1000 audience (unit economics)
+  totalPrice: PricingModelStats;     // Total monthly price (for reference)
+  audienceSize: PricingModelStats;   // Audience size statistics
   sampleSize: number;
   isAlreadyNormalized?: boolean;
 }
