@@ -76,6 +76,47 @@ router.post('/:id/inquire', authenticateToken, async (req: any, res: Response) =
   }
 });
 
+// Generate insertion order for a package (authenticated)
+router.post('/:id/insertion-order', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { format = 'html' } = req.body;
+
+    // Validate format
+    if (format !== 'html' && format !== 'markdown') {
+      return res.status(400).json({ error: 'Invalid format. Must be "html" or "markdown"' });
+    }
+
+    // Fetch the package
+    const hubPackage = await hubPackagesService.getById(id);
+    if (!hubPackage) {
+      return res.status(404).json({ error: 'Package not found' });
+    }
+
+    // Generate insertion order
+    const { insertionOrderGenerator } = await import('../insertionOrderGenerator');
+    const content = format === 'html'
+      ? await insertionOrderGenerator.generateHTMLInsertionOrderForPackage(hubPackage)
+      : await insertionOrderGenerator.generateMarkdownInsertionOrderForPackage(hubPackage);
+
+    const insertionOrder = {
+      generatedAt: new Date(),
+      format,
+      content,
+      version: 1
+    };
+
+    // Return the generated insertion order
+    res.json({
+      success: true,
+      insertionOrder
+    });
+  } catch (error) {
+    console.error('Error generating package insertion order:', error);
+    res.status(500).json({ error: 'Failed to generate insertion order' });
+  }
+});
+
 // Note: Admin routes for hub packages (create, update, delete, restore) are in server/routes/admin.ts
 
 export default router;

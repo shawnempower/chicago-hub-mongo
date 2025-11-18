@@ -129,6 +129,42 @@ export const packagesApi = {
       throw error;
     }
   },
+
+  // Generate insertion order for a package
+  async generateInsertionOrder(
+    packageId: string, 
+    format: 'html' | 'markdown' = 'html'
+  ): Promise<{ success: boolean; insertionOrder: { generatedAt: Date; format: string; content: string; version: number } }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/hub-packages/${packageId}/insertion-order`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ format }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        if (response.status === 404) {
+          throw new Error('Package not found.');
+        }
+        if (response.status === 400) {
+          try {
+            const error = JSON.parse(errorText);
+            throw new Error(error.error || 'Invalid format specified.');
+          } catch (e) {
+            throw new Error('Invalid format specified.');
+          }
+        }
+        throw new Error(`Failed to generate insertion order (${response.status})`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error generating package insertion order:', error);
+      throw error;
+    }
+  },
 };
 
 

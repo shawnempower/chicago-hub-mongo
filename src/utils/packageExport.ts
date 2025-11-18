@@ -302,3 +302,37 @@ export function downloadInsertionOrder(packageData: HubPackage): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Download professional insertion order (HTML or Markdown)
+ * This function downloads the professionally formatted insertion order content
+ */
+export function downloadPackageInsertionOrder(
+  content: string, 
+  format: 'html' | 'markdown', 
+  packageName: string
+): void {
+  const mimeType = format === 'html' 
+    ? 'text/html;charset=utf-8;' 
+    : 'text/markdown;charset=utf-8;';
+  
+  const extension = format === 'html' ? 'html' : 'md';
+  
+  const blob = new Blob([content], { type: mimeType });
+  const link = document.createElement('a');
+  
+  const sanitizedName = packageName.toLowerCase().replace(/\s+/g, '-');
+  const dateStr = new Date().toISOString().split('T')[0];
+  const filename = `insertion-order-${sanitizedName}-${dateStr}.${extension}`;
+  
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
+}
+

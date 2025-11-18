@@ -24,6 +24,9 @@ import { BuilderResult } from '@/services/packageBuilderService';
 import { LineItemsDetail } from './LineItemsDetail';
 import { calculateItemCost } from '@/utils/inventoryPricing';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
+import { useToast } from '@/hooks/use-toast';
+import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
+import { downloadPackageInsertionOrder } from '@/utils/packageExport';
 
 interface PackageResultsProps {
   result: BuilderResult;
@@ -48,11 +51,13 @@ export function PackageResults({
   loading,
   initialPackageName = ''
 }: PackageResultsProps) {
+  const { toast } = useToast();
   const [packageName, setPackageName] = useState(initialPackageName);
   const [expandedChannels, setExpandedChannels] = useState<Set<string>>(new Set());
   const [expandedOutlets, setExpandedOutlets] = useState<Set<number>>(new Set());
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempPackageName, setTempPackageName] = useState(initialPackageName);
+  const [generatingIO, setGeneratingIO] = useState(false);
   
   // Store original publications to track removed items
   const [originalPublications] = useState<HubPackagePublication[]>(() => 
@@ -172,6 +177,183 @@ export function PackageResults({
     );
 
     onUpdatePublications(filteredPublications);
+  };
+
+  // Handle generate insertion order
+  const handleGenerateInsertionOrder = () => {
+    if (!packageName.trim()) {
+      toast({
+        title: 'Package Name Required',
+        description: 'Please enter a package name before generating an insertion order.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setGeneratingIO(true);
+    try {
+      // Generate insertion order HTML directly
+      const html = generateInsertionOrderHTML(packageName, publications, summary, duration);
+      
+      // Download the file
+      downloadPackageInsertionOrder(html, 'html', packageName);
+      
+      toast({
+        title: 'Success',
+        description: 'Insertion order generated and downloaded successfully',
+      });
+    } catch (error) {
+      console.error('Error generating insertion order:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate insertion order',
+        variant: 'destructive'
+      });
+    } finally {
+      setGeneratingIO(false);
+    }
+  };
+
+  // Generate insertion order HTML
+  const generateInsertionOrderHTML = (
+    name: string, 
+    pubs: HubPackagePublication[], 
+    summaryData: any, 
+    durationMonths: number
+  ): string => {
+    const formatCurrency = (amount: number) => 
+      `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    
+    const formatDate = (date: Date) => 
+      date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const totalPublications = pubs.length;
+    const totalInventoryItems = pubs.reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0);
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Insertion Order - ${name}</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { color: #1e40af; margin: 0 0 10px 0; font-size: 28px; }
+        .section { margin-bottom: 30px; }
+        .section h2 { color: #1e40af; font-size: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; }
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+        .info-item { padding: 12px; background: #f8fafc; border-left: 3px solid #2563eb; }
+        .info-label { font-weight: 600; color: #475569; font-size: 12px; text-transform: uppercase; }
+        .info-value { color: #1e293b; font-size: 14px; margin-top: 4px; }
+        .placeholder { border-bottom: 1px solid #cbd5e1; min-width: 200px; display: inline-block; padding: 2px 4px; }
+        .publication-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #f9fafb; }
+        .publication-header { display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+        .publication-name { font-size: 18px; font-weight: 700; color: #1e293b; }
+        .publication-total { font-size: 18px; font-weight: 700; color: #059669; }
+        .inventory-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .inventory-table th { background: #f1f5f9; padding: 10px; text-align: left; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; }
+        .inventory-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        .channel-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .channel-website { background: #dbeafe; color: #1e40af; }
+        .channel-print { background: #f3e8ff; color: #6b21a8; }
+        .channel-newsletter { background: #fef3c7; color: #92400e; }
+        .pricing-summary { background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin-top: 20px; }
+        .pricing-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 16px; }
+        .pricing-row.total { border-top: 2px solid #10b981; margin-top: 10px; padding-top: 15px; font-size: 20px; font-weight: 700; color: #065f46; }
+        .terms-list { list-style: none; padding: 0; }
+        .terms-list li { padding: 8px 0 8px 24px; position: relative; }
+        .terms-list li:before { content: "•"; position: absolute; left: 8px; color: #2563eb; font-weight: bold; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center; color: #64748b; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Media Insertion Order</h1>
+            <div style="color: #64748b; font-size: 14px; font-weight: 600;">Package: ${name}</div>
+        </div>
+        <div class="section">
+            <h2>Client Information</h2>
+            <div class="info-grid">
+                <div class="info-item"><div class="info-label">Company Name</div><div class="info-value"><span class="placeholder">&nbsp;</span></div></div>
+                <div class="info-item"><div class="info-label">Contact Name</div><div class="info-value"><span class="placeholder">&nbsp;</span></div></div>
+                <div class="info-item"><div class="info-label">Contact Email</div><div class="info-value"><span class="placeholder">&nbsp;</span></div></div>
+                <div class="info-item"><div class="info-label">Contact Phone</div><div class="info-value"><span class="placeholder">&nbsp;</span></div></div>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Included Publications & Inventory</h2>
+            <p style="color: #64748b; margin-bottom: 20px;">${totalPublications} publications • ${totalInventoryItems} ad placements</p>
+            ${pubs.map(pub => `
+                <div class="publication-card">
+                    <div class="publication-header">
+                        <div class="publication-name">${pub.publicationName}</div>
+                        <div class="publication-total">${formatCurrency(pub.publicationTotal)}</div>
+                    </div>
+                    <table class="inventory-table">
+                        <thead><tr><th>Channel</th><th>Ad Placement</th><th>Quantity</th><th>Audience Estimate</th><th>Cost</th></tr></thead>
+                        <tbody>
+                            ${pub.inventoryItems.map(item => {
+                                const pricingModel = item.itemPricing?.pricingModel;
+                                const monthlyImpressions = (item as any).monthlyImpressions;
+                                const hubPrice = item.itemPricing?.hubPrice || 0;
+                                
+                                let audienceInfo = 'N/A';
+                                if (pricingModel === 'cpm' && monthlyImpressions) {
+                                    audienceInfo = `${monthlyImpressions.toLocaleString()} impressions/mo`;
+                                } else if (pricingModel === 'cpv' && monthlyImpressions) {
+                                    audienceInfo = `${monthlyImpressions.toLocaleString()} views/mo`;
+                                } else if (pricingModel === 'cpc' && monthlyImpressions) {
+                                    const clicks = Math.round(monthlyImpressions * 0.01);
+                                    audienceInfo = `~${clicks.toLocaleString()} clicks/mo`;
+                                } else if (pricingModel === 'per_send' || pricingModel === 'per_newsletter') {
+                                    audienceInfo = 'Per send';
+                                } else if (pricingModel === 'per_spot' || pricingModel === 'per_ad') {
+                                    audienceInfo = 'Per placement';
+                                } else if (pricingModel === 'monthly' || pricingModel === 'flat') {
+                                    audienceInfo = 'Monthly rate';
+                                }
+                                
+                                return `
+                                <tr>
+                                    <td><span class="channel-badge channel-${item.channel}">${item.channel}</span></td>
+                                    <td>${item.itemName}</td>
+                                    <td>${item.currentFrequency || item.quantity || 1}×</td>
+                                    <td style="font-size: 12px; color: #64748b;">${audienceInfo}</td>
+                                    <td>${formatCurrency(hubPrice)}</td>
+                                </tr>
+                            `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `).join('')}
+        </div>
+        <div class="section">
+            <h2>Investment Summary</h2>
+            <div class="pricing-summary">
+                <div class="pricing-row"><span>Monthly Total:</span><span><strong>${formatCurrency(summaryData.monthlyCost)}</strong></span></div>
+                <div class="pricing-row"><span>Campaign Duration:</span><span><strong>${durationMonths} months</strong></span></div>
+                <div class="pricing-row total"><span>Total Package Investment:</span><span>${formatCurrency(summaryData.totalCost)}</span></div>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Terms & Conditions</h2>
+            <ul class="terms-list">
+                <li>Lead Time: 10 business days</li>
+                <li>Material Deadline: 5 business days before campaign start</li>
+                <li>Payment terms: Net 30 days from invoice date</li>
+                <li>All pricing reflects Hub discounted rates</li>
+            </ul>
+        </div>
+        <div class="footer">
+            <p>Generated on ${formatDate(new Date())}</p>
+            <p>Chicago Hub • Supporting Local Journalism • Press Forward Initiative</p>
+        </div>
+    </div>
+</body>
+</html>`;
   };
 
   // Helper: Get removed items for a publication
@@ -400,12 +582,22 @@ export function PackageResults({
               </Button>
               
               <Button
+                onClick={handleGenerateInsertionOrder}
                 variant="outline"
                 size="sm"
-                disabled={loading}
+                disabled={loading || generatingIO}
               >
-                <FileText className="mr-2 h-4 w-4" />
-                Generate Order
+                {generatingIO ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Generate Order
+                  </>
+                )}
               </Button>
               
               <Button

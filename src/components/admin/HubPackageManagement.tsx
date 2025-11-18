@@ -16,7 +16,8 @@ import {
   Search,
   Copy,
   Download,
-  ChevronLeft
+  ChevronLeft,
+  FileText
 } from 'lucide-react';
 import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -26,8 +27,9 @@ import { PackageBuilder } from './PackageBuilder/PackageBuilder';
 import { PackageResults } from './PackageBuilder/PackageResults';
 import { ErrorBoundary } from './PackageBuilder/ErrorBoundary';
 import { BuilderFilters, BuilderResult } from '@/services/packageBuilderService';
-import { downloadPackageCSV } from '@/utils/packageExport';
+import { downloadPackageCSV, downloadPackageInsertionOrder } from '@/utils/packageExport';
 import { calculateItemCost } from '@/utils/inventoryPricing';
+import { packagesApi } from '@/api/packages';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('auth_token');
@@ -47,6 +49,7 @@ export const HubPackageManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'draft' | 'archived'>('all');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [generatingIO, setGeneratingIO] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Builder state
@@ -124,6 +127,46 @@ export const HubPackageManagement = () => {
         description: 'Failed to delete package',
         variant: 'destructive'
       });
+    }
+  };
+
+  const handleGenerateInsertionOrder = async (pkg: HubPackage, format: 'html' | 'markdown' = 'html') => {
+    const packageId = pkg._id?.toString();
+    
+    if (!packageId) {
+      toast({
+        title: 'Error',
+        description: 'Package ID not found',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setGeneratingIO(packageId);
+    
+    try {
+      const result = await packagesApi.generateInsertionOrder(packageId, format);
+      
+      // Download the generated insertion order
+      downloadPackageInsertionOrder(
+        result.insertionOrder.content,
+        format,
+        pkg.basicInfo.name
+      );
+
+      toast({
+        title: 'Success',
+        description: `Insertion order generated and downloaded in ${format.toUpperCase()} format`,
+      });
+    } catch (error) {
+      console.error('Error generating insertion order:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to generate insertion order',
+        variant: 'destructive'
+      });
+    } finally {
+      setGeneratingIO(null);
     }
   };
 
@@ -889,6 +932,19 @@ export const HubPackageManagement = () => {
                         title="Download CSV"
                       >
                         <Download className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGenerateInsertionOrder(pkg, 'html');
+                        }}
+                        disabled={generatingIO === pkg._id?.toString()}
+                        title="Generate Insertion Order"
+                      >
+                        <FileText className="w-3 h-3" />
                       </Button>
                       <Button 
                         variant="ghost" 

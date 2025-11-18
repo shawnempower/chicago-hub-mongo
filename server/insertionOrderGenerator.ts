@@ -5,6 +5,7 @@
  */
 
 import { Campaign } from '../src/integrations/mongodb/campaignSchema';
+import { HubPackage } from '../src/integrations/mongodb/hubPackageSchema';
 
 class InsertionOrderGenerator {
   
@@ -896,6 +897,584 @@ Campaign ID: ${campaign.campaignId}
     }
 
     return insertionOrders;
+  }
+
+  /**
+   * Generate HTML Insertion Order for a Hub Package
+   */
+  async generateHTMLInsertionOrderForPackage(hubPackage: HubPackage): Promise<string> {
+    // Calculate duration
+    const duration = hubPackage.metadata?.builderInfo?.originalDuration || 6;
+    const monthlyCost = hubPackage.pricing.breakdown.finalPrice;
+    const totalCost = monthlyCost * duration;
+
+    // Calculate totals
+    const totalPublications = hubPackage.components.publications.length;
+    const totalInventoryItems = hubPackage.components.publications.reduce(
+      (sum, pub) => sum + (pub.inventoryItems?.length || 0), 
+      0
+    );
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insertion Order - ${hubPackage.basicInfo.name}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1e40af;
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .header .package-id {
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #1e40af;
+            font-size: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        .section h3 {
+            color: #475569;
+            font-size: 16px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .info-item {
+            padding: 12px;
+            background: #f8fafc;
+            border-left: 3px solid #2563eb;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #475569;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .info-value {
+            color: #1e293b;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .placeholder {
+            border-bottom: 1px solid #cbd5e1;
+            min-width: 200px;
+            display: inline-block;
+            padding: 2px 4px;
+        }
+        .publication-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #f9fafb;
+        }
+        .publication-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .publication-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .publication-total {
+            font-size: 18px;
+            font-weight: 700;
+            color: #059669;
+        }
+        .inventory-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .inventory-table th {
+            background: #f1f5f9;
+            padding: 10px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .inventory-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+        .inventory-table tr:last-child td {
+            border-bottom: none;
+        }
+        .channel-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .channel-website { background: #dbeafe; color: #1e40af; }
+        .channel-print { background: #f3e8ff; color: #6b21a8; }
+        .channel-newsletter { background: #fef3c7; color: #92400e; }
+        .channel-radio { background: #fed7aa; color: #c2410c; }
+        .channel-podcast { background: #fecaca; color: #991b1b; }
+        .channel-events { background: #d1fae5; color: #065f46; }
+        .channel-streaming { background: #e0f2fe; color: #075985; }
+        .channel-social { background: #fae8ff; color: #86198f; }
+        .pricing-summary {
+            background: #f0fdf4;
+            border: 2px solid #10b981;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .pricing-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 16px;
+        }
+        .pricing-row.total {
+            border-top: 2px solid #10b981;
+            margin-top: 10px;
+            padding-top: 15px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #065f46;
+        }
+        .terms-list {
+            list-style: none;
+            padding: 0;
+        }
+        .terms-list li {
+            padding: 8px 0 8px 24px;
+            position: relative;
+        }
+        .terms-list li:before {
+            content: "•";
+            position: absolute;
+            left: 8px;
+            color: #2563eb;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+        }
+        .highlight-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        @media print {
+            body {
+                background: white;
+                margin: 0;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 20px;
+            }
+            .publication-card {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Media Insertion Order</h1>
+            <div class="package-id">Package: ${hubPackage.basicInfo.name}</div>
+        </div>
+
+        <!-- Client Information Section (To Be Filled) -->
+        <div class="section">
+            <h2>Client Information</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Company Name</div>
+                    <div class="info-value"><span class="placeholder">&nbsp;</span></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Contact Name</div>
+                    <div class="info-value"><span class="placeholder">&nbsp;</span></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Contact Email</div>
+                    <div class="info-value"><span class="placeholder">&nbsp;</span></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Contact Phone</div>
+                    <div class="info-value"><span class="placeholder">&nbsp;</span></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Campaign Start Date</div>
+                    <div class="info-value"><span class="placeholder">&nbsp;</span></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Campaign End Date</div>
+                    <div class="info-value"><span class="placeholder">&nbsp;</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Package Information -->
+        <div class="section">
+            <h2>Package Information</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Package Name</div>
+                    <div class="info-value">${hubPackage.basicInfo.name}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Package Category</div>
+                    <div class="info-value">${hubPackage.basicInfo.category}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Duration</div>
+                    <div class="info-value">${duration} months</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Hub</div>
+                    <div class="info-value">${hubPackage.hubInfo.hubName}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Package Description -->
+        ${hubPackage.basicInfo.description ? `
+        <div class="section">
+            <h2>Package Description</h2>
+            <p>${hubPackage.basicInfo.description}</p>
+        </div>
+        ` : ''}
+
+        <!-- Key Benefits -->
+        ${hubPackage.features?.keyBenefits && hubPackage.features.keyBenefits.length > 0 ? `
+        <div class="section">
+            <h2>Key Benefits</h2>
+            <ul class="terms-list">
+                ${hubPackage.features.keyBenefits.map(benefit => `<li>${benefit}</li>`).join('')}
+            </ul>
+        </div>
+        ` : ''}
+
+        <!-- Selected Publications and Inventory -->
+        <div class="section">
+            <h2>Included Publications & Inventory</h2>
+            <p style="color: #64748b; margin-bottom: 20px;">
+                ${totalPublications} publications • ${totalInventoryItems} ad placements
+            </p>
+
+            ${hubPackage.components.publications.map(pub => `
+                <div class="publication-card">
+                    <div class="publication-header">
+                        <div class="publication-name">${pub.publicationName}</div>
+                        <div class="publication-total">${this.formatCurrency(pub.publicationTotal)}</div>
+                    </div>
+                    
+                    <table class="inventory-table">
+                        <thead>
+                            <tr>
+                                <th>Channel</th>
+                                <th>Ad Placement</th>
+                                <th>Quantity</th>
+                                <th>Audience Estimate</th>
+                                <th>Duration</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pub.inventoryItems.map(item => {
+                                const pricingModel = item.itemPricing?.pricingModel;
+                                const monthlyImpressions = (item as any).monthlyImpressions;
+                                
+                                let audienceInfo = 'N/A';
+                                if (pricingModel === 'cpm' && monthlyImpressions) {
+                                    audienceInfo = `${monthlyImpressions.toLocaleString()} impressions/mo`;
+                                } else if (pricingModel === 'cpv' && monthlyImpressions) {
+                                    audienceInfo = `${monthlyImpressions.toLocaleString()} views/mo`;
+                                } else if (pricingModel === 'cpc' && monthlyImpressions) {
+                                    const clicks = Math.round(monthlyImpressions * 0.01);
+                                    audienceInfo = `~${clicks.toLocaleString()} clicks/mo`;
+                                } else if (pricingModel === 'per_send' || pricingModel === 'per_newsletter') {
+                                    audienceInfo = 'Per send';
+                                } else if (pricingModel === 'per_spot' || pricingModel === 'per_ad') {
+                                    audienceInfo = 'Per placement';
+                                } else if (pricingModel === 'monthly' || pricingModel === 'flat') {
+                                    audienceInfo = 'Monthly rate';
+                                }
+                                
+                                return `
+                                <tr>
+                                    <td>
+                                        <span class="channel-badge channel-${item.channel}">${item.channel}</span>
+                                    </td>
+                                    <td>${item.itemName}</td>
+                                    <td>${item.currentFrequency || item.quantity || 1}× ${item.frequency || 'monthly'}</td>
+                                    <td style="font-size: 12px; color: #64748b;">${audienceInfo}</td>
+                                    <td>${item.duration || 'Campaign duration'}</td>
+                                    <td>${this.formatCurrency(item.itemPricing?.hubPrice || 0)}</td>
+                                </tr>
+                            `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `).join('')}
+        </div>
+
+        <!-- Investment Summary -->
+        <div class="section">
+            <h2>Investment Summary</h2>
+            <div class="pricing-summary">
+                <div class="pricing-row">
+                    <span>Monthly Total:</span>
+                    <span><strong>${this.formatCurrency(monthlyCost)}</strong></span>
+                </div>
+                <div class="pricing-row">
+                    <span>Campaign Duration:</span>
+                    <span><strong>${duration} months</strong></span>
+                </div>
+                <div class="pricing-row total">
+                    <span>Total Package Investment:</span>
+                    <span>${this.formatCurrency(totalCost)}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Included Services -->
+        ${hubPackage.features?.includedServices && hubPackage.features.includedServices.length > 0 ? `
+        <div class="section">
+            <h2>Included Services</h2>
+            <ul class="terms-list">
+                ${hubPackage.features.includedServices.map(service => `<li>${service}</li>`).join('')}
+            </ul>
+        </div>
+        ` : ''}
+
+        <!-- Terms and Conditions -->
+        <div class="section">
+            <h2>Terms & Conditions</h2>
+            <ul class="terms-list">
+                <li>Lead Time: ${hubPackage.campaignDetails.leadTime}</li>
+                <li>Material Deadline: ${hubPackage.campaignDetails.materialDeadline}</li>
+                <li>Cancellation Policy: ${hubPackage.campaignDetails.cancellationPolicy}</li>
+                ${hubPackage.campaignDetails.modificationPolicy ? `<li>Modification Policy: ${hubPackage.campaignDetails.modificationPolicy}</li>` : ''}
+                ${hubPackage.campaignDetails.minimumCommitment ? `<li>Minimum Commitment: ${hubPackage.campaignDetails.minimumCommitment}</li>` : ''}
+                <li>All advertising materials must be submitted according to each publication's specifications</li>
+                <li>Payment terms: Net 30 days from invoice date</li>
+                <li>All pricing reflects Hub discounted rates</li>
+                <li>Each publication reserves the right to reject advertising that doesn't meet their standards</li>
+            </ul>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="section">
+            <h2>Questions or Changes?</h2>
+            <p>For questions about this insertion order or to make changes to your package, please contact:</p>
+            <div class="info-item" style="margin-top: 15px;">
+                <div class="info-label">${hubPackage.hubInfo.hubName} Package Support</div>
+                <div class="info-value">Email: packages@${hubPackage.hubInfo.hubId}.media</div>
+                <div class="info-value">Package: ${hubPackage.basicInfo.name}</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Generated on ${this.formatDate(new Date())}</p>
+            <p>${hubPackage.hubInfo.hubName} • Supporting Local Journalism • Press Forward Initiative</p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    return html;
+  }
+
+  /**
+   * Generate Markdown Insertion Order for a Hub Package
+   */
+  async generateMarkdownInsertionOrderForPackage(hubPackage: HubPackage): Promise<string> {
+    // Calculate duration
+    const duration = hubPackage.metadata?.builderInfo?.originalDuration || 6;
+    const monthlyCost = hubPackage.pricing.breakdown.finalPrice;
+    const totalCost = monthlyCost * duration;
+
+    // Calculate totals
+    const totalPublications = hubPackage.components.publications.length;
+    const totalInventoryItems = hubPackage.components.publications.reduce(
+      (sum, pub) => sum + (pub.inventoryItems?.length || 0), 
+      0
+    );
+
+    const markdown = `# Media Insertion Order
+
+**Package:** ${hubPackage.basicInfo.name}  
+**Generated:** ${this.formatDate(new Date())}
+
+---
+
+## Client Information
+
+| Field | Value |
+|-------|-------|
+| **Company Name** | ___________________________ |
+| **Contact Name** | ___________________________ |
+| **Contact Email** | ___________________________ |
+| **Contact Phone** | ___________________________ |
+| **Campaign Start Date** | ___________________________ |
+| **Campaign End Date** | ___________________________ |
+
+---
+
+## Package Information
+
+| Field | Value |
+|-------|-------|
+| **Package Name** | ${hubPackage.basicInfo.name} |
+| **Package Category** | ${hubPackage.basicInfo.category} |
+| **Duration** | ${duration} months |
+| **Hub** | ${hubPackage.hubInfo.hubName} |
+
+${hubPackage.basicInfo.description ? `\n## Package Description\n\n${hubPackage.basicInfo.description}\n` : ''}
+
+${hubPackage.features?.keyBenefits && hubPackage.features.keyBenefits.length > 0 ? `
+## Key Benefits
+
+${hubPackage.features.keyBenefits.map(benefit => `- ${benefit}`).join('\n')}
+` : ''}
+
+---
+
+## Included Publications & Inventory
+
+**${totalPublications} publications • ${totalInventoryItems} ad placements**
+
+${hubPackage.components.publications.map(pub => `
+### ${pub.publicationName}
+**Publication Total:** ${this.formatCurrency(pub.publicationTotal)}/month
+
+| Channel | Ad Placement | Quantity | Audience Estimate | Duration | Cost |
+|---------|--------------|----------|-------------------|----------|------|
+${pub.inventoryItems.map(item => {
+  const pricingModel = item.itemPricing?.pricingModel;
+  const monthlyImpressions = (item as any).monthlyImpressions;
+  
+  let audienceInfo = 'N/A';
+  if (pricingModel === 'cpm' && monthlyImpressions) {
+    audienceInfo = `${monthlyImpressions.toLocaleString()} impressions/mo`;
+  } else if (pricingModel === 'cpv' && monthlyImpressions) {
+    audienceInfo = `${monthlyImpressions.toLocaleString()} views/mo`;
+  } else if (pricingModel === 'cpc' && monthlyImpressions) {
+    const clicks = Math.round(monthlyImpressions * 0.01);
+    audienceInfo = `~${clicks.toLocaleString()} clicks/mo`;
+  } else if (pricingModel === 'per_send' || pricingModel === 'per_newsletter') {
+    audienceInfo = 'Per send';
+  } else if (pricingModel === 'per_spot' || pricingModel === 'per_ad') {
+    audienceInfo = 'Per placement';
+  } else if (pricingModel === 'monthly' || pricingModel === 'flat') {
+    audienceInfo = 'Monthly rate';
+  }
+  
+  return `| ${item.channel} | ${item.itemName} | ${item.currentFrequency || item.quantity || 1}× ${item.frequency || 'monthly'} | ${audienceInfo} | ${item.duration || 'Campaign duration'} | ${this.formatCurrency(item.itemPricing?.hubPrice || 0)} |`;
+}).join('\n')}
+`).join('\n')}
+
+---
+
+## Investment Summary
+
+**Monthly Total:** ${this.formatCurrency(monthlyCost)}  
+**Campaign Duration:** ${duration} months  
+
+### **Total Package Investment:** ${this.formatCurrency(totalCost)}
+
+---
+
+${hubPackage.features?.includedServices && hubPackage.features.includedServices.length > 0 ? `
+## Included Services
+
+${hubPackage.features.includedServices.map(service => `- ${service}`).join('\n')}
+
+---
+` : ''}
+
+## Terms & Conditions
+
+- Lead Time: ${hubPackage.campaignDetails.leadTime}
+- Material Deadline: ${hubPackage.campaignDetails.materialDeadline}
+- Cancellation Policy: ${hubPackage.campaignDetails.cancellationPolicy}
+${hubPackage.campaignDetails.modificationPolicy ? `- Modification Policy: ${hubPackage.campaignDetails.modificationPolicy}\n` : ''}${hubPackage.campaignDetails.minimumCommitment ? `- Minimum Commitment: ${hubPackage.campaignDetails.minimumCommitment}\n` : ''}- All advertising materials must be submitted according to each publication's specifications
+- Payment terms: Net 30 days from invoice date
+- All pricing reflects Hub discounted rates
+- Each publication reserves the right to reject advertising that doesn't meet their standards
+
+---
+
+## Questions or Changes?
+
+For questions about this insertion order or to make changes to your package, please contact:
+
+**${hubPackage.hubInfo.hubName} Package Support**  
+Email: packages@${hubPackage.hubInfo.hubId}.media  
+Package: ${hubPackage.basicInfo.name}
+
+---
+
+*${hubPackage.hubInfo.hubName} • Supporting Local Journalism • Press Forward Initiative*
+`;
+
+    return markdown;
   }
 }
 
