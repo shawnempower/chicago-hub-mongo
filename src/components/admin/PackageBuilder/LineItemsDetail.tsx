@@ -21,6 +21,30 @@ interface LineItemsDetailProps {
 export function LineItemsDetail({ publications, originalPublications, onUpdate }: LineItemsDetailProps) {
   const [collapsedTypes, setCollapsedTypes] = useState<Set<PublicationFrequencyType>>(new Set());
 
+  // Convert camelCase to Title Case
+  const camelToTitleCase = (str: string): string => {
+    const specialCases: Record<string, string> = {
+      'fileSize': 'File Size',
+      'thirdPartyTags': 'Third Party Tags',
+      'adFormat': 'Ad Format',
+      'bitrate': 'Bitrate',
+      'duration': 'Duration',
+      'format': 'Format',
+      'placement': 'Placement',
+      'size': 'Size',
+      'animationAllowed': 'Animation Allowed'
+    };
+    
+    if (specialCases[str]) {
+      return specialCases[str];
+    }
+    
+    return str
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (s) => s.toUpperCase())
+      .trim();
+  };
+
   // Group publications by frequency type
   const publicationsByType = publications.reduce((acc, pub) => {
     const type = pub.publicationFrequencyType || 'custom';
@@ -354,12 +378,16 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
         {/* Specifications */}
         {item.specifications && Object.keys(item.specifications).length > 0 && (
           <div className="pt-2 border-t">
-            <p className="text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 flex-wrap text-xs">
               {Object.entries(item.specifications)
                 .filter(([key, value]) => value)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join(' • ')}
-            </p>
+                .map(([key, value], idx) => (
+                  <span key={idx} className="flex items-center gap-1">
+                    <span className="text-gray-400 font-light">{camelToTitleCase(key)}</span>
+                    <span className="text-gray-700 font-normal">{value}</span>
+                  </span>
+                ))}
+            </div>
           </div>
         )}
       </div>
@@ -396,7 +424,7 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
             <div>
               <h3 className="font-semibold">{getPublicationTypeLabel(type)}</h3>
               <p className="text-sm text-muted-foreground">
-                {pubs.length} outlets • {totalItems} items
+                {pubs.length} outlets • {totalItems} {totalItems === 1 ? 'Ad Slot' : 'Ad Slots'}
               </p>
             </div>
           </div>
@@ -421,7 +449,7 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
                   <div className="flex-1">
                     <div className="font-semibold text-lg">{pub.publicationName || 'Unknown'}</div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      {pub.inventoryItems?.length || 0} items
+                      {pub.inventoryItems?.length || 0} {(pub.inventoryItems?.length || 0) === 1 ? 'Ad Slot' : 'Ad Slots'}
                     </div>
                   </div>
                   <div className="text-right">
@@ -512,7 +540,7 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
     <div className="space-y-4">
       <div className="flex items-center justify-between pb-2 border-b">
         <p className="text-sm text-muted-foreground">
-          Adjust frequencies for individual items
+          Adjust frequencies for individual Ad Slots
         </p>
         <Button
           variant="ghost"

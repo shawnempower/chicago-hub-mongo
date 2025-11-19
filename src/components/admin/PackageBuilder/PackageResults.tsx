@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   Download,
   Save,
@@ -14,6 +13,7 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
   Trash2,
   X,
   Plus,
@@ -22,7 +22,8 @@ import {
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
 import { BuilderResult } from '@/services/packageBuilderService';
 import { LineItemsDetail } from './LineItemsDetail';
-import { calculateItemCost } from '@/utils/inventoryPricing';
+import { LineItemsTable } from './LineItemsTable';
+import { calculateItemCost, calculatePublicationTotal } from '@/utils/inventoryPricing';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
 import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
@@ -177,6 +178,39 @@ export function PackageResults({
     );
 
     onUpdatePublications(filteredPublications);
+  };
+
+  // Handle frequency change for line items
+  const handleFrequencyChange = (pubId: number, itemIndex: number, newFrequency: number) => {
+    const updatedPublications = publications.map(pub => {
+      if (pub.publicationId === pubId && pub.inventoryItems) {
+        const updatedItems = pub.inventoryItems.map((item, idx) => {
+          if (idx === itemIndex) {
+            return {
+              ...item,
+              currentFrequency: newFrequency,
+              quantity: newFrequency
+            };
+          }
+          return item;
+        });
+
+        // Recalculate publication total using pricing service
+        const newTotal = calculatePublicationTotal({
+          ...pub,
+          inventoryItems: updatedItems
+        });
+
+        return {
+          ...pub,
+          inventoryItems: updatedItems,
+          publicationTotal: newTotal
+        };
+      }
+      return pub;
+    });
+
+    onUpdatePublications(updatedPublications);
   };
 
   // Handle generate insertion order
@@ -711,7 +745,7 @@ export function PackageResults({
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                               <span>{data.outlets.size} outlets</span>
                               <span>•</span>
-                              <span>{data.items.length} items</span>
+                              <span>{data.items.length} {data.items.length === 1 ? 'Ad Slot' : 'Ad Slots'}</span>
                               <span>•</span>
                               <span>{data.units} units/mo</span>
                             </div>
@@ -738,150 +772,22 @@ export function PackageResults({
                                 
                                 return (
                                   <div key={pubName} className="space-y-2">
-                                    <div className="flex items-center justify-between bg-background p-2 rounded-md">
-                                      <div className="font-medium">{pubName}</div>
-                                      <div className="text-sm font-semibold">{formatPrice(pubTotal)}/mo</div>
-                                    </div>
-                                    
-                                    <div className="ml-4 space-y-2">
-                                      {items.map((item, idx) => {
-                                        // Determine outlet type icon/label based on channel
-                                        const getOutletTypeLabel = () => {
-                                          switch (channel) {
-                                            case 'newsletter': return '📧 Newsletter';
-                                            case 'print': return '📰 Newspaper';
-                                            case 'radio': return '📻 Radio';
-                                            case 'podcast': return '🎙️ Podcast';
-                                            case 'website': return '🌐 Website';
-                                            case 'social': return '📱 Social';
-                                            case 'streaming': return '📺 Streaming';
-                                            case 'events': return '🎪 Events';
-                                            default: return '📍 ' + channel;
-                                          }
-                                        };
-                                        
-                                        // Use the sourceName field if available (newsletters, radio shows, podcasts, etc.)
-                                        // Fall back to parsing itemName if sourceName not available (for legacy packages)
-                                        let sourceName = (item as any).sourceName;
-                                        if (!sourceName && item.itemName && item.itemName.includes(' - ')) {
-                                          const parts = item.itemName.split(' - ');
-                                          if (parts.length > 1) {
-                                            sourceName = parts[0]; // Extract the source name before the dash
-                                          }
-                                        }
-                                        
-                                        return (
-                                        <div key={idx} className="flex items-start justify-between p-3 bg-background rounded-lg border group hover:border-destructive/50 transition-colors">
-                                          <div className="flex-1 space-y-1">
-                                            {/* Outlet Type & Publication/Source Name - highlighted */}
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                              <Badge variant="secondary" className="text-xs font-semibold">
-                                                {getOutletTypeLabel()}
-                                              </Badge>
-                                              <span className="text-xs font-semibold text-primary">
-                                                {item.publicationName || 'Unknown Outlet'}
-                                              </span>
-                                              {sourceName && (
-                                                <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                                  📬 {sourceName}
-                                                </span>
-                                              )}
-                                            </div>
-                                            
-                                            {/* Inventory Item Name */}
-                                            <div className="font-medium text-sm">{item.itemName || 'Unnamed Item'}</div>
-                                            
-                                            {/* Specifications */}
-                                            {item.specifications && Object.keys(item.specifications).length > 0 && (
-                                              <div className="text-xs text-muted-foreground">
-                                                {Object.entries(item.specifications)
-                                                  .filter(([_, value]) => value)
-                                                  .slice(0, 3)
-                                                  .map(([key, value]) => `${key}: ${value}`)
-                                                  .join(' • ')}
-                                              </div>
-                                            )}
-                                            
-                                            {/* Frequency */}
-                                            <div className="text-xs text-muted-foreground">
-                                              Frequency: {item.currentFrequency || item.quantity || 1}x per month
-                                            </div>
-                                          </div>
-                                          <div className="flex items-center gap-3 ml-4">
-                                            <div className="text-right space-y-1">
-                                              <div className="font-bold">{formatPrice(item.itemCost)}</div>
-                                              <div className="text-xs text-muted-foreground">
-                                                {(() => {
-                                                  const pricingModel = item.itemPricing?.pricingModel;
-                                                  const hubPrice = item.itemPricing?.hubPrice || 0;
-                                                  const freq = item.currentFrequency || item.quantity || 1;
-                                                  
-                                                  if (pricingModel === 'cpm' && (item as any).monthlyImpressions) {
-                                                    const impressions = (item as any).monthlyImpressions;
-                                                    return `$${hubPrice}/1000 impressions × ${(impressions / 1000).toLocaleString()}K`;
-                                                  }
-                                                  if (pricingModel === 'cpv' && (item as any).monthlyImpressions) {
-                                                    const impressions = (item as any).monthlyImpressions;
-                                                    return `$${hubPrice}/100 views × ${(impressions / 100).toLocaleString()}`;
-                                                  }
-                                                  if (pricingModel === 'cpc' && (item as any).monthlyImpressions) {
-                                                    const impressions = (item as any).monthlyImpressions;
-                                                    const clicks = Math.round(impressions * 0.01);
-                                                    return `$${hubPrice}/click × ${clicks.toLocaleString()} clicks`;
-                                                  }
-                                                  
-                                                  // Map pricing models to their display units
-                                                  const modelUnits: Record<string, string> = {
-                                                    'flat': '/month',
-                                                    'monthly': '/month',
-                                                    'per_week': '/week',
-                                                    'per_day': '/day',
-                                                    'per_send': '/send',
-                                                    'per_spot': '/spot',
-                                                    'per_post': '/post',
-                                                    'per_ad': '/ad',
-                                                    'per_episode': '/episode',
-                                                    'per_story': '/story'
-                                                  };
-                                                  
-                                                  const unit = modelUnits[pricingModel || 'flat'] || '';
-                                                  return `$${hubPrice.toLocaleString()}${unit} × ${freq}`;
-                                                })()}
-                                              </div>
-                                            </div>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteItem(item.publicationId, item.itemPath);
-                                              }}
-                                              title="Remove item"
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </div>
-                    </div>
-                        );
-                                      })}
-                                      
-                                      {/* Publication Subtotal Calculation */}
-                                      {items.length > 1 && (
-                                        <div className="p-2 bg-muted/50 rounded text-xs text-muted-foreground">
-                                          <div className="font-medium mb-1">{pubName} Calculation:</div>
-                                          <div className="space-y-0.5">
-                                            {items.map((item, idx) => (
-                                              <div key={idx}>
-                                                {formatPrice(item.itemCost)}{idx < items.length - 1 ? ' +' : ''}
-                  </div>
-                ))}
-                                            <div className="border-t border-muted-foreground/30 pt-1 font-semibold">
-                                              = {formatPrice(pubTotal)}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      )}
+                                    <div className="ml-4">
+                                      <LineItemsTable
+                                        title={pubName}
+                                        items={items}
+                                        publicationId={items[0]?.publicationId || 0}
+                                        onFrequencyChange={(pubId, itemIndex, newFrequency) => {
+                                          // Find the actual publication object
+                                          const pub = publications.find(p => p.publicationId === pubId);
+                                          // Find the item by matching the itemPath
+                                          const item = items[itemIndex];
+                                          const actualItemIndex = pub?.inventoryItems?.findIndex(i => i.itemPath === item.itemPath) ?? itemIndex;
+                                          handleFrequencyChange(pubId, actualItemIndex, newFrequency);
+                                        }}
+                                        totalCost={pubTotal}
+                                        defaultExpanded={true}
+                                      />
                                       
                                       {/* Removed Items Section for By Channel */}
                                       {(() => {
@@ -895,31 +801,6 @@ export function PackageResults({
                                 );
                               })}
                               
-                              {/* Channel Total Calculation */}
-                              <Separator />
-                              {Object.keys(itemsByPublication).length > 1 && (
-                                <div className="p-3 bg-muted/30 rounded text-xs text-muted-foreground">
-                                  <div className="font-medium mb-2">
-                                    {channel.charAt(0).toUpperCase() + channel.slice(1)} Channel Calculation:
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                    {Object.entries(itemsByPublication).map(([pubName, items], idx) => {
-                                      const pubTotal = items.reduce((sum, item) => sum + item.itemCost, 0);
-                                      return (
-                                        <div key={idx} className="flex justify-between">
-                                          <span className="truncate mr-2">{pubName}:</span>
-                                          <span>{formatPrice(pubTotal)}</span>
-                                        </div>
-                                      );
-                                    })}
-                                    <div className="col-span-2 border-t border-muted-foreground/30 pt-1 mt-1 flex justify-between font-semibold">
-                                      <span>Total:</span>
-                                      <span>= {formatPrice(data.cost)}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                              
                               {/* Channel Total */}
                               <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border-2 border-primary/30">
                                 <div className="space-y-1">
@@ -927,7 +808,7 @@ export function PackageResults({
                                     {channel.charAt(0).toUpperCase() + channel.slice(1)} Total
                                   </div>
                                   <div className="text-sm text-muted-foreground">
-                                    {Object.keys(itemsByPublication).length} publications, {data.items.length} items
+                                    {Object.keys(itemsByPublication).length} publications, {data.items.length} {data.items.length === 1 ? 'Ad Slot' : 'Ad Slots'}
                                   </div>
                                 </div>
                                 <div className="text-right">
@@ -989,7 +870,7 @@ export function PackageResults({
                               <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                                 <span>{Object.keys(itemsByChannel).length} channels</span>
                                 <span>•</span>
-                                <span>{pub.inventoryItems?.length || 0} items</span>
+                                <span>{pub.inventoryItems?.length || 0} {(pub.inventoryItems?.length || 0) === 1 ? 'Ad Slot' : 'Ad Slots'}</span>
                                 <span>•</span>
                                 <span>{totalUnits} units/mo</span>
                               </div>
@@ -1021,143 +902,24 @@ export function PackageResults({
 
                                   return (
                                     <div key={channel} className="space-y-2">
-                                      <div className="flex items-center justify-between bg-background p-2 rounded-md">
-                                        <Badge variant="secondary" className="capitalize">
-                                          {channel}
-                                        </Badge>
-                                        <div className="text-sm font-semibold">
-                                          {formatPrice(channelTotal)}/mo
-                                        </div>
-                                      </div>
-
-                                      <div className="ml-4 space-y-2">
-                                        {items.map((item, idx) => {
-                                          const itemCost = calculateItemCost(item, item.currentFrequency || item.quantity || 1);
-                                          
-                                          // Use the sourceName field if available (newsletters, radio shows, podcasts, etc.)
-                                          // Fall back to parsing itemName if sourceName not available (for legacy packages)
-                                          let sourceName = (item as any).sourceName;
-                                          if (!sourceName && item.itemName && item.itemName.includes(' - ')) {
-                                            const parts = item.itemName.split(' - ');
-                                            if (parts.length > 1) {
-                                              sourceName = parts[0]; // Extract the source name before the dash
-                                            }
-                                          }
-                                          
-                                          return (
-                                            <div key={idx} className="flex items-start justify-between p-3 bg-background rounded-lg border group hover:border-destructive/50 transition-colors">
-                                              <div className="flex-1 space-y-1">
-                                                {/* Channel Badge & Source Name (for nested items like newsletters) */}
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                  <Badge variant="outline" className="capitalize text-xs">
-                                                    {channel}
-                                                  </Badge>
-                                                  {sourceName && (
-                                                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                                      📬 {sourceName}
-                                                    </span>
-                                                  )}
-                                                </div>
-                                                
-                                                {/* Inventory Item Name */}
-                                                <div className="font-medium text-sm">{item.itemName || 'Unnamed Item'}</div>
-                                                
-                                                {/* Specifications */}
-                                                {item.specifications && Object.keys(item.specifications).length > 0 && (
-                                                  <div className="text-xs text-muted-foreground">
-                                                    {Object.entries(item.specifications)
-                                                      .filter(([_, value]) => value)
-                                                      .slice(0, 3)
-                                                      .map(([key, value]) => `${key}: ${value}`)
-                                                      .join(' • ')}
-                                                  </div>
-                                                )}
-                                                
-                                                {/* Frequency */}
-                                                <div className="text-xs text-muted-foreground">
-                                                  Frequency: {item.currentFrequency || item.quantity || 1}x per month
-                                                </div>
-                                              </div>
-                                              <div className="flex items-center gap-3 ml-4">
-                                                <div className="text-right space-y-1">
-                                                  <div className="font-bold">{formatPrice(itemCost)}</div>
-                                                  <div className="text-xs text-muted-foreground">
-                                                    {(() => {
-                                                      const pricingModel = item.itemPricing?.pricingModel;
-                                                      const hubPrice = item.itemPricing?.hubPrice || 0;
-                                                      const freq = item.currentFrequency || item.quantity || 1;
-                                                      
-                                                      if (pricingModel === 'cpm' && (item as any).monthlyImpressions) {
-                                                        const impressions = (item as any).monthlyImpressions;
-                                                        return `$${hubPrice}/1000 impressions × ${(impressions / 1000).toLocaleString()}K`;
-                                                      }
-                                                      if (pricingModel === 'cpv' && (item as any).monthlyImpressions) {
-                                                        const impressions = (item as any).monthlyImpressions;
-                                                        return `$${hubPrice}/100 views × ${(impressions / 100).toLocaleString()}`;
-                                                      }
-                                                      if (pricingModel === 'cpc' && (item as any).monthlyImpressions) {
-                                                        const impressions = (item as any).monthlyImpressions;
-                                                        const clicks = Math.round(impressions * 0.01);
-                                                        return `$${hubPrice}/click × ${clicks.toLocaleString()} clicks`;
-                                                      }
-                                                      
-                                                      // Map pricing models to their display units
-                                                      const modelUnits: Record<string, string> = {
-                                                        'flat': '/month',
-                                                        'monthly': '/month',
-                                                        'per_week': '/week',
-                                                        'per_day': '/day',
-                                                        'per_send': '/send',
-                                                        'per_spot': '/spot',
-                                                        'per_post': '/post',
-                                                        'per_ad': '/ad',
-                                                        'per_episode': '/episode',
-                                                        'per_story': '/story'
-                                                      };
-                                                      
-                                                      const unit = modelUnits[pricingModel || 'flat'] || '';
-                                                      return `$${hubPrice.toLocaleString()}${unit} × ${freq}`;
-                                                    })()}
-                                                  </div>
-                                                </div>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteItem(pub.publicationId, item.itemPath);
-                                                  }}
-                                                  title="Remove item"
-                                                >
-                                                  <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                        
-                                        {/* Channel Items Calculation */}
-                                        {items.length > 1 && (
-                                          <div className="p-2 bg-muted/50 rounded text-xs text-muted-foreground">
-                                            <div className="font-medium mb-1">
-                                              {channel.charAt(0).toUpperCase() + channel.slice(1)} Calculation:
-                                            </div>
-                                            <div className="space-y-0.5">
-                                              {items.map((item, idx) => {
-                                                const itemCost = calculateItemCost(item, item.currentFrequency || item.quantity || 1);
-                                                return (
-                                                  <div key={idx}>
-                                                    {formatPrice(itemCost)}{idx < items.length - 1 ? ' +' : ''}
-                                                  </div>
-                                                );
-                                              })}
-                                              <div className="border-t border-muted-foreground/30 pt-1 font-semibold">
-                                                = {formatPrice(channelTotal)}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        )}
+                                      <div className="ml-4">
+                                        <LineItemsTable
+                                          title={channel.charAt(0).toUpperCase() + channel.slice(1)}
+                                          items={items.map(item => {
+                                            // Enrich items with their actual index for callbacks
+                                            const actualItemIndex = pub.inventoryItems?.findIndex(i => i.itemPath === item.itemPath) ?? 0;
+                                            return { ...item, actualItemIndex };
+                                          })}
+                                          publicationId={pub.publicationId}
+                                          onFrequencyChange={(pubId, itemIndex, newFrequency) => {
+                                            // Find the item by matching the itemPath
+                                            const item = items[itemIndex];
+                                            const actualItemIndex = pub.inventoryItems?.findIndex(i => i.itemPath === item.itemPath) ?? itemIndex;
+                                            handleFrequencyChange(pubId, actualItemIndex, newFrequency);
+                                          }}
+                                          totalCost={channelTotal}
+                                          defaultExpanded={true}
+                                        />
                                         
                                         {/* Removed Items Section for By Outlet */}
                                         {(() => {
@@ -1168,43 +930,6 @@ export function PackageResults({
                                     </div>
                                   );
                                 })}
-                              
-                              {/* Outlet Total Calculation */}
-                              <Separator />
-                              {Object.keys(itemsByChannel).length > 1 && (
-                                <div className="p-3 bg-muted/30 rounded text-xs text-muted-foreground">
-                                  <div className="font-medium mb-2">
-                                    {pub.publicationName} Outlet Calculation:
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                    {Object.entries(itemsByChannel)
-                                      .sort((a, b) => {
-                                        const costA = a[1].reduce((sum, item) => 
-                                          sum + calculateItemCost(item, item.currentFrequency || item.quantity || 1), 0
-                                        );
-                                        const costB = b[1].reduce((sum, item) => 
-                                          sum + calculateItemCost(item, item.currentFrequency || item.quantity || 1), 0
-                                        );
-                                        return costB - costA;
-                                      })
-                                      .map(([channel, items], idx) => {
-                                        const channelTotal = items.reduce((sum, item) => {
-                                          return sum + calculateItemCost(item, item.currentFrequency || item.quantity || 1);
-                                        }, 0);
-                                        return (
-                                          <div key={idx} className="flex justify-between">
-                                            <span className="capitalize truncate mr-2">{channel}:</span>
-                                            <span>{formatPrice(channelTotal)}</span>
-                                          </div>
-                                        );
-                                      })}
-                                    <div className="col-span-2 border-t border-muted-foreground/30 pt-1 mt-1 flex justify-between font-semibold">
-                                      <span>Total:</span>
-                                      <span>= {formatPrice(pub.publicationTotal || 0)}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
                             </div>
                     </div>
                         )}

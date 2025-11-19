@@ -858,17 +858,9 @@ export const HubPackageManagement = () => {
   // Render based on view state
   if (viewState === 'builder') {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => setViewState('list')}>
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Back to Packages
-          </Button>
-        </div>
-        <ErrorBoundary>
-          <PackageBuilder onAnalyze={handleAnalyze} loading={loading} />
-        </ErrorBoundary>
-      </div>
+      <ErrorBoundary>
+        <PackageBuilder onAnalyze={handleAnalyze} loading={loading} onBack={() => setViewState('list')} />
+      </ErrorBoundary>
     );
   }
 
