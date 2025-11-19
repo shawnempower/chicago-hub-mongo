@@ -24,84 +24,27 @@ echo "   API URL: $API_URL"
 echo "   AWS Profile: $AWS_PROFILE"
 echo ""
 
-# Step 1: Build frontend
-echo "📦 Step 1: Building frontend for staging..."
+# Step 1: Trigger Amplify build from repository
+echo "🚀 Step 1: Triggering Amplify build from repository..."
 cd "$(dirname "$0")/.."
-VITE_API_BASE_URL=$API_URL npm run build
 
-if [ $? -ne 0 ]; then
-    echo "❌ Build failed"
-    exit 1
-fi
-
-echo "✅ Build completed successfully"
-
-# Step 2: Create deployment package
-echo "📦 Step 2: Creating deployment package..."
-cd dist
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-ZIP_FILE="../staging-frontend-${TIMESTAMP}.zip"
-zip -r $ZIP_FILE . > /dev/null
-
-if [ $? -ne 0 ]; then
-    echo "❌ Package creation failed"
-    exit 1
-fi
-
-cd ..
-# Update ZIP_FILE path to be relative to root directory
-ZIP_FILE="staging-frontend-${TIMESTAMP}.zip"
-echo "✅ Package created: $(basename $ZIP_FILE)"
-
-# Step 3: Create deployment in Amplify
-echo "🔄 Step 3: Creating deployment in Amplify..."
-DEPLOYMENT_JSON=$(aws amplify create-deployment \
+JOB_JSON=$(aws amplify start-job \
   --app-id $APP_ID \
   --branch-name $BRANCH_NAME \
+  --job-type RELEASE \
   --profile "$AWS_PROFILE" \
   --output json)
 
 if [ $? -ne 0 ]; then
-    echo "❌ Deployment creation failed"
+    echo "❌ Failed to start Amplify job"
     exit 1
 fi
 
-JOB_ID=$(echo $DEPLOYMENT_JSON | python3 -c "import sys, json; print(json.load(sys.stdin)['jobId'])")
-UPLOAD_URL=$(echo $DEPLOYMENT_JSON | python3 -c "import sys, json; print(json.load(sys.stdin)['zipUploadUrl'])")
+JOB_ID=$(echo $JOB_JSON | python3 -c "import sys, json; print(json.load(sys.stdin)['jobSummary']['jobId'])")
+echo "✅ Build started with Job ID: $JOB_ID"
 
-echo "✅ Deployment created with Job ID: $JOB_ID"
-
-# Step 4: Upload package to Amplify
-echo "⬆️  Step 4: Uploading package to Amplify..."
-HTTP_STATUS=$(curl -X PUT "$UPLOAD_URL" \
-  -H "Content-Type: application/zip" \
-  --data-binary "@$ZIP_FILE" \
-  -s -o /dev/null -w "%{http_code}")
-
-if [ "$HTTP_STATUS" != "200" ]; then
-    echo "❌ Upload failed with HTTP status: $HTTP_STATUS"
-    exit 1
-fi
-
-echo "✅ Package uploaded successfully"
-
-# Step 5: Start deployment
-echo "🚀 Step 5: Starting deployment..."
-aws amplify start-deployment \
-  --app-id $APP_ID \
-  --branch-name $BRANCH_NAME \
-  --job-id $JOB_ID \
-  --profile "$AWS_PROFILE" > /dev/null
-
-if [ $? -ne 0 ]; then
-    echo "❌ Deployment start failed"
-    exit 1
-fi
-
-echo "✅ Deployment started"
-
-# Step 6: Monitor deployment
-echo "👁️  Step 6: Monitoring deployment status..."
+# Step 2: Monitor deployment
+echo "👁️  Step 2: Monitoring deployment status..."
 echo "   Waiting for deployment to complete..."
 
 for i in {1..60}; do
@@ -127,11 +70,6 @@ done
 if [ "$STATUS" != "SUCCEED" ]; then
     echo "⚠️  Deployment may still be in progress. Check manually in Amplify console."
 fi
-
-# Step 7: Cleanup
-echo "🧹 Step 7: Cleaning up..."
-rm -f $ZIP_FILE
-echo "✅ Cleanup complete"
 
 echo ""
 echo "🎉 Staging frontend has been deployed!"
