@@ -169,15 +169,9 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// Update publication (admin only)
-router.put('/:id', authenticateToken, async (req: any, res: Response) => {
+// Update publication (requires publication access)
+router.put('/:id', authenticateToken, requirePublicationAccess('id'), async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { id } = req.params;
     const publication = await publicationsService.update(id, req.body);
     
@@ -337,8 +331,8 @@ router.get('/:publicationId/files/:fileId/download', authenticateToken, async (r
   }
 });
 
-// Upload a new file to publication
-router.post('/:publicationId/files', authenticateToken, upload.single('file'), async (req: any, res: Response) => {
+// Upload a new file to publication (requires publication access)
+router.post('/:publicationId/files', authenticateToken, requirePublicationAccess('publicationId'), upload.single('file'), async (req: any, res: Response) => {
   try {
     const { publicationId } = req.params;
     const { fileType, description, tags, isPublic } = req.body;
@@ -349,12 +343,6 @@ router.post('/:publicationId/files', authenticateToken, upload.single('file'), a
 
     if (!fileType) {
       return res.status(400).json({ error: 'File type is required' });
-    }
-
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
     }
 
     // Verify publication exists
@@ -407,17 +395,11 @@ router.post('/:publicationId/files', authenticateToken, upload.single('file'), a
   }
 });
 
-// Update file metadata
-router.put('/:publicationId/files/:fileId', authenticateToken, async (req: any, res: Response) => {
+// Update file metadata (requires publication access)
+router.put('/:publicationId/files/:fileId', authenticateToken, requirePublicationAccess('publicationId'), async (req: any, res: Response) => {
   try {
     const { publicationId, fileId } = req.params;
     const { fileName, description, tags, isPublic } = req.body;
-
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
 
     // Verify publication exists
     const publication = await publicationsService.getById(publicationId);
@@ -446,16 +428,10 @@ router.put('/:publicationId/files/:fileId', authenticateToken, async (req: any, 
   }
 });
 
-// Delete file
-router.delete('/:publicationId/files/:fileId', authenticateToken, async (req: any, res: Response) => {
+// Delete file (requires publication access)
+router.delete('/:publicationId/files/:fileId', authenticateToken, requirePublicationAccess('publicationId'), async (req: any, res: Response) => {
   try {
     const { publicationId, fileId } = req.params;
-
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
 
     // Verify publication exists
     const publication = await publicationsService.getById(publicationId);

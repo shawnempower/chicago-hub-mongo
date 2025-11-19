@@ -100,10 +100,37 @@ export class PermissionsService {
       // Admin has access to everything
       if (permissions.role === 'admin') return true;
       
-      // Check via access junction table (most efficient)
+      // First, look up the publication to get both ID formats
+      // The ID passed could be either _id (MongoDB string) or publicationId (numeric)
+      const publicationsCollection = getDatabase().collection(COLLECTIONS.PUBLICATIONS);
+      const query: any = { $or: [] };
+      
+      // Try to match as string _id
+      query.$or.push({ _id: publicationId });
+      
+      // Try to match as ObjectId (for MongoDB-generated IDs)
+      if (ObjectId.isValid(publicationId)) {
+        query.$or.push({ _id: new ObjectId(publicationId) });
+      }
+      
+      // Try to match as numeric publicationId
+      const numericId = parseInt(publicationId);
+      if (!isNaN(numericId)) {
+        query.$or.push({ publicationId: numericId });
+      }
+      
+      const publication = await publicationsCollection.findOne(query);
+      
+      if (!publication) {
+        logger.warn(`Publication not found for ID: ${publicationId}`);
+        return false;
+      }
+      
+      // Check via access junction table with the numeric publicationId
+      // (which is how access records are stored)
       const access = await this.accessJunctionCollection.findOne({
         userId,
-        publicationId: String(publicationId)
+        publicationId: String(publication.publicationId)
       });
       
       return access !== null;
