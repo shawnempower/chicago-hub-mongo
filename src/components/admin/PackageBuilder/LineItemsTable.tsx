@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { HubPackageInventoryItem } from '@/integrations/mongodb/hubPackageSchema';
 import {
   getFrequencyOptionsWithLabels,
@@ -16,6 +17,7 @@ interface LineItemsTableProps {
   items: HubPackageInventoryItem[];
   publicationId: number;
   onFrequencyChange: (pubId: number, itemIndex: number, newFrequency: number) => void;
+  onToggleExclude?: (pubId: number, itemIndex: number) => void;
   defaultExpanded?: boolean;
   totalCost: number;
 }
@@ -25,10 +27,15 @@ export function LineItemsTable({
   items,
   publicationId,
   onFrequencyChange,
+  onToggleExclude,
   defaultExpanded = true,
   totalCost
 }: LineItemsTableProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  
+  // Calculate excluded items count
+  const excludedCount = items.filter(item => item.isExcluded).length;
+  const activeCount = items.length - excludedCount;
 
   // Convert camelCase to Title Case
   const camelToTitleCase = (str: string): string => {
@@ -203,7 +210,8 @@ export function LineItemsTable({
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm">{title}</span>
                   <span className="text-xs font-light text-gray-400">
-                    {items.length} {items.length === 1 ? 'Ad Slot' : 'Ad Slots'}
+                    {activeCount} {activeCount === 1 ? 'Ad Slot' : 'Ad Slots'}
+                    {excludedCount > 0 && ` (${excludedCount} excluded)`}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -237,13 +245,27 @@ export function LineItemsTable({
             const pricingModel = item.itemPricing?.pricingModel || 'flat';
             const monthlyCost = calculateItemCost(item, frequency);
             
+            const isExcluded = item.isExcluded || false;
+            
             return (
-              <tr key={item.itemPath || itemIndex} className="border-t hover:bg-gray-50">
+              <tr 
+                key={item.itemPath || itemIndex} 
+                className={`border-t hover:bg-gray-50 ${isExcluded ? 'opacity-30' : ''}`}
+              >
                 {/* Item Name & Non-Pricing Specs */}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3 flex-wrap">
                     {/* Item Name */}
-                    <span className="font-normal text-sm">{item.itemName}</span>
+                    <span className={`font-normal text-sm ${isExcluded ? 'line-through' : ''}`}>
+                      {item.itemName}
+                    </span>
+                    
+                    {/* Excluded Badge */}
+                    {isExcluded && (
+                      <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-500">
+                        Excluded
+                      </Badge>
+                    )}
                     
                     {/* Source Name Badge */}
                     {(item as any).sourceName && (
@@ -295,9 +317,32 @@ export function LineItemsTable({
                   </div>
                 </td>
                 
-                {/* Actions placeholder for consistency */}
+                {/* Actions */}
                 <td className="px-4 py-3 w-12">
-                  {/* Could add delete button here if needed */}
+                  {onToggleExclude && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onToggleExclude(publicationId, itemIndex)}
+                            className="h-8 w-8 p-0 hover:bg-gray-200"
+                          >
+                            {isExcluded ? (
+                              <EyeOff className="h-4 w-4 text-gray-500" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-600" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{isExcluded ? 'Include in package' : 'Exclude from package'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </td>
               </tr>
             );

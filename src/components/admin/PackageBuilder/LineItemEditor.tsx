@@ -248,11 +248,20 @@ export function LineItemEditor({
 
   // Compact inline display for table rows
   if (compact) {
+    const isExcluded = item.isExcluded || false;
+    
     return (
-      <div className="flex items-start justify-between p-3 bg-background rounded-lg border group hover:border-primary/50 transition-colors">
+      <div className={`flex items-start justify-between p-3 bg-background rounded-lg border group hover:border-primary/50 transition-colors ${isExcluded ? 'opacity-30' : ''}`}>
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm">{item.itemName}</span>
+            <span className={`font-medium text-sm ${isExcluded ? 'line-through' : ''}`}>
+              {item.itemName}
+            </span>
+            {isExcluded && (
+              <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-500">
+                Excluded
+              </Badge>
+            )}
             <Badge variant="outline" className="text-xs capitalize">
               {item.channel}
             </Badge>
@@ -308,13 +317,20 @@ export function LineItemEditor({
   }
 
   // Expanded card display (not used initially but available)
+  const isExcluded = item.isExcluded || false;
+  
   return (
-    <div className="border rounded-lg p-4 space-y-3">
+    <div className={`border rounded-lg p-4 space-y-3 ${isExcluded ? 'opacity-30' : ''}`}>
       {/* Item Header */}
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="font-medium">{item.itemName}</p>
+          <p className={`font-medium ${isExcluded ? 'line-through' : ''}`}>{item.itemName}</p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {isExcluded && (
+              <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-500">
+                Excluded
+              </Badge>
+            )}
             <Badge variant="outline" className="text-xs capitalize">
               {item.channel}
             </Badge>

@@ -111,11 +111,13 @@ export function calculatePublicationTotal(
     return 0;
   }
 
-  return publication.inventoryItems.reduce((total, item) => {
-    const itemFrequency = item.currentFrequency || item.quantity || 1;
-    const itemCost = calculateItemCost(item, itemFrequency, durationMonths);
-    return total + itemCost;
-  }, 0);
+  return publication.inventoryItems
+    .filter(item => !item.isExcluded) // Exclude items marked as excluded
+    .reduce((total, item) => {
+      const itemFrequency = item.currentFrequency || item.quantity || 1;
+      const itemCost = calculateItemCost(item, itemFrequency, durationMonths);
+      return total + itemCost;
+    }, 0);
 }
 
 /**
@@ -226,8 +228,13 @@ export function scalePublication(
     return publication;
   }
 
-  // Scale each item
+  // Scale each item (but don't scale excluded items)
   const scaledItems = publication.inventoryItems.map(item => {
+    // Skip scaling for excluded items
+    if (item.isExcluded) {
+      return item;
+    }
+    
     const currentFreq = item.currentFrequency || item.quantity || 1;
     // Apply scale factor and round to nearest integer (minimum 1)
     const newFrequency = Math.max(1, Math.round(currentFreq * scaleFactor));
@@ -235,11 +242,13 @@ export function scalePublication(
     return applyFrequencyChange(item, newFrequency, durationMonths);
   });
 
-  // Recalculate publication total
-  const newTotal = scaledItems.reduce((sum, item) => 
-    sum + (item.monthlyCost || calculateItemCost(item, item.currentFrequency || item.quantity || 1, durationMonths)),
-    0
-  );
+  // Recalculate publication total (excluding excluded items)
+  const newTotal = scaledItems
+    .filter(item => !item.isExcluded)
+    .reduce((sum, item) => 
+      sum + (item.monthlyCost || calculateItemCost(item, item.currentFrequency || item.quantity || 1, durationMonths)),
+      0
+    );
 
   return {
     ...publication,
@@ -268,21 +277,23 @@ export function scaleChannel(
       return publication;
     }
 
-    // Scale only items matching the channel
+    // Scale only items matching the channel (but not excluded items)
     const updatedItems = publication.inventoryItems.map(item => {
-      if (item.channel === channel) {
+      if (item.channel === channel && !item.isExcluded) {
         const currentFreq = item.currentFrequency || item.quantity || 1;
         const newFrequency = Math.max(1, Math.round(currentFreq * scaleFactor));
         return applyFrequencyChange(item, newFrequency, durationMonths);
       }
-      return item; // Keep non-matching items unchanged
+      return item; // Keep non-matching items and excluded items unchanged
     });
 
-    // Recalculate publication total
-    const newTotal = updatedItems.reduce((sum, item) => 
-      sum + (item.monthlyCost || calculateItemCost(item, item.currentFrequency || item.quantity || 1, durationMonths)),
-      0
-    );
+    // Recalculate publication total (excluding excluded items)
+    const newTotal = updatedItems
+      .filter(item => !item.isExcluded)
+      .reduce((sum, item) => 
+        sum + (item.monthlyCost || calculateItemCost(item, item.currentFrequency || item.quantity || 1, durationMonths)),
+        0
+      );
 
     return {
       ...publication,
@@ -405,18 +416,20 @@ export function calculateSummaryStats(
 
   publications.forEach(pub => {
     if (pub.inventoryItems) {
-      pub.inventoryItems.forEach(item => {
-        allChannels.add(item.channel);
-        totalUnits += item.currentFrequency || item.quantity || 1;
-        
-        // Track channel costs
-        const itemCost = calculateItemCost(
-          item, 
-          item.currentFrequency || item.quantity || 1,
-          durationMonths
-        );
-        channelBreakdown[item.channel] = (channelBreakdown[item.channel] || 0) + itemCost;
-      });
+      pub.inventoryItems
+        .filter(item => !item.isExcluded) // Skip excluded items
+        .forEach(item => {
+          allChannels.add(item.channel);
+          totalUnits += item.currentFrequency || item.quantity || 1;
+          
+          // Track channel costs
+          const itemCost = calculateItemCost(
+            item, 
+            item.currentFrequency || item.quantity || 1,
+            durationMonths
+          );
+          channelBreakdown[item.channel] = (channelBreakdown[item.channel] || 0) + itemCost;
+        });
     }
   });
 

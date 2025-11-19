@@ -45,6 +45,9 @@ geography.csv
 # Export files
 exports/
 
+# Build files
+*.zip
+
 # Test files and output (root directory only)
 /test-*.ts
 /test-*.json

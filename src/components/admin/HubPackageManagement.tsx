@@ -808,10 +808,12 @@ export const HubPackageManagement = () => {
         summary: {
           totalOutlets: pkg.components.publications.length,
           totalChannels: new Set(
-            pkg.components.publications.flatMap(p => p.inventoryItems?.map(i => i.channel) || [])
+            pkg.components.publications.flatMap(p => 
+              p.inventoryItems?.filter(i => !i.isExcluded).map(i => i.channel) || []
+            )
           ).size,
           totalUnits: pkg.components.publications.reduce(
-            (sum, p) => sum + (p.inventoryItems?.reduce((s, i) => s + (i.currentFrequency || i.quantity || 1), 0) || 0),
+            (sum, p) => sum + (p.inventoryItems?.filter(i => !i.isExcluded).reduce((s, i) => s + (i.currentFrequency || i.quantity || 1), 0) || 0),
             0
           ),
           monthlyCost: pkg.pricing?.breakdown?.finalPrice || 0,
@@ -843,7 +845,7 @@ export const HubPackageManagement = () => {
     );
   });
 
-  // Calculate stats
+  // Calculate stats (recalculate prices to account for excluded items)
   const stats = {
     total: packages.length,
     active: packages.filter(p => p.availability.isActive).length,
@@ -851,7 +853,18 @@ export const HubPackageManagement = () => {
     totalViews: packages.reduce((sum, p) => sum + p.analytics.viewCount, 0),
     totalInquiries: packages.reduce((sum, p) => sum + p.analytics.inquiryCount, 0),
     avgPrice: packages.length > 0 
-      ? Math.round(packages.reduce((sum, p) => sum + p.pricing.breakdown.finalPrice, 0) / packages.length)
+      ? Math.round(packages.reduce((sum, p) => {
+          // Recalculate each package's price excluding excluded items
+          const actualPrice = p.components.publications.reduce((pubSum, pub) => {
+            if (!pub.inventoryItems) return pubSum;
+            return pubSum + pub.inventoryItems
+              .filter(item => !item.isExcluded)
+              .reduce((itemSum, item) => 
+                itemSum + calculateItemCost(item, item.currentFrequency || item.quantity || 1), 0
+              );
+          }, 0);
+          return sum + actualPrice;
+        }, 0) / packages.length)
       : 0
   };
 
@@ -1090,12 +1103,14 @@ export const HubPackageManagement = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredPackages.map((pkg) => {
-            // Recalculate actual monthly cost from items
+            // Recalculate actual monthly cost from items (excluding excluded items)
             const actualMonthlyCost = pkg.components.publications.reduce((sum, pub) => {
               if (!pub.inventoryItems) return sum;
-              return sum + pub.inventoryItems.reduce((pubSum, item) => {
-                return pubSum + calculateItemCost(item, item.currentFrequency || item.quantity || 1);
-              }, 0);
+              return sum + pub.inventoryItems
+                .filter(item => !item.isExcluded) // Exclude items marked as excluded
+                .reduce((pubSum, item) => {
+                  return pubSum + calculateItemCost(item, item.currentFrequency || item.quantity || 1);
+                }, 0);
             }, 0);
             
             return (
@@ -1196,7 +1211,9 @@ export const HubPackageManagement = () => {
                     <div>
                       <p className="text-muted-foreground">Items</p>
                       <p className="font-semibold">
-                        {pkg.components.publications.reduce((sum, p) => sum + p.inventoryItems.length, 0)}
+                        {pkg.components.publications.reduce((sum, p) => 
+                          sum + p.inventoryItems.filter(item => !item.isExcluded).length, 0
+                        )}
                       </p>
                     </div>
                   </div>

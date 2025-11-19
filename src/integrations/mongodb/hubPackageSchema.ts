@@ -34,6 +34,9 @@ export interface HubPackageInventoryItem {
   maxFrequency?: number; // Maximum allowed frequency based on publication schedule
   publicationFrequencyType?: PublicationFrequencyType; // Type of publication for constraint logic
   
+  // BUILDER: Item exclusion (soft delete)
+  isExcluded?: boolean; // Excluded from package but not deleted - won't contribute to totals
+  
   // Campaign-specific calculated metrics (from LLM)
   monthlyImpressions?: number; // Calculated impressions per month (for CPM pricing)
   monthlyCost?: number; // Cost per month

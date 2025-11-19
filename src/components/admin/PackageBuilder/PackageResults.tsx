@@ -88,12 +88,14 @@ export function PackageResults({
   // Calculate summary stats
   const { summary: originalSummary, publications } = result;
   
-  // Recalculate monthlyCost from actual items to match the breakdown
+  // Recalculate monthlyCost from actual items to match the breakdown (excluding excluded items)
   const actualMonthlyCost = publications.reduce((sum, pub) => {
     if (!pub.inventoryItems) return sum;
-    return sum + pub.inventoryItems.reduce((pubSum, item) => {
-      return pubSum + calculateItemCost(item, item.currentFrequency || item.quantity || 1);
-    }, 0);
+    return sum + pub.inventoryItems
+      .filter(item => !item.isExcluded) // Exclude items marked as excluded
+      .reduce((pubSum, item) => {
+        return pubSum + calculateItemCost(item, item.currentFrequency || item.quantity || 1);
+      }, 0);
   }, 0);
   
   // Use recalculated value for summary
@@ -213,6 +215,38 @@ export function PackageResults({
     onUpdatePublications(updatedPublications);
   };
 
+  // Handle toggling item exclusion
+  const handleToggleExclude = (pubId: number, itemIndex: number) => {
+    const updatedPublications = publications.map(pub => {
+      if (pub.publicationId === pubId && pub.inventoryItems) {
+        const updatedItems = pub.inventoryItems.map((item, idx) => {
+          if (idx === itemIndex) {
+            return {
+              ...item,
+              isExcluded: !item.isExcluded
+            };
+          }
+          return item;
+        });
+
+        // Recalculate publication total using pricing service (which now filters excluded items)
+        const newTotal = calculatePublicationTotal({
+          ...pub,
+          inventoryItems: updatedItems
+        });
+
+        return {
+          ...pub,
+          inventoryItems: updatedItems,
+          publicationTotal: newTotal
+        };
+      }
+      return pub;
+    });
+
+    onUpdatePublications(updatedPublications);
+  };
+
   // Handle generate insertion order
   const handleGenerateInsertionOrder = () => {
     if (!packageName.trim()) {
@@ -262,7 +296,8 @@ export function PackageResults({
       date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const totalPublications = pubs.length;
-    const totalInventoryItems = pubs.reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0);
+    const totalInventoryItems = pubs.reduce((sum, pub) => 
+      sum + (pub.inventoryItems?.filter(item => !item.isExcluded).length || 0), 0);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -515,9 +550,16 @@ export function PackageResults({
         };
       }
       acc[item.channel].outlets.add(pub.publicationName || 'Unknown');
-      acc[item.channel].units += (item.currentFrequency || item.quantity || 1);
+      
+      // Only count units and cost for non-excluded items
+      if (!item.isExcluded) {
+        acc[item.channel].units += (item.currentFrequency || item.quantity || 1);
+        const itemCost = calculateItemCost(item, item.currentFrequency || item.quantity || 1);
+        acc[item.channel].cost += itemCost;
+      }
+      
+      // But include ALL items in the array for display (they'll be styled differently)
       const itemCost = calculateItemCost(item, item.currentFrequency || item.quantity || 1);
-      acc[item.channel].cost += itemCost;
       acc[item.channel].items.push({
         ...item,
         publicationId: pub.publicationId,  // Ensure publicationId is present
@@ -768,7 +810,9 @@ export function PackageResults({
                             <div className="p-4 space-y-4">
                               {/* Group by Publication */}
                               {Object.entries(itemsByPublication).map(([pubName, items]) => {
-                                const pubTotal = items.reduce((sum, item) => sum + item.itemCost, 0);
+                                const pubTotal = items
+                                  .filter(item => !item.isExcluded)
+                                  .reduce((sum, item) => sum + item.itemCost, 0);
                                 
                                 return (
                                   <div key={pubName} className="space-y-2">
@@ -784,6 +828,14 @@ export function PackageResults({
                                           const item = items[itemIndex];
                                           const actualItemIndex = pub?.inventoryItems?.findIndex(i => i.itemPath === item.itemPath) ?? itemIndex;
                                           handleFrequencyChange(pubId, actualItemIndex, newFrequency);
+                                        }}
+                                        onToggleExclude={(pubId, itemIndex) => {
+                                          // Find the actual publication object
+                                          const pub = publications.find(p => p.publicationId === pubId);
+                                          // Find the item by matching the itemPath
+                                          const item = items[itemIndex];
+                                          const actualItemIndex = pub?.inventoryItems?.findIndex(i => i.itemPath === item.itemPath) ?? itemIndex;
+                                          handleToggleExclude(pubId, actualItemIndex);
                                         }}
                                         totalCost={pubTotal}
                                         defaultExpanded={true}
@@ -837,7 +889,7 @@ export function PackageResults({
                   .sort((a, b) => (a.publicationName || '').localeCompare(b.publicationName || '')) // Sort by name alphabetically for stability
                   .map((pub) => {
                     const isExpanded = expandedOutlets.has(pub.publicationId);
-                    // Group items by channel
+                    // Group items by channel (keep excluded items for display, they'll be styled differently)
                     const itemsByChannel = (pub.inventoryItems || []).reduce((acc, item) => {
                       if (!item || !item.channel) return acc;
                       if (!acc[item.channel]) {
@@ -847,16 +899,20 @@ export function PackageResults({
                       return acc;
                     }, {} as Record<string, any[]>);
 
-                    const totalUnits = (pub.inventoryItems || []).reduce(
-                      (sum, item) => sum + (item.currentFrequency || item.quantity || 1), 
-                      0
-                    );
+                    const totalUnits = (pub.inventoryItems || [])
+                      .filter(item => !item.isExcluded)
+                      .reduce(
+                        (sum, item) => sum + (item.currentFrequency || item.quantity || 1), 
+                        0
+                      );
 
-                    // Recalculate publication total from actual items
-                    const actualPublicationTotal = (pub.inventoryItems || []).reduce(
-                      (sum, item) => sum + calculateItemCost(item, item.currentFrequency || item.quantity || 1),
-                      0
-                    );
+                    // Recalculate publication total from actual items (excluding excluded items)
+                    const actualPublicationTotal = (pub.inventoryItems || [])
+                      .filter(item => !item.isExcluded)
+                      .reduce(
+                        (sum, item) => sum + calculateItemCost(item, item.currentFrequency || item.quantity || 1),
+                        0
+                      );
 
                     return (
                       <Card key={pub.publicationId} className="overflow-hidden">
@@ -896,9 +952,11 @@ export function PackageResults({
                               {Object.entries(itemsByChannel)
                                 .sort((a, b) => a[0].localeCompare(b[0])) // Sort by channel name alphabetically for stability
                                 .map(([channel, items]) => {
-                                  const channelTotal = items.reduce((sum, item) => {
-                                    return sum + calculateItemCost(item, item.currentFrequency || item.quantity || 1);
-                                  }, 0);
+                                  const channelTotal = items
+                                    .filter(item => !item.isExcluded)
+                                    .reduce((sum, item) => {
+                                      return sum + calculateItemCost(item, item.currentFrequency || item.quantity || 1);
+                                    }, 0);
 
                                   return (
                                     <div key={channel} className="space-y-2">
@@ -916,6 +974,12 @@ export function PackageResults({
                                             const item = items[itemIndex];
                                             const actualItemIndex = pub.inventoryItems?.findIndex(i => i.itemPath === item.itemPath) ?? itemIndex;
                                             handleFrequencyChange(pubId, actualItemIndex, newFrequency);
+                                          }}
+                                          onToggleExclude={(pubId, itemIndex) => {
+                                            // Find the item by matching the itemPath
+                                            const item = items[itemIndex];
+                                            const actualItemIndex = pub.inventoryItems?.findIndex(i => i.itemPath === item.itemPath) ?? itemIndex;
+                                            handleToggleExclude(pubId, actualItemIndex);
                                           }}
                                           totalCost={channelTotal}
                                           defaultExpanded={true}

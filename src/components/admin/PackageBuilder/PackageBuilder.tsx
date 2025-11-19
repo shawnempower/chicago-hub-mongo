@@ -62,6 +62,7 @@ interface InventoryDisplay {
   hubPrice: number; // Hub-specific pricing only
   specifications?: Record<string, unknown>;
   frequency?: number;
+  isExcluded?: boolean; // Excluded from package but not deleted
 }
 
 // Publication with inventory for display
@@ -140,18 +141,21 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
             'standard' // Using standard for display purposes
           );
 
-          const inventory: InventoryDisplay[] = items.map(item => ({
-            channel: item.channel || '',
-            itemName: item.itemName || 'Unnamed Item',
-            itemPath: item.itemPath || '',
-            hubPrice: item.itemPricing?.hubPrice || 0, // Hub pricing only
-            specifications: item.specifications || {},
-            frequency: item.currentFrequency || 1
-          }));
+                          const inventory: InventoryDisplay[] = items.map(item => ({
+                            channel: item.channel || '',
+                            itemName: item.itemName || 'Unnamed Item',
+                            itemPath: item.itemPath || '',
+                            hubPrice: item.itemPricing?.hubPrice || 0, // Hub pricing only
+                            specifications: item.specifications || {},
+                            frequency: item.currentFrequency || 1,
+                            isExcluded: item.isExcluded || false
+                          }));
 
-          const totalPrice = inventory.reduce((sum, item) => 
-            sum + ((item.hubPrice || 0) * (item.frequency || 1)), 0
-          );
+                          const totalPrice = inventory
+                            .filter(item => !item.isExcluded) // Exclude items marked as excluded
+                            .reduce((sum, item) => 
+                              sum + ((item.hubPrice || 0) * (item.frequency || 1)), 0
+                            );
 
           return {
             ...pub,
@@ -275,9 +279,18 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
     p.publicationId != null && 
     selectedPublications.includes(p.publicationId)
   );
-  const totalMonthly = selectedPubs.reduce((sum, p) => sum + (p.totalPrice || 0), 0);
+  // Recalculate total dynamically based on current excluded status
+  const totalMonthly = selectedPubs.reduce((sum, p) => {
+    const pubTotal = (p.inventory || [])
+      .filter(item => !item.isExcluded)
+      .reduce((itemSum, item) => 
+        itemSum + ((item.hubPrice || 0) * (item.frequency || 1)), 0
+      );
+    return sum + pubTotal;
+  }, 0);
   const totalCampaign = totalMonthly * (parseInt(duration) || 1);
-  const totalInventoryItems = selectedPubs.reduce((sum, p) => sum + ((p.inventory || []).length), 0);
+  const totalInventoryItems = selectedPubs.reduce((sum, p) => 
+    sum + ((p.inventory || []).filter(item => !item.isExcluded).length), 0);
 
   return (
     <div className="space-y-4">
@@ -429,6 +442,7 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                       <div className="space-y-3">
                         {publications.map((pub) => {
                           const isSelected = selectedPublications.includes(pub.publicationId);
+                          // Group by channel (keep all items for display, they'll be styled if excluded)
                           const inventoryByChannel = (pub.inventory || []).reduce((acc, item) => {
                             if (!item || !item.channel) return acc;
                             if (!acc[item.channel]) {
@@ -470,7 +484,13 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                                           <span className="flex items-center gap-1">
                                             <PackageIcon className="h-3 w-3" />
-                                            {(pub.inventory || []).length} items
+                                            {(() => {
+                                              const activeItems = (pub.inventory || []).filter(item => !item.isExcluded).length;
+                                              const excludedItems = (pub.inventory || []).filter(item => item.isExcluded).length;
+                                              return excludedItems > 0 
+                                                ? `${activeItems} items (${excludedItems} excluded)`
+                                                : `${activeItems} items`;
+                                            })()}
                                           </span>
                                           <span className="flex items-center gap-1">
                                             <Sparkles className="h-3 w-3" />
@@ -499,11 +519,14 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                             ) : (
                               <div className="space-y-4">
                                 {Object.entries(inventoryByChannel).map(([channel, items]) => {
-                                  const channelTotal = items.reduce((sum, item) => 
-                                    sum + (item.hubPrice * (item.frequency || 1)), 0
-                                  );
+                                  const channelTotal = items
+                                    .filter(item => !item.isExcluded) // Exclude items marked as excluded
+                                    .reduce((sum, item) => 
+                                      sum + (item.hubPrice * (item.frequency || 1)), 0
+                                    );
                                   
                                   // Group items by source (e.g., newsletter name, radio show name)
+                                  // Keep all items for display - they'll be styled if excluded
                                   const itemsBySource = items.reduce((acc, item) => {
                                     // Extract source name from item path (e.g., "Newsletter Name" from path)
                                     const pathParts = item.itemPath.split('.');
@@ -555,9 +578,11 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                                       
                                       <div className="ml-4 space-y-3">
                                         {Object.entries(itemsBySource).map(([sourceName, sourceItems]) => {
-                                          const sourceTotal = sourceItems.reduce((sum, item) => 
-                                            sum + (item.hubPrice * (item.frequency || 1)), 0
-                                          );
+                                          const sourceTotal = sourceItems
+                                            .filter(item => !item.isExcluded) // Exclude items marked as excluded
+                                            .reduce((sum, item) => 
+                                              sum + (item.hubPrice * (item.frequency || 1)), 0
+                                            );
                                           
                                           return (
                                             <div key={sourceName} className="space-y-2">
@@ -571,19 +596,26 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                                               
                                               {/* Ad Slots under this source */}
                                               <div className={Object.keys(itemsBySource).length > 1 ? "ml-3 space-y-2" : "space-y-2"}>
-                                                {sourceItems.map((item, idx) => (
-                                                  <div 
-                                                    key={`${item.itemPath}-${idx}`}
-                                                    className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg text-sm"
-                                                  >
-                                                    {/* Left Section: Item Name & Specs */}
-                                                    <div className="flex-1 flex items-center gap-3 flex-wrap">
-                                                      <span className="font-medium">
-                                                        {Object.keys(itemsBySource).length > 1 
-                                                          ? item.itemName.replace(sourceName + ' - ', '') 
-                                                          : item.itemName
-                                                        }
-                                                      </span>
+                                                {sourceItems.map((item, idx) => {
+                                                  const isExcluded = item.isExcluded || false;
+                                                  return (
+                                                    <div 
+                                                      key={`${item.itemPath}-${idx}`}
+                                                      className={`flex items-center gap-4 p-3 bg-muted/30 rounded-lg text-sm ${isExcluded ? 'opacity-30' : ''}`}
+                                                    >
+                                                      {/* Left Section: Item Name & Specs */}
+                                                      <div className="flex-1 flex items-center gap-3 flex-wrap">
+                                                        <span className={`font-medium ${isExcluded ? 'line-through' : ''}`}>
+                                                          {Object.keys(itemsBySource).length > 1 
+                                                            ? item.itemName.replace(sourceName + ' - ', '') 
+                                                            : item.itemName
+                                                          }
+                                                        </span>
+                                                        {isExcluded && (
+                                                          <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-500">
+                                                            Excluded
+                                                          </Badge>
+                                                        )}
                                                       {item.specifications && Object.keys(item.specifications).length > 0 && (
                                                         <>
                                                           {Object.entries(item.specifications)
@@ -612,7 +644,8 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                                                       </span>
                                                     </div>
                                                   </div>
-                                                ))}
+                                                  );
+                                                })}
                                               </div>
                                             </div>
                                           );
