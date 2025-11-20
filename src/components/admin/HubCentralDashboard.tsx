@@ -8,6 +8,7 @@ import { HubPackageManagement } from './HubPackageManagement';
 import { HubDataQuality } from './HubDataQuality';
 import { HubTeamManagement } from './HubTeamManagement';
 import { HubPricingAnalytics } from './HubPricingAnalytics';
+import { InventoryChatContainer } from '../inventory-chat/InventoryChatContainer';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
@@ -968,6 +969,14 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </div>
             </CardContent>
           </Card>
+        </div>
+      );
+    }
+    
+    if (activeTab === 'inventory-chat') {
+      return (
+        <div className="h-[calc(100vh-12rem)]">
+          <InventoryChatContainer />
         </div>
       );
     }

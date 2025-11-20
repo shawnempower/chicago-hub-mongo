@@ -63,6 +63,7 @@ import hubPackagesRouter from './routes/hub-packages';
 import hubsRouter from './routes/hubs';
 import adminRouter from './routes/admin';
 import permissionsRouter from './routes/permissions';
+import inventoryChatRouter from './routes/inventory-chat';
 import { authenticateToken } from './middleware/authenticate';
 import { createLogger } from '../src/utils/logger';
 
@@ -168,6 +169,7 @@ app.use('/api/storefront', storefrontRouter);
 app.use('/api/hub-packages', hubPackagesRouter);
 app.use('/api/hubs', hubsRouter);
 app.use('/api/campaigns', campaignsRouter);
+app.use('/api/inventory-chat', inventoryChatRouter);
 
 // ===== STANDALONE ROUTES =====
 // Health check
