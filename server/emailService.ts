@@ -83,6 +83,19 @@ export class EmailService {
   private mg: any;
   private config: EmailConfig;
 
+  // Brand colors matching the web application
+  private readonly BRAND_COLORS = {
+    navy: '#2a3642',        // hsl(210 20% 18%) - Primary
+    orange: '#ee7623',      // hsl(24 86% 52%) - Accent
+    green: '#27AE60',       // hsl(145 63% 42%) - Success
+    cream: '#faf7f2',       // hsl(42 30% 95%) - Background
+    lightGray: '#f8f9fa',   // hsl(0 0% 98%) - Muted
+    mediumGray: '#6c757d',  // hsl(215 16% 47%) - Muted foreground
+    red: '#e74c3c',         // hsl(0 84% 60%) - Destructive
+    white: '#ffffff',
+    border: '#e5e7eb'       // hsl(215 20% 90%)
+  };
+
   constructor(config: EmailConfig) {
     this.config = config;
     this.mg = mailgun.client({
@@ -123,74 +136,213 @@ export class EmailService {
     return process.env.FRONTEND_URL || 'http://localhost:5173';
   }
 
+  /**
+   * Generate standardized email template
+   * Uses Chicago Hub brand colors and typography to match the web application
+   */
+  private generateEmailTemplate(options: {
+    title: string;
+    preheader?: string;
+    content: string;
+    headerColor?: string;
+    headerIcon?: string;
+    recipientEmail: string;
+  }): string {
+    const { title, preheader, content, headerColor, headerIcon, recipientEmail } = options;
+    const primaryColor = headerColor || this.BRAND_COLORS.navy;
+
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>${title}</title>
+        ${preheader ? `<style type="text/css">
+          .preheader { display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; }
+        </style>` : ''}
+        <!--[if mso]>
+        <style type="text/css">
+          .button { padding: 12px 30px !important; }
+        </style>
+        <![endif]-->
+      </head>
+      <body style="margin: 0; padding: 0; background-color: ${this.BRAND_COLORS.cream}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+        ${preheader ? `<span class="preheader" style="display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0;">${preheader}</span>` : ''}
+        
+        <!-- Email Container -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: ${this.BRAND_COLORS.cream};">
+          <tr>
+            <td style="padding: 40px 20px;">
+              
+              <!-- Main Email Card -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: ${this.BRAND_COLORS.white}; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                
+                <!-- Header -->
+                <tr>
+                  <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
+                    ${headerIcon ? `<div style="font-size: 48px; margin-bottom: 16px;">${headerIcon}</div>` : ''}
+                    <h1 style="margin: 0; color: ${this.BRAND_COLORS.white}; font-family: 'Playfair Display', Georgia, serif; font-size: 32px; font-weight: 600; line-height: 1.2;">${title}</h1>
+                  </td>
+                </tr>
+                
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px 30px; color: ${this.BRAND_COLORS.navy}; font-size: 16px; line-height: 1.6;">
+                    ${content}
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color: ${this.BRAND_COLORS.lightGray}; padding: 30px; text-align: center; border-top: 1px solid ${this.BRAND_COLORS.border};">
+                    <p style="margin: 0 0 8px 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray}; line-height: 1.5;">
+                      <strong style="color: ${this.BRAND_COLORS.navy};">Chicago Hub</strong> — Your Premier Media Planning Platform
+                    </p>
+                    <p style="margin: 0 0 16px 0; font-size: 13px; color: ${this.BRAND_COLORS.mediumGray};">
+                      © ${new Date().getFullYear()} Chicago Hub. All rights reserved.
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: ${this.BRAND_COLORS.mediumGray};">
+                      This email was sent to <a href="mailto:${recipientEmail}" style="color: ${this.BRAND_COLORS.orange}; text-decoration: none;">${recipientEmail}</a>
+                    </p>
+                  </td>
+                </tr>
+                
+              </table>
+              
+            </td>
+          </tr>
+        </table>
+        
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Generate a call-to-action button with consistent styling
+   */
+  private generateButton(text: string, url: string, color?: string): string {
+    const buttonColor = color || this.BRAND_COLORS.orange;
+    return `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 24px auto;">
+        <tr>
+          <td style="border-radius: 6px; background-color: ${buttonColor};">
+            <a href="${url}" target="_blank" class="button" style="display: inline-block; padding: 14px 32px; color: ${this.BRAND_COLORS.white}; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 6px; background-color: ${buttonColor};">
+              ${text}
+            </a>
+          </td>
+        </tr>
+      </table>
+    `;
+  }
+
+  /**
+   * Generate an info box with consistent styling
+   */
+  private generateInfoBox(content: string, color?: string): string {
+    const accentColor = color || this.BRAND_COLORS.orange;
+    return `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+        <tr>
+          <td style="background-color: ${this.BRAND_COLORS.lightGray}; border-left: 4px solid ${accentColor}; padding: 20px; border-radius: 6px;">
+            ${content}
+          </td>
+        </tr>
+      </table>
+    `;
+  }
+
+  /**
+   * Generate an alert/warning box
+   */
+  private generateAlertBox(content: string, type: 'warning' | 'info' | 'success' = 'warning'): string {
+    const colors = {
+      warning: { bg: '#fff3cd', border: '#ffc107', icon: '⚠️' },
+      info: { bg: '#d1ecf1', border: '#0dcaf0', icon: 'ℹ️' },
+      success: { bg: '#d4edda', border: this.BRAND_COLORS.green, icon: '✓' }
+    };
+    const config = colors[type];
+
+    return `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+        <tr>
+          <td style="background-color: ${config.bg}; border: 1px solid ${config.border}; border-radius: 6px; padding: 16px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td width="30" style="vertical-align: top; padding-right: 12px; font-size: 20px;">${config.icon}</td>
+                <td style="color: ${this.BRAND_COLORS.navy}; font-size: 15px; line-height: 1.5;">
+                  ${content}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    `;
+  }
+
   // Welcome email for new users
   async sendWelcomeEmail(data: WelcomeEmailData): Promise<{ success: boolean; error?: string }> {
     const verificationLink = data.verificationToken 
       ? `${this.getBaseUrl()}/verify-email?token=${data.verificationToken}`
       : null;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to Chicago Hub</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; padding: 30px 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e1e5e9; }
-          .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; border-radius: 0 0 8px 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Welcome to Chicago Hub!</h1>
-            <p>Your media planning journey starts here</p>
-          </div>
-          
-          <div class="content">
-            <h2>Hi ${data.firstName || 'there'}!</h2>
-            
-            <p>Thank you for joining Chicago Hub, your premier platform for media planning and advertising opportunities in the Chicago area.</p>
-            
-            <p>With Chicago Hub, you can:</p>
-            <ul>
-              <li>🎯 Discover targeted advertising packages</li>
-              <li>📊 Access detailed audience demographics</li>
-              <li>🤝 Connect with local media partners</li>
-              <li>💡 Get AI-powered media planning recommendations</li>
-            </ul>
-            
-            ${verificationLink ? `
-              <p><strong>Please verify your email address to get started:</strong></p>
-              <p style="text-align: center;">
-                <a href="${verificationLink}" class="button">Verify Email Address</a>
-              </p>
-              <p><small>If the button doesn't work, copy and paste this link: ${verificationLink}</small></p>
-            ` : `
-              <p style="text-align: center;">
-                <a href="${this.getBaseUrl()}/dashboard" class="button">Get Started</a>
-              </p>
-            `}
-            
-            <p>If you have any questions, don't hesitate to reach out to our support team.</p>
-            
-            <p>Welcome aboard!<br>
-            The Chicago Hub Team</p>
-          </div>
-          
-          <div class="footer">
-            <p>© 2025 Chicago Hub. All rights reserved.</p>
-            <p>This email was sent to ${data.email}</p>
-          </div>
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.firstName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 16px 0;">
+        Thank you for joining <strong>Chicago Hub</strong>, your premier platform for media planning and advertising opportunities in the Chicago area.
+      </p>
+      
+      <p style="margin: 0 0 12px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
+        With Chicago Hub, you can:
+      </p>
+      <ul style="margin: 0 0 24px 0; padding-left: 24px;">
+        <li style="margin-bottom: 8px;">🎯 Discover targeted advertising packages</li>
+        <li style="margin-bottom: 8px;">📊 Access detailed audience demographics</li>
+        <li style="margin-bottom: 8px;">🤝 Connect with local media partners</li>
+        <li style="margin-bottom: 8px;">💡 Get AI-powered media planning recommendations</li>
+      </ul>
+      
+      ${verificationLink ? `
+        <p style="margin: 0 0 8px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
+          Please verify your email address to get started:
+        </p>
+        <div style="text-align: center; margin: 24px 0;">
+          ${this.generateButton('Verify Email Address', verificationLink, this.BRAND_COLORS.green)}
         </div>
-      </body>
-      </html>
+        <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+          If the button doesn't work, copy and paste this link into your browser:<br>
+          <a href="${verificationLink}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${verificationLink}</a>
+        </p>
+      ` : `
+        <div style="text-align: center; margin: 24px 0;">
+          ${this.generateButton('Get Started', `${this.getBaseUrl()}/dashboard`)}
+        </div>
+      `}
+      
+      <p style="margin: 24px 0 0 0;">
+        If you have any questions, don't hesitate to reach out to our support team.
+      </p>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Welcome aboard!<br>
+        <strong>The Chicago Hub Team</strong>
+      </p>
     `;
+
+    const html = this.generateEmailTemplate({
+      title: 'Welcome to Chicago Hub!',
+      preheader: 'Your media planning journey starts here',
+      content,
+      headerColor: this.BRAND_COLORS.navy,
+      headerIcon: '🎉',
+      recipientEmail: data.email
+    });
 
     return await this.sendEmail({
       to: data.email,
@@ -203,65 +355,56 @@ export class EmailService {
   async sendPasswordResetEmail(data: PasswordResetEmailData): Promise<{ success: boolean; error?: string }> {
     const resetLink = `${this.getBaseUrl()}/reset-password?token=${data.resetToken}`;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Reset Your Password - Chicago Hub</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #dc3545; color: white; text-align: center; padding: 30px 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e1e5e9; }
-          .button { display: inline-block; background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; border-radius: 0 0 8px 8px; }
-          .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🔐 Password Reset Request</h1>
-          </div>
-          
-          <div class="content">
-            <h2>Hi ${data.firstName || 'there'}!</h2>
-            
-            <p>We received a request to reset your password for your Chicago Hub account.</p>
-            
-            <div class="warning">
-              <strong>⚠️ Security Notice:</strong> If you didn't request this password reset, please ignore this email. Your account remains secure.
-            </div>
-            
-            <p>To reset your password, click the button below:</p>
-            
-            <p style="text-align: center;">
-              <a href="${resetLink}" class="button">Reset Password</a>
-            </p>
-            
-            <p><small>If the button doesn't work, copy and paste this link: ${resetLink}</small></p>
-            
-            <p><strong>Important:</strong></p>
-            <ul>
-              <li>This link will expire in 1 hour for security</li>
-              <li>You can only use this link once</li>
-              <li>If you need a new reset link, request another one</li>
-            </ul>
-            
-            <p>Best regards,<br>
-            The Chicago Hub Team</p>
-          </div>
-          
-          <div class="footer">
-            <p>© 2025 Chicago Hub. All rights reserved.</p>
-            <p>This email was sent to ${data.email}</p>
-          </div>
-        </div>
-      </body>
-      </html>
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.firstName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 16px 0;">
+        We received a request to reset your password for your Chicago Hub account.
+      </p>
+      
+      ${this.generateAlertBox(
+        '<strong>Security Notice:</strong> If you didn\'t request this password reset, please ignore this email. Your account remains secure.',
+        'warning'
+      )}
+      
+      <p style="margin: 0 0 8px 0;">
+        To reset your password, click the button below:
+      </p>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('Reset Password', resetLink, this.BRAND_COLORS.red)}
+      </div>
+      
+      <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${resetLink}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${resetLink}</a>
+      </p>
+      
+      <p style="margin: 24px 0 8px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
+        Important:
+      </p>
+      <ul style="margin: 0 0 24px 0; padding-left: 24px; color: ${this.BRAND_COLORS.navy};">
+        <li style="margin-bottom: 8px;">This link will expire in 1 hour for security</li>
+        <li style="margin-bottom: 8px;">You can only use this link once</li>
+        <li style="margin-bottom: 8px;">If you need a new reset link, request another one</li>
+      </ul>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>The Chicago Hub Team</strong>
+      </p>
     `;
+
+    const html = this.generateEmailTemplate({
+      title: 'Password Reset Request',
+      preheader: 'Reset your Chicago Hub password securely',
+      content,
+      headerColor: this.BRAND_COLORS.red,
+      headerIcon: '🔐',
+      recipientEmail: data.email
+    });
 
     return await this.sendEmail({
       to: data.email,
@@ -274,63 +417,56 @@ export class EmailService {
   async sendEmailVerificationEmail(data: EmailVerificationData): Promise<{ success: boolean; error?: string }> {
     const verificationLink = `${this.getBaseUrl()}/verify-email?token=${data.verificationToken}`;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Verify Your Email - Chicago Hub</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #28a745; color: white; text-align: center; padding: 30px 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e1e5e9; }
-          .button { display: inline-block; background: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; border-radius: 0 0 8px 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>✅ Verify Your Email</h1>
-          </div>
-          
-          <div class="content">
-            <h2>Hi ${data.firstName || 'there'}!</h2>
-            
-            <p>Please verify your email address to complete your Chicago Hub account setup.</p>
-            
-            <p>Click the button below to verify your email:</p>
-            
-            <p style="text-align: center;">
-              <a href="${verificationLink}" class="button">Verify Email Address</a>
-            </p>
-            
-            <p><small>If the button doesn't work, copy and paste this link: ${verificationLink}</small></p>
-            
-            <p>Once verified, you'll have full access to:</p>
-            <ul>
-              <li>🎯 Personalized advertising recommendations</li>
-              <li>💾 Save and manage your favorite packages</li>
-              <li>📊 Access detailed analytics and insights</li>
-              <li>🤖 AI-powered media planning assistant</li>
-            </ul>
-            
-            <p>Thanks for joining Chicago Hub!</p>
-            
-            <p>Best regards,<br>
-            The Chicago Hub Team</p>
-          </div>
-          
-          <div class="footer">
-            <p>© 2025 Chicago Hub. All rights reserved.</p>
-            <p>This email was sent to ${data.email}</p>
-          </div>
-        </div>
-      </body>
-      </html>
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.firstName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 16px 0;">
+        Please verify your email address to complete your <strong>Chicago Hub</strong> account setup.
+      </p>
+      
+      <p style="margin: 0 0 8px 0;">
+        Click the button below to verify your email:
+      </p>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('Verify Email Address', verificationLink, this.BRAND_COLORS.green)}
+      </div>
+      
+      <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${verificationLink}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${verificationLink}</a>
+      </p>
+      
+      <p style="margin: 24px 0 12px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
+        Once verified, you'll have full access to:
+      </p>
+      <ul style="margin: 0 0 24px 0; padding-left: 24px;">
+        <li style="margin-bottom: 8px;">🎯 Personalized advertising recommendations</li>
+        <li style="margin-bottom: 8px;">💾 Save and manage your favorite packages</li>
+        <li style="margin-bottom: 8px;">📊 Access detailed analytics and insights</li>
+        <li style="margin-bottom: 8px;">🤖 AI-powered media planning assistant</li>
+      </ul>
+      
+      <p style="margin: 0 0 24px 0;">
+        Thanks for joining Chicago Hub!
+      </p>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>The Chicago Hub Team</strong>
+      </p>
     `;
+
+    const html = this.generateEmailTemplate({
+      title: 'Verify Your Email',
+      preheader: 'Complete your Chicago Hub account setup',
+      content,
+      headerColor: this.BRAND_COLORS.green,
+      headerIcon: '✅',
+      recipientEmail: data.email
+    });
 
     return await this.sendEmail({
       to: data.email,
@@ -344,74 +480,70 @@ export class EmailService {
     const acceptLink = `${this.getBaseUrl()}/accept-invitation/${data.invitationToken}`;
     const resourceTypeLabel = data.resourceType === 'hub' ? 'Hub' : 'Publication';
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Invitation to ${data.resourceName} - Chicago Hub</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; padding: 30px 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e1e5e9; }
-          .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-          .info-box { background: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; border-radius: 0 0 8px 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🎉 You're Invited!</h1>
-          </div>
-          
-          <div class="content">
-            <h2>Hi ${data.recipientName || 'there'}!</h2>
-            
-            <p><strong>${data.invitedByName}</strong> has invited you to join <strong>${data.resourceName}</strong> on Chicago Hub.</p>
-            
-            <div class="info-box">
-              <strong>📋 Resource Type:</strong> ${resourceTypeLabel}<br>
-              <strong>📍 Resource Name:</strong> ${data.resourceName}<br>
-              <strong>👤 Invited By:</strong> ${data.invitedByName}
-            </div>
-            
-            ${data.isExistingUser ? `
-              <p>Since you already have a Chicago Hub account, simply click the button below to accept this invitation and gain access:</p>
-            ` : `
-              <p>To get started, you'll need to create your Chicago Hub account. Click the button below to accept this invitation and set up your account:</p>
-            `}
-            
-            <p style="text-align: center;">
-              <a href="${acceptLink}" class="button">Accept Invitation</a>
-            </p>
-            
-            <p><small>If the button doesn't work, copy and paste this link: ${acceptLink}</small></p>
-            
-            <p><strong>What you'll be able to do:</strong></p>
-            <ul>
-              <li>✅ Manage ${data.resourceType === 'hub' ? 'hub settings and publications' : 'publication details and content'}</li>
-              <li>✅ Invite other team members</li>
-              <li>✅ Access analytics and insights</li>
-              <li>✅ Collaborate with your team</li>
-            </ul>
-            
-            <p><small><strong>Note:</strong> This invitation will expire in 7 days.</small></p>
-            
-            <p>Welcome to the team!<br>
-            The Chicago Hub Team</p>
-          </div>
-          
-          <div class="footer">
-            <p>© 2025 Chicago Hub. All rights reserved.</p>
-            <p>This email was sent to ${data.recipientEmail}</p>
-          </div>
-        </div>
-      </body>
-      </html>
+    const infoBoxContent = `
+      <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Resource Type:</strong> ${resourceTypeLabel}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">📍 Resource Name:</strong> ${data.resourceName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">👤 Invited By:</strong> ${data.invitedByName}
+      </p>
     `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        <strong>${data.invitedByName}</strong> has invited you to join <strong>${data.resourceName}</strong> on Chicago Hub.
+      </p>
+      
+      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.orange)}
+      
+      <p style="margin: 0 0 16px 0;">
+        ${data.isExistingUser 
+          ? 'Since you already have a Chicago Hub account, simply click the button below to accept this invitation and gain access:'
+          : 'To get started, you\'ll need to create your Chicago Hub account. Click the button below to accept this invitation and set up your account:'
+        }
+      </p>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('Accept Invitation', acceptLink)}
+      </div>
+      
+      <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${acceptLink}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${acceptLink}</a>
+      </p>
+      
+      <p style="margin: 24px 0 12px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
+        What you'll be able to do:
+      </p>
+      <ul style="margin: 0 0 24px 0; padding-left: 24px;">
+        <li style="margin-bottom: 8px;">✅ Manage ${data.resourceType === 'hub' ? 'hub settings and publications' : 'publication details and content'}</li>
+        <li style="margin-bottom: 8px;">✅ Invite other team members</li>
+        <li style="margin-bottom: 8px;">✅ Access analytics and insights</li>
+        <li style="margin-bottom: 8px;">✅ Collaborate with your team</li>
+      </ul>
+      
+      ${this.generateAlertBox(
+        '<strong>Note:</strong> This invitation will expire in 7 days.',
+        'info'
+      )}
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Welcome to the team!<br>
+        <strong>The Chicago Hub Team</strong>
+      </p>
+    `;
+
+    const html = this.generateEmailTemplate({
+      title: 'You\'re Invited!',
+      preheader: `Join ${data.resourceName} on Chicago Hub`,
+      content,
+      headerColor: this.BRAND_COLORS.orange,
+      headerIcon: '🎉',
+      recipientEmail: data.recipientEmail
+    });
 
     return await this.sendEmail({
       to: data.recipientEmail,
@@ -425,60 +557,51 @@ export class EmailService {
     const dashboardLink = `${this.getBaseUrl()}/dashboard`;
     const resourceTypeLabel = data.resourceType === 'hub' ? 'Hub' : 'Publication';
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Access Granted - Chicago Hub</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #28a745; color: white; text-align: center; padding: 30px 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e1e5e9; }
-          .button { display: inline-block; background: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-          .info-box { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; border-radius: 0 0 8px 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>✅ Access Granted!</h1>
-          </div>
-          
-          <div class="content">
-            <h2>Hi ${data.recipientName || 'there'}!</h2>
-            
-            <p>Great news! You now have access to <strong>${data.resourceName}</strong> on Chicago Hub.</p>
-            
-            <div class="info-box">
-              <strong>📋 Resource Type:</strong> ${resourceTypeLabel}<br>
-              <strong>📍 Resource Name:</strong> ${data.resourceName}<br>
-              <strong>✓ Status:</strong> Access Granted
-            </div>
-            
-            <p>You can now manage this ${data.resourceType} and collaborate with your team.</p>
-            
-            <p style="text-align: center;">
-              <a href="${dashboardLink}" class="button">Go to Dashboard</a>
-            </p>
-            
-            <p>If you have any questions, don't hesitate to reach out to your team administrator.</p>
-            
-            <p>Best regards,<br>
-            The Chicago Hub Team</p>
-          </div>
-          
-          <div class="footer">
-            <p>© 2025 Chicago Hub. All rights reserved.</p>
-            <p>This email was sent to ${data.recipientEmail}</p>
-          </div>
-        </div>
-      </body>
-      </html>
+    const infoBoxContent = `
+      <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Resource Type:</strong> ${resourceTypeLabel}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">📍 Resource Name:</strong> ${data.resourceName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">✓ Status:</strong> <span style="color: ${this.BRAND_COLORS.green};">Access Granted</span>
+      </p>
     `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        Great news! You now have access to <strong>${data.resourceName}</strong> on Chicago Hub.
+      </p>
+      
+      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.green)}
+      
+      <p style="margin: 0 0 16px 0;">
+        You can now manage this ${data.resourceType} and collaborate with your team.
+      </p>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('Go to Dashboard', dashboardLink, this.BRAND_COLORS.green)}
+      </div>
+      
+      <p style="margin: 24px 0 0 0;">
+        If you have any questions, don't hesitate to reach out to your team administrator.
+      </p>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>The Chicago Hub Team</strong>
+      </p>
+    `;
+
+    const html = this.generateEmailTemplate({
+      title: 'Access Granted!',
+      preheader: `You now have access to ${data.resourceName}`,
+      content,
+      headerColor: this.BRAND_COLORS.green,
+      headerIcon: '✅',
+      recipientEmail: data.recipientEmail
+    });
 
     return await this.sendEmail({
       to: data.recipientEmail,
@@ -491,54 +614,46 @@ export class EmailService {
   async sendAccessRevokedEmail(data: AccessRevokedEmailData): Promise<{ success: boolean; error?: string }> {
     const resourceTypeLabel = data.resourceType === 'hub' ? 'Hub' : 'Publication';
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Access Removed - Chicago Hub</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0; auto; padding: 20px; }
-          .header { background: #6c757d; color: white; text-align: center; padding: 30px 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e1e5e9; }
-          .info-box { background: #f8f9fa; border-left: 4px solid #6c757d; padding: 15px; margin: 20px 0; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; border-radius: 0 0 8px 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Access Update</h1>
-          </div>
-          
-          <div class="content">
-            <h2>Hi ${data.recipientName || 'there'}!</h2>
-            
-            <p>We're writing to let you know that your access to <strong>${data.resourceName}</strong> has been removed.</p>
-            
-            <div class="info-box">
-              <strong>📋 Resource Type:</strong> ${resourceTypeLabel}<br>
-              <strong>📍 Resource Name:</strong> ${data.resourceName}
-            </div>
-            
-            <p>If you believe this was done in error or have questions, please contact your team administrator.</p>
-            
-            <p>Thank you for your time with this ${data.resourceType}.</p>
-            
-            <p>Best regards,<br>
-            The Chicago Hub Team</p>
-          </div>
-          
-          <div class="footer">
-            <p>© 2025 Chicago Hub. All rights reserved.</p>
-            <p>This email was sent to ${data.recipientEmail}</p>
-          </div>
-        </div>
-      </body>
-      </html>
+    const infoBoxContent = `
+      <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Resource Type:</strong> ${resourceTypeLabel}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">📍 Resource Name:</strong> ${data.resourceName}
+      </p>
     `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        We're writing to let you know that your access to <strong>${data.resourceName}</strong> has been removed.
+      </p>
+      
+      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.mediumGray)}
+      
+      <p style="margin: 0 0 16px 0;">
+        If you believe this was done in error or have questions, please contact your team administrator.
+      </p>
+      
+      <p style="margin: 0 0 24px 0;">
+        Thank you for your time with this ${data.resourceType}.
+      </p>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>The Chicago Hub Team</strong>
+      </p>
+    `;
+
+    const html = this.generateEmailTemplate({
+      title: 'Access Update',
+      preheader: `Your access to ${data.resourceName} has been updated`,
+      content,
+      headerColor: this.BRAND_COLORS.mediumGray,
+      headerIcon: '🔒',
+      recipientEmail: data.recipientEmail
+    });
 
     return await this.sendEmail({
       to: data.recipientEmail,
@@ -559,52 +674,42 @@ export class EmailService {
     const oldRoleLabel = roleLabels[data.oldRole] || data.oldRole;
     const newRoleLabel = roleLabels[data.newRole] || data.newRole;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Role Updated - Chicago Hub</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #17a2b8; color: white; text-align: center; padding: 30px 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e1e5e9; }
-          .info-box { background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 15px; margin: 20px 0; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; border-radius: 0 0 8px 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🔄 Role Updated</h1>
-          </div>
-          
-          <div class="content">
-            <h2>Hi ${data.recipientName || 'there'}!</h2>
-            
-            <p>Your role on Chicago Hub has been updated.</p>
-            
-            <div class="info-box">
-              <strong>Previous Role:</strong> ${oldRoleLabel}<br>
-              <strong>New Role:</strong> ${newRoleLabel}
-            </div>
-            
-            <p>This change may affect your permissions and what you can access on the platform. If you have any questions about your new role, please contact your administrator.</p>
-            
-            <p>Best regards,<br>
-            The Chicago Hub Team</p>
-          </div>
-          
-          <div class="footer">
-            <p>© 2025 Chicago Hub. All rights reserved.</p>
-            <p>This email was sent to ${data.recipientEmail}</p>
-          </div>
-        </div>
-      </body>
-      </html>
+    const infoBoxContent = `
+      <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+        <strong style="color: ${this.BRAND_COLORS.navy};">Previous Role:</strong> ${oldRoleLabel}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">New Role:</strong> <span style="color: ${this.BRAND_COLORS.orange};">${newRoleLabel}</span>
+      </p>
     `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        Your role on <strong>Chicago Hub</strong> has been updated.
+      </p>
+      
+      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.orange)}
+      
+      <p style="margin: 0 0 16px 0;">
+        This change may affect your permissions and what you can access on the platform. If you have any questions about your new role, please contact your administrator.
+      </p>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>The Chicago Hub Team</strong>
+      </p>
+    `;
+
+    const html = this.generateEmailTemplate({
+      title: 'Role Updated',
+      preheader: 'Your Chicago Hub role has been changed',
+      content,
+      headerColor: this.BRAND_COLORS.navy,
+      headerIcon: '🔄',
+      recipientEmail: data.recipientEmail
+    });
 
     return await this.sendEmail({
       to: data.recipientEmail,
@@ -617,78 +722,72 @@ export class EmailService {
   async sendLeadNotificationEmail(leadData: any): Promise<{ success: boolean; error?: string }> {
     const adminEmail = process.env.ADMIN_EMAIL || this.config.fromEmail;
     
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>New Lead Inquiry - Chicago Hub</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #007bff; color: white; text-align: center; padding: 30px 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e1e5e9; }
-          .info-row { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
-          .label { font-weight: bold; color: #495057; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; border-radius: 0 0 8px 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🎯 New Lead Inquiry</h1>
-          </div>
-          
-          <div class="content">
-            <h2>New Lead Submission</h2>
-            
-            <div class="info-row">
-              <span class="label">Contact Name:</span> ${leadData.contactName}
-            </div>
-            
-            <div class="info-row">
-              <span class="label">Email:</span> ${leadData.contactEmail}
-            </div>
-            
-            <div class="info-row">
-              <span class="label">Phone:</span> ${leadData.contactPhone || 'Not provided'}
-            </div>
-            
-            <div class="info-row">
-              <span class="label">Business:</span> ${leadData.businessName}
-            </div>
-            
-            <div class="info-row">
-              <span class="label">Website:</span> ${leadData.websiteUrl || 'Not provided'}
-            </div>
-            
-            <div class="info-row">
-              <span class="label">Budget Range:</span> ${leadData.budgetRange || 'Not specified'}
-            </div>
-            
-            <div class="info-row">
-              <span class="label">Timeline:</span> ${leadData.timeline || 'Not specified'}
-            </div>
-            
-            ${leadData.marketingGoals && leadData.marketingGoals.length > 0 ? `
-              <div class="info-row">
-                <span class="label">Marketing Goals:</span><br>
-                ${leadData.marketingGoals.map((goal: string) => `• ${goal}`).join('<br>')}
-              </div>
-            ` : ''}
-            
-            <p><strong>Follow up promptly to convert this lead!</strong></p>
-          </div>
-          
-          <div class="footer">
-            <p>© 2025 Chicago Hub. All rights reserved.</p>
-            <p>Lead submitted at ${new Date().toLocaleString()}</p>
-          </div>
-        </div>
-      </body>
-      </html>
+    const generateInfoRow = (label: string, value: string) => `
+      <tr>
+        <td style="padding: 12px 16px; background-color: ${this.BRAND_COLORS.lightGray}; border-radius: 6px; margin-bottom: 8px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+            <tr>
+              <td style="font-weight: 600; color: ${this.BRAND_COLORS.navy}; font-size: 14px; padding-bottom: 4px;">
+                ${label}
+              </td>
+            </tr>
+            <tr>
+              <td style="color: ${this.BRAND_COLORS.navy}; font-size: 15px;">
+                ${value}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr><td style="height: 8px;"></td></tr>
     `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.orange}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        New Lead Submission
+      </h2>
+      
+      <p style="margin: 0 0 20px 0; font-size: 15px;">
+        A new lead inquiry has been submitted through Chicago Hub. Review the details below and follow up promptly!
+      </p>
+      
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+        ${generateInfoRow('👤 Contact Name', leadData.contactName)}
+        ${generateInfoRow('📧 Email', `<a href="mailto:${leadData.contactEmail}" style="color: ${this.BRAND_COLORS.orange}; text-decoration: none;">${leadData.contactEmail}</a>`)}
+        ${generateInfoRow('📱 Phone', leadData.contactPhone || '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not provided</span>')}
+        ${generateInfoRow('🏢 Business Name', leadData.businessName)}
+        ${generateInfoRow('🌐 Website', leadData.websiteUrl ? `<a href="${leadData.websiteUrl}" target="_blank" style="color: ${this.BRAND_COLORS.orange}; text-decoration: none;">${leadData.websiteUrl}</a>` : '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not provided</span>')}
+        ${generateInfoRow('💰 Budget Range', leadData.budgetRange || '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not specified</span>')}
+        ${generateInfoRow('📅 Timeline', leadData.timeline || '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not specified</span>')}
+        ${leadData.marketingGoals && leadData.marketingGoals.length > 0 ? generateInfoRow('🎯 Marketing Goals', leadData.marketingGoals.map((goal: string) => `• ${goal}`).join('<br>')) : ''}
+      </table>
+      
+      ${this.generateAlertBox(
+        '<strong>Action Required:</strong> Follow up promptly to convert this lead! First response time is critical for conversion rates.',
+        'info'
+      )}
+      
+      <p style="margin: 20px 0 0 0; font-size: 13px; color: ${this.BRAND_COLORS.mediumGray};">
+        Lead submitted at ${new Date().toLocaleString('en-US', { 
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZoneName: 'short'
+        })}
+      </p>
+    `;
+
+    const html = this.generateEmailTemplate({
+      title: 'New Lead Inquiry',
+      preheader: `${leadData.businessName} - ${leadData.contactName}`,
+      content,
+      headerColor: this.BRAND_COLORS.orange,
+      headerIcon: '🎯',
+      recipientEmail: adminEmail
+    });
 
     return await this.sendEmail({
       to: adminEmail,

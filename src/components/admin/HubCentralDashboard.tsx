@@ -883,7 +883,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
     }
     
     if (activeTab === 'pricing') {
-      return <HubPricingAnalytics pricingAnalytics={stats?.pricingAnalytics} loading={loading} />;
+      return <HubPricingAnalytics pricingAnalytics={stats?.pricingAnalytics} publications={publications} loading={loading || loadingPubs} />;
     }
     
     if (activeTab === 'team') {
