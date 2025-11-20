@@ -345,8 +345,17 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
       const extractFromChannel = (channelName: string, channelData: any, path: string, itemFrequencyString?: string, sourceInfo?: any) => {
         if (!channels.includes(channelName)) return;
         
-        // Extract channel-level metrics from sourceInfo
-        const channelMetrics = sourceInfo?.websiteMetrics || sourceInfo?.newsletterMetrics || sourceInfo?.printMetrics || sourceInfo?.socialMetrics || sourceInfo?.podcastMetrics || sourceInfo?.radioMetrics || sourceInfo?.streamingMetrics || sourceInfo?.eventMetrics;
+        // Consolidate all channel-level metrics from sourceInfo (combine all available metrics)
+        const channelMetrics = {
+          ...sourceInfo?.websiteMetrics,
+          ...sourceInfo?.newsletterMetrics,
+          ...sourceInfo?.printMetrics,
+          ...sourceInfo?.socialMetrics,
+          ...sourceInfo?.podcastMetrics,
+          ...sourceInfo?.radioMetrics,
+          ...sourceInfo?.streamingMetrics,
+          ...sourceInfo?.eventMetrics
+        };
         
         const opportunities = Array.isArray(channelData) 
           ? channelData.flatMap((item: any) => item.advertisingOpportunities || [])
@@ -475,7 +484,7 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
                   pricingModel: pricing.pricingModel || 'flat'
                 },
                 specifications: opp.specifications,
-                audienceMetrics: channelMetrics || undefined,  // Add channel-level metrics
+                audienceMetrics: Object.keys(channelMetrics).length > 0 ? channelMetrics : undefined,  // Add channel-level metrics (only if not empty)
                 performanceMetrics: opp.performanceMetrics || undefined  // Add item-level metrics
               };
               
