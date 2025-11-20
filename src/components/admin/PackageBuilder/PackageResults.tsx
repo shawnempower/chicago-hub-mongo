@@ -361,15 +361,6 @@ export function PackageResults({
             <div style="color: #64748b; font-size: 14px; font-weight: 600;">Package: ${name}</div>
         </div>
         <div class="section">
-            <h2>Client Information</h2>
-            <div class="info-grid">
-                <div class="info-item"><div class="info-label">Company Name</div><div class="info-value"><span class="placeholder">&nbsp;</span></div></div>
-                <div class="info-item"><div class="info-label">Contact Name</div><div class="info-value"><span class="placeholder">&nbsp;</span></div></div>
-                <div class="info-item"><div class="info-label">Contact Email</div><div class="info-value"><span class="placeholder">&nbsp;</span></div></div>
-                <div class="info-item"><div class="info-label">Contact Phone</div><div class="info-value"><span class="placeholder">&nbsp;</span></div></div>
-            </div>
-        </div>
-        <div class="section">
             <h2>Included Publications & Inventory</h2>
             <p style="color: #64748b; margin-bottom: 20px;">${totalPublications} publications • ${totalInventoryItems} ad placements</p>
             ${pubs.map(pub => `
@@ -381,7 +372,7 @@ export function PackageResults({
                     <table class="inventory-table">
                         <thead><tr><th>Channel</th><th>Ad Placement</th><th>Quantity</th><th>Audience Estimate</th><th>Cost</th></tr></thead>
                         <tbody>
-                            ${pub.inventoryItems.map(item => {
+                            ${pub.inventoryItems.filter(item => !item.isExcluded).map(item => {
                                 const hubPrice = item.itemPricing?.hubPrice || 0;
                                 
                                 // Use standardized formatting functions
