@@ -9,6 +9,7 @@ import {
 } from '@/utils/frequencyEngine';
 import { calculateItemCost } from '@/utils/inventoryPricing';
 import { getFrequencyLabel, getFrequencyUnit } from '@/utils/frequencyLabels';
+import { formatInsertionOrderAudience } from '@/utils/insertionOrderFormatting';
 
 interface LineItemEditorProps {
   item: HubPackageInventoryItem;
@@ -290,6 +291,8 @@ export function LineItemEditor({
           
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>${unitPrice.toFixed(2)} / unit</span>
+            <span>•</span>
+            <span>{formatInsertionOrderAudience(item, (item as any).performanceMetrics, (item as any).audienceMetrics)}</span>
             {!isFrequencyLocked && atMax && (
               <div className="flex items-center gap-1 text-amber-600">
                 <AlertCircle className="h-3 w-3" />
@@ -343,7 +346,7 @@ export function LineItemEditor({
               </Badge>
             )}
             <span className="text-xs text-muted-foreground">
-              ${unitPrice.toFixed(2)} / unit
+              ${unitPrice.toFixed(2)} / unit • {formatInsertionOrderAudience(item, (item as any).performanceMetrics, (item as any).audienceMetrics)}
             </span>
           </div>
         </div>

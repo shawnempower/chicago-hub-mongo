@@ -56,6 +56,27 @@ export interface HubPackageInventoryItem {
     pricingModel: string; // "per_week", "cpm", "per_post", "flat"
     totalCost?: number; // Total cost for this item (campaign duration)
   };
+  
+  // Audience metrics from publication channel (for reach calculations)
+  audienceMetrics?: {
+    monthlyVisitors?: number;
+    monthlyPageViews?: number;
+    subscribers?: number;
+    circulation?: number;
+    followers?: number;
+    listeners?: number;
+    averageAttendance?: number;
+    expectedAttendees?: number;
+    [key: string]: any;
+  };
+  
+  // Item-specific performance metrics (if available)
+  performanceMetrics?: {
+    impressionsPerMonth?: number;
+    occurrencesPerMonth?: number;
+    audienceSize?: number;
+    guaranteed?: boolean;
+  };
 }
 
 export interface HubPackagePublication {

@@ -10,6 +10,7 @@ import {
 } from '@/utils/frequencyEngine';
 import { calculateItemCost, calculatePublicationTotal } from '@/utils/inventoryPricing';
 import { getFrequencyLabel, getFrequencyUnit } from '@/utils/frequencyLabels';
+import { formatInsertionOrderAudience } from '@/utils/insertionOrderFormatting';
 import { Button } from '@/components/ui/button';
 
 interface LineItemsDetailProps {
@@ -243,7 +244,7 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
                 </Badge>
               )}
               <span className="text-xs text-muted-foreground">
-                ${unitPrice.toFixed(2)} / unit
+                ${unitPrice.toFixed(2)} / unit • {formatInsertionOrderAudience(item, (item as any).performanceMetrics, (item as any).audienceMetrics)}
               </span>
             </div>
           </div>

@@ -66,6 +66,23 @@ export interface BuilderResult {
     monthlyCost: number;
     totalCost: number;
     budgetUsed?: number; // percentage if budget was specified
+    // Reach metrics
+    totalMonthlyImpressions?: number;
+    totalMonthlyExposures?: number;
+    estimatedTotalReach?: number;
+    estimatedUniqueReach?: number;
+    channelAudiences?: {
+      website?: number;
+      print?: number;
+      newsletter?: number;
+      social?: number;
+      podcast?: number;
+      radio?: number;
+      streaming?: number;
+      events?: number;
+    };
+    reachCalculationMethod?: 'impressions' | 'audience' | 'mixed';
+    reachOverlapFactor?: number;
   };
 }
 
@@ -145,7 +162,8 @@ export class PackageBuilderService {
       pricingModel: string = 'flat',
       itemFrequencyString?: string,  // Frequency from the item itself (e.g., "weekly", "daily")
       specifications?: any,
-      audienceMetrics?: any  // Audience metrics from parent channel
+      audienceMetrics?: any,  // Audience metrics from parent channel
+      performanceMetrics?: any  // Item-specific performance metrics
     ): InventoryItemWithConstraints | null => {
       if (!channelFilters.includes(channel)) return null;
       if (hubPrice <= 0) return null;
@@ -216,7 +234,8 @@ export class PackageBuilderService {
           pricingModel
         },
         specifications,
-        audienceMetrics,  // Include audience metrics
+        audienceMetrics,  // Include channel-level audience metrics
+        performanceMetrics,  // Include item-level performance metrics
         publicationId: publication.publicationId,
         publicationName: publication.basicInfo.publicationName
       };
@@ -248,8 +267,8 @@ export class PackageBuilderService {
     if (channels.website?.advertisingOpportunities) {
       const websiteMetrics = {
         monthlyVisitors: channels.website.metrics?.monthlyVisitors,
-        monthlyImpressions: channels.website.metrics?.monthlyImpressions,
-        pageViews: channels.website.metrics?.pageViews
+        monthlyPageViews: channels.website.metrics?.monthlyPageViews,
+        monthlyImpressions: channels.website.metrics?.monthlyImpressions
       };
       
       channels.website.advertisingOpportunities.forEach((ad: any, idx: number) => {
@@ -265,7 +284,8 @@ export class PackageBuilderService {
             pricing.pricingModel || 'flat',
             undefined,  // Website ads are typically monthly (handled by pricing model)
             ad.specifications,
-            websiteMetrics
+            websiteMetrics,
+            ad.performanceMetrics  // Pass item-level performance metrics
           );
           if (item) items.push(item);
         }
@@ -299,7 +319,8 @@ export class PackageBuilderService {
               pricing.pricingModel || 'per_send',
               newsletter.frequency,  // Use the newsletter's actual frequency
               ad.specifications,
-              newsletterMetrics
+              newsletterMetrics,
+              ad.performanceMetrics  // Pass item-level performance metrics
             );
             if (item) {
               // Store the source newsletter name for easy access
@@ -333,7 +354,8 @@ export class PackageBuilderService {
               pricing.pricingModel || 'per_ad',
               printPub.frequency || publication.printFrequency,  // Use print publication's frequency
               { size: ad.dimensions || ad.size, ...ad.specifications },
-              printMetrics
+              printMetrics,
+              ad.performanceMetrics  // Pass item-level performance metrics
             );
             if (item) {
               // Store the print section/edition name if available
@@ -367,7 +389,8 @@ export class PackageBuilderService {
               pricing.pricingModel || 'per_post',
               ad.frequency,  // Use ad's frequency if specified
               { platform: social.platform, ...ad.specifications },
-              socialMetrics
+              socialMetrics,
+              ad.performanceMetrics  // Pass item-level performance metrics
             );
             if (item) {
               // Store the source social media platform name
@@ -401,7 +424,8 @@ export class PackageBuilderService {
               pricing.pricingModel || 'per_episode',
               podcast.frequency,  // Use podcast's frequency (e.g., "weekly", "daily")
               ad.specifications,
-              podcastMetrics
+              podcastMetrics,
+              ad.performanceMetrics  // Pass item-level performance metrics
             );
             if (item) {
               // Store the podcast name
@@ -443,7 +467,8 @@ export class PackageBuilderService {
                   pricing.pricingModel || 'per_spot',
                   show.frequency,  // Use show's frequency (e.g., "daily", "weekdays", "weekly")
                   ad.specifications,
-                  showMetrics
+                  showMetrics,
+                  ad.performanceMetrics  // Pass item-level performance metrics
                 );
                 if (item) {
                   // Store the radio show name
@@ -469,7 +494,8 @@ export class PackageBuilderService {
               pricing.pricingModel || 'per_spot',
               undefined,  // Station-level ads don't have specific frequency
               ad.specifications,
-              radioMetrics
+              radioMetrics,
+              ad.performanceMetrics  // Pass item-level performance metrics
             );
             if (item) {
               // Store the radio station call sign
@@ -507,7 +533,8 @@ export class PackageBuilderService {
               pricing.pricingModel || 'flat',
               stream.frequency,  // Use streaming channel's frequency
               ad.specifications,
-              streamingMetrics
+              streamingMetrics,
+              ad.performanceMetrics  // Pass item-level performance metrics
             );
             if (item) {
               item.sourceName = stream.name || 'Streaming';
@@ -541,7 +568,8 @@ export class PackageBuilderService {
               pricing.pricingModel || 'flat',
               event.frequency,  // Use event's frequency (e.g., "annual", "bi-annual", "quarterly")
               sponsorship.benefits,
-              eventMetrics
+              eventMetrics,
+              sponsorship.performanceMetrics  // Pass item-level performance metrics
             );
             if (item) {
               item.sourceName = event.name || 'Event';

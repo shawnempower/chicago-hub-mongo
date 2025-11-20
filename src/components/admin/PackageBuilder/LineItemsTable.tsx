@@ -11,6 +11,7 @@ import {
 } from '@/utils/frequencyEngine';
 import { calculateItemCost } from '@/utils/inventoryPricing';
 import { getFrequencyLabel } from '@/utils/frequencyLabels';
+import { formatInsertionOrderAudience } from '@/utils/insertionOrderFormatting';
 
 interface LineItemsTableProps {
   title: string; // e.g., "Website", "Newsletter", or publication name
@@ -205,7 +206,7 @@ export function LineItemsTable({
         <thead>
           {/* Top Header with Title and Controls */}
           <tr style={{ backgroundColor: '#FAFAFA' }} className="border-b">
-            <td colSpan={5} className="px-4 py-1">
+            <td colSpan={6} className="px-4 py-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm">{title}</span>
@@ -305,6 +306,13 @@ export function LineItemsTable({
                 {/* Frequency Control */}
                 <td className="px-4 py-3 w-48">
                   {renderFrequencyControl(item, itemIndex)}
+                </td>
+                
+                {/* Audience */}
+                <td className="px-4 py-3 w-48">
+                  <div className="text-xs text-muted-foreground">
+                    {formatInsertionOrderAudience(item, (item as any).performanceMetrics, (item as any).audienceMetrics)}
+                  </div>
                 </td>
                 
                 {/* Monthly Cost */}

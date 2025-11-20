@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +28,9 @@ import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
 import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { downloadPackageInsertionOrder } from '@/utils/packageExport';
+import { formatInsertionOrderQuantity, formatInsertionOrderAudienceWithBadge } from '@/utils/insertionOrderFormatting';
+import { ReachSummary } from './ReachSummary';
+import { calculatePackageReach } from '@/utils/reachCalculations';
 
 interface PackageResultsProps {
   result: BuilderResult;
@@ -104,6 +107,11 @@ export function PackageResults({
     monthlyCost: actualMonthlyCost,
     totalCost: actualMonthlyCost * (duration || 1)
   };
+  
+  // Recalculate reach dynamically when publications change (accounts for excluded items and frequency changes)
+  const currentReach = useMemo(() => {
+    return calculatePackageReach(publications);
+  }, [publications]);
   
   const budgetUsagePercent = budget ? (summary.monthlyCost / budget) * 100 : undefined;
 
@@ -260,8 +268,18 @@ export function PackageResults({
 
     setGeneratingIO(true);
     try {
-      // Generate insertion order HTML directly
-      const html = generateInsertionOrderHTML(packageName, publications, summary, duration);
+      // Generate insertion order HTML with current reach data
+      const summaryWithCurrentReach = {
+        ...summary,
+        totalMonthlyImpressions: currentReach.totalMonthlyImpressions,
+        totalMonthlyExposures: currentReach.totalMonthlyExposures,
+        estimatedTotalReach: currentReach.estimatedTotalReach,
+        estimatedUniqueReach: currentReach.estimatedUniqueReach,
+        channelAudiences: currentReach.channelAudiences,
+        reachCalculationMethod: currentReach.calculationMethod,
+        reachOverlapFactor: currentReach.overlapFactor
+      };
+      const html = generateInsertionOrderHTML(packageName, publications, summaryWithCurrentReach, duration);
       
       // Download the file
       downloadPackageInsertionOrder(html, 'html', packageName);
@@ -364,32 +382,22 @@ export function PackageResults({
                         <thead><tr><th>Channel</th><th>Ad Placement</th><th>Quantity</th><th>Audience Estimate</th><th>Cost</th></tr></thead>
                         <tbody>
                             ${pub.inventoryItems.map(item => {
-                                const pricingModel = item.itemPricing?.pricingModel;
-                                const monthlyImpressions = (item as any).monthlyImpressions;
                                 const hubPrice = item.itemPricing?.hubPrice || 0;
                                 
-                                let audienceInfo = 'N/A';
-                                if (pricingModel === 'cpm' && monthlyImpressions) {
-                                    audienceInfo = `${monthlyImpressions.toLocaleString()} impressions/mo`;
-                                } else if (pricingModel === 'cpv' && monthlyImpressions) {
-                                    audienceInfo = `${monthlyImpressions.toLocaleString()} views/mo`;
-                                } else if (pricingModel === 'cpc' && monthlyImpressions) {
-                                    const clicks = Math.round(monthlyImpressions * 0.01);
-                                    audienceInfo = `~${clicks.toLocaleString()} clicks/mo`;
-                                } else if (pricingModel === 'per_send' || pricingModel === 'per_newsletter') {
-                                    audienceInfo = 'Per send';
-                                } else if (pricingModel === 'per_spot' || pricingModel === 'per_ad') {
-                                    audienceInfo = 'Per placement';
-                                } else if (pricingModel === 'monthly' || pricingModel === 'flat') {
-                                    audienceInfo = 'Monthly rate';
-                                }
+                                // Use standardized formatting functions
+                                const quantityDisplay = formatInsertionOrderQuantity(item);
+                                const audienceDisplay = formatInsertionOrderAudienceWithBadge(
+                                  item, 
+                                  (item as any).performanceMetrics,
+                                  (item as any).audienceMetrics
+                                );
                                 
                                 return `
                                 <tr>
                                     <td><span class="channel-badge channel-${item.channel}">${item.channel}</span></td>
                                     <td>${item.itemName}</td>
-                                    <td>${item.currentFrequency || item.quantity || 1}×</td>
-                                    <td style="font-size: 12px; color: #64748b;">${audienceInfo}</td>
+                                    <td>${quantityDisplay}</td>
+                                    <td style="font-size: 12px; color: #64748b;">${audienceDisplay}</td>
                                     <td>${formatCurrency(hubPrice)}</td>
                                 </tr>
                             `;
@@ -407,6 +415,55 @@ export function PackageResults({
                 <div class="pricing-row total"><span>Total Package Investment:</span><span>${formatCurrency(summaryData.totalCost)}</span></div>
             </div>
         </div>
+        ${summaryData.estimatedUniqueReach || summaryData.totalMonthlyExposures || summaryData.totalMonthlyImpressions ? `
+        <div class="section">
+            <h2>Estimated Reach & Frequency</h2>
+            ${summaryData.estimatedUniqueReach ? `
+                <div class="pricing-row">
+                    <span>Unique Monthly Reach:</span>
+                    <span><strong>~${summaryData.estimatedUniqueReach.toLocaleString()} people</strong></span>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin: 5px 0 15px 0; font-style: italic;">
+                    Estimated number of unique individuals reached
+                </div>
+            ` : ''}
+            ${summaryData.totalMonthlyExposures ? `
+                <div class="pricing-row">
+                    <span>Total Monthly Exposures:</span>
+                    <span><strong>${summaryData.totalMonthlyExposures.toLocaleString()}</strong></span>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin: 5px 0 5px 0; font-style: italic;">
+                    Total touchpoints including frequency (same person may see message multiple times)
+                </div>
+                ${summaryData.estimatedUniqueReach && summaryData.totalMonthlyExposures > summaryData.estimatedUniqueReach ? `
+                    <div class="pricing-row" style="margin-top: 5px; margin-bottom: 15px;">
+                        <span style="font-size: 12px; color: #64748b;">Average Frequency:</span>
+                        <span style="font-size: 12px;"><strong>${(summaryData.totalMonthlyExposures / summaryData.estimatedUniqueReach).toFixed(1)}x</strong> per person</span>
+                    </div>
+                ` : '<div style="margin-bottom: 15px;"></div>'}
+            ` : ''}
+            ${summaryData.totalMonthlyImpressions ? `
+                <div class="pricing-row">
+                    <span>Total Monthly Impressions:</span>
+                    <span><strong>${summaryData.totalMonthlyImpressions.toLocaleString()}</strong></span>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin: 5px 0 15px 0; font-style: italic;">
+                    Impression-based metrics from CPM/CPV inventory
+                </div>
+            ` : ''}
+            ${summaryData.estimatedUniqueReach && summaryData.estimatedTotalReach ? `
+                <div style="font-size: 11px; color: #64748b; margin-top: 15px; padding: 10px; background: #f8fafc; border-left: 3px solid #2563eb;">
+                    <strong>Methodology:</strong> 
+                    ${summaryData.totalOutlets === 1 ? 
+                        `Single publication across ${summaryData.totalChannels} channel${summaryData.totalChannels > 1 ? 's' : ''}. ` :
+                        `${summaryData.totalOutlets} publications across ${summaryData.totalChannels} channel${summaryData.totalChannels > 1 ? 's' : ''}. `
+                    }
+                    Unique reach assumes ${Math.round((1 - (summaryData.reachOverlapFactor || 0.70)) * 100)}% audience overlap across channels 
+                    (Total audience: ${summaryData.estimatedTotalReach?.toLocaleString()}).
+                </div>
+            ` : ''}
+        </div>
+        ` : ''}
         <div class="section">
             <h2>Terms & Conditions</h2>
             <ul class="terms-list">
@@ -746,6 +803,19 @@ export function PackageResults({
           )}
         </CardContent>
       </Card>
+
+      {/* Reach Summary */}
+      <ReachSummary
+        totalMonthlyImpressions={currentReach.totalMonthlyImpressions}
+        totalMonthlyExposures={currentReach.totalMonthlyExposures}
+        estimatedTotalReach={currentReach.estimatedTotalReach}
+        estimatedUniqueReach={currentReach.estimatedUniqueReach}
+        channelAudiences={currentReach.channelAudiences}
+        calculationMethod={currentReach.calculationMethod}
+        overlapFactor={currentReach.overlapFactor}
+        publicationsCount={currentReach.publicationsCount}
+        channelsCount={currentReach.channelsCount}
+      />
 
       {/* Tabs */}
       <Tabs defaultValue="channel" className="w-full">

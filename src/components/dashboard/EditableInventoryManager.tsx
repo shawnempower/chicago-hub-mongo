@@ -1268,7 +1268,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="flat_rate">Flat Rate</SelectItem>
-                        <SelectItem value="flat">/month</SelectItem>
+                        <SelectItem value="monthly">/month</SelectItem>
                         <SelectItem value="per_week">/week</SelectItem>
                         <SelectItem value="per_day">/day</SelectItem>
                         <SelectItem value="cpm">CPM</SelectItem>

@@ -9,6 +9,165 @@ import { inferOccurrencesFromFrequency } from '../../src/utils/pricingCalculatio
 const router = Router();
 
 /**
+ * Calculate package reach across all publications
+ * Uses publication-level deduplication and overlap adjustments
+ */
+function calculatePackageReach(publications: any[]): any {
+  const DEFAULT_OVERLAP = 0.70; // 30% overlap assumption
+  const SINGLE_PUB_OVERLAP = 0.60; // 40% overlap for single pub multi-channel
+  
+  // Track reach per publication
+  const publicationReach = new Map<number, {
+    impressions: number;
+    audience: number;
+    channels: Set<string>;
+  }>();
+  
+  // Track total exposures (frequency-adjusted)
+  let totalExposures = 0;
+  
+  // Helper to extract audience from item
+  const getItemAudience = (item: any): number | undefined => {
+    if (item.performanceMetrics?.audienceSize) {
+      return item.performanceMetrics.audienceSize;
+    }
+    
+    const metrics = item.audienceMetrics;
+    if (!metrics) return undefined;
+    
+    switch (item.channel) {
+      case 'website': return metrics.monthlyVisitors;
+      case 'print': return metrics.circulation;
+      case 'newsletter':
+      case 'email': return metrics.subscribers;
+      case 'social': return metrics.followers;
+      case 'podcast':
+      case 'radio': return metrics.listeners;
+      case 'events': return metrics.averageAttendance || metrics.expectedAttendees;
+      default: return undefined;
+    }
+  };
+  
+  // Helper to extract impressions from item
+  const getItemImpressions = (item: any): number | undefined => {
+    if (item.performanceMetrics?.impressionsPerMonth) {
+      return item.performanceMetrics.impressionsPerMonth;
+    }
+    if (item.channel === 'website' && item.audienceMetrics?.monthlyPageViews) {
+      return item.audienceMetrics.monthlyPageViews;
+    }
+    if (item.monthlyImpressions) {
+      return item.monthlyImpressions;
+    }
+    return undefined;
+  };
+  
+  // Process each publication
+  publications.forEach(pub => {
+    let pubImpressions = 0;
+    let pubMaxAudience = 0;
+    const pubChannels = new Set<string>();
+    
+    pub.inventoryItems
+      ?.filter((item: any) => !item.isExcluded)
+      .forEach((item: any) => {
+        pubChannels.add(item.channel);
+        const frequency = item.currentFrequency || item.quantity || 1;
+        
+        const itemImpressions = getItemImpressions(item);
+        if (itemImpressions) pubImpressions += itemImpressions;
+        
+        const itemAudience = getItemAudience(item);
+        if (itemAudience) pubMaxAudience = Math.max(pubMaxAudience, itemAudience);
+        
+        // Calculate exposures (audience × frequency)
+        if (itemImpressions) {
+          totalExposures += itemImpressions; // Impressions already account for volume
+        } else if (itemAudience) {
+          // Multiply base audience by frequency for total exposures
+          totalExposures += itemAudience * frequency;
+        }
+      });
+    
+    publicationReach.set(pub.publicationId, {
+      impressions: pubImpressions,
+      audience: pubMaxAudience,
+      channels: pubChannels
+    });
+  });
+  
+  // Aggregate across publications
+  let totalImpressions = 0;
+  const channelAudiences: any = {};
+  const allChannels = new Set<string>();
+  
+  publicationReach.forEach(pubData => {
+    totalImpressions += pubData.impressions;
+    pubData.channels.forEach(ch => allChannels.add(ch));
+  });
+  
+  // Calculate channel-specific audiences
+  const channelMap = new Map<string, number[]>();
+  
+  publications.forEach(pub => {
+    const channelMaxForPub = new Map<string, number>();
+    
+    pub.inventoryItems
+      ?.filter((item: any) => !item.isExcluded)
+      .forEach((item: any) => {
+        const audience = getItemAudience(item);
+        if (audience) {
+          const currentMax = channelMaxForPub.get(item.channel) || 0;
+          channelMaxForPub.set(item.channel, Math.max(currentMax, audience));
+        }
+      });
+    
+    channelMaxForPub.forEach((audience, channel) => {
+      if (!channelMap.has(channel)) {
+        channelMap.set(channel, []);
+      }
+      channelMap.get(channel)!.push(audience);
+    });
+  });
+  
+  // Sum audiences by channel
+  let totalAudience = 0;
+  channelMap.forEach((audiences, channel) => {
+    const channelTotal = audiences.reduce((sum, aud) => sum + aud, 0);
+    channelAudiences[channel] = channelTotal;
+    totalAudience += channelTotal;
+  });
+  
+  // Determine overlap factor
+  const pubCount = publications.length;
+  const channelCount = allChannels.size;
+  const overlapFactor = (pubCount === 1 && channelCount > 1) 
+    ? SINGLE_PUB_OVERLAP 
+    : DEFAULT_OVERLAP;
+  
+  // Apply overlap adjustment
+  const estimatedUniqueReach = Math.round(totalAudience * overlapFactor);
+  
+  // Determine calculation method
+  let calculationMethod = 'audience';
+  if (totalImpressions > 0 && totalAudience > 0) {
+    calculationMethod = 'mixed';
+  } else if (totalImpressions > 0) {
+    calculationMethod = 'impressions';
+  }
+  
+  return {
+    totalMonthlyImpressions: totalImpressions > 0 ? totalImpressions : undefined,
+    totalMonthlyExposures: totalExposures > 0 ? totalExposures : undefined,
+    channelAudiences: Object.keys(channelAudiences).length > 0 ? channelAudiences : undefined,
+    estimatedTotalReach: totalAudience,
+    estimatedUniqueReach,
+    calculationMethod,
+    overlapFactor
+  };
+}
+
+/**
  * Package Builder API Endpoints
  * 
  * These endpoints support the new Package Builder feature that allows
@@ -186,6 +345,9 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
       const extractFromChannel = (channelName: string, channelData: any, path: string, itemFrequencyString?: string, sourceInfo?: any) => {
         if (!channels.includes(channelName)) return;
         
+        // Extract channel-level metrics from sourceInfo
+        const channelMetrics = sourceInfo?.websiteMetrics || sourceInfo?.newsletterMetrics || sourceInfo?.printMetrics || sourceInfo?.socialMetrics || sourceInfo?.podcastMetrics || sourceInfo?.radioMetrics || sourceInfo?.streamingMetrics || sourceInfo?.eventMetrics;
+        
         const opportunities = Array.isArray(channelData) 
           ? channelData.flatMap((item: any) => item.advertisingOpportunities || [])
           : channelData?.advertisingOpportunities || [];
@@ -312,7 +474,9 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
                   hubPrice,
                   pricingModel: pricing.pricingModel || 'flat'
                 },
-                specifications: opp.specifications
+                specifications: opp.specifications,
+                audienceMetrics: channelMetrics || undefined,  // Add channel-level metrics
+                performanceMetrics: opp.performanceMetrics || undefined  // Add item-level metrics
               };
               
               // For CPM/CPV/CPC pricing, extract impression data
@@ -350,7 +514,12 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
         
         // Website
         if (dc.website) {
-          extractFromChannel('website', dc.website, 'distributionChannels.website.advertisingOpportunities', undefined, undefined);
+          const websiteMetrics = {
+            monthlyVisitors: dc.website.metrics?.monthlyVisitors,
+            monthlyPageViews: dc.website.metrics?.monthlyPageViews,
+            monthlyImpressions: dc.website.metrics?.monthlyImpressions
+          };
+          extractFromChannel('website', dc.website, 'distributionChannels.website.advertisingOpportunities', undefined, { websiteMetrics });
         }
         
         // Newsletters
@@ -358,8 +527,14 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
           dc.newsletters.forEach((newsletter: any, nlIdx: number) => {
             if (newsletter.advertisingOpportunities) {
               const newsletterName = newsletter.name || newsletter.subject || 'Newsletter';
+              const newsletterMetrics = {
+                subscribers: newsletter.subscribers,
+                openRate: newsletter.openRate,
+                clickThroughRate: newsletter.clickThroughRate
+              };
               extractFromChannel('newsletter', [newsletter], `distributionChannels.newsletters[${nlIdx}].advertisingOpportunities`, newsletter.frequency, {
-                sourceName: newsletterName
+                sourceName: newsletterName,
+                newsletterMetrics
               });
             }
           });
@@ -372,8 +547,13 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
             if (printPub.advertisingOpportunities) {
               const printFreq = printPub.frequency || pub.printFrequency;
               const printName = printPub.section || printPub.name || pub.basicInfo?.publicationName || 'Print';
+              const printMetrics = {
+                circulation: printPub.circulation,
+                distributionArea: printPub.distributionArea
+              };
               extractFromChannel('print', [printPub], `distributionChannels.print[${printIdx}].advertisingOpportunities`, printFreq, {
-                sourceName: printName
+                sourceName: printName,
+                printMetrics
               });
             }
           });
@@ -383,8 +563,14 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
         if (dc.socialMedia && Array.isArray(dc.socialMedia)) {
           dc.socialMedia.forEach((socialAd: any, socialIdx: number) => {
             if (socialAd.advertisingOpportunities) {
+              const socialMetrics = {
+                followers: socialAd.metrics?.followers,
+                engagementRate: socialAd.metrics?.engagementRate,
+                averageReach: socialAd.metrics?.averageReach
+              };
               extractFromChannel('social', [socialAd], `distributionChannels.socialMedia[${socialIdx}].advertisingOpportunities`, socialAd.frequency, {
-                sourceName: socialAd.platform || 'Social Media'
+                sourceName: socialAd.platform || 'Social Media',
+                socialMetrics
               });
             }
           });
@@ -394,8 +580,14 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
         if (dc.podcasts && Array.isArray(dc.podcasts)) {
           dc.podcasts.forEach((podcast: any, podIdx: number) => {
             if (podcast.advertisingOpportunities) {
+              const podcastMetrics = {
+                listeners: podcast.listeners,
+                subscribers: podcast.subscribers,
+                downloadsPerEpisode: podcast.downloadsPerEpisode
+              };
               extractFromChannel('podcast', [podcast], `distributionChannels.podcasts[${podIdx}].advertisingOpportunities`, podcast.frequency, {
-                sourceName: podcast.name || 'Podcast'
+                sourceName: podcast.name || 'Podcast',
+                podcastMetrics
               });
             }
           });
@@ -404,11 +596,22 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
         // Radio
         if (dc.radioStations && Array.isArray(dc.radioStations)) {
           dc.radioStations.forEach((station: any, stationIdx: number) => {
+            const radioMetrics = {
+              listeners: station.listeners,
+              marketRank: station.marketRank,
+              signalStrength: station.signalStrength
+            };
+            
             if (station.shows && Array.isArray(station.shows)) {
               station.shows.forEach((show: any, showIdx: number) => {
                 if (show.advertisingOpportunities) {
+                  const showMetrics = {
+                    ...radioMetrics,
+                    averageListeners: show.averageListeners || station.listeners
+                  };
                   extractFromChannel('radio', [show], `distributionChannels.radioStations[${stationIdx}].shows[${showIdx}].advertisingOpportunities`, show.frequency, {
-                    sourceName: show.name || 'Radio Show'
+                    sourceName: show.name || 'Radio Show',
+                    radioMetrics: showMetrics
                   });
                 }
               });
@@ -416,7 +619,8 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
             // Station-level ads
             if (station.advertisingOpportunities && !station.shows) {
               extractFromChannel('radio', [station], `distributionChannels.radioStations[${stationIdx}].advertisingOpportunities`, undefined, {
-                sourceName: station.callSign || 'Radio'
+                sourceName: station.callSign || 'Radio',
+                radioMetrics
               });
             }
           });
@@ -426,8 +630,14 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
         if (dc.streamingVideo && Array.isArray(dc.streamingVideo)) {
           dc.streamingVideo.forEach((stream: any, streamIdx: number) => {
             if (stream.advertisingOpportunities) {
+              const streamingMetrics = {
+                subscribers: stream.subscribers,
+                averageViews: stream.averageViews,
+                totalReach: stream.totalReach
+              };
               extractFromChannel('streaming', [stream], `distributionChannels.streamingVideo[${streamIdx}].advertisingOpportunities`, stream.frequency, {
-                sourceName: stream.name || 'Streaming'
+                sourceName: stream.name || 'Streaming',
+                streamingMetrics
               });
             }
           });
@@ -437,8 +647,14 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
         if (dc.events && Array.isArray(dc.events)) {
           dc.events.forEach((event: any, eventIdx: number) => {
             if (event.advertisingOpportunities) {
+              const eventMetrics = {
+                averageAttendance: event.averageAttendance,
+                expectedAttendees: event.expectedAttendees,
+                historicalAttendance: event.historicalAttendance
+              };
               extractFromChannel('events', [event], `distributionChannels.events[${eventIdx}].advertisingOpportunities`, event.frequency, {
-                sourceName: event.name || 'Event'
+                sourceName: event.name || 'Event',
+                eventMetrics
               });
             }
           });
@@ -507,6 +723,9 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
       0
     );
 
+    // Calculate reach across all publications
+    const reachSummary = calculatePackageReach(resultPublications);
+
     const result = {
       publications: resultPublications,
       summary: {
@@ -515,7 +734,15 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
         totalUnits,
         monthlyCost: totalCost,
         totalCost: totalCost * duration,
-        budgetUsed: budget ? (totalCost / budget) * 100 : undefined
+        budgetUsed: budget ? (totalCost / budget) * 100 : undefined,
+        // Reach metrics
+        totalMonthlyImpressions: reachSummary.totalMonthlyImpressions,
+        totalMonthlyExposures: reachSummary.totalMonthlyExposures,
+        estimatedTotalReach: reachSummary.estimatedTotalReach,
+        estimatedUniqueReach: reachSummary.estimatedUniqueReach,
+        channelAudiences: reachSummary.channelAudiences,
+        reachCalculationMethod: reachSummary.calculationMethod,
+        reachOverlapFactor: reachSummary.overlapFactor
       }
     };
 

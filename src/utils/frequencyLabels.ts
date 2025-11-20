@@ -34,9 +34,10 @@ export function getFrequencyUnit(pricingModel: string | undefined): string {
     case 'cpv':
     case 'cpc':
       return 'months'; // Impression-based models are typically monthly
-    case 'flat':
     case 'monthly':
-      return 'time'; // or could be 'flat' or just omit
+      return 'month'; // monthly recurring
+    case 'flat':
+      return 'time'; // one-time flat rate
     default:
       return 'per month';
   }
@@ -63,7 +64,10 @@ export function formatFrequency(
     const singularUnit = unit.endsWith('s') ? unit.slice(0, -1) : unit;
     
     // Special cases
-    if (pricingModel === 'flat' || pricingModel === 'monthly') {
+    if (pricingModel === 'monthly') {
+      return 'Monthly';
+    }
+    if (pricingModel === 'flat') {
       return 'One-time';
     }
     
@@ -93,8 +97,13 @@ export function getFrequencyLabel(
     return `${frequency}x per month`;
   }
   
-  // For flat/monthly, just show frequency or "Monthly"
-  if (model === 'flat' || model === 'monthly') {
+  // For monthly, show monthly
+  if (model === 'monthly') {
+    return 'Monthly';
+  }
+  
+  // For flat, show one-time (used for events with frequency)
+  if (model === 'flat') {
     return frequency === 1 ? 'One-time' : `${frequency}x`;
   }
   
@@ -132,8 +141,9 @@ export function getFrequencyDescription(pricingModel: string | undefined): strin
     case 'cpv':
     case 'cpc':
       return 'impressions per month';
-    case 'flat':
     case 'monthly':
+      return 'monthly';
+    case 'flat':
       return 'flat rate';
     default:
       return 'insertions per month';

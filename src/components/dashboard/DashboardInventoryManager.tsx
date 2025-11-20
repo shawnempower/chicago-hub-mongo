@@ -5128,8 +5128,7 @@ export const DashboardInventoryManager = () => {
                     ]}
                     pricingModels={[
                       { value: 'flat_rate', label: 'Flat Rate' },
-                      { value: 'flat', label: '/month' },
-                      { value: 'monthly', label: '/month (recurring)' },
+                      { value: 'monthly', label: '/month' },
                       { value: 'per_week', label: '/week' },
                       { value: 'per_day', label: '/day' },
                       { value: 'cpm', label: '/1000 impressions' },

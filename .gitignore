@@ -45,8 +45,9 @@ geography.csv
 # Export files
 exports/
 
-# Build files
-*.zip
+# Build zip files
+production-frontend-*.zip
+production-backend-*.zip
 
 # Test files and output (root directory only)
 /test-*.ts
