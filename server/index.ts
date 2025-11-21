@@ -22,6 +22,7 @@ console.log('📧 emailService imported:', !!emailService);
 import { s3Service } from './s3Service';
 import { StorefrontImageService } from './storefrontImageService';
 import { subdomainService } from './subdomainService';
+import { fileStorage } from './storage/fileStorage';
 
 // Import the services and initialization function
 import { 
@@ -64,6 +65,9 @@ import hubsRouter from './routes/hubs';
 import adminRouter from './routes/admin';
 import permissionsRouter from './routes/permissions';
 import inventoryChatRouter from './routes/inventory-chat';
+import publicationOrdersRouter from './routes/publication-orders';
+import adminOrdersRouter from './routes/admin/orders';
+import creativeAssetsRouter from './routes/creative-assets';
 import { authenticateToken } from './middleware/authenticate';
 import { createLogger } from '../src/utils/logger';
 
@@ -164,11 +168,14 @@ app.use('/api/auth', authRouter);
 app.use('/api/permissions', permissionsRouter); // User permissions and invitations
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/builder', builderRouter); // Admin-only package builder routes
+app.use('/api/admin/orders', adminOrdersRouter); // Admin order management
 app.use('/api/publications', publicationsRouter);
+app.use('/api/publication-orders', publicationOrdersRouter); // Publication insertion orders
 app.use('/api/storefront', storefrontRouter);
 app.use('/api/hub-packages', hubPackagesRouter);
 app.use('/api/hubs', hubsRouter);
 app.use('/api/campaigns', campaignsRouter);
+app.use('/api/creative-assets', creativeAssetsRouter); // Creative assets management
 app.use('/api/inventory-chat', inventoryChatRouter);
 
 // ===== STANDALONE ROUTES =====
@@ -319,6 +326,11 @@ async function startServer() {
     console.log('S3 Service status:', s3ServiceInstance ? 'AVAILABLE' : 'NOT AVAILABLE');
     if (s3ServiceInstance) {
       console.log('✅ S3 service initialized successfully');
+      
+      // Initialize file storage with S3
+      fileStorage.setS3Service(s3ServiceInstance);
+      await fileStorage.initialize();
+      console.log('✅ File storage initialized with S3');
     } else {
       console.warn('⚠️  S3 service is not available - file uploads will fail');
     }

@@ -1265,6 +1265,7 @@ export const COLLECTIONS = {
   HUB_PACKAGES: 'hub_packages', // New comprehensive hub-level package system
   HUBS: 'hubs', // Hub/market definitions
   CAMPAIGNS: 'campaigns', // AI-powered campaign builder
+  CREATIVE_ASSETS: 'creative_assets', // Creative assets for campaigns and insertion orders
   ADVERTISING_INVENTORY: 'advertising_inventory',
   LEAD_INQUIRIES: 'lead_inquiries',
   LEAD_NOTES: 'lead_notes', // Lead notes and activity history

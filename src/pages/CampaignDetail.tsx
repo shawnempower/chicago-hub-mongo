@@ -413,9 +413,10 @@ export default function CampaignDetail() {
                       <span className="text-2xl">
                         {campaign.algorithm.id === 'all-inclusive' ? '🌍' : 
                          campaign.algorithm.id === 'budget-friendly' ? '💰' : 
-                         campaign.algorithm.id === 'little-guys' ? '🏘️' : '✨'}
+                         campaign.algorithm.id === 'little-guys' ? '🏘️' : 
+                         campaign.algorithm.id === 'package-based' ? '📦' : '✨'}
                       </span>
-                      <CardTitle>AI Campaign Strategy</CardTitle>
+                      <CardTitle>{campaign.algorithm.id === 'package-based' ? 'Package-Based Campaign' : 'AI Campaign Strategy'}</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -423,7 +424,10 @@ export default function CampaignDetail() {
                       <div className="flex-1">
                         <p className="font-semibold text-purple-900 mb-1">{campaign.algorithm.name}</p>
                         <p className="text-sm text-purple-800 mb-2">
-                          Version {campaign.algorithm.version} • Generated on {format(new Date(campaign.algorithm.executedAt), 'MMM d, yyyy \'at\' h:mm a')}
+                          Version {campaign.algorithm.version}
+                          {campaign.algorithm.executedAt && (
+                            <> • Generated on {format(new Date(campaign.algorithm.executedAt), 'MMM d, yyyy \'at\' h:mm a')}</>
+                          )}
                         </p>
                         <div className="bg-white/60 rounded-lg p-3 border border-purple-200">
                           <p className="text-xs text-purple-700 font-medium mb-1">Strategy Used:</p>
@@ -434,6 +438,8 @@ export default function CampaignDetail() {
                               ? 'This campaign was generated using the Budget-Friendly strategy, which focuses on maximizing reach and value while staying strictly within budget constraints through cost-effective placements.'
                               : campaign.algorithm.id === 'little-guys'
                               ? 'This campaign was generated using The Little Guys strategy, which champions smaller, independent publications serving tight-knit communities. Perfect for hyper-local campaigns and supporting emerging outlets with highly engaged niche audiences.'
+                              : campaign.algorithm.id === 'package-based'
+                              ? campaign.algorithm.description || 'This campaign was created from a pre-built hub package with curated publication combinations and pricing.'
                               : 'This campaign was generated using a custom AI strategy tailored to your specific requirements.'}
                           </p>
                         </div>

@@ -10,28 +10,42 @@ export const authenticateToken = async (req: any, res: Response, next: NextFunct
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('🔐 Authenticate Token Middleware:', {
+    path: req.path,
+    hasAuthHeader: !!authHeader,
+    hasToken: !!token
+  });
+
   if (!token) {
+    console.log('❌ No token provided');
     return res.status(401).json({ error: 'Access token required' });
   }
 
   try {
     // Verify token and extract userId
     const decoded = authService.verifyToken(token);
+    console.log('🔓 Token decoded:', { decoded: decoded ? { userId: decoded.userId } : null });
+    
     if (!decoded || !decoded.userId) {
+      console.log('❌ Invalid token structure');
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
     
     // Fetch full user from database (includes isAdmin from User record or Profile)
     const user = await authService.getUserById(decoded.userId);
+    console.log('👤 User fetched:', user ? { id: user.id, email: user.email } : null);
+    
     if (!user) {
+      console.log('❌ User not found in database');
       return res.status(403).json({ error: 'User not found' });
     }
     
     req.user = user;
     req.token = token;
+    console.log('✅ Authentication successful');
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('❌ Auth middleware error:', error);
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
 };

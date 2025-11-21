@@ -24,14 +24,26 @@ interface CampaignReviewStepProps {
     channels: string[];
     startDate: Date | null;
     endDate: Date | null;
+    inventorySelectionMethod?: 'ai' | 'package';
   };
   result: CampaignAnalysisResponse | null;
   campaignId: string | null;
+  selectedPackageData?: any;
 }
 
-export function CampaignReviewStep({ formData, result, campaignId }: CampaignReviewStepProps) {
+export function CampaignReviewStep({ formData, result, campaignId, selectedPackageData }: CampaignReviewStepProps) {
   if (!campaignId) {
     // Pre-creation review
+    const isPackageBased = formData.inventorySelectionMethod === 'package';
+    const packagePrice = selectedPackageData?.pricing?.breakdown?.finalPrice || 0;
+    const packagePublications = selectedPackageData?.components?.publications || [];
+    // Count only non-excluded items
+    const totalItems = packagePublications.reduce((sum: number, pub: any) => {
+      const activeItems = (pub.inventoryItems || []).filter((item: any) => !item.isExcluded);
+      return sum + activeItems.length;
+    }, 0);
+    const estimatedReach = selectedPackageData?.performance?.estimatedReach?.minReach || 0;
+    
     return (
       <div className="space-y-6">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -72,29 +84,36 @@ export function CampaignReviewStep({ formData, result, campaignId }: CampaignRev
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground">Channels</p>
-                <p className="font-semibold">{formData.channels.length} selected</p>
+                <p className="text-muted-foreground">
+                  {isPackageBased ? 'Package' : 'Channels'}
+                </p>
+                <p className="font-semibold">
+                  {isPackageBased 
+                    ? selectedPackageData?.basicInfo?.name || 'Selected' 
+                    : `${formData.channels.length} selected`
+                  }
+                </p>
               </div>
             </div>
 
-            {result && (
+            {(result || isPackageBased) && (
               <div className="pt-4 border-t">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
                     <p className="text-2xl font-bold text-green-600">
-                      ${result.pricing.finalPrice.toLocaleString()}
+                      ${(isPackageBased ? packagePrice : result?.pricing.finalPrice || 0).toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">Total Investment</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-blue-600">
-                      {result.selectedInventory.totalInventoryItems}
+                      {isPackageBased ? totalItems : result?.selectedInventory.totalInventoryItems || 0}
                     </p>
                     <p className="text-xs text-muted-foreground">Ad Placements</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-purple-600">
-                      {result.estimatedPerformance.reach.min.toLocaleString()}+
+                      {(isPackageBased ? estimatedReach : result?.estimatedPerformance.reach.min || 0).toLocaleString()}+
                     </p>
                     <p className="text-xs text-muted-foreground">Est. Reach</p>
                   </div>
