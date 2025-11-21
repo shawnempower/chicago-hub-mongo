@@ -5,8 +5,7 @@
  */
 
 import { Campaign, CampaignAnalysisRequest, CampaignAnalysisResponse, CampaignSummary } from '../integrations/mongodb/campaignSchema';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { API_BASE_URL } from '@/config/api';
 
 /**
  * Get auth headers with JWT token

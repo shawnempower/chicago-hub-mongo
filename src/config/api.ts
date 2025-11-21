@@ -5,10 +5,12 @@ const getApiBaseUrl = (): string => {
     return '/api';
   }
   
-  // In production, use the environment variable or fallback to custom domain
-  return import.meta.env.VITE_API_BASE_URL 
-    ? `${import.meta.env.VITE_API_BASE_URL}/api`
-    : 'https://hubapi.empowerlocal.co/api';
+  // In production, use the environment variable (no fallback)
+  if (!import.meta.env.VITE_API_BASE_URL) {
+    throw new Error('VITE_API_BASE_URL environment variable is required in production');
+  }
+  
+  return `${import.meta.env.VITE_API_BASE_URL}/api`;
 };
 
 export const API_BASE_URL = getApiBaseUrl();
