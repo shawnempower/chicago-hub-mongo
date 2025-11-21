@@ -44,6 +44,9 @@ export function generatePackageCSV(
 
   for (const pub of packageData.components.publications) {
     for (const item of pub.inventoryItems) {
+      // Skip excluded items
+      if (item.isExcluded) continue;
+      
       const frequency = item.currentFrequency || item.quantity || 1;
       const unitPrice = item.itemPricing?.hubPrice || 0;
       const monthlyCost = unitPrice * frequency;

@@ -455,6 +455,9 @@ export const HubPackageManagement = () => {
         if (!pub.inventoryItems) return;
 
         pub.inventoryItems.forEach(item => {
+          // Skip excluded items
+          if (item.isExcluded) return;
+          
           const frequency = item.currentFrequency || item.quantity || 1;
           const monthlyCost = calculateItemCost(item, frequency);
           const totalCost = monthlyCost * duration;

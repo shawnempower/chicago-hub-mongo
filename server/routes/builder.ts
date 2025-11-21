@@ -880,6 +880,9 @@ router.get('/packages/:id/export-csv', authenticateToken, async (req: any, res: 
     
     for (const pub of (package_ as any).components.publications) {
       for (const item of pub.inventoryItems) {
+        // Skip excluded items
+        if (item.isExcluded) continue;
+        
         const frequency = item.currentFrequency || item.quantity || 1;
         const unitPrice = item.itemPricing?.hubPrice || 0;
         const monthlyCost = unitPrice * frequency;

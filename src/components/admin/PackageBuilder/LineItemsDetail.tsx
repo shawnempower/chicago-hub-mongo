@@ -203,6 +203,7 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
       }
     }
     const atMax = isAtMaxFrequency(frequency, publicationType);
+    const isExcluded = item.isExcluded || false;
 
     // Get pricing model display label
     const getPricingModelLabel = (model: string) => {
@@ -226,12 +227,17 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
     };
 
     return (
-      <div key={`${pub.publicationId}-${itemIndex}`} className="border rounded-lg p-4 space-y-3">
+      <div key={`${pub.publicationId}-${itemIndex}`} className={`border rounded-lg p-4 space-y-3 ${isExcluded ? 'opacity-30 bg-gray-50' : ''}`}>
         {/* Item Header */}
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="font-medium">{item.itemName}</p>
+            <p className={`font-medium ${isExcluded ? 'line-through' : ''}`}>{item.itemName}</p>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {isExcluded && (
+                <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-500">
+                  Excluded
+                </Badge>
+              )}
               <Badge variant="outline" className="text-xs capitalize">
                 {item.channel}
               </Badge>

@@ -393,7 +393,7 @@ class InsertionOrderGenerator {
                             </tr>
                         </thead>
                         <tbody>
-                            ${pub.inventoryItems.map(item => `
+                            ${pub.inventoryItems.filter(item => !item.isExcluded).map(item => `
                                 <tr>
                                     <td>
                                         <span class="channel-badge channel-${item.channel}">${item.channel}</span>
@@ -520,7 +520,7 @@ ${(Array.isArray(campaign.selectedInventory) ? campaign.selectedInventory : []).
 
 | Channel | Ad Placement | Quantity | Duration | Cost |
 |---------|--------------|----------|----------|------|
-${pub.inventoryItems.map(item => 
+${pub.inventoryItems.filter(item => !item.isExcluded).map(item => 
   `| ${item.channel} | ${item.itemName} | ${item.quantity}× ${item.frequency || ''} | ${item.duration || 'Campaign duration'} | ${this.formatCurrency(item.itemPricing?.hubPrice || 0)} |`
 ).join('\n')}
 `).join('\n')}
@@ -1234,7 +1234,7 @@ Campaign ID: ${campaign.campaignId}
                             </tr>
                         </thead>
                         <tbody>
-                            ${pub.inventoryItems.map(item => {
+                            ${pub.inventoryItems.filter(item => !item.isExcluded).map(item => {
                                 const pricingModel = item.itemPricing?.pricingModel;
                                 const monthlyImpressions = (item as any).monthlyImpressions;
                                 
@@ -1406,7 +1406,7 @@ ${hubPackage.components.publications.map(pub => `
 
 | Channel | Ad Placement | Quantity | Audience Estimate | Duration | Cost |
 |---------|--------------|----------|-------------------|----------|------|
-${pub.inventoryItems.map(item => {
+${pub.inventoryItems.filter(item => !item.isExcluded).map(item => {
   const pricingModel = item.itemPricing?.pricingModel;
   const monthlyImpressions = (item as any).monthlyImpressions;
   
