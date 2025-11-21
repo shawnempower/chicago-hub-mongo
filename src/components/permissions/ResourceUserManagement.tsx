@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserPlus } from 'lucide-react';
 import { UserInviteDialog } from './UserInviteDialog';
@@ -33,12 +33,7 @@ export function ResourceUserManagement({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>User Access</CardTitle>
-            <CardDescription>
-              Manage who can access and manage this {resourceType}
-            </CardDescription>
-          </div>
+          <CardTitle>User Access</CardTitle>
           <Button onClick={() => setInviteDialogOpen(true)} className="gap-2">
             <UserPlus className="h-4 w-4" />
             Invite User

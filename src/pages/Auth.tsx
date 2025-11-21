@@ -4,13 +4,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useConfetti } from '@/hooks/useConfetti';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Info, Mail } from 'lucide-react';
+import { Mail, Info, ArrowLeft } from 'lucide-react';
 import { authAPI } from '@/api/auth';
+import empowerLogo from '@/assets/empower-logo.png';
+import sideloginImage from '@/assets/sidelogin.png';
 
 export default function Auth() {
   const { user, signIn } = useAuth();
@@ -88,98 +89,112 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-block hover:opacity-80 transition-opacity">
-            <h1 className="text-2xl font-bold text-primary font-serif mb-2">
-              Chicago Media Hub
-            </h1>
-          </Link>
-          <p className="text-muted-foreground">
-            Access your saved packages and personalized recommendations
-          </p>
-        </div>
+    <div className="min-h-screen flex">
+      {/* Left Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-8 py-12 bg-background relative">
+        {/* Return Button - Top Left */}
+        <Link 
+          to="/" 
+          className="absolute top-8 left-8 text-orange-500 hover:text-orange-600 font-semibold inline-flex items-center gap-2 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Return
+        </Link>
 
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
-              Sign In
-            </CardTitle>
-            <CardDescription className="text-center">
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? "Signing in..." : "Sign In"}
-              </Button>
-            </form>
+        <div className="w-full max-w-md space-y-8">
+          {/* Logo */}
+          <div>
+            <Link to="/" className="inline-block hover:opacity-80 transition-opacity">
+              <img 
+                src={empowerLogo} 
+                alt="Chicago Media Hub" 
+                className="h-8 w-auto"
+              />
+            </Link>
+          </div>
 
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setShowForgotPassword(true)}
-                className="text-sm text-primary hover:underline"
-              >
-                Forgot password?
-              </button>
+          {/* Sign in heading */}
+          <div>
+            <h2 className="text-3xl font-sans font-semibold text-foreground" style={{ letterSpacing: '-0.03em' }}>
+              Sign in to your account
+            </h2>
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleSignIn} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="h-12 bg-white border-[#E7E5DF]"
+              />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="h-12 bg-white border-[#E7E5DF]"
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full h-12"
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
 
-            <Alert className="mt-4">
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                Don't have an account? New accounts are created by invitation only. 
-                Contact your administrator to get access.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
+          {/* Forgot Password */}
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="text-sm text-orange-500 hover:text-orange-600 font-semibold hover:underline"
+            >
+              Forgot password?
+            </button>
+          </div>
 
-        <div className="text-center mt-6">
-          <Link 
-            to="/" 
-            className="text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            ← Back to Chicago Media Hub
-          </Link>
+          {/* Horizontal Separator */}
+          <div className="border-t" style={{ borderColor: '#E7E5DF' }}></div>
+
+          {/* Info Banner */}
+          <div className="rounded-lg p-4 flex items-start gap-3" style={{ backgroundColor: '#F0EEE8' }}>
+            <Info className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: '#6F6D66' }} />
+            <p className="text-sm" style={{ color: '#6F6D66' }}>
+              Don't have an account? New accounts are created by invitation only. Contact your administrator to get access.
+            </p>
+          </div>
         </div>
+      </div>
+
+      {/* Right Side - Image */}
+      <div className="hidden lg:flex lg:w-1/2 relative">
+        <img
+          src={sideloginImage}
+          alt="Welcome"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       </div>
 
       {/* Forgot Password Dialog */}
       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+          <DialogHeader className="space-y-2">
             <div className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-primary" />
-              <DialogTitle>Reset Password</DialogTitle>
+              <DialogTitle className="font-sans">Reset Password</DialogTitle>
             </div>
             <DialogDescription>
               {resetSent
