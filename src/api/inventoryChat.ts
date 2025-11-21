@@ -4,7 +4,7 @@
  * Frontend API wrapper for inventory chat conversations
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { API_BASE_URL } from '@/config/api';
 
 // Helper to get auth headers
 function getAuthHeaders(): HeadersInit {
@@ -48,7 +48,7 @@ export interface SendMessageResponse {
  * Create a new conversation
  */
 export async function createConversation(hubId: string): Promise<Conversation> {
-  const response = await fetch(`${API_BASE_URL}/api/inventory-chat/conversations`, {
+  const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ hubId }),
@@ -71,7 +71,7 @@ export async function listConversations(hubId?: string): Promise<Conversation[]>
     params.append('hubId', hubId);
   }
 
-  const url = `${API_BASE_URL}/api/inventory-chat/conversations${params.toString() ? '?' + params.toString() : ''}`;
+  const url = `${API_BASE_URL}/inventory-chat/conversations${params.toString() ? '?' + params.toString() : ''}`;
   
   const response = await fetch(url, {
     method: 'GET',
@@ -91,7 +91,7 @@ export async function listConversations(hubId?: string): Promise<Conversation[]>
  * Get a specific conversation
  */
 export async function getConversation(conversationId: string): Promise<Conversation> {
-  const response = await fetch(`${API_BASE_URL}/api/inventory-chat/conversations/${conversationId}`, {
+  const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}`, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -108,7 +108,7 @@ export async function getConversation(conversationId: string): Promise<Conversat
  * Send a message and get AI response
  */
 export async function sendMessage(conversationId: string, message: string): Promise<SendMessageResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/inventory-chat/conversations/${conversationId}/messages`, {
+  const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}/messages`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ message }),
@@ -126,7 +126,7 @@ export async function sendMessage(conversationId: string, message: string): Prom
  * Delete a conversation
  */
 export async function deleteConversation(conversationId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/inventory-chat/conversations/${conversationId}`, {
+  const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });
@@ -141,7 +141,7 @@ export async function deleteConversation(conversationId: string): Promise<void> 
  * Update conversation title
  */
 export async function updateConversationTitle(conversationId: string, title: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/inventory-chat/conversations/${conversationId}/title`, {
+  const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}/title`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify({ title }),
