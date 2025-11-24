@@ -311,6 +311,23 @@ export interface HubPackage {
     performanceNotes?: string;
   };
 
+  // Insertion Orders Tracking
+  insertionOrders?: {
+    ordersGenerated: boolean; // Whether orders have been generated for this package
+    generatedAt?: Date; // When orders were first generated
+    generatedBy?: string; // User ID who generated orders
+    orderIds?: string[]; // Array of PublicationInsertionOrder _id values
+    overallStatus?: 'draft' | 'sent' | 'partial_confirmed' | 'all_confirmed' | 'in_production' | 'delivered'; // Rollup status
+    statusSummary?: {
+      draft: number;
+      sent: number;
+      confirmed: number;
+      rejected: number;
+      in_production: number;
+      delivered: number;
+    };
+  };
+
   // Administrative
   metadata: {
     createdBy: string; // User ID

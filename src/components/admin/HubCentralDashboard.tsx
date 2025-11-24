@@ -9,6 +9,7 @@ import { HubDataQuality } from './HubDataQuality';
 import { HubTeamManagement } from './HubTeamManagement';
 import { HubPricingAnalytics } from './HubPricingAnalytics';
 import { InventoryChatContainer } from '../inventory-chat/InventoryChatContainer';
+import { HubOrdersManagement } from './HubOrdersManagement';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
@@ -881,6 +882,10 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
     
     if (activeTab === 'packages') {
       return <HubPackageManagement />;
+    }
+    
+    if (activeTab === 'orders') {
+      return <HubOrdersManagement />;
     }
     
     if (activeTab === 'pricing') {

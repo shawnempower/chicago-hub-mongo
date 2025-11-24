@@ -15,13 +15,14 @@ import { useToast } from '@/components/ui/use-toast';
 import { useHubContext } from '@/contexts/HubContext';
 import { useAnalyzeCampaign, useCreateCampaign } from '@/hooks/useCampaigns';
 import { CampaignAnalysisRequest } from '@/integrations/mongodb/campaignSchema';
-import { ArrowLeft, ArrowRight, Sparkles, CheckCircle2, Eye } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, CheckCircle2, Eye, Package } from 'lucide-react';
 
 // Step components
 import { CampaignBasicsStep } from '@/components/campaign/CampaignBasicsStep';
 import { CampaignObjectivesStep } from '@/components/campaign/CampaignObjectivesStep';
 import { CampaignTimelineStep } from '@/components/campaign/CampaignTimelineStep';
 import { CampaignAnalysisStep } from '@/components/campaign/CampaignAnalysisStep';
+import { CampaignPackageSelectionStep } from '@/components/campaign/CampaignPackageSelectionStep';
 import { CampaignReviewStep } from '@/components/campaign/CampaignReviewStep';
 
 interface CampaignFormData {
@@ -43,6 +44,8 @@ interface CampaignFormData {
   channels: string[];
   includeAllOutlets: boolean;
   algorithm?: string;
+  inventorySelectionMethod?: 'ai' | 'package';
+  selectedPackageId?: string;
   
   // Step 3: Timeline
   startDate: Date | null;
@@ -65,15 +68,22 @@ const INITIAL_FORM_DATA: CampaignFormData = {
   channels: [],
   includeAllOutlets: true,
   algorithm: 'all-inclusive',
+  inventorySelectionMethod: 'package',
+  selectedPackageId: undefined,
   startDate: null,
   endDate: null,
 };
 
-const STEPS = [
+// Dynamic steps based on inventory selection method
+const getSteps = (inventoryMethod: 'ai' | 'package') => [
   { id: 1, title: 'Campaign Basics', description: 'Name and advertiser information' },
   { id: 2, title: 'Campaign Objectives', description: 'Goals, budget, and targeting' },
   { id: 3, title: 'Timeline', description: 'Campaign dates and duration' },
-  { id: 4, title: 'AI Analysis', description: 'Intelligent inventory selection' },
+  { 
+    id: 4, 
+    title: inventoryMethod === 'ai' ? 'AI Analysis' : 'Package Selection', 
+    description: inventoryMethod === 'ai' ? 'Intelligent inventory selection' : 'Choose pre-built package' 
+  },
   { id: 5, title: 'Review & Create', description: 'Review and finalize campaign' },
 ];
 
@@ -89,6 +99,10 @@ export default function CampaignBuilder() {
   const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null);
   const [editedInventory, setEditedInventory] = useState<any>(null);
   const [inventoryEdited, setInventoryEdited] = useState(false);
+  const [selectedPackageData, setSelectedPackageData] = useState<any>(null);
+
+  // Get dynamic steps based on selection method
+  const STEPS = getSteps(formData.inventorySelectionMethod || 'package');
 
   const updateFormData = (updates: Partial<CampaignFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
@@ -101,6 +115,12 @@ export default function CampaignBuilder() {
     
     // Note: We'll recalculate pricing when creating the campaign
     // The inventoryPricing service will handle the calculations
+  };
+
+  // Handle package selection
+  const handlePackageSelect = (packageId: string, packageData: any) => {
+    updateFormData({ selectedPackageId: packageId });
+    setSelectedPackageData(packageData);
   };
 
   const validateStep = (step: number): boolean => {
@@ -127,10 +147,20 @@ export default function CampaignBuilder() {
         return true;
         
       case 2:
-        if (!formData.targetAudience || formData.budget <= 0 || formData.channels.length === 0) {
+        // Validation depends on inventory selection method
+        if (!formData.targetAudience || formData.budget <= 0) {
           toast({
             title: 'Missing Information',
-            description: 'Please fill in target audience, budget, and select at least one channel',
+            description: 'Please fill in target audience and budget',
+            variant: 'destructive',
+          });
+          return false;
+        }
+        // Only require channels if using AI selection
+        if (formData.inventorySelectionMethod === 'ai' && formData.channels.length === 0) {
+          toast({
+            title: 'Missing Information',
+            description: 'Please select at least one channel for AI analysis',
             variant: 'destructive',
           });
           return false;
@@ -167,12 +197,31 @@ export default function CampaignBuilder() {
     }
 
     if (currentStep === 3) {
-      // Move to step 4 FIRST to show loading screen
-      setCurrentStep(4);
-      // Then trigger AI analysis
-      await handleAnalyze();
-      // Don't increment step again - we're already on step 4
-      return;
+      // Different behavior based on inventory selection method
+      if (formData.inventorySelectionMethod === 'ai') {
+        // Move to step 4 FIRST to show loading screen
+        setCurrentStep(4);
+        // Then trigger AI analysis
+        await handleAnalyze();
+        // Don't increment step again - we're already on step 4
+        return;
+      } else {
+        // Package method: just move to package selection step
+        setCurrentStep(4);
+        return;
+      }
+    }
+
+    if (currentStep === 4 && formData.inventorySelectionMethod === 'package') {
+      // Validate package selection before moving to review
+      if (!formData.selectedPackageId || !selectedPackageData) {
+        toast({
+          title: 'No Package Selected',
+          description: 'Please select a package to continue',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
     
     setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
@@ -284,8 +333,80 @@ export default function CampaignBuilder() {
   };
 
   const handleCreate = async () => {
-    if (!result || !selectedHubId || !selectedHub) {
+    if (!selectedHubId || !selectedHub) {
       return;
+    }
+
+    // Check if we have required data based on method
+    if (formData.inventorySelectionMethod === 'ai' && !result) {
+      toast({
+        title: 'No Analysis Result',
+        description: 'Please complete AI analysis first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (formData.inventorySelectionMethod === 'package' && !selectedPackageData) {
+      toast({
+        title: 'No Package Selected',
+        description: 'Please select a package first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Build campaign data based on selection method
+    let selectedInventory, pricing, estimatedPerformance, algorithm;
+    
+    if (formData.inventorySelectionMethod === 'ai' && result) {
+      selectedInventory = result.selectedInventory;
+      pricing = result.pricing;
+      estimatedPerformance = result.estimatedPerformance;
+      algorithm = result.algorithm;
+    } else if (selectedPackageData) {
+      // Convert package data to campaign format
+      const packagePublications = selectedPackageData.components?.publications || [];
+      
+      // Filter out excluded items from each publication
+      const filteredPublications = packagePublications.map((pub: any) => ({
+        publicationId: pub.publicationId,
+        publicationName: pub.publicationName,
+        inventoryItems: (pub.inventoryItems || []).filter((item: any) => !item.isExcluded)
+      })).filter((pub: any) => pub.inventoryItems.length > 0); // Remove publications with no active items
+      
+      selectedInventory = {
+        publications: filteredPublications,
+        totalInventoryItems: filteredPublications.reduce((sum: number, pub: any) => 
+          sum + pub.inventoryItems.length, 0
+        )
+      };
+      
+      pricing = {
+        finalPrice: selectedPackageData.pricing?.breakdown?.finalPrice || 0,
+        breakdown: selectedPackageData.pricing?.breakdown || {},
+        billingCycle: 'monthly'
+      };
+      
+      estimatedPerformance = {
+        reach: {
+          min: selectedPackageData.performance?.estimatedReach?.minReach || 0,
+          max: selectedPackageData.performance?.estimatedReach?.maxReach || 0,
+          description: selectedPackageData.performance?.estimatedReach?.reachDescription || ''
+        },
+        impressions: {
+          min: selectedPackageData.performance?.estimatedImpressions?.minImpressions || 0,
+          max: selectedPackageData.performance?.estimatedImpressions?.maxImpressions || 0
+        }
+      };
+      
+      algorithm = {
+        id: 'package-based',
+        name: 'Pre-Built Package',
+        version: '1.0',
+        executedAt: new Date(),
+        description: `Campaign created from package: ${selectedPackageData.basicInfo?.name || 'Hub Package'}`
+      };
     }
 
     const campaignData = {
@@ -311,16 +432,17 @@ export default function CampaignBuilder() {
           currency: 'USD',
           billingCycle: formData.billingCycle,
         },
-        channels: formData.channels,
+        channels: formData.inventorySelectionMethod === 'ai' ? formData.channels : [],
       },
       timeline: {
         startDate: formData.startDate!,
         endDate: formData.endDate!,
       },
-      selectedInventory: result.selectedInventory,
-      pricing: result.pricing,
-      estimatedPerformance: result.estimatedPerformance,
-      algorithm: result.algorithm,
+      selectedInventory,
+      pricing,
+      estimatedPerformance,
+      algorithm,
+      packageId: formData.selectedPackageId, // Link to package if used
       status: 'draft' as const,
     };
 
@@ -437,7 +559,7 @@ export default function CampaignBuilder() {
                 />
               )}
               
-              {currentStep === 4 && (
+              {currentStep === 4 && formData.inventorySelectionMethod === 'ai' && (
                 <CampaignAnalysisStep
                   analyzing={analyzing}
                   result={result}
@@ -454,11 +576,20 @@ export default function CampaignBuilder() {
                 />
               )}
               
+              {currentStep === 4 && formData.inventorySelectionMethod === 'package' && (
+                <CampaignPackageSelectionStep
+                  selectedPackageId={formData.selectedPackageId}
+                  onPackageSelect={handlePackageSelect}
+                  budget={formData.budget}
+                />
+              )}
+              
               {currentStep === 5 && (
                 <CampaignReviewStep
                   formData={formData}
                   result={result}
                   campaignId={createdCampaignId}
+                  selectedPackageData={selectedPackageData}
                 />
               )}
             </CardContent>
@@ -479,10 +610,17 @@ export default function CampaignBuilder() {
               {currentStep < 4 && (
                 <Button onClick={handleNext}>
                   {currentStep === 3 ? (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Analyze with AI
-                    </>
+                    formData.inventorySelectionMethod === 'ai' ? (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Analyze with AI
+                      </>
+                    ) : (
+                      <>
+                        <Package className="mr-2 h-4 w-4" />
+                        Select Package
+                      </>
+                    )
                   ) : (
                     <>
                       Next
@@ -492,10 +630,24 @@ export default function CampaignBuilder() {
                 </Button>
               )}
               
+              {currentStep === 4 && formData.inventorySelectionMethod === 'package' && formData.selectedPackageId && (
+                <Button onClick={handleNext}>
+                  Review Campaign
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+              
               {currentStep === 4 && result && createdCampaignId && (
                 <Button onClick={() => navigate(`/campaigns/${createdCampaignId}`)}>
                   <CheckCircle2 className="mr-2 h-4 w-4" />
                   View Campaign Details
+                </Button>
+              )}
+              
+              {currentStep === 5 && !createdCampaignId && (
+                <Button onClick={handleCreate} disabled={creating}>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {creating ? 'Creating Campaign...' : 'Create Campaign'}
                 </Button>
               )}
               

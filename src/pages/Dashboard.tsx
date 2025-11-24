@@ -11,6 +11,8 @@ import { PublicationLeads } from "@/components/dashboard/PublicationLeads";
 import { PublicationStorefront } from "@/components/dashboard/PublicationStorefront";
 import { PublicationFullSummary } from "@/components/dashboard/PublicationFullSummary";
 import { HubPricingReport } from "@/components/dashboard/HubPricingReport";
+import { PublicationOrders } from "@/components/dashboard/PublicationOrders";
+import { PublicationOrderDetail } from "@/components/dashboard/PublicationOrderDetail";
 import { useAuth } from "@/contexts/CustomAuthContext";
 import { Navigate, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { usePublication } from "@/contexts/PublicationContext";
@@ -45,10 +47,10 @@ export default function Dashboard() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'leads', label: 'Leads', icon: Users },
+    { id: 'orders', label: 'Orders', icon: FileText },
     { id: 'knowledgebase', label: 'Knowledge', icon: BookOpen },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'storefront', label: 'Storefront', icon: Store },
-    { id: 'summary', label: 'Summary', icon: FileText },
     { id: 'hub-pricing', label: 'Hub Pricing', icon: DollarSign },
   ];
 
@@ -61,12 +63,14 @@ export default function Dashboard() {
         {currentTab === 'profile' && <PublicationProfile />}
         {currentTab === 'inventory' && <DashboardInventoryManager />}
         {currentTab === 'leads' && selectedPublication?._id && <PublicationLeads publicationId={selectedPublication._id} />}
+        {currentTab === 'orders' && <PublicationOrders />}
+        {currentTab === 'order-detail' && <PublicationOrderDetail />}
         {currentTab === 'knowledgebase' && <PublicationKnowledgeBase />}
         {currentTab === 'settings' && <PublicationSettings />}
         {currentTab === 'storefront' && <PublicationStorefront />}
         {currentTab === 'summary' && <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />}
         {currentTab === 'hub-pricing' && <HubPricingReport onBack={() => handleTabChange('dashboard')} />}
-        {!['dashboard', 'profile', 'inventory', 'leads', 'knowledgebase', 'settings', 'storefront', 'summary', 'hub-pricing'].includes(currentTab) && <DashboardOverview />}
+        {!['dashboard', 'profile', 'inventory', 'leads', 'orders', 'order-detail', 'knowledgebase', 'settings', 'storefront', 'summary', 'hub-pricing'].includes(currentTab) && <DashboardOverview />}
       </>
     );
   };

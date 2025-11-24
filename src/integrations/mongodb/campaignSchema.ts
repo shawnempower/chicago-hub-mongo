@@ -94,7 +94,44 @@ export interface InsertionOrder {
   version: number; // Version number for regenerations
 }
 
+export interface CreativeAsset {
+  assetId: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string; // 'image/jpeg', 'image/png', 'application/pdf', 'video/mp4', etc.
+  fileSize: number; // in bytes
+  uploadedAt: Date;
+  uploadedBy: string; // User ID
+  thumbnailUrl?: string; // For images/videos
+  description?: string;
+}
+
+export interface AdSpecification {
+  placementId: string; // Reference to inventory item
+  placementName: string;
+  channel: string;
+  specifications: {
+    dimensions?: string; // e.g., "300x250" or "Full page"
+    fileFormats?: string[]; // e.g., ["JPG", "PNG", "PDF"]
+    maxFileSize?: string; // e.g., "10MB"
+    colorSpace?: string; // e.g., "CMYK", "RGB"
+    resolution?: string; // e.g., "300dpi"
+    additionalRequirements?: string;
+  };
+  deadline?: Date;
+  providedAt?: Date;
+  providedBy?: string; // User ID
+}
+
+export interface StatusHistoryEntry {
+  status: 'draft' | 'sent' | 'confirmed' | 'rejected' | 'in_production' | 'delivered';
+  timestamp: Date;
+  changedBy: string; // User ID
+  notes?: string;
+}
+
 export interface PublicationInsertionOrder {
+  _id?: string | ObjectId; // MongoDB ID for the order itself
   publicationId: number;
   publicationName: string;
   generatedAt: Date;
@@ -103,9 +140,29 @@ export interface PublicationInsertionOrder {
   downloadUrl?: string; // S3 URL if stored
   sentTo?: string[]; // Email addresses where this IO was sent
   sentAt?: Date;
-  status: 'draft' | 'sent' | 'confirmed' | 'rejected';
+  status: 'draft' | 'sent' | 'confirmed' | 'rejected' | 'in_production' | 'delivered';
   confirmationDate?: Date;
-  notes?: string; // Publication-specific notes or requirements
+  notes?: string; // Publication-specific notes or requirements (deprecated, use publicationNotes)
+  
+  // Enhanced tracking fields
+  creativeAssets?: CreativeAsset[]; // Creative assets for this order
+  adSpecifications?: AdSpecification[]; // Ad specs provided by publication
+  adSpecificationsProvided?: boolean; // Flag for quick checking
+  statusHistory?: StatusHistoryEntry[]; // Track all status changes
+  publicationNotes?: string; // Notes from publication side
+  hubNotes?: string; // Internal notes from hub team
+  
+  // Proof of performance (post-campaign)
+  proofOfPerformance?: {
+    uploadedAt?: Date;
+    uploadedBy?: string;
+    files?: Array<{
+      fileName: string;
+      fileUrl: string;
+      fileType: string;
+    }>;
+    notes?: string;
+  };
 }
 
 export interface Campaign {
