@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useCampaign, useGenerateInsertionOrder, useUpdateCampaignStatus, useDeleteCampaign } from '@/hooks/useCampaigns';
+import { useCampaign, useGenerateInsertionOrder, useUpdateCampaignStatus, useDeleteCampaign, useGeneratePublicationOrders } from '@/hooks/useCampaigns';
 import { format } from 'date-fns';
 import { 
   ArrowLeft, 
@@ -48,6 +48,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { InventoryEditor } from '@/components/admin/InventoryEditor';
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
 import { API_BASE_URL } from '@/config/api';
+import { CreativeRequirementsChecklist } from '@/components/campaign/CreativeRequirementsChecklist';
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-800',
@@ -75,6 +76,7 @@ export default function CampaignDetail() {
   const { toast } = useToast();
   const { campaign, loading, refetch } = useCampaign(id || null);
   const { generate, generating } = useGenerateInsertionOrder();
+  const { generateOrders, generating: generatingOrders } = useGeneratePublicationOrders();
   const { updateStatus, updating } = useUpdateCampaignStatus();
   const { deleteCampaign, deleting } = useDeleteCampaign();
   const [ioFormat, setIoFormat] = useState<'html' | 'markdown'>('html');
@@ -96,6 +98,26 @@ export default function CampaignDetail() {
       toast({
         title: 'Generation Failed',
         description: 'Failed to generate insertion order. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleGeneratePublicationOrders = async () => {
+    if (!id) return;
+    
+    try {
+      const result = await generateOrders(id);
+      toast({
+        title: 'Publication Orders Generated',
+        description: `${result.ordersGenerated} publication insertion orders have been created and are now visible to publications.`,
+      });
+      refetch(); // Refresh campaign data
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate publication orders';
+      toast({
+        title: 'Generation Failed',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
@@ -352,6 +374,7 @@ export default function CampaignDetail() {
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="inventory">Inventory</TabsTrigger>
+              <TabsTrigger value="creative-requirements">Creative Requirements</TabsTrigger>
               <TabsTrigger value="insertion-order">Insertion Order</TabsTrigger>
             </TabsList>
 
@@ -789,37 +812,54 @@ export default function CampaignDetail() {
                                   )}
                                 </div>
                                 
-                                {/* Pricing section - Show TOTAL cost */}
+                                {/* Pricing section - PHASE 4: Display calculated values */}
                                 <div className="text-right flex-shrink-0">
                                   {(() => {
-                                    // ALWAYS use stored totalCost if available (for algorithms that scale allocations)
-                                    // Otherwise fall back to calculating from quantity and rate
-                                    let totalCost = 0;
-                                    const model = item.itemPricing?.pricingModel;
-                                    const rate = item.itemPricing?.hubPrice || 0;
-                                    const qty = item.quantity || 0;
+                                    // Try to use pre-calculated values first
+                                    let totalCost = item.itemPricing?.totalCost || (item as any).campaignCost;
                                     
-                                    if (item.itemPricing?.totalCost) {
-                                      // Use stored total cost (set by backend for proportional allocations)
-                                      totalCost = item.itemPricing.totalCost;
-                                    } else if ((item as any).campaignCost) {
-                                      // Fallback to campaignCost field
-                                      totalCost = (item as any).campaignCost;
-                                    } else if (model === 'cpm') {
-                                      // Calculate from quantity (impressions) and CPM rate
-                                      totalCost = (qty / 1000) * rate;
-                                    } else if (model === 'flat') {
-                                      totalCost = rate;
-                                    } else {
-                                      // per_send, per_ad, per_week - calculate from quantity and rate
-                                      totalCost = qty * rate;
+                                    // If not available, calculate on-the-fly using shared utility
+                                    if (totalCost === undefined || totalCost === null || totalCost === 0) {
+                                      try {
+                                        const { calculateItemCost } = require('@/utils/inventoryPricing');
+                                        const frequency = (item as any).currentFrequency || (item as any).quantity || 1;
+                                        
+                                        // Check if item has proper pricing structure
+                                        if (!item.itemPricing || !item.itemPricing.hubPrice) {
+                                          console.warn('Item missing pricing data:', {
+                                            itemName: item.itemName,
+                                            hasItemPricing: !!item.itemPricing,
+                                            hubPrice: item.itemPricing?.hubPrice,
+                                            pricingModel: item.itemPricing?.pricingModel,
+                                            fullItem: item
+                                          });
+                                          
+                                          // Try to use standardPrice as fallback
+                                          const fallbackPrice = item.itemPricing?.standardPrice || (item as any).standardPrice;
+                                          if (fallbackPrice) {
+                                            totalCost = fallbackPrice * frequency;
+                                            console.log('Using fallback standardPrice calculation:', totalCost);
+                                          } else {
+                                            totalCost = 0;
+                                          }
+                                        } else {
+                                          totalCost = calculateItemCost(item, frequency);
+                                          
+                                          if (totalCost === 0) {
+                                            console.warn('Calculated cost is 0 for item:', item.itemName);
+                                          }
+                                        }
+                                      } catch (error) {
+                                        console.error('Error calculating item cost:', error);
+                                        totalCost = 0;
+                                      }
                                     }
                                     
                                     return (
                                       <>
                                         <p className="text-xs text-gray-500 mb-1">Item Total</p>
                                         <p className="text-2xl font-bold text-green-600">
-                                          ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          ${(totalCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
                                       </>
                                     );
@@ -837,8 +877,72 @@ export default function CampaignDetail() {
               )}
             </TabsContent>
 
+            {/* Creative Requirements Tab */}
+            <TabsContent value="creative-requirements">
+              <CreativeRequirementsChecklist 
+                campaign={campaign}
+                onUploadAssets={() => {
+                  toast({
+                    title: 'Coming Soon',
+                    description: 'Creative asset upload functionality will be available soon.',
+                  });
+                }}
+              />
+            </TabsContent>
+
             {/* Insertion Order Tab */}
             <TabsContent value="insertion-order">
+              {/* Publication Orders Alert */}
+              {!campaign.publicationInsertionOrders || campaign.publicationInsertionOrders.length === 0 ? (
+                <Card className="mb-6 border-amber-200 bg-amber-50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-4">
+                      <AlertTriangle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-amber-900 mb-2">Publication Orders Not Generated</h3>
+                        <p className="text-sm text-amber-800 mb-4">
+                          Publication insertion orders create individual order records for each publication in this campaign. 
+                          Once generated, these orders will be visible to publications in their dashboard where they can review, 
+                          confirm, and provide ad specifications.
+                        </p>
+                        <Button 
+                          onClick={handleGeneratePublicationOrders} 
+                          disabled={generatingOrders}
+                          variant="default"
+                          className="bg-amber-600 hover:bg-amber-700"
+                        >
+                          {generatingOrders ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Generating Publication Orders...
+                            </>
+                          ) : (
+                            <>
+                              <Package className="mr-2 h-4 w-4" />
+                              Generate Publication Orders ({campaign.selectedInventory?.publications?.length || 0} publications)
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="mb-6 border-green-200 bg-green-50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-4">
+                      <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-green-900 mb-1">Publication Orders Generated</h3>
+                        <p className="text-sm text-green-800">
+                          {campaign.publicationInsertionOrders.length} publication orders have been created and are visible to publications.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">

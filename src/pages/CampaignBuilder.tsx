@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { useHubContext } from '@/contexts/HubContext';
-import { useAnalyzeCampaign, useCreateCampaign } from '@/hooks/useCampaigns';
+import { useAnalyzeCampaign, useCreateCampaign, useGenerateInsertionOrder } from '@/hooks/useCampaigns';
 import { CampaignAnalysisRequest } from '@/integrations/mongodb/campaignSchema';
 import { ArrowLeft, ArrowRight, Sparkles, CheckCircle2, Eye, Package } from 'lucide-react';
 
@@ -93,6 +93,7 @@ export default function CampaignBuilder() {
   const { selectedHubId, selectedHub } = useHubContext();
   const { analyze, analyzing, result, error: analysisError } = useAnalyzeCampaign();
   const { create, creating } = useCreateCampaign();
+  const { generate, generating } = useGenerateInsertionOrder();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<CampaignFormData>(INITIAL_FORM_DATA);
@@ -368,37 +369,124 @@ export default function CampaignBuilder() {
       // Convert package data to campaign format
       const packagePublications = selectedPackageData.components?.publications || [];
       
-      // Filter out excluded items from each publication
-      const filteredPublications = packagePublications.map((pub: any) => ({
-        publicationId: pub.publicationId,
-        publicationName: pub.publicationName,
-        inventoryItems: (pub.inventoryItems || []).filter((item: any) => !item.isExcluded)
-      })).filter((pub: any) => pub.inventoryItems.length > 0); // Remove publications with no active items
+      // Import calculation utility
+      const { calculateItemCost } = await import('@/utils/inventoryPricing');
+      
+      // Filter out excluded items from each publication and calculate costs
+      const filteredPublications = packagePublications.map((pub: any) => {
+        // Filter and calculate cost for each item
+        const items = (pub.inventoryItems || [])
+          .filter((item: any) => !item.isExcluded)
+          .map((item: any) => {
+            // Calculate the item cost using shared utility
+            const frequency = item.currentFrequency || item.quantity || 1;
+            
+            // Debug: Check if item has proper pricing structure
+            if (!item.itemPricing || !item.itemPricing.hubPrice) {
+              console.warn('Item missing pricing structure during campaign creation:', {
+                itemName: item.itemName,
+                hasItemPricing: !!item.itemPricing,
+                itemPricing: item.itemPricing
+              });
+            }
+            
+            const itemCost = calculateItemCost(item, frequency);
+            
+            console.log(`Calculated cost for ${item.itemName}:`, {
+              frequency,
+              itemCost,
+              hasItemPricing: !!item.itemPricing,
+              hubPrice: item.itemPricing?.hubPrice,
+              pricingModel: item.itemPricing?.pricingModel
+            });
+            
+            return {
+              ...item,
+              // Ensure itemPricing exists with totalCost
+              itemPricing: {
+                ...item.itemPricing,
+                totalCost: itemCost
+              },
+              // Also store as campaignCost for backwards compatibility
+              campaignCost: itemCost
+            };
+          });
+        
+        // Calculate publication total from items if not provided
+        const pubTotal = pub.publicationTotal || items.reduce((sum: number, item: any) => sum + (item.campaignCost || 0), 0);
+        
+        return {
+          publicationId: pub.publicationId,
+          publicationName: pub.publicationName,
+          publicationTotal: pubTotal,
+          inventoryItems: items,
+          // Include other fields needed for reach calculation
+          monthlyReach: pub.monthlyReach,
+          monthlyImpressions: pub.monthlyImpressions
+        };
+      }).filter((pub: any) => pub.inventoryItems.length > 0); // Remove publications with no active items
       
       selectedInventory = {
         publications: filteredPublications,
         totalInventoryItems: filteredPublications.reduce((sum: number, pub: any) => 
           sum + pub.inventoryItems.length, 0
-        )
+        ),
+        totalPublications: filteredPublications.length
       };
       
+      // Calculate total price from publication totals (more accurate than package stored price)
+      const calculatedTotal = filteredPublications.reduce((sum: number, pub: any) => 
+        sum + (pub.publicationTotal || 0), 0
+      );
+      
       pricing = {
-        finalPrice: selectedPackageData.pricing?.breakdown?.finalPrice || 0,
-        breakdown: selectedPackageData.pricing?.breakdown || {},
+        finalPrice: calculatedTotal || selectedPackageData.pricing?.breakdown?.finalPrice || 0,
+        breakdown: {
+          ...selectedPackageData.pricing?.breakdown,
+          finalPrice: calculatedTotal || selectedPackageData.pricing?.breakdown?.finalPrice || 0,
+          totalHubPrice: calculatedTotal || selectedPackageData.pricing?.breakdown?.totalHubPrice || 0
+        },
         billingCycle: 'monthly'
       };
       
-      estimatedPerformance = {
-        reach: {
-          min: selectedPackageData.performance?.estimatedReach?.minReach || 0,
-          max: selectedPackageData.performance?.estimatedReach?.maxReach || 0,
-          description: selectedPackageData.performance?.estimatedReach?.reachDescription || ''
-        },
-        impressions: {
-          min: selectedPackageData.performance?.estimatedImpressions?.minImpressions || 0,
-          max: selectedPackageData.performance?.estimatedImpressions?.maxImpressions || 0
-        }
-      };
+      // Calculate reach from inventory if package doesn't have reach data
+      const packageHasReach = selectedPackageData.performance?.estimatedReach?.minReach > 0;
+      
+      if (!packageHasReach && filteredPublications.length > 0) {
+        // Package has no reach data (old package), calculate from inventory
+        console.log('Package has no reach data, calculating from inventory...');
+        const { calculatePackageReach } = await import('@/utils/reachCalculations');
+        const reachSummary = calculatePackageReach(filteredPublications);
+        
+        estimatedPerformance = {
+          reach: {
+            min: reachSummary.estimatedUniqueReach || 0,
+            max: reachSummary.estimatedUniqueReach || 0,
+            description: `${(reachSummary.estimatedUniqueReach || 0).toLocaleString()}+ estimated unique reach`
+          },
+          impressions: {
+            min: reachSummary.totalMonthlyImpressions || 0,
+            max: reachSummary.totalMonthlyImpressions || 0,
+            byChannel: reachSummary.channelAudiences
+          },
+          cpm: reachSummary.totalMonthlyImpressions > 0
+            ? (pricing.finalPrice / (reachSummary.totalMonthlyImpressions / 1000))
+            : 0
+        };
+      } else {
+        // Use package's stored reach data
+        estimatedPerformance = {
+          reach: {
+            min: selectedPackageData.performance?.estimatedReach?.minReach || 0,
+            max: selectedPackageData.performance?.estimatedReach?.maxReach || 0,
+            description: selectedPackageData.performance?.estimatedReach?.reachDescription || ''
+          },
+          impressions: {
+            min: selectedPackageData.performance?.estimatedImpressions?.minImpressions || 0,
+            max: selectedPackageData.performance?.estimatedImpressions?.maxImpressions || 0
+          }
+        };
+      }
       
       algorithm = {
         id: 'package-based',
@@ -464,6 +552,57 @@ export default function CampaignBuilder() {
         description: 'Failed to create campaign. Please try again.',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleGenerateIO = async () => {
+    if (!createdCampaignId) {
+      toast({
+        title: 'No Campaign',
+        description: 'Campaign ID not found',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const result = await generate(createdCampaignId, 'html');
+      
+      // Extract content from the insertion order
+      const content = result.insertionOrder?.content || '';
+      
+      if (!content) {
+        throw new Error('No content generated');
+      }
+      
+      // Create a downloadable link
+      const blob = new Blob([content], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `insertion-order-${formData.name.replace(/\s+/g, '-').toLowerCase()}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Success',
+        description: 'Insertion order generated and downloaded',
+      });
+    } catch (error) {
+      console.error('Generate IO error:', error);
+      toast({
+        title: 'Generation Failed',
+        description: error instanceof Error ? error.message : 'Failed to generate insertion order. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleViewCampaign = () => {
+    if (createdCampaignId) {
+      navigate(`/campaigns/${createdCampaignId}`);
     }
   };
 
@@ -590,6 +729,8 @@ export default function CampaignBuilder() {
                   result={result}
                   campaignId={createdCampaignId}
                   selectedPackageData={selectedPackageData}
+                  onGenerateIO={handleGenerateIO}
+                  onViewCampaign={handleViewCampaign}
                 />
               )}
             </CardContent>
