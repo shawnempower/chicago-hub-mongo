@@ -189,7 +189,7 @@ export async function uploadFile(
       xhr.open('POST', endpoint);
       
       // Add auth token if available
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token');
       if (token) {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }

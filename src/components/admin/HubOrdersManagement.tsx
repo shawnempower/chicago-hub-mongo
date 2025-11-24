@@ -38,7 +38,7 @@ export function HubOrdersManagement() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token');
 
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
@@ -65,7 +65,7 @@ export function HubOrdersManagement() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/admin/orders/stats', {
         headers: { 'Authorization': `Bearer ${token}` }
       });

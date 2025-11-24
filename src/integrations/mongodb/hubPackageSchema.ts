@@ -281,6 +281,41 @@ export interface HubPackage {
     spotsRemaining?: number; // For limited packages
   };
 
+  // Package Health Check (for drift detection and maintenance)
+  healthCheck?: {
+    lastChecked?: Date;
+    checks?: {
+      pricing?: {
+        status: 'current' | 'outdated' | 'significant-change';
+        storedPrice: number;
+        currentPrice: number;
+        deltaPercent: number;
+      };
+      reach?: {
+        status: 'current' | 'improved' | 'declined';
+        storedReach: number;
+        currentReach: number;
+        deltaPercent: number;
+      };
+      availability?: {
+        status: 'available' | 'partially-available' | 'unavailable';
+        unavailableItems: string[];
+      };
+      inventory?: {
+        status: 'current' | 'stale';
+        inventoryAge: number; // days since package was last modified
+        publicationsNeedingUpdate: string[];
+      };
+    };
+    recommendedAction?: 'none' | 'review' | 'update-required' | 'archive';
+    overallHealth?: 'healthy' | 'needs-attention' | 'critical';
+    history?: Array<{
+      checkedAt: Date;
+      overallHealth: string;
+      changes: string[];
+    }>;
+  };
+
   // Marketing & Display
   marketing: {
     thumbnailImage?: string; // URL to package image

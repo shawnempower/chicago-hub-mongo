@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Download, Eye, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { CampaignAnalysisResponse } from '@/integrations/mongodb/campaignSchema';
+import { CreativeRequirementsChecklist } from './CreativeRequirementsChecklist';
 
 interface CampaignReviewStepProps {
   formData: {
@@ -29,9 +30,11 @@ interface CampaignReviewStepProps {
   result: CampaignAnalysisResponse | null;
   campaignId: string | null;
   selectedPackageData?: any;
+  onGenerateIO?: () => void;
+  onViewCampaign?: () => void;
 }
 
-export function CampaignReviewStep({ formData, result, campaignId, selectedPackageData }: CampaignReviewStepProps) {
+export function CampaignReviewStep({ formData, result, campaignId, selectedPackageData, onGenerateIO, onViewCampaign }: CampaignReviewStepProps) {
   if (!campaignId) {
     // Pre-creation review
     const isPackageBased = formData.inventorySelectionMethod === 'package';
@@ -43,6 +46,17 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
       return sum + activeItems.length;
     }, 0);
     const estimatedReach = selectedPackageData?.performance?.estimatedReach?.minReach || 0;
+    
+    // Debug logging
+    console.log('📊 CampaignReviewStep - Data:', {
+      isPackageBased,
+      estimatedReach: isPackageBased ? estimatedReach : result?.estimatedPerformance?.reach?.min,
+      result: result ? {
+        hasEstimatedPerformance: !!result.estimatedPerformance,
+        reach: result.estimatedPerformance?.reach,
+        impressions: result.estimatedPerformance?.impressions
+      } : 'No result'
+    });
     
     return (
       <div className="space-y-6">
@@ -215,6 +229,13 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
         </CardContent>
       </Card>
 
+      {/* Creative Requirements */}
+      <CreativeRequirementsChecklist 
+        campaign={null}
+        analysisResult={result}
+        compact={true}
+      />
+
       {/* Next Steps */}
       <Card>
         <CardHeader>
@@ -229,7 +250,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
                 <p className="text-sm text-blue-800 mb-3">
                   Create a professional insertion order document to share with stakeholders or submit to publications.
                 </p>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={onGenerateIO}>
                   <Download className="mr-2 h-4 w-4" />
                   Generate IO
                 </Button>
@@ -243,7 +264,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
                 <p className="text-sm text-green-800 mb-3">
                   View the complete campaign with all selected inventory, pricing breakdowns, and performance estimates.
                 </p>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={onViewCampaign}>
                   <Eye className="mr-2 h-4 w-4" />
                   View Campaign
                 </Button>

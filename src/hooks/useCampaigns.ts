@@ -319,4 +319,35 @@ export function useCampaignStats(hubId?: string) {
   };
 }
 
+/**
+ * Hook for generating publication insertion orders
+ * Creates the database records that publications can view
+ */
+export function useGeneratePublicationOrders() {
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const generateOrders = async (campaignId: string) => {
+    try {
+      setGenerating(true);
+      setError(null);
+      const result = await campaignsApi.generatePublicationOrders(campaignId);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate publication orders';
+      setError(errorMessage);
+      console.error('Error in useGeneratePublicationOrders:', err);
+      throw err;
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return {
+    generateOrders,
+    generating,
+    error
+  };
+}
+
 

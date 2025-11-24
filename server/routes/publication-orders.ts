@@ -32,26 +32,34 @@ router.get('/', async (req: any, res: Response) => {
     
     console.log('User profile:', { userId, profile: profile ? { id: profile._id, isAdmin: profile.isAdmin, publicationId: profile.publicationId } : null });
     
-    // If admin, return empty for now (admins should use admin routes)
-    if (profile?.isAdmin) {
-      console.log('User is admin, returning empty orders');
-      return res.json({ orders: [] });
-    }
-
     // Get user's assigned publications
     let publicationIds: string[] = [];
     
-    try {
-      publicationIds = await permissionsService.getUserPublications(userId);
-      console.log('Publications from permissions service:', publicationIds);
-    } catch (err) {
-      console.warn('Could not get user publications from permissions service:', err);
-    }
-    
-    // If no permissions found, try to get from profile
-    if (publicationIds.length === 0 && profile?.publicationId) {
-      publicationIds = [profile.publicationId.toString()];
-      console.log('Using publication from profile:', publicationIds);
+    // If admin, get ALL publication orders
+    if (profile?.isAdmin) {
+      console.log('User is admin, fetching ALL publication orders');
+      // Get all publication IDs from campaigns that have insertion orders
+      const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+      const allOrders = await insertionOrderService.getAllOrders();
+      
+      // Get unique publication IDs
+      const uniquePubIds = new Set(allOrders.map(order => order.publicationId.toString()));
+      publicationIds = Array.from(uniquePubIds);
+      console.log('Admin - found orders for publications:', publicationIds);
+    } else {
+      // Regular publication user - get their assigned publications
+      try {
+        publicationIds = await permissionsService.getUserPublications(userId);
+        console.log('Publications from permissions service:', publicationIds);
+      } catch (err) {
+        console.warn('Could not get user publications from permissions service:', err);
+      }
+      
+      // If no permissions found, try to get from profile
+      if (publicationIds.length === 0 && profile?.publicationId) {
+        publicationIds = [profile.publicationId.toString()];
+        console.log('Using publication from profile:', publicationIds);
+      }
     }
     
     if (publicationIds.length === 0) {
@@ -60,22 +68,32 @@ router.get('/', async (req: any, res: Response) => {
     }
 
     // Get filters from query params
-    const { status, dateFrom, dateTo } = req.query;
+    const { status, dateFrom, dateTo, publicationId } = req.query;
 
     const filters: any = {};
     if (status) filters.status = status;
     if (dateFrom) filters.dateFrom = new Date(dateFrom as string);
     if (dateTo) filters.dateTo = new Date(dateTo as string);
 
-    // For now, return empty orders (no campaigns with insertion orders yet)
-    // TODO: Implement getOrdersForPublication in insertionOrderService
-    console.log('Returning empty orders (feature not yet fully implemented)');
-    res.json({ orders: [] });
-    
-    /*
-    // Get orders for all assigned publications
+    // Filter to specific publication if provided
+    let publicationsToQuery = publicationIds;
+    if (publicationId) {
+      // Check if user has access to this publication
+      const requestedPubId = publicationId.toString();
+      if (profile?.isAdmin || publicationIds.includes(requestedPubId)) {
+        publicationsToQuery = [requestedPubId];
+        console.log('Filtering to specific publication:', requestedPubId);
+      } else {
+        console.log('User does not have access to publication:', requestedPubId);
+        return res.status(403).json({ error: 'Access denied to this publication' });
+      }
+    }
+
+    // Get orders for the publications
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     const allOrders = [];
-    for (const pubId of publicationIds) {
+    
+    for (const pubId of publicationsToQuery) {
       const orders = await insertionOrderService.getOrdersForPublication(
         parseInt(pubId),
         filters
@@ -83,13 +101,13 @@ router.get('/', async (req: any, res: Response) => {
       allOrders.push(...orders);
     }
 
-    // Sort by generated date
+    // Sort by generated date (newest first)
     allOrders.sort((a, b) => 
       new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
     );
 
+    console.log(`Found ${allOrders.length} orders for publications:`, publicationIds);
     res.json({ orders: allOrders });
-    */
   } catch (error) {
     console.error('Error fetching publication orders:', error);
     res.status(500).json({ error: 'Failed to fetch orders' });
@@ -132,6 +150,7 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
     }
 
     // Get orders for this publication
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     const orders = await insertionOrderService.getOrdersForPublication(
       parseInt(publicationId)
     );
@@ -143,7 +162,31 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.json({ order });
+    // Fetch the full campaign data to include inventory items
+    const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
+    
+    // Try to get campaign by both _id and campaignId string
+    let campaign = await campaignsService.getById(campaignId);
+    if (!campaign) {
+      campaign = await campaignsService.getByCampaignId(campaignId);
+    }
+    
+    // Include campaign data with inventory for ad specs
+    const orderWithCampaignData = {
+      ...order,
+      campaignData: campaign ? {
+        selectedInventory: campaign.selectedInventory,
+        timeline: campaign.timeline,
+        objectives: campaign.objectives,
+        basicInfo: campaign.basicInfo
+      } : null
+    };
+
+    console.log('Order detail - campaignId:', campaignId);
+    console.log('Order detail - found campaign:', !!campaign);
+    console.log('Order detail - campaign data included:', !!orderWithCampaignData.campaignData);
+
+    res.json({ order: orderWithCampaignData });
   } catch (error) {
     console.error('Error fetching order detail:', error);
     res.status(500).json({ error: 'Failed to fetch order' });
@@ -186,6 +229,7 @@ router.put('/:campaignId/:publicationId/status', async (req: any, res: Response)
     }
 
     // Update status
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     const result = await insertionOrderService.updateCampaignOrderStatus(
       campaignId,
       parseInt(publicationId),
@@ -237,6 +281,7 @@ router.post('/:campaignId/:publicationId/confirm', async (req: any, res: Respons
     }
 
     // Update to confirmed status
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     const result = await insertionOrderService.updateCampaignOrderStatus(
       campaignId,
       parseInt(publicationId),
@@ -273,20 +318,39 @@ router.post('/:campaignId/:publicationId/ad-specs', async (req: any, res: Respon
     }
 
     // Verify access
-    const hasAccess = await permissionsService.canAccessPublication(
-      userId,
-      publicationId
-    );
+    const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
+    const profile = await userProfilesService.getByUserId(userId);
+    
+    let hasAccess = false;
+    if (profile?.isAdmin) {
+      hasAccess = true;
+    } else {
+      try {
+        hasAccess = await permissionsService.canAccessPublication(userId, publicationId);
+      } catch (err) {
+        if (profile?.publicationId && profile.publicationId.toString() === publicationId) {
+          hasAccess = true;
+        }
+      }
+    }
 
     if (!hasAccess) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Update ad specifications in the order
-    // This would be implemented in the insertionOrderService
-    // For now, return success
+    // Save ad specifications
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+    const result = await insertionOrderService.saveAdSpecifications(
+      campaignId,
+      parseInt(publicationId),
+      specifications
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
     
-    res.json({ success: true, message: 'Ad specifications saved' });
+    res.json({ success: true, message: 'Ad specifications saved', order: result.order });
   } catch (error) {
     console.error('Error saving ad specifications:', error);
     res.status(500).json({ error: 'Failed to save ad specifications' });
@@ -301,28 +365,40 @@ router.post('/:campaignId/:publicationId/notes', async (req: any, res: Response)
   try {
     const userId = req.user.id;
     const { campaignId, publicationId } = req.params;
-    const { notes } = req.body;
+    const { notes, noteType } = req.body;
 
     if (!notes) {
       return res.status(400).json({ error: 'Notes are required' });
     }
 
     // Verify access
-    const hasAccess = await permissionsService.canAccessPublication(
-      userId,
-      publicationId
-    );
+    const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
+    const profile = await userProfilesService.getByUserId(userId);
+    
+    let hasAccess = false;
+    if (profile?.isAdmin) {
+      hasAccess = true;
+    } else {
+      try {
+        hasAccess = await permissionsService.canAccessPublication(userId, publicationId);
+      } catch (err) {
+        if (profile?.publicationId && profile.publicationId.toString() === publicationId) {
+          hasAccess = true;
+        }
+      }
+    }
 
     if (!hasAccess) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Add publication notes
+    // Add notes (type defaults to 'publication' but can be overridden)
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     const result = await insertionOrderService.addNotes(
       campaignId,
       parseInt(publicationId),
       notes,
-      'publication'
+      noteType || 'publication'
     );
 
     if (!result.success) {
@@ -404,6 +480,7 @@ router.get('/stats', async (req: any, res: Response) => {
       }
     };
 
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     for (const pubId of publicationIds) {
       const stats = await insertionOrderService.getOrderStatistics({
         publicationId: parseInt(pubId)

@@ -15,6 +15,7 @@ import {
   CampaignSelectedInventory
 } from '../src/integrations/mongodb/campaignSchema';
 import { HubPackagePublication, HubPackageInventoryItem } from '../src/integrations/mongodb/hubPackageSchema';
+import { calculatePackageReach } from '../src/utils/reachCalculations';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -853,18 +854,28 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
       }
     };
 
+    // Calculate reach using shared utilities (same as package builder)
+    const reachSummary = calculatePackageReach(publications);
+    console.log('📊 Campaign Analysis - Calculated Reach:', {
+      estimatedUniqueReach: reachSummary.estimatedUniqueReach,
+      totalMonthlyImpressions: reachSummary.totalMonthlyImpressions,
+      channelAudiences: reachSummary.channelAudiences
+    });
+
     const estimatedPerformance = {
       reach: {
-        min: llmResponse.estimatedReach?.min || 0,
-        max: llmResponse.estimatedReach?.max || 0,
-        description: `${llmResponse.estimatedReach?.min.toLocaleString()} - ${llmResponse.estimatedReach?.max.toLocaleString()} people`
+        min: reachSummary.estimatedUniqueReach || 0,
+        max: reachSummary.estimatedUniqueReach || 0, // For now, min/max are the same
+        description: `${(reachSummary.estimatedUniqueReach || 0).toLocaleString()}+ estimated unique reach`,
+        byChannel: reachSummary.channelAudiences
       },
       impressions: {
-        min: llmResponse.estimatedImpressions?.min || 0,
-        max: llmResponse.estimatedImpressions?.max || 0
+        min: reachSummary.totalMonthlyImpressions || 0,
+        max: reachSummary.totalMonthlyImpressions || 0,
+        byChannel: reachSummary.channelAudiences
       },
-      cpm: llmResponse.totalCost && llmResponse.estimatedImpressions?.max 
-        ? (llmResponse.totalCost / (llmResponse.estimatedImpressions.max / 1000))
+      cpm: llmResponse.totalCost && reachSummary.totalMonthlyImpressions 
+        ? (llmResponse.totalCost / (reachSummary.totalMonthlyImpressions / 1000))
         : 0
     };
 

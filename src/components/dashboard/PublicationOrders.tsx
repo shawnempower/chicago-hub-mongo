@@ -57,9 +57,14 @@ export function PublicationOrders() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token');
       
-      const response = await fetch('/api/publication-orders', {
+      // Add publication ID filter if a publication is selected
+      const url = selectedPublication 
+        ? `/api/publication-orders?publicationId=${selectedPublication.publicationId}`
+        : '/api/publication-orders';
+      
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

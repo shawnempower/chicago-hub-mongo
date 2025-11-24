@@ -18,11 +18,15 @@ import {
   Download,
   ChevronLeft,
   FileText,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Activity,
+  RefreshCw
 } from 'lucide-react';
 import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useHubContext } from '@/contexts/HubContext';
+import { HealthBadge } from '@/components/ui/health-badge';
+import { PackageHealthModal } from './PackageHealthModal';
 import { API_BASE_URL } from '@/config/api';
 import { PackageBuilder } from './PackageBuilder/PackageBuilder';
 import { PackageResults } from './PackageBuilder/PackageResults';
@@ -58,6 +62,10 @@ export const HubPackageManagement = () => {
   const [builderResult, setBuilderResult] = useState<BuilderResult | null>(null);
   const [builderFilters, setBuilderFilters] = useState<BuilderFilters | null>(null);
   const [editingPackage, setEditingPackage] = useState<HubPackage | null>(null);
+  
+  // Health modal state
+  const [healthModalOpen, setHealthModalOpen] = useState(false);
+  const [selectedPackageForHealth, setSelectedPackageForHealth] = useState<HubPackage | null>(null);
   
   // Store hubId locally to preserve it across component states and context changes
   const [localHubId, setLocalHubId] = useState<string | null>(null);
@@ -129,6 +137,11 @@ export const HubPackageManagement = () => {
         variant: 'destructive'
       });
     }
+  };
+
+  const handleViewHealth = (pkg: HubPackage) => {
+    setSelectedPackageForHealth(pkg);
+    setHealthModalOpen(true);
   };
 
   const handleGenerateInsertionOrder = async (pkg: HubPackage, format: 'html' | 'markdown' = 'html') => {
@@ -323,14 +336,19 @@ export const HubPackageManagement = () => {
         },
         performance: {
           estimatedReach: {
-            minReach: 0,
-            maxReach: 0,
-            reachDescription: 'TBD'
+            minReach: builderResult.summary.estimatedUniqueReach || 0,
+            maxReach: builderResult.summary.estimatedUniqueReach || 0,
+            reachDescription: `${(builderResult.summary.estimatedUniqueReach || 0).toLocaleString()}+ estimated unique reach`,
+            deduplicatedReach: builderResult.summary.estimatedUniqueReach
           },
           estimatedImpressions: {
-            minImpressions: 0,
-            maxImpressions: 0
-          }
+            minImpressions: builderResult.summary.totalMonthlyImpressions || 0,
+            maxImpressions: builderResult.summary.totalMonthlyImpressions || 0,
+            impressionsByChannel: builderResult.summary.channelAudiences
+          },
+          costPerThousand: builderResult.summary.totalMonthlyImpressions > 0
+            ? (builderResult.summary.monthlyCost / (builderResult.summary.totalMonthlyImpressions / 1000))
+            : 0
         },
         features: {
           keyBenefits: [],
@@ -1125,7 +1143,27 @@ export const HubPackageManagement = () => {
               <CardHeader>
                 <div className="space-y-2">
                   <div className="flex justify-between items-start gap-2">
-                    <CardTitle className="text-base">{pkg.basicInfo.name}</CardTitle>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CardTitle className="text-base">{pkg.basicInfo.name}</CardTitle>
+                        {pkg.healthCheck?.overallHealth && (
+                          <div className="flex items-center gap-2">
+                            <HealthBadge status={pkg.healthCheck.overallHealth} size="sm" />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 px-2 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewHealth(pkg);
+                              }}
+                            >
+                              View Details
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button 
                         variant="ghost" 
@@ -1150,31 +1188,6 @@ export const HubPackageManagement = () => {
                         title="Duplicate"
                       >
                         <Copy className="w-3 h-3" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadPackageCSV(pkg);
-                        }}
-                        title="Download CSV"
-                      >
-                        <Download className="w-3 h-3" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="h-6 w-6 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleGenerateInsertionOrder(pkg, 'html');
-                        }}
-                        disabled={generatingIO === pkg._id?.toString()}
-                        title="Generate Insertion Order"
-                      >
-                        <FileText className="w-3 h-3" />
                       </Button>
                       <Button 
                         variant="ghost" 
@@ -1222,12 +1235,26 @@ export const HubPackageManagement = () => {
                   </div>
 
                   {/* Active Badge - Bottom Left */}
-                  <div className="flex justify-start pt-2">
-                    {pkg.availability.isActive ? (
-                      <Badge className="text-xs bg-green-50 text-green-600 border border-green-300">Active</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">Inactive</Badge>
-                    )}
+                  <div className="flex justify-between items-center pt-2">
+                    <div>
+                      {pkg.availability.isActive ? (
+                        <Badge className="text-xs bg-green-50 text-green-600 border border-green-300">Active</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">Inactive</Badge>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewHealth(pkg);
+                      }}
+                    >
+                      <Activity className="mr-1 h-3 w-3" />
+                      View Health
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -1235,6 +1262,16 @@ export const HubPackageManagement = () => {
             );
           })}
         </div>
+      )}
+
+      {/* Package Health Modal */}
+      {selectedPackageForHealth && (
+        <PackageHealthModal
+          package={selectedPackageForHealth}
+          open={healthModalOpen}
+          onOpenChange={setHealthModalOpen}
+          onPackageUpdated={fetchPackages}
+        />
       )}
     </div>
   );

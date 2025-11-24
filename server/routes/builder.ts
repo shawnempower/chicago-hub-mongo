@@ -5,167 +5,20 @@ import { userProfilesService } from '../../src/integrations/mongodb/allServices'
 import { hubPackagesService } from '../../src/integrations/mongodb/hubPackageService';
 import { authenticateToken } from '../middleware/authenticate';
 import { inferOccurrencesFromFrequency } from '../../src/utils/pricingCalculations';
+import { calculatePackageReach } from '../../src/utils/reachCalculations';
+import { calculateItemCost, calculatePublicationTotal } from '../../src/utils/inventoryPricing';
 
 const router = Router();
 
 /**
- * Calculate package reach across all publications
- * Uses publication-level deduplication and overlap adjustments
+ * PHASE 1 COMPLETE: Builder route now uses shared utilities
+ * 
+ * Removed duplicate functions:
+ * - calculatePackageReach() - Now imported from src/utils/reachCalculations.ts
+ * - calculateItemCost() - Now imported from src/utils/inventoryPricing.ts
+ * 
+ * All pricing and reach calculations now use the same utilities as the package system.
  */
-function calculatePackageReach(publications: any[]): any {
-  const DEFAULT_OVERLAP = 0.70; // 30% overlap assumption
-  const SINGLE_PUB_OVERLAP = 0.60; // 40% overlap for single pub multi-channel
-  
-  // Track reach per publication
-  const publicationReach = new Map<number, {
-    impressions: number;
-    audience: number;
-    channels: Set<string>;
-  }>();
-  
-  // Track total exposures (frequency-adjusted)
-  let totalExposures = 0;
-  
-  // Helper to extract audience from item
-  const getItemAudience = (item: any): number | undefined => {
-    if (item.performanceMetrics?.audienceSize) {
-      return item.performanceMetrics.audienceSize;
-    }
-    
-    const metrics = item.audienceMetrics;
-    if (!metrics) return undefined;
-    
-    switch (item.channel) {
-      case 'website': return metrics.monthlyVisitors;
-      case 'print': return metrics.circulation;
-      case 'newsletter':
-      case 'email': return metrics.subscribers;
-      case 'social': return metrics.followers;
-      case 'podcast':
-      case 'radio': return metrics.listeners;
-      case 'events': return metrics.averageAttendance || metrics.expectedAttendees;
-      default: return undefined;
-    }
-  };
-  
-  // Helper to extract impressions from item
-  const getItemImpressions = (item: any): number | undefined => {
-    if (item.performanceMetrics?.impressionsPerMonth) {
-      return item.performanceMetrics.impressionsPerMonth;
-    }
-    if (item.channel === 'website' && item.audienceMetrics?.monthlyPageViews) {
-      return item.audienceMetrics.monthlyPageViews;
-    }
-    if (item.monthlyImpressions) {
-      return item.monthlyImpressions;
-    }
-    return undefined;
-  };
-  
-  // Process each publication
-  publications.forEach(pub => {
-    let pubImpressions = 0;
-    let pubMaxAudience = 0;
-    const pubChannels = new Set<string>();
-    
-    pub.inventoryItems
-      ?.filter((item: any) => !item.isExcluded)
-      .forEach((item: any) => {
-        pubChannels.add(item.channel);
-        const frequency = item.currentFrequency || item.quantity || 1;
-        
-        const itemImpressions = getItemImpressions(item);
-        if (itemImpressions) pubImpressions += itemImpressions;
-        
-        const itemAudience = getItemAudience(item);
-        if (itemAudience) pubMaxAudience = Math.max(pubMaxAudience, itemAudience);
-        
-        // Calculate exposures (audience × frequency)
-        if (itemImpressions) {
-          totalExposures += itemImpressions; // Impressions already account for volume
-        } else if (itemAudience) {
-          // Multiply base audience by frequency for total exposures
-          totalExposures += itemAudience * frequency;
-        }
-      });
-    
-    publicationReach.set(pub.publicationId, {
-      impressions: pubImpressions,
-      audience: pubMaxAudience,
-      channels: pubChannels
-    });
-  });
-  
-  // Aggregate across publications
-  let totalImpressions = 0;
-  const channelAudiences: any = {};
-  const allChannels = new Set<string>();
-  
-  publicationReach.forEach(pubData => {
-    totalImpressions += pubData.impressions;
-    pubData.channels.forEach(ch => allChannels.add(ch));
-  });
-  
-  // Calculate channel-specific audiences
-  const channelMap = new Map<string, number[]>();
-  
-  publications.forEach(pub => {
-    const channelMaxForPub = new Map<string, number>();
-    
-    pub.inventoryItems
-      ?.filter((item: any) => !item.isExcluded)
-      .forEach((item: any) => {
-        const audience = getItemAudience(item);
-        if (audience) {
-          const currentMax = channelMaxForPub.get(item.channel) || 0;
-          channelMaxForPub.set(item.channel, Math.max(currentMax, audience));
-        }
-      });
-    
-    channelMaxForPub.forEach((audience, channel) => {
-      if (!channelMap.has(channel)) {
-        channelMap.set(channel, []);
-      }
-      channelMap.get(channel)!.push(audience);
-    });
-  });
-  
-  // Sum audiences by channel
-  let totalAudience = 0;
-  channelMap.forEach((audiences, channel) => {
-    const channelTotal = audiences.reduce((sum, aud) => sum + aud, 0);
-    channelAudiences[channel] = channelTotal;
-    totalAudience += channelTotal;
-  });
-  
-  // Determine overlap factor
-  const pubCount = publications.length;
-  const channelCount = allChannels.size;
-  const overlapFactor = (pubCount === 1 && channelCount > 1) 
-    ? SINGLE_PUB_OVERLAP 
-    : DEFAULT_OVERLAP;
-  
-  // Apply overlap adjustment
-  const estimatedUniqueReach = Math.round(totalAudience * overlapFactor);
-  
-  // Determine calculation method
-  let calculationMethod = 'audience';
-  if (totalImpressions > 0 && totalAudience > 0) {
-    calculationMethod = 'mixed';
-  } else if (totalImpressions > 0) {
-    calculationMethod = 'impressions';
-  }
-  
-  return {
-    totalMonthlyImpressions: totalImpressions > 0 ? totalImpressions : undefined,
-    totalMonthlyExposures: totalExposures > 0 ? totalExposures : undefined,
-    channelAudiences: Object.keys(channelAudiences).length > 0 ? channelAudiences : undefined,
-    estimatedTotalReach: totalAudience,
-    estimatedUniqueReach,
-    calculationMethod,
-    overlapFactor
-  };
-}
 
 /**
  * Package Builder API Endpoints
@@ -311,35 +164,16 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
         return pricingData;
       };
 
-      // Helper to calculate item cost based on pricing model
-      const calculateItemCost = (item: any): number => {
-        const hubPrice = item.itemPricing.hubPrice;
-        const frequency = item.currentFrequency || 1;
-        const pricingModel = item.itemPricing.pricingModel;
-        
-        // For impression-based pricing, frequency represents percentage (default 100)
-        if (pricingModel === 'cpm' && item.monthlyImpressions) {
-          const impressionPercent = frequency / 100;
-          return (hubPrice * item.monthlyImpressions * impressionPercent) / 1000;
-        }
-        if (pricingModel === 'cpv' && item.monthlyImpressions) {
-          const viewPercent = frequency / 100;
-          return (hubPrice * item.monthlyImpressions * viewPercent) / 100;
-        }
-        if (pricingModel === 'cpc' && item.monthlyImpressions) {
-          const impressionPercent = frequency / 100;
-          const estimatedClicks = item.monthlyImpressions * impressionPercent * 0.01;
-          return hubPrice * estimatedClicks;
-        }
-        
-        // For per_week and per_day, frequency represents weeks/days per month
-        if (pricingModel === 'per_week' || pricingModel === 'per_day') {
-          return hubPrice * frequency;
-        }
-        
-        // For all other pricing models, use simple multiplication
-        return hubPrice * frequency;
-      };
+      /**
+       * REMOVED: Duplicate calculateItemCost function
+       * Now using shared utility from src/utils/inventoryPricing.ts
+       * 
+       * The shared utility is superior:
+       * - Has duration parameter for campaign calculations
+       * - Better input validation
+       * - More comprehensive pricing model support
+       * - Smarter frequency fallback logic
+       */
 
       // Extract inventory from each channel
       const extractFromChannel = (channelName: string, channelData: any, path: string, itemFrequencyString?: string, sourceInfo?: any) => {
@@ -672,7 +506,8 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
 
       if (inventoryItems.length > 0) {
         const pubTotal = inventoryItems.reduce((sum, item) => {
-          return sum + calculateItemCost(item);
+          const frequency = item.currentFrequency || item.quantity || 1;
+          return sum + calculateItemCost(item, frequency);
         }, 0);
 
         // For budget-first mode, check if adding this publication exceeds budget
@@ -684,7 +519,8 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
             
             for (const item of inventoryItems) {
               if (!channelMap.has(item.channel)) {
-                const itemCost = calculateItemCost(item);
+                const frequency = item.currentFrequency || item.quantity || 1;
+                const itemCost = calculateItemCost(item, frequency);
                 if (totalCost + itemCost <= budget) {
                   minItems.push(item);
                   channelMap.set(item.channel, true);
@@ -695,7 +531,8 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
 
             if (minItems.length > 0) {
               const minTotal = minItems.reduce((sum, item) => {
-                return sum + calculateItemCost(item);
+                const frequency = item.currentFrequency || item.quantity || 1;
+                return sum + calculateItemCost(item, frequency);
               }, 0);
 
               resultPublications.push({
@@ -941,6 +778,192 @@ router.get('/packages', authenticateToken, async (req: any, res: Response) => {
   } catch (error) {
     console.error('Error fetching builder packages:', error);
     res.status(500).json({ error: 'Failed to fetch packages' });
+  }
+});
+
+// ===== PACKAGE HEALTH CHECK ENDPOINTS =====
+
+// Run health check on a single package
+router.get('/packages/:id/health-check', authenticateToken, async (req: any, res: Response) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    const { packageHealthService } = await import('../../src/services/packageHealthService');
+    
+    const package_ = await hubPackagesService.getById(id);
+    
+    if (!package_) {
+      return res.status(404).json({ error: 'Package not found' });
+    }
+
+    const healthCheck = await packageHealthService.runHealthCheck(package_);
+    res.json({ healthCheck });
+  } catch (error) {
+    console.error('Error running package health check:', error);
+    res.status(500).json({ error: 'Failed to run health check' });
+  }
+});
+
+// Recalculate and update package with current values
+router.post('/packages/:id/recalculate', authenticateToken, async (req: any, res: Response) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    const { updatePricing = true, updateReach = true } = req.body;
+    const { packageHealthService } = await import('../../src/services/packageHealthService');
+    
+    const package_ = await hubPackagesService.getById(id);
+    
+    if (!package_) {
+      return res.status(404).json({ error: 'Package not found' });
+    }
+
+    // Store old values
+    const oldValues = {
+      pricing: package_.pricing.breakdown.finalPrice,
+      reach: package_.performance.estimatedReach.minReach,
+    };
+
+    // Recalculate
+    const newValues = packageHealthService.recalculatePackageValues(package_);
+
+    // Build update object
+    const updates: any = {};
+    const changes: string[] = [];
+
+    if (updatePricing) {
+      updates['pricing.breakdown'] = newValues.pricing.breakdown;
+      updates['pricing.breakdown.finalPrice'] = newValues.pricing.finalPrice;
+      updates['pricing.displayPrice'] = `$${newValues.pricing.finalPrice.toLocaleString()}/month`;
+      
+      const priceDiff = newValues.pricing.finalPrice - oldValues.pricing;
+      changes.push(
+        `Pricing updated: $${oldValues.pricing.toLocaleString()} → $${newValues.pricing.finalPrice.toLocaleString()} (${priceDiff > 0 ? '+' : ''}${priceDiff.toFixed(2)})`
+      );
+    }
+
+    if (updateReach) {
+      updates['performance.estimatedReach'] = newValues.performance.estimatedReach;
+      updates['performance.estimatedImpressions'] = newValues.performance.estimatedImpressions;
+      updates['performance.costPerThousand'] = newValues.performance.costPerThousand;
+      
+      const reachDiff = newValues.performance.estimatedReach.minReach - oldValues.reach;
+      changes.push(
+        `Reach updated: ${oldValues.reach.toLocaleString()} → ${newValues.performance.estimatedReach.minReach.toLocaleString()} (${reachDiff > 0 ? '+' : ''}${reachDiff.toLocaleString()})`
+      );
+    }
+
+    // Update analytics
+    updates['analytics.lastModified'] = new Date();
+
+    // Run health check after recalculation
+    const healthCheck = await packageHealthService.runHealthCheck({
+      ...package_,
+      pricing: updatePricing ? { ...package_.pricing, breakdown: newValues.pricing.breakdown } : package_.pricing,
+      performance: updateReach ? { ...package_.performance, ...newValues.performance } : package_.performance,
+    } as any);
+
+    // Store health check in package
+    updates['healthCheck'] = {
+      lastChecked: new Date(),
+      checks: healthCheck.checks,
+      recommendedAction: healthCheck.recommendedAction,
+      overallHealth: healthCheck.overallHealth,
+      history: [
+        ...(package_.healthCheck?.history || []),
+        {
+          checkedAt: new Date(),
+          overallHealth: healthCheck.overallHealth,
+          changes,
+        }
+      ].slice(-10), // Keep last 10 health checks
+    };
+
+    // Update the package
+    await hubPackagesService.update(id, updates, req.user.id);
+
+    res.json({
+      success: true,
+      oldValues,
+      newValues: {
+        pricing: newValues.pricing.finalPrice,
+        reach: newValues.performance.estimatedReach.minReach,
+      },
+      changes,
+      healthCheck,
+    });
+  } catch (error) {
+    console.error('Error recalculating package:', error);
+    res.status(500).json({ error: 'Failed to recalculate package' });
+  }
+});
+
+// Get health summary for multiple packages
+router.post('/packages/bulk-health-check', authenticateToken, async (req: any, res: Response) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { packageIds, hubId } = req.body;
+    const { packageHealthService } = await import('../../src/services/packageHealthService');
+    
+    let packages = [];
+    
+    if (hubId) {
+      // Check all packages for a hub
+      const allPackages = await hubPackagesService.list({ hubId });
+      packages = allPackages;
+    } else if (packageIds && Array.isArray(packageIds)) {
+      // Check specific packages
+      packages = await Promise.all(
+        packageIds.map(id => hubPackagesService.getById(id))
+      );
+      packages = packages.filter(pkg => pkg !== null);
+    } else {
+      return res.status(400).json({ error: 'Must provide packageIds or hubId' });
+    }
+
+    const healthChecks = await Promise.all(
+      packages.map(pkg => packageHealthService.runHealthCheck(pkg))
+    );
+
+    res.json({ healthChecks });
+  } catch (error) {
+    console.error('Error running bulk health check:', error);
+    res.status(500).json({ error: 'Failed to run bulk health check' });
+  }
+});
+
+// Get health summary (for dashboard widget)
+router.get('/packages/health-summary', authenticateToken, async (req: any, res: Response) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { hubId } = req.query;
+    const { packageHealthService } = await import('../../src/services/packageHealthService');
+    
+    const packages = await hubPackagesService.list({ 
+      hubId: hubId as string | undefined 
+    });
+
+    const summary = await packageHealthService.getHealthSummary(packages);
+
+    res.json({
+      ...summary,
+      lastChecked: new Date(),
+    });
+  } catch (error) {
+    console.error('Error fetching health summary:', error);
+    res.status(500).json({ error: 'Failed to fetch health summary' });
   }
 });
 

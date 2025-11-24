@@ -302,5 +302,28 @@ export const campaignsApi = {
       throw error;
     }
   },
+
+  /**
+   * Generate publication insertion orders for a campaign
+   * This creates the database records that publications can see
+   */
+  async generatePublicationOrders(campaignId: string): Promise<{ success: boolean; ordersGenerated: number; message: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/orders/generate/${campaignId}`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate publication orders');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error generating publication orders:', error);
+      throw error;
+    }
+  },
 };
 

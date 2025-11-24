@@ -15,6 +15,8 @@ import {
   CampaignSummary,
   InsertionOrder
 } from './campaignSchema';
+import { calculateItemCost, calculatePublicationTotal, calculateCampaignTotal } from '../../utils/inventoryPricing';
+import { calculatePackageReach } from '../../utils/reachCalculations';
 
 const COLLECTION_NAME = COLLECTIONS.CAMPAIGNS;
 
@@ -49,6 +51,163 @@ export class CampaignsService {
   }
 
   /**
+   * PHASE 2: Validate campaign pricing using shared utilities
+   * Recalculates pricing and compares with stored values
+   */
+  validateCampaignPricing(campaign: Campaign): { 
+    isValid: boolean; 
+    storedTotal: number; 
+    calculatedTotal: number;
+    discrepancy: number;
+    message: string;
+  } {
+    try {
+      if (!campaign.selectedInventory?.publications) {
+        return {
+          isValid: true,
+          storedTotal: 0,
+          calculatedTotal: 0,
+          discrepancy: 0,
+          message: 'No inventory to validate'
+        };
+      }
+
+      // Recalculate using shared utilities (same as packages use)
+      const durationMonths = campaign.timeline?.durationMonths || 1;
+      const calculatedTotal = calculateCampaignTotal(
+        campaign.selectedInventory.publications,
+        durationMonths
+      );
+
+      const storedTotal = campaign.pricing?.subtotal || campaign.pricing?.finalPrice || 0;
+      const discrepancy = Math.abs(calculatedTotal - storedTotal);
+      const percentDiff = storedTotal > 0 ? (discrepancy / storedTotal) * 100 : 0;
+
+      // Allow up to 1% difference due to rounding
+      const isValid = percentDiff < 1;
+
+      return {
+        isValid,
+        storedTotal,
+        calculatedTotal,
+        discrepancy,
+        message: isValid 
+          ? 'Pricing validation passed'
+          : `Pricing discrepancy: stored=$${storedTotal.toFixed(2)}, calculated=$${calculatedTotal.toFixed(2)} (${percentDiff.toFixed(2)}% diff)`
+      };
+    } catch (error) {
+      console.error('Error validating campaign pricing:', error);
+      return {
+        isValid: false,
+        storedTotal: 0,
+        calculatedTotal: 0,
+        discrepancy: 0,
+        message: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * PHASE 2: Validate campaign reach using shared utilities
+   * Recalculates reach and compares with stored values
+   */
+  validateCampaignReach(campaign: Campaign): {
+    isValid: boolean;
+    storedReach: number;
+    calculatedReach: number;
+    discrepancy: number;
+    message: string;
+  } {
+    try {
+      if (!campaign.selectedInventory?.publications) {
+        return {
+          isValid: true,
+          storedReach: 0,
+          calculatedReach: 0,
+          discrepancy: 0,
+          message: 'No inventory to validate'
+        };
+      }
+
+      // Recalculate using shared utilities (same as packages use)
+      const reachSummary = calculatePackageReach(campaign.selectedInventory.publications);
+      const calculatedReach = reachSummary.estimatedUniqueReach;
+
+      const storedReach = campaign.estimatedPerformance?.reach?.min || 
+                          campaign.estimatedPerformance?.reach?.max || 0;
+      
+      const discrepancy = Math.abs(calculatedReach - storedReach);
+      const percentDiff = storedReach > 0 ? (discrepancy / storedReach) * 100 : 0;
+
+      // Allow up to 10% difference (reach estimates are less precise)
+      const isValid = percentDiff < 10;
+
+      return {
+        isValid,
+        storedReach,
+        calculatedReach,
+        discrepancy,
+        message: isValid
+          ? 'Reach validation passed'
+          : `Reach discrepancy: stored=${storedReach.toLocaleString()}, calculated=${calculatedReach.toLocaleString()} (${percentDiff.toFixed(2)}% diff)`
+      };
+    } catch (error) {
+      console.error('Error validating campaign reach:', error);
+      return {
+        isValid: false,
+        storedReach: 0,
+        calculatedReach: 0,
+        discrepancy: 0,
+        message: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * PHASE 2: Recalculate all campaign metrics using shared utilities
+   * Returns updated pricing and reach data
+   */
+  recalculateCampaignMetrics(campaign: Campaign): {
+    pricing: {
+      subtotal: number;
+      publicationTotals: Record<number, number>;
+    };
+    reach: {
+      estimatedUniqueReach: number;
+      estimatedTotalReach: number;
+      totalMonthlyImpressions?: number;
+      totalMonthlyExposures?: number;
+    };
+  } {
+    const durationMonths = campaign.timeline?.durationMonths || 1;
+    const publications = campaign.selectedInventory?.publications || [];
+
+    // Calculate pricing using shared utilities
+    const subtotal = calculateCampaignTotal(publications, durationMonths);
+    const publicationTotals: Record<number, number> = {};
+    
+    publications.forEach(pub => {
+      publicationTotals[pub.publicationId] = calculatePublicationTotal(pub, durationMonths);
+    });
+
+    // Calculate reach using shared utilities
+    const reachSummary = calculatePackageReach(publications);
+
+    return {
+      pricing: {
+        subtotal,
+        publicationTotals
+      },
+      reach: {
+        estimatedUniqueReach: reachSummary.estimatedUniqueReach,
+        estimatedTotalReach: reachSummary.estimatedTotalReach,
+        totalMonthlyImpressions: reachSummary.totalMonthlyImpressions,
+        totalMonthlyExposures: reachSummary.totalMonthlyExposures
+      }
+    };
+  }
+
+  /**
    * Create a new campaign
    */
   async create(campaignData: Omit<CampaignInsert, 'campaignId'>, userId: string): Promise<Campaign> {
@@ -79,7 +238,28 @@ export class CampaignsService {
       };
 
       const result = await this.collection.insertOne(newCampaign);
-      return { ...newCampaign, _id: result.insertedId };
+      const createdCampaign = { ...newCampaign, _id: result.insertedId };
+
+      // PHASE 2: Validate calculations using shared utilities
+      if (createdCampaign.selectedInventory?.publications) {
+        const pricingValidation = this.validateCampaignPricing(createdCampaign);
+        const reachValidation = this.validateCampaignReach(createdCampaign);
+
+        if (!pricingValidation.isValid) {
+          console.warn(`[Campaign ${campaignId}] ${pricingValidation.message}`);
+        }
+        if (!reachValidation.isValid) {
+          console.warn(`[Campaign ${campaignId}] ${reachValidation.message}`);
+        }
+
+        // Log validation results for monitoring
+        console.log(`[Campaign ${campaignId}] Validation complete:`, {
+          pricing: pricingValidation.isValid ? 'PASS' : 'WARN',
+          reach: reachValidation.isValid ? 'PASS' : 'WARN'
+        });
+      }
+
+      return createdCampaign;
     } catch (error) {
       console.error('Error creating campaign:', error);
       throw error;

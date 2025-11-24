@@ -10,9 +10,74 @@ import { HubPackage } from '../src/integrations/mongodb/hubPackageSchema';
 class InsertionOrderGenerator {
   
   /**
+   * PHASE 5: Ensure campaign has pre-calculated values
+   * Calculates missing values on-the-fly for backwards compatibility
+   */
+  private async ensureCampaignCalculations(campaign: Campaign): Promise<Campaign> {
+    const { calculatePublicationTotal, calculateCampaignTotal } = await import('../src/utils/inventoryPricing');
+    const { calculatePackageReach } = await import('../src/utils/reachCalculations');
+    
+    let modified = false;
+
+    // Calculate missing publicationTotal values
+    if (campaign.selectedInventory?.publications) {
+      campaign.selectedInventory.publications = campaign.selectedInventory.publications.map((pub) => {
+        if (pub.publicationTotal === undefined || pub.publicationTotal === null) {
+          console.log(`Calculating missing publicationTotal for ${pub.publicationName}`);
+          // Calculate on-the-fly using shared utilities
+          const pubTotal = calculatePublicationTotal([pub], 1); // Monthly total
+          modified = true;
+          return { ...pub, publicationTotal: pubTotal };
+        }
+        return pub;
+      });
+    }
+
+    // Ensure pricing exists
+    if (!campaign.pricing?.subtotal && !campaign.pricing?.finalPrice && campaign.selectedInventory?.publications) {
+      console.log('Calculating missing campaign pricing');
+      const totalCost = calculateCampaignTotal(campaign.selectedInventory.publications, 1);
+      if (!campaign.pricing) {
+        campaign.pricing = {} as any;
+      }
+      campaign.pricing.subtotal = totalCost;
+      campaign.pricing.finalPrice = totalCost;
+      modified = true;
+    }
+
+    // Ensure reach calculations exist
+    if (!campaign.estimatedPerformance?.reach && campaign.selectedInventory?.publications) {
+      console.log('Calculating missing campaign reach');
+      const reachSummary = calculatePackageReach(campaign.selectedInventory.publications);
+      if (!campaign.estimatedPerformance) {
+        campaign.estimatedPerformance = {} as any;
+      }
+      campaign.estimatedPerformance.reach = {
+        min: reachSummary.estimatedUniqueReach || 0,
+        max: reachSummary.estimatedUniqueReach || 0,
+        description: `${(reachSummary.estimatedUniqueReach || 0).toLocaleString()}+ estimated unique reach`
+      };
+      campaign.estimatedPerformance.impressions = {
+        min: reachSummary.totalMonthlyImpressions || 0,
+        max: reachSummary.totalMonthlyImpressions || 0
+      };
+      modified = true;
+    }
+
+    if (modified) {
+      console.log('⚠️ Campaign calculations were missing and calculated on-the-fly. Consider updating campaign creation logic.');
+    }
+
+    return campaign;
+  }
+
+  /**
    * Format currency
    */
-  private formatCurrency(amount: number): string {
+  private formatCurrency(amount: number | undefined | null): string {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return '$0.00';
+    }
     return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
@@ -31,6 +96,8 @@ class InsertionOrderGenerator {
    * Generate HTML Insertion Order
    */
   async generateHTMLInsertionOrder(campaign: Campaign): Promise<string> {
+    // PHASE 5: Ensure pre-calculated values exist (calculate if missing)
+    campaign = await this.ensureCampaignCalculations(campaign);
     const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -369,13 +436,11 @@ class InsertionOrderGenerator {
         <div class="section">
             <h2>Selected Publications & Inventory</h2>
             <p style="color: #64748b; margin-bottom: 20px;">
-                ${Array.isArray(campaign.selectedInventory) ? campaign.selectedInventory.length : 0} publications • 
-                ${Array.isArray(campaign.selectedInventory) 
-                  ? campaign.selectedInventory.reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0) 
-                  : 0} ad placements
+                ${campaign.selectedInventory?.publications?.length || 0} publications • 
+                ${campaign.selectedInventory?.publications?.reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0) || 0} ad placements
             </p>
 
-            ${(Array.isArray(campaign.selectedInventory) ? campaign.selectedInventory : []).map(pub => `
+            ${(campaign.selectedInventory?.publications || []).map(pub => `
                 <div class="publication-card">
                     <div class="publication-header">
                         <div class="publication-name">${pub.publicationName}</div>
@@ -474,6 +539,8 @@ class InsertionOrderGenerator {
    * Generate Markdown Insertion Order
    */
   async generateMarkdownInsertionOrder(campaign: Campaign): Promise<string> {
+    // PHASE 5: Ensure pre-calculated values exist (calculate if missing)
+    campaign = await this.ensureCampaignCalculations(campaign);
     const markdown = `# Media Insertion Order
 
 **Campaign ID:** ${campaign.campaignId}  
@@ -512,9 +579,9 @@ ${(campaign.performance?.costPerThousand || campaign.estimatedPerformance?.cpm) 
 
 ## Selected Publications & Inventory
 
-**${Array.isArray(campaign.selectedInventory) ? campaign.selectedInventory.length : 0} publications • ${Array.isArray(campaign.selectedInventory) ? campaign.selectedInventory.reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0) : 0} ad placements**
+**${campaign.selectedInventory?.publications?.length || 0} publications • ${campaign.selectedInventory?.publications?.reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0) || 0} ad placements**
 
-${(Array.isArray(campaign.selectedInventory) ? campaign.selectedInventory : []).map(pub => `
+${(campaign.selectedInventory?.publications || []).map(pub => `
 ### ${pub.publicationName}
 **Publication Total:** ${this.formatCurrency(pub.publicationTotal)}
 
@@ -574,13 +641,18 @@ Campaign ID: ${campaign.campaignId}
     campaign: Campaign, 
     publicationId: number
   ): Promise<string | null> {
+    // PHASE 5: Ensure pre-calculated values exist (calculate if missing)
+    campaign = await this.ensureCampaignCalculations(campaign);
     // Find the publication in the campaign
-    const publication = Array.isArray(campaign.selectedInventory)
-      ? campaign.selectedInventory.find(p => p.publicationId === publicationId)
-      : null;
+    const publication = campaign.selectedInventory?.publications?.find(
+      p => p.publicationId === publicationId
+    );
 
     if (!publication) {
-      console.error(`Publication ${publicationId} not found in campaign`);
+      console.error(`Publication ${publicationId} not found in campaign`, {
+        publicationId,
+        availablePublications: campaign.selectedInventory?.publications?.map(p => p.publicationId)
+      });
       return null;
     }
 
@@ -878,9 +950,7 @@ Campaign ID: ${campaign.campaignId}
     format: 'html' | 'markdown';
     content: string;
   }>> {
-    const publications = Array.isArray(campaign.selectedInventory) 
-      ? campaign.selectedInventory 
-      : [];
+    const publications = campaign.selectedInventory?.publications || [];
 
     const insertionOrders = [];
 
