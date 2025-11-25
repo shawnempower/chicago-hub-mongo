@@ -34,12 +34,16 @@ interface UserManagementTableProps {
   resourceType: 'hub' | 'publication';
   resourceId: string;
   onUsersChange?: () => void;
+  filteredUsers?: any[];
+  filteredInvitations?: any[];
 }
 
 export function UserManagementTable({
   resourceType,
   resourceId,
   onUsersChange,
+  filteredUsers: externalFilteredUsers,
+  filteredInvitations: externalFilteredInvitations,
 }: UserManagementTableProps) {
   const [users, setUsers] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
@@ -50,6 +54,10 @@ export function UserManagementTable({
   const [resendingInvitation, setResendingInvitation] = useState<string | null>(null);
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
+
+  // Use external filtered data if provided, otherwise use internal state
+  const displayUsers = externalFilteredUsers !== undefined ? externalFilteredUsers : users;
+  const displayInvitations = externalFilteredInvitations !== undefined ? externalFilteredInvitations : invitations;
 
   const loadUsers = async () => {
     setLoading(true);
@@ -80,8 +88,11 @@ export function UserManagementTable({
   };
 
   useEffect(() => {
-    loadUsers();
-  }, [resourceType, resourceId]);
+    // Only load if external data is not provided
+    if (externalFilteredUsers === undefined && externalFilteredInvitations === undefined) {
+      loadUsers();
+    }
+  }, [resourceType, resourceId, externalFilteredUsers, externalFilteredInvitations]);
 
   const handleRemoveUser = async () => {
     if (!userToRemove) return;
@@ -196,11 +207,11 @@ export function UserManagementTable({
     );
   }
 
-  if (users.length === 0 && invitations.length === 0) {
+  if (displayUsers.length === 0 && displayInvitations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center border rounded-lg">
+      <div className="flex flex-col items-center justify-center p-8 text-center">
         <UserIcon className="h-12 w-12 text-muted-foreground mb-3" />
-        <p className="text-lg font-medium">No users yet</p>
+        <p className="text-lg font-medium">No team members yet</p>
         <p className="text-sm text-muted-foreground mt-1">
           Invite users to start collaborating
         </p>
@@ -210,7 +221,7 @@ export function UserManagementTable({
 
   return (
     <>
-      <div className="border rounded-lg">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -223,7 +234,7 @@ export function UserManagementTable({
           </TableHeader>
           <TableBody>
             {/* Pending Invitations */}
-            {invitations.map((invitation) => (
+            {displayInvitations.map((invitation) => (
               <TableRow key={invitation._id} className="bg-muted/30">
                 <TableCell className="font-medium text-muted-foreground">
                   Pending...
@@ -271,7 +282,7 @@ export function UserManagementTable({
             ))}
             
             {/* Active Users */}
-            {users.map((user) => (
+            {displayUsers.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
                   {user.firstName || user.lastName

@@ -10,6 +10,7 @@ interface ResourceUserManagementProps {
   resourceId: string;
   resourceName: string;
   canManageUsers?: boolean;
+  showHeader?: boolean;
 }
 
 /**
@@ -21,6 +22,7 @@ export function ResourceUserManagement({
   resourceId,
   resourceName,
   canManageUsers = true,
+  showHeader = true,
 }: ResourceUserManagementProps) {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -29,11 +31,34 @@ export function ResourceUserManagement({
     return null;
   }
 
+  // If showHeader is false, just render the table without the card wrapper
+  if (!showHeader) {
+    return (
+      <>
+        <UserManagementTable
+          key={refreshKey}
+          resourceType={resourceType}
+          resourceId={resourceId}
+          onUsersChange={() => setRefreshKey(prev => prev + 1)}
+        />
+
+        <UserInviteDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          resourceType={resourceType}
+          resourceId={resourceId}
+          resourceName={resourceName}
+          onInviteSent={() => setRefreshKey(prev => prev + 1)}
+        />
+      </>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>User Access</CardTitle>
+          <CardTitle className="font-sans">User Access</CardTitle>
           <Button onClick={() => setInviteDialogOpen(true)} className="gap-2">
             <UserPlus className="h-4 w-4" />
             Invite User

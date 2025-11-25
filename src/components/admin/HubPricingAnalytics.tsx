@@ -488,7 +488,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Pricing Analytics</CardTitle>
+          <CardTitle className="font-sans">Pricing Analytics</CardTitle>
           <CardDescription>Loading statistical analysis...</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-12">
@@ -502,7 +502,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Pricing Analytics</CardTitle>
+          <CardTitle className="font-sans">Pricing Analytics</CardTitle>
           <CardDescription>No pricing data available</CardDescription>
         </CardHeader>
         <CardContent>
@@ -520,7 +520,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
       {/* Header */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 font-sans text-lg">
             <TrendingUp className="h-5 w-5" />
             Pricing Analytics by Channel
           </CardTitle>
@@ -533,18 +533,18 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
 
       {/* Pricing Health Score Card */}
       {pricingHealth && (
-        <Card className={`border-2 ${
+        <Card className={`border ${
           pricingHealth.health.score >= 80 ? 'border-green-300 bg-green-50/50' :
           pricingHealth.health.score >= 60 ? 'border-yellow-300 bg-yellow-50/50' :
-          'border-red-300 bg-red-50/50'
+          'border-gray-300 bg-gray-50/50'
         }`}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  {pricingHealth.health.score >= 80 ? <CheckCircle className="h-7 w-7 text-green-600" /> :
-                   pricingHealth.health.score >= 60 ? <AlertTriangle className="h-7 w-7 text-yellow-600" /> :
-                   <AlertCircle className="h-7 w-7 text-red-600" />}
+                <CardTitle className="text-xl flex items-center gap-2 font-sans">
+                  {pricingHealth.health.score >= 80 ? <CheckCircle className="h-6 w-6 text-green-600" /> :
+                   pricingHealth.health.score >= 60 ? <AlertTriangle className="h-6 w-6 text-yellow-600" /> :
+                   <AlertCircle className="h-6 w-6 text-red-600" />}
                   {pricingHealth.health.score >= 80 ? "Your Pricing Looks Good!" :
                    pricingHealth.health.score >= 60 ? "Your Pricing Needs Some Work" :
                    "Your Pricing Needs Attention"}
@@ -558,48 +558,48 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                 </CardDescription>
               </div>
               <div className="text-right">
-                <div className={`text-6xl font-bold ${
+                <div className={`text-6xl font-bold font-sans ${
                   pricingHealth.health.score >= 80 ? 'text-green-600' :
                   pricingHealth.health.score >= 60 ? 'text-yellow-600' :
                   'text-red-600'
                 }`}>
                   {pricingHealth.health.score}
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">health score</div>
+                <div className="text-sm text-muted-foreground mt-1 font-sans">health score</div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-5 gap-3">
-              <div className="bg-white rounded-lg p-3 text-center border-2 border-green-300">
+              <div className="bg-white rounded-lg p-3 text-center border border-green-300">
                 <Star className="h-5 w-5 text-green-600 mx-auto mb-1" />
-                <div className="text-2xl font-bold text-green-600">{pricingHealth.health.breakdown.excellent}</div>
-                <div className="text-xs text-muted-foreground font-medium">Great Value</div>
-                <div className="text-[10px] text-green-700 mt-1">Use in packages</div>
+                <div className="text-2xl font-bold font-sans text-green-600">{pricingHealth.health.breakdown.excellent}</div>
+                <div className="text-xs text-muted-foreground font-medium font-sans">Great Value</div>
+                <div className="text-[10px] text-green-700 mt-1 font-sans">Use in packages</div>
               </div>
               <div className="bg-white rounded-lg p-3 text-center border border-green-200">
                 <ThumbsUp className="h-5 w-5 text-green-500 mx-auto mb-1" />
-                <div className="text-2xl font-bold text-green-500">{pricingHealth.health.breakdown.good}</div>
-                <div className="text-xs text-muted-foreground font-medium">Good Price</div>
-                <div className="text-[10px] text-green-600 mt-1">Ready to sell</div>
+                <div className="text-2xl font-bold font-sans text-green-500">{pricingHealth.health.breakdown.good}</div>
+                <div className="text-xs text-muted-foreground font-medium font-sans">Good Price</div>
+                <div className="text-[10px] text-green-600 mt-1 font-sans">Ready to sell</div>
               </div>
               <div className="bg-white rounded-lg p-3 text-center border border-yellow-200">
                 <Info className="h-5 w-5 text-yellow-600 mx-auto mb-1" />
-                <div className="text-2xl font-bold text-yellow-600">{pricingHealth.health.breakdown.fair}</div>
-                <div className="text-xs text-muted-foreground font-medium">Fair</div>
-                <div className="text-[10px] text-yellow-700 mt-1">Could improve</div>
+                <div className="text-2xl font-bold font-sans text-yellow-600">{pricingHealth.health.breakdown.fair}</div>
+                <div className="text-xs text-muted-foreground font-medium font-sans">Fair</div>
+                <div className="text-[10px] text-yellow-700 mt-1 font-sans">Could improve</div>
               </div>
-              <div className="bg-white rounded-lg p-3 text-center border-2 border-orange-300">
+              <div className="bg-white rounded-lg p-3 text-center border border-orange-300">
                 <AlertTriangle className="h-5 w-5 text-orange-600 mx-auto mb-1" />
-                <div className="text-2xl font-bold text-orange-600">{pricingHealth.health.breakdown.review}</div>
-                <div className="text-xs text-muted-foreground font-medium">Too High</div>
-                <div className="text-[10px] text-orange-700 mt-1">Needs review</div>
+                <div className="text-2xl font-bold font-sans text-orange-600">{pricingHealth.health.breakdown.review}</div>
+                <div className="text-xs text-muted-foreground font-medium font-sans">Too High</div>
+                <div className="text-[10px] text-orange-700 mt-1 font-sans">Needs review</div>
               </div>
-              <div className="bg-white rounded-lg p-3 text-center border-2 border-red-300">
+              <div className="bg-white rounded-lg p-3 text-center border border-red-300">
                 <AlertCircle className="h-5 w-5 text-red-600 mx-auto mb-1" />
-                <div className="text-2xl font-bold text-red-600">{pricingHealth.health.breakdown.critical}</div>
-                <div className="text-xs text-muted-foreground font-medium">Way Too High</div>
-                <div className="text-[10px] text-red-700 mt-1">Fix immediately</div>
+                <div className="text-2xl font-bold font-sans text-red-600">{pricingHealth.health.breakdown.critical}</div>
+                <div className="text-xs text-muted-foreground font-medium font-sans">Way Too High</div>
+                <div className="text-[10px] text-red-700 mt-1 font-sans">Fix immediately</div>
               </div>
             </div>
           </CardContent>
@@ -627,14 +627,14 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
             };
 
             return (
-              <Card className="border-red-300 bg-red-50/30">
+              <Card className="border-gray-300 bg-gray-50/30">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
+                  <CardTitle className="text-lg flex items-center gap-2 font-sans">
                     <AlertCircle className="h-5 w-5 text-red-600" />
                     Pricing Problems
                     <Badge variant="destructive">{outliers.length}</Badge>
                   </CardTitle>
-                  <CardDescription className="text-red-900">
+                  <CardDescription className="text-gray-700">
                     These items are priced way above market rates - fix these to improve sales
                   </CardDescription>
                 </CardHeader>
@@ -644,10 +644,10 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                     const comparisons = getComparisons(item.channel);
                     
                     return (
-                      <div key={idx} className="border-2 border-red-300 rounded-lg p-4 bg-white">
+                      <div key={idx} className="border rounded-lg p-4" style={{ backgroundColor: '#FAEFEF', borderColor: '#E9DADA' }}>
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
-                            <div className="font-bold text-base text-red-900 mb-1">
+                            <div className="font-bold font-sans text-base text-red-900 mb-1">
                               {item.publicationName}
                             </div>
                             <div className="text-sm text-gray-700 mb-2">
@@ -657,9 +657,9 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                           <span className="text-2xl">{item.assessment.icon}</span>
                         </div>
 
-                        <div className="bg-red-50 rounded p-3 mb-3 space-y-2">
+                        <div className="rounded p-3 mb-3 space-y-2" style={{ backgroundColor: '#F2E6E6' }}>
                           <div className="text-sm">
-                            <span className="font-semibold text-red-900">The Problem:</span>
+                            <span className="font-semibold font-sans text-red-900">The Problem:</span>
                             <div className="mt-1">Charging <strong>${item.price.toLocaleString()}/month</strong> to reach only <strong>{item.audience.toLocaleString()} people</strong></div>
                             <div className="text-red-700 font-medium mt-1">
                               That's ${item.unitPrice.toFixed(2)} per 1,000 people
@@ -668,11 +668,11 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                         </div>
 
                         {comparisons.length > 0 && (
-                          <div className="bg-blue-50 rounded p-3 mb-3">
-                            <div className="text-sm font-semibold text-blue-900 mb-2">What Similar Outlets Charge:</div>
+                          <div className="bg-gray-100 rounded p-3 mb-3">
+                            <div className="text-sm font-semibold font-sans text-gray-900 mb-2">What Similar Outlets Charge:</div>
                             <div className="space-y-1 text-sm">
                               {comparisons.map((comp, i) => (
-                                <div key={i} className="text-blue-800">
+                                <div key={i} className="text-gray-700">
                                   • {comp.publicationName} ({comp.audience.toLocaleString()} audience): <strong>${comp.unitPrice.toFixed(2)} per 1K</strong>
                                 </div>
                               ))}
@@ -680,9 +680,9 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                           </div>
                         )}
 
-                        <div className="bg-green-50 rounded p-3 mb-3">
+                        <div className="rounded p-3 mb-3" style={{ backgroundColor: '#E1EFE5' }}>
                           <div className="text-sm">
-                            <span className="font-semibold text-green-900">Your Options:</span>
+                            <span className="font-semibold font-sans text-green-900">Your Options:</span>
                             <div className="mt-2 space-y-1">
                               {suggested && (
                                 <>
@@ -724,23 +724,23 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
             if (packageReady.length === 0) return null;
 
             return (
-              <Card className="border-green-300 bg-green-50/30">
+              <Card className="border-gray-300 bg-gray-50/30">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
+                  <CardTitle className="text-lg flex items-center gap-2 font-sans">
                     <Star className="h-5 w-5 text-green-600" />
                     Great Value Inventory
                     <Badge className="bg-green-600">{packageReady.length}</Badge>
                   </CardTitle>
-                  <CardDescription className="text-green-900">
+                  <CardDescription className="text-gray-700">
                     These are priced right - perfect for packages!
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {packageReady.map((item, idx) => (
-                    <div key={idx} className="border-2 border-green-300 rounded-lg p-4 bg-white">
+                    <div key={idx} className="border rounded-lg p-4" style={{ backgroundColor: '#FAFFFC', borderColor: '#DAE9DD' }}>
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <div className="font-bold text-base text-green-900 mb-1">
+                          <div className="font-bold font-sans text-base text-green-900 mb-1">
                             {item.publicationName}
                           </div>
                           <div className="text-sm text-gray-700 mb-2">
@@ -750,10 +750,10 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                         <span className="text-2xl">{item.assessment.icon}</span>
                       </div>
 
-                      <div className="bg-green-50 rounded p-3 mb-3">
+                      <div className="rounded p-3 mb-3" style={{ backgroundColor: '#E1EFE5' }}>
                         <div className="text-sm space-y-2">
                           <div>
-                            <span className="font-semibold text-green-900">Why This Works:</span>
+                            <span className="font-semibold font-sans text-green-900">Why This Works:</span>
                             <div className="mt-1 text-green-800">
                               <strong>${item.price.toLocaleString()}/month</strong> to reach <strong>{item.audience.toLocaleString()} people</strong>
                             </div>
@@ -764,10 +764,10 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                         </div>
                       </div>
 
-                      <div className="bg-blue-50 rounded p-3 mb-3">
+                      <div className="bg-gray-100 rounded p-3 mb-3">
                         <div className="text-sm">
-                          <span className="font-semibold text-blue-900">Package Potential:</span>
-                          <div className="mt-1 space-y-1 text-blue-800">
+                          <span className="font-semibold font-sans text-gray-900">Package Potential:</span>
+                          <div className="mt-1 space-y-1 text-gray-700">
                             <div>• Total Reach: {item.audience.toLocaleString()} {getAudienceMetricLabel(item.channel).toLowerCase()}</div>
                             <div>• Cost-effective pricing at ${item.unitPrice.toFixed(2)} per 1K</div>
                             <div>• Ready to add to any package</div>
@@ -794,16 +794,16 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
 
       {/* Total Audience Reach Across All Channels */}
       {totalAudienceAcrossChannels && totalAudienceAcrossChannels.grandTotal > 0 && (
-        <Card className="border-blue-200 bg-blue-50/50">
+        <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Total Audience Reach</CardTitle>
+            <CardTitle className="text-lg font-sans">Total Audience Reach</CardTitle>
             <CardDescription>Combined potential audience across all inventory channels</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-muted-foreground mb-1">Total Combined Audience</p>
-                <p className="text-3xl font-bold text-blue-600">
+                <p className="text-sm text-muted-foreground mb-1 font-sans">Total Combined Audience</p>
+                <p className="text-3xl font-bold font-sans">
                   {formatAudience(totalAudienceAcrossChannels.grandTotal)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -842,7 +842,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
         <div className="grid gap-4 md:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
                 Channel
               </CardTitle>
             </CardHeader>
@@ -860,17 +860,17 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
             </CardContent>
           </Card>
 
-          <Card className="border-purple-200 bg-purple-50/50">
+          <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-purple-700">
+              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
                 Total Audience
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-900">
+              <div className="text-2xl font-bold">
                 {formatAudience(channelSummary.totalPotentialReach)}
               </div>
-              <p className="text-xs text-purple-700 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {getAudienceMetricLabel(activeChannel)}
               </p>
             </CardContent>
@@ -878,7 +878,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
                 Avg Audience Size
               </CardTitle>
             </CardHeader>
@@ -892,21 +892,21 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
             </CardContent>
           </Card>
           
-          <Card className="border-green-200 bg-green-50/50">
+          <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-700">
+              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
                 Avg Normalized Price
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-900">{formatCPR(channelSummary.avgUnitPrice)}</div>
-              <p className="text-xs text-green-700 mt-1">{getNormalizedUnitLabel(activeChannel)}</p>
+              <div className="text-2xl font-bold">{formatCPR(channelSummary.avgUnitPrice)}</div>
+              <p className="text-xs text-muted-foreground mt-1">{getNormalizedUnitLabel(activeChannel)}</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
                 Price Range
               </CardTitle>
             </CardHeader>

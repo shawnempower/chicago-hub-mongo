@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { OrderStatusBadge, OrderStatus } from '../orders/OrderStatusBadge';
-import { Eye, Search, Filter, Calendar } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X } from 'lucide-react';
 import { usePublication } from '@/contexts/PublicationContext';
 import { toast } from '@/hooks/use-toast';
+import { formatDistanceToNow } from 'date-fns';
 
 interface InsertionOrder {
   _id?: string;
@@ -21,14 +24,26 @@ interface InsertionOrder {
   confirmationDate?: Date;
 }
 
+type SortKey = 'campaignName' | 'generatedAt' | 'status';
+
 export function PublicationOrders() {
   const { selectedPublication } = usePublication();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<InsertionOrder[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<InsertionOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [statusFilterDraft, setStatusFilterDraft] = useState<string[]>([]);
+  const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
+
+  const statusOptions = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'sent', label: 'Sent' },
+    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'in_production', label: 'In Production' },
+    { value: 'delivered', label: 'Delivered' },
+  ] as const;
 
   // Fetch orders
   useEffect(() => {
@@ -37,22 +52,11 @@ export function PublicationOrders() {
     }
   }, [selectedPublication]);
 
-  // Apply filters
   useEffect(() => {
-    let filtered = [...orders];
-
-    if (searchTerm) {
-      filtered = filtered.filter(order =>
-        order.campaignName.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    if (statusPopoverOpen) {
+      setStatusFilterDraft(statusFilter);
     }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-
-    setFilteredOrders(filtered);
-  }, [orders, searchTerm, statusFilter]);
+  }, [statusPopoverOpen, statusFilter]);
 
   const fetchOrders = async () => {
     try {
@@ -91,7 +95,7 @@ export function PublicationOrders() {
   };
 
   const formatDate = (date?: Date) => {
-    if (!date) return '-';
+    if (!date) return '—';
     return new Date(date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -110,7 +114,106 @@ export function PublicationOrders() {
     };
   };
 
+  const getStatusFilterLabel = () => {
+    if (statusFilter.length === 0) {
+      return 'Status';
+    }
+
+    const labels = statusFilter
+      .map(value => statusOptions.find(option => option.value === value)?.label)
+      .filter(Boolean) as string[];
+
+    if (labels.length === 1) return labels[0];
+    if (labels.length === statusOptions.length) return 'All Statuses';
+    if (labels.length <= 2) return labels.join(', ');
+    return `${labels.slice(0, 2).join(', ')} +${labels.length - 2}`;
+  };
+
+  const applyStatusFilter = () => {
+    setStatusFilter(statusFilterDraft);
+    setStatusPopoverOpen(false);
+  };
+
+  const getSortValue = (order: InsertionOrder, key: SortKey) => {
+    switch (key) {
+      case 'campaignName':
+        return order.campaignName || '';
+      case 'generatedAt':
+        return order.generatedAt || '';
+      case 'status':
+        return order.status || '';
+      default:
+        return '';
+    }
+  };
+
+  const sortedOrders = useMemo(() => {
+    if (!sortConfig) return orders;
+
+    const { key, direction } = sortConfig;
+
+    return [...orders].sort((a, b) => {
+      const aValue = getSortValue(a, key);
+      const bValue = getSortValue(b, key);
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.localeCompare(bValue, undefined, { sensitivity: 'base' });
+        return direction === 'asc' ? comparison : -comparison;
+      }
+
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      return 0;
+    });
+  }, [orders, sortConfig]);
+
+  const filteredOrders = useMemo(() => {
+    return sortedOrders.filter(order => {
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        const matchesSearch = order.campaignName?.toLowerCase().includes(search);
+
+        if (!matchesSearch) {
+          return false;
+        }
+      }
+
+      if (statusFilter.length > 0 && !statusFilter.includes(order.status ?? '')) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [sortedOrders, searchTerm, statusFilter]);
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig(prev => {
+      if (prev && prev.key === key) {
+        const nextDirection = prev.direction === 'asc' ? 'desc' : 'asc';
+        return { key, direction: nextDirection };
+      }
+
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="h-3.5 w-3.5" />;
+    }
+
+    return sortConfig.direction === 'asc' ? (
+      <ArrowUp className="h-3.5 w-3.5" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5" />
+    );
+  };
+
   const statusCounts = getStatusCounts();
+  const hasActiveFilters = statusFilter.length > 0;
+  const visibleCount = filteredOrders.length;
+  const filterTriggerClass =
+    'justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200 h-9 flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium';
 
   if (loading) {
     return (
@@ -125,41 +228,35 @@ export function PublicationOrders() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Insertion Orders</h2>
-        <p className="text-muted-foreground">
-          View and manage your advertising insertion orders
-        </p>
-      </div>
+      <h2 className="text-xl font-semibold font-sans text-slate-900">Insertion Orders</h2>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{statusCounts.all}</div>
             <p className="text-xs text-muted-foreground">Total Orders</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-blue-600">{statusCounts.sent}</div>
             <p className="text-xs text-muted-foreground">Pending Review</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">{statusCounts.confirmed}</div>
             <p className="text-xs text-muted-foreground">Confirmed</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-purple-600">{statusCounts.in_production}</div>
             <p className="text-xs text-muted-foreground">In Production</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-emerald-600">{statusCounts.delivered}</div>
             <p className="text-xs text-muted-foreground">Delivered</p>
@@ -167,110 +264,167 @@ export function PublicationOrders() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by campaign name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant={statusFilter === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('all')}
-              >
-                All ({statusCounts.all})
-              </Button>
-              <Button
-                variant={statusFilter === 'sent' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('sent')}
-              >
-                Pending ({statusCounts.sent})
-              </Button>
-              <Button
-                variant={statusFilter === 'confirmed' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('confirmed')}
-              >
-                Confirmed ({statusCounts.confirmed})
-              </Button>
-              <Button
-                variant={statusFilter === 'in_production' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('in_production')}
-              >
-                In Production ({statusCounts.in_production})
-              </Button>
+      {/* Orders Table */}
+      <Card className="bg-white">
+        <CardHeader className="border-b">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-base font-semibold font-sans text-slate-900">
+              All Orders ({visibleCount}
+              {hasActiveFilters ? ` of ${orders.length}` : ''})
+            </CardTitle>
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`${filterTriggerClass} ${
+                      statusFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                    }`}
+                  >
+                    {getStatusFilterLabel()}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 space-y-4">
+                  <div className="space-y-3">
+                    {statusOptions.map(option => {
+                      const checked = statusFilterDraft.includes(option.value);
+                      return (
+                        <label key={option.value} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => {
+                              setStatusFilterDraft(prev =>
+                                checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
+                              );
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStatusFilter([]);
+                        setStatusFilterDraft([]);
+                        setStatusPopoverOpen(false);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                    <Button size="sm" onClick={applyStatusFilter}>
+                      Apply
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              <div className="relative min-w-[200px]">
+                <Input
+                  placeholder="Search orders…"
+                  value={searchTerm}
+                  onChange={event => setSearchTerm(event.target.value)}
+                  className={`${filterTriggerClass} pr-9 ${
+                    searchTerm ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                  }`}
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0"
+                    onClick={() => setSearchTerm('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {orders.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">No orders available yet.</div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">No orders match the current filters.</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[45%]">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('campaignName')}
+                      className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                    >
+                      Campaign
+                      {renderSortIcon('campaignName')}
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-[25%]">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('generatedAt')}
+                      className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                    >
+                      Received
+                      {renderSortIcon('generatedAt')}
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-[20%]">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('status')}
+                      className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                    >
+                      Status
+                      {renderSortIcon('status')}
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-[10%] text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredOrders.map((order) => (
+                  <TableRow
+                    key={`${order.campaignId}-${order.publicationId}`}
+                    className="cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleViewOrder(order)}
+                  >
+                    <TableCell>
+                      <p className="text-sm font-medium">{order.campaignName}</p>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatDistanceToNow(new Date(order.generatedAt), { addSuffix: true })}
+                    </TableCell>
+                    <TableCell>
+                      <OrderStatusBadge status={order.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewOrder(order);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
-
-      {/* Orders List */}
-      {filteredOrders.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              {orders.length === 0 
-                ? 'No insertion orders yet'
-                : 'No orders match your filters'}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredOrders.map((order) => (
-            <Card key={`${order.campaignId}-${order.publicationId}`} className="hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold">{order.campaignName}</h3>
-                      <OrderStatusBadge status={order.status} />
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>Received: {formatDate(order.generatedAt)}</span>
-                      </div>
-                      {order.sentAt && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>Sent: {formatDate(order.sentAt)}</span>
-                        </div>
-                      )}
-                      {order.confirmationDate && (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <Calendar className="h-4 w-4" />
-                          <span>Confirmed: {formatDate(order.confirmationDate)}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={() => handleViewOrder(order)}
-                    variant="outline"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Details
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
-
