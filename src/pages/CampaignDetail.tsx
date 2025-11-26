@@ -653,7 +653,7 @@ export default function CampaignDetail() {
                   })()}
                   uploadedAssets={uploadedAssets}
                   onAssetsChange={setUploadedAssets}
-                  campaignId={campaign?._id?.toString()}
+                  campaignId={campaign?.campaignId}
                 />
               </div>
             </TabsContent>
