@@ -204,7 +204,14 @@ export class InsertionOrderService {
     campaignId?: string;
     dateFrom?: Date;
     dateTo?: Date;
-  }): Promise<Array<PublicationInsertionOrder & { campaignId: string; campaignName: string }>> {
+  }): Promise<Array<PublicationInsertionOrder & { 
+    campaignId: string; 
+    campaignName: string;
+    uploadedAssetCount?: number;
+    placementCount?: number;
+    campaignStartDate?: Date;
+    campaignEndDate?: Date;
+  }>> {
     try {
       const query: any = {
         publicationInsertionOrders: { $exists: true, $ne: [] },
@@ -219,9 +226,40 @@ export class InsertionOrderService {
         .find(query)
         .toArray();
 
-      const orders: Array<PublicationInsertionOrder & { campaignId: string; campaignName: string }> = [];
+      // Fetch actual uploaded asset counts for all campaigns
+      const creativeAssetsCollection = getDatabase().collection(COLLECTIONS.CREATIVE_ASSETS);
+      const campaignIds = campaigns.map(c => c.campaignId);
+      
+      const assetCounts = await creativeAssetsCollection.aggregate([
+        {
+          $match: {
+            'associations.campaignId': { $in: campaignIds },
+            deletedAt: { $exists: false },
+            'uploadInfo.uploadedAt': { $exists: true }
+          }
+        },
+        {
+          $group: {
+            _id: '$associations.campaignId',
+            count: { $sum: 1 }
+          }
+        }
+      ]).toArray();
+
+      const assetCountMap = new Map(assetCounts.map((ac: any) => [ac._id, ac.count]));
+
+      const orders: Array<PublicationInsertionOrder & { 
+        campaignId: string; 
+        campaignName: string;
+        uploadedAssetCount?: number;
+        placementCount?: number;
+        campaignStartDate?: Date;
+        campaignEndDate?: Date;
+      }> = [];
 
       for (const campaign of campaigns) {
+        const campaignAssetCount = assetCountMap.get(campaign.campaignId) || 0;
+        
         for (const order of campaign.publicationInsertionOrders || []) {
           // Apply filters
           if (filters?.status && order.status !== filters.status) continue;
@@ -229,10 +267,18 @@ export class InsertionOrderService {
           if (filters?.dateFrom && new Date(order.generatedAt) < filters.dateFrom) continue;
           if (filters?.dateTo && new Date(order.generatedAt) > filters.dateTo) continue;
 
+          // Count placements from selected inventory
+          const pub = campaign.selectedInventory?.publications?.find((p: any) => p.publicationId === order.publicationId);
+          const placementCount = pub?.inventoryItems?.length || 0;
+
           orders.push({
             ...order,
             campaignId: campaign.campaignId,
-            campaignName: campaign.basicInfo.name
+            campaignName: campaign.basicInfo.name,
+            uploadedAssetCount: campaignAssetCount,
+            placementCount,
+            campaignStartDate: campaign.basicInfo?.startDate,
+            campaignEndDate: campaign.basicInfo?.endDate
           });
         }
       }

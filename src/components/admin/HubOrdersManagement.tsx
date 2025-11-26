@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { OrderStatusBadge, OrderStatus } from '../orders/OrderStatusBadge';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X, Image, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X, Image, AlertCircle, CheckCircle2, Calendar } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
 interface InsertionOrder {
@@ -22,9 +23,11 @@ interface InsertionOrder {
   status: OrderStatus;
   sentAt?: Date;
   confirmationDate?: Date;
-  creativeAssets?: any[];
+  uploadedAssetCount?: number;
   placementStatuses?: Record<string, 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered'>;
   placementCount?: number;
+  campaignStartDate?: Date;
+  campaignEndDate?: Date;
 }
 
 interface PlacementStats {
@@ -51,6 +54,7 @@ export function HubOrdersManagement() {
   const [stats, setStats] = useState<OrderStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
   const [issueFilter, setIssueFilter] = useState<string[]>([]);
   const [issueFilterDraft, setIssueFilterDraft] = useState<string[]>([]);
   const [issuePopoverOpen, setIssuePopoverOpen] = useState(false);
@@ -102,6 +106,22 @@ export function HubOrdersManagement() {
     }
   };
 
+  // Get unique campaigns for filter dropdown
+  const uniqueCampaigns = useMemo(() => {
+    const campaigns = new Map<string, { id: string; name: string; startDate?: Date; endDate?: Date }>();
+    orders.forEach(order => {
+      if (!campaigns.has(order.campaignId)) {
+        campaigns.set(order.campaignId, {
+          id: order.campaignId,
+          name: order.campaignName,
+          startDate: order.campaignStartDate,
+          endDate: order.campaignEndDate
+        });
+      }
+    });
+    return Array.from(campaigns.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [orders]);
+
   const getOrderIssues = (order: InsertionOrder) => {
     const issues: string[] = [];
     const statuses = Object.values(order.placementStatuses || {});
@@ -112,7 +132,7 @@ export function HubOrdersManagement() {
     if (statuses.includes('pending')) {
       issues.push('pending');
     }
-    if (!order.creativeAssets || order.creativeAssets.length === 0) {
+    if (!order.uploadedAssetCount || order.uploadedAssetCount === 0) {
       issues.push('no_assets');
     }
     
@@ -156,11 +176,10 @@ export function HubOrdersManagement() {
 
       // Check for issues
       const hasRejections = statuses.includes('rejected');
-      const hasPending = statuses.includes('pending');
       if (hasRejections) ordersWithIssues++;
       
       // Check for missing assets
-      if (!order.creativeAssets || order.creativeAssets.length === 0) {
+      if (!order.uploadedAssetCount || order.uploadedAssetCount === 0) {
         ordersWithMissingAssets++;
       }
     });
@@ -240,6 +259,12 @@ export function HubOrdersManagement() {
 
   const filteredOrders = useMemo(() => {
     return sortedOrders.filter(order => {
+      // Campaign filter
+      if (selectedCampaign !== 'all' && order.campaignId !== selectedCampaign) {
+        return false;
+      }
+
+      // Search filter
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
         const matchesSearch =
@@ -251,6 +276,7 @@ export function HubOrdersManagement() {
         }
       }
 
+      // Issue filter
       if (issueFilter.length > 0) {
         const orderIssues = getOrderIssues(order);
         const hasMatchingIssue = issueFilter.some(filter => orderIssues.includes(filter));
@@ -261,7 +287,7 @@ export function HubOrdersManagement() {
 
       return true;
     });
-  }, [sortedOrders, searchTerm, issueFilter]);
+  }, [sortedOrders, searchTerm, issueFilter, selectedCampaign]);
 
   const handleSort = (key: SortKey) => {
     setSortConfig(prev => {
@@ -286,7 +312,7 @@ export function HubOrdersManagement() {
     );
   };
 
-  const hasActiveFilters = issueFilter.length > 0;
+  const hasActiveFilters = issueFilter.length > 0 || selectedCampaign !== 'all';
   const visibleCount = filteredOrders.length;
   const filterTriggerClass =
     'justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200 h-9 flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium';
@@ -363,6 +389,26 @@ export function HubOrdersManagement() {
               {hasActiveFilters ? ` of ${orders.length}` : ''})
             </CardTitle>
             <div className="flex items-center gap-2 overflow-x-auto">
+              {/* Campaign Filter */}
+              <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+                <SelectTrigger 
+                  className={`${filterTriggerClass} w-[200px] ${
+                    selectedCampaign !== 'all' ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                  }`}
+                >
+                  <SelectValue placeholder="All Campaigns" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Campaigns</SelectItem>
+                  {uniqueCampaigns.map(campaign => (
+                    <SelectItem key={campaign.id} value={campaign.id}>
+                      {campaign.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Issue Filter */}
               <Popover open={issuePopoverOpen} onOpenChange={setIssuePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -446,7 +492,7 @@ export function HubOrdersManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[20%]">
+                  <TableHead className="w-[15%]">
                     <button
                       type="button"
                       onClick={() => handleSort('campaignName')}
@@ -456,7 +502,7 @@ export function HubOrdersManagement() {
                       {renderSortIcon('campaignName')}
                     </button>
                   </TableHead>
-                  <TableHead className="w-[20%]">
+                  <TableHead className="w-[15%]">
                     <button
                       type="button"
                       onClick={() => handleSort('publicationName')}
@@ -466,12 +512,17 @@ export function HubOrdersManagement() {
                       {renderSortIcon('publicationName')}
                     </button>
                   </TableHead>
-                  <TableHead className="w-[25%]">
+                  <TableHead className="w-[12%]">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Campaign Dates
+                    </span>
+                  </TableHead>
+                  <TableHead className="w-[20%]">
                     <span className="text-sm font-medium text-muted-foreground">
                       Placement Status
                     </span>
                   </TableHead>
-                  <TableHead className="w-[10%]">
+                  <TableHead className="w-[8%]">
                     <span className="text-sm font-medium text-muted-foreground">
                       Assets
                     </span>
@@ -486,7 +537,7 @@ export function HubOrdersManagement() {
                       {renderSortIcon('issues')}
                     </button>
                   </TableHead>
-                  <TableHead className="w-[15%] text-right">Actions</TableHead>
+                  <TableHead className="w-[10%] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -503,10 +554,25 @@ export function HubOrdersManagement() {
                       <TableCell>
                         <p className="text-sm font-medium">{order.campaignName}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {formatDistanceToNow(new Date(order.generatedAt), { addSuffix: true })}
+                          Generated {formatDistanceToNow(new Date(order.generatedAt), { addSuffix: true })}
                         </p>
                       </TableCell>
                       <TableCell className="text-sm">{order.publicationName}</TableCell>
+                      <TableCell>
+                        {order.campaignStartDate && order.campaignEndDate ? (
+                          <div className="text-xs">
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              <span>{format(new Date(order.campaignStartDate), 'MMM d')}</span>
+                            </div>
+                            <div className="text-muted-foreground mt-0.5">
+                              to {format(new Date(order.campaignEndDate), 'MMM d, yyyy')}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {placementCounts.accepted > 0 && (
@@ -537,11 +603,11 @@ export function HubOrdersManagement() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {order.creativeAssets && order.creativeAssets.length > 0 ? (
+                        {order.uploadedAssetCount && order.uploadedAssetCount > 0 ? (
                           <div className="flex items-center gap-1 text-xs">
                             <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                             <span className="text-green-700 font-medium">
-                              {order.creativeAssets.length}
+                              {order.uploadedAssetCount}
                             </span>
                           </div>
                         ) : (
