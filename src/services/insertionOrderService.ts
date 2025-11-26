@@ -230,6 +230,27 @@ export class InsertionOrderService {
       const creativeAssetsCollection = getDatabase().collection(COLLECTIONS.CREATIVE_ASSETS);
       const campaignIds = campaigns.map(c => c.campaignId);
       
+      console.log('🔍 [getAllOrders] Fetching asset counts for campaigns:', campaignIds);
+      
+      // First, let's see what assets exist at all
+      const totalAssets = await creativeAssetsCollection.countDocuments({
+        deletedAt: { $exists: false },
+        'uploadInfo.uploadedAt': { $exists: true }
+      });
+      console.log('📊 [getAllOrders] Total uploaded assets in database:', totalAssets);
+      
+      // Check if any assets have these campaign IDs
+      const assetsWithCampaigns = await creativeAssetsCollection.find({
+        'associations.campaignId': { $exists: true },
+        deletedAt: { $exists: false }
+      }).limit(5).toArray();
+      console.log('📦 [getAllOrders] Sample assets with campaignId:', 
+        assetsWithCampaigns.map(a => ({ 
+          campaignId: a.associations?.campaignId, 
+          fileName: a.metadata?.fileName 
+        }))
+      );
+      
       const assetCounts = await creativeAssetsCollection.aggregate([
         {
           $match: {
@@ -245,6 +266,8 @@ export class InsertionOrderService {
           }
         }
       ]).toArray();
+
+      console.log('📈 [getAllOrders] Asset counts by campaign:', assetCounts);
 
       const assetCountMap = new Map(assetCounts.map((ac: any) => [ac._id, ac.count]));
 
