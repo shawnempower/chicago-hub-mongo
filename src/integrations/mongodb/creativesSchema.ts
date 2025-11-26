@@ -49,6 +49,20 @@ export interface CreativeAsset {
     packageId?: string; // If associated with a package
     insertionOrderId?: string; // If associated with a specific insertion order
     publicationId?: number; // If for a specific publication
+    placementId?: string; // Specific placement/inventory item
+  };
+  
+  // Specifications from publication's inventory requirements
+  specifications?: {
+    placementName?: string;
+    publicationName?: string;
+    channel?: string;
+    dimensions?: string | string[];
+    fileFormats?: string[];
+    maxFileSize?: string;
+    colorSpace?: string;
+    resolution?: string;
+    additionalRequirements?: string;
   };
   
   // Usage tracking
@@ -105,7 +119,18 @@ export interface CreativeAsset {
 }
 
 // Type for creating new assets
-export type CreativeAssetInsert = Omit<CreativeAsset, '_id' | 'assetId' | 'version' | 'usage'> & {
+export type CreativeAssetInsert = Omit<CreativeAsset, '_id' | 'assetId' | 'version' | 'usage'>
+
+/**
+ * ZIP file upload support
+ * When a ZIP is uploaded, it can contain multiple assets for different placements
+ */
+export interface ZipUploadRequest {
+  campaignId: string;
+  zipFile: Buffer;
+  fileName: string;
+  placementMapping?: Record<string, string>; // filename -> placementId mapping
+} & {
   usage?: Partial<CreativeAsset['usage']>;
 };
 

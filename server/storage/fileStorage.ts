@@ -19,10 +19,16 @@ const ALLOWED_FILE_TYPES = {
   'image/png': ['.png'],
   'image/gif': ['.gif'],
   'image/webp': ['.webp'],
+  'image/svg+xml': ['.svg'],
   'application/pdf': ['.pdf'],
+  'application/zip': ['.zip'],
+  'application/x-zip-compressed': ['.zip'],
+  'application/postscript': ['.ai', '.eps'],
+  'image/vnd.adobe.photoshop': ['.psd'],
   'video/mp4': ['.mp4'],
   'video/quicktime': ['.mov'],
-  'video/x-msvideo': ['.avi']
+  'video/x-msvideo': ['.avi'],
+  'application/octet-stream': ['.indd', '.ai', '.psd', '.eps'] // Design files
 };
 
 export interface FileUploadResult {
@@ -39,7 +45,7 @@ export interface FileUploadResult {
 }
 
 export interface FileStorageOptions {
-  category?: 'campaigns' | 'packages' | 'insertion-orders' | 'temp';
+  category?: string; // Allow any category for 'creative-assets/campaigns', etc.
   subPath?: string; // e.g., campaignId, packageId
   preserveFileName?: boolean;
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { getWebsiteStandards, InventoryTypeStandard } from '@/config/inventoryStandards';
 
 export type WebsiteAdCategory = 
   | "iab-standard"      // Web display standards (300x250, 728x90, etc.)
@@ -9,6 +10,8 @@ export type WebsiteAdCategory =
 
 export interface WebsiteAdFormat {
   dimensions: string | string[];  // Single or multiple accepted dimensions
+  standardId?: string;  // Reference to inventory standard (e.g., "website_banner_300x250")
+  specifications?: any; // Full specs from standard (formats, max size, color, etc.)
 }
 
 interface WebsiteAdFormatSelectorProps {
@@ -19,43 +22,65 @@ interface WebsiteAdFormatSelectorProps {
   legacyDimensions?: string;
 }
 
-// Standard dimension options for websites
-const WEBSITE_DIMENSION_OPTIONS = [
-  {
-    label: 'IAB Standard Sizes',
-    options: [
-      { value: '300x250', label: 'Medium Rectangle (300x250)' },
-      { value: '728x90', label: 'Leaderboard (728x90)' },
-      { value: '300x600', label: 'Half Page (300x600)' },
-      { value: '160x600', label: 'Wide Skyscraper (160x600)' },
-      { value: '320x50', label: 'Mobile Banner (320x50)' },
-      { value: '970x250', label: 'Billboard (970x250)' },
-      { value: '336x280', label: 'Large Rectangle (336x280)' },
-      { value: '120x600', label: 'Skyscraper (120x600)' },
-      { value: '970x90', label: 'Super Leaderboard (970x90)' },
-      { value: '250x250', label: 'Square (250x250)' },
-      { value: '200x200', label: 'Small Square (200x200)' },
-      { value: '468x60', label: 'Full Banner (468x60)' },
-      { value: '234x60', label: 'Half Banner (234x60)' },
-    ]
-  },
-  {
-    label: 'Native & Responsive',
-    options: [
-      { value: 'text-only', label: 'Text Only' },
-      { value: 'sponsored-content', label: 'Sponsored Content' },
-      { value: 'logo-text', label: 'Logo + Text' },
-      { value: 'content-integration', label: 'Content Integration' },
-      { value: 'responsive', label: 'Responsive (Flexible Size)' },
-    ]
-  },
-  {
-    label: 'Custom',
-    options: [
-      { value: 'custom', label: 'Custom dimensions...' }
-    ]
-  }
-];
+// Generate dimension options from inventory standards
+function generateWebsiteDimensionOptions() {
+  const standards = getWebsiteStandards();
+  
+  // Group by IAB standards and other types
+  const iabStandards: Array<{ value: string; label: string; standardId: string; standard: InventoryTypeStandard }> = [];
+  const videoStandards: Array<{ value: string; label: string; standardId: string; standard: InventoryTypeStandard }> = [];
+  const nativeStandards: Array<{ value: string; label: string; standardId: string; standard: InventoryTypeStandard }> = [];
+  const customStandards: Array<{ value: string; label: string; standardId: string; standard: InventoryTypeStandard }> = [];
+  
+  standards.forEach(standard => {
+    const dims = typeof standard.defaultSpecs.dimensions === 'string' 
+      ? standard.defaultSpecs.dimensions 
+      : standard.defaultSpecs.dimensions?.[0] || 'custom';
+    
+    const option = {
+      value: dims,
+      label: standard.name,
+      standardId: standard.id,
+      standard
+    };
+    
+    if (standard.id.includes('video')) {
+      videoStandards.push(option);
+    } else if (standard.id.includes('native')) {
+      nativeStandards.push(option);
+    } else if (standard.iabStandard) {
+      iabStandards.push(option);
+    } else {
+      customStandards.push(option);
+    }
+  });
+  
+  return [
+    {
+      label: 'IAB Standard Sizes',
+      options: iabStandards
+    },
+    ...(videoStandards.length > 0 ? [{
+      label: 'Video Formats',
+      options: videoStandards
+    }] : []),
+    ...(nativeStandards.length > 0 ? [{
+      label: 'Native & Responsive',
+      options: nativeStandards
+    }] : []),
+    {
+      label: 'Custom',
+      options: [{
+        value: 'custom',
+        label: 'Custom dimensions...',
+        standardId: 'website_banner_custom',
+        standard: null as any
+      }]
+    }
+  ];
+}
+
+const WEBSITE_DIMENSION_OPTIONS = generateWebsiteDimensionOptions();
 
 function getWebsiteAdCategory(dimensions: string | string[]): WebsiteAdCategory {
   const dim = Array.isArray(dimensions) ? dimensions[0] : dimensions;
@@ -149,7 +174,7 @@ export function WebsiteAdFormatSelector({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleDimensionToggle = (dimension: string) => {
+  const handleDimensionToggle = (dimension: string, standardId?: string, standard?: InventoryTypeStandard) => {
     if (dimension === 'custom') {
       // Check if we need to show warning
       if (selectedDimensions.length > 0) {
@@ -166,7 +191,12 @@ export function WebsiteAdFormatSelector({
       if (newDims.length === 0) {
         onChange(null);
       } else {
-        onChange({ dimensions: newDims.length === 1 ? newDims[0] : newDims });
+        // Include standard ID and specifications
+        onChange({ 
+          dimensions: newDims.length === 1 ? newDims[0] : newDims,
+          standardId: standardId,
+          specifications: standard?.defaultSpecs
+        });
       }
     }
   };
@@ -371,23 +401,39 @@ export function WebsiteAdFormatSelector({
                   <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 sticky top-0">
                     {group.label}
                   </div>
-                  {group.options.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleDimensionToggle(option.value)}
-                      className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center justify-between group"
-                    >
-                      <span className="text-sm text-gray-700 group-hover:text-blue-700">
-                        {option.label}
-                      </span>
-                      {selectedDimensions.includes(option.value) && (
-                        <svg className="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
+                  {group.options.map((option) => {
+                    const isStandardOption = 'standardId' in option && 'standard' in option;
+                    const standardInfo = isStandardOption ? option.standard : null;
+                    
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => handleDimensionToggle(
+                          option.value,
+                          isStandardOption ? option.standardId : undefined,
+                          standardInfo || undefined
+                        )}
+                        className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center justify-between group"
+                      >
+                        <div className="flex-1">
+                          <span className="text-sm text-gray-700 group-hover:text-blue-700">
+                            {option.label}
+                          </span>
+                          {standardInfo && standardInfo.description && (
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {standardInfo.description}
+                            </p>
+                          )}
+                        </div>
+                        {selectedDimensions.includes(option.value) && (
+                          <svg className="h-5 w-5 text-blue-600 ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -399,6 +445,27 @@ export function WebsiteAdFormatSelector({
         <p className="text-sm text-gray-500">
           Enter pixel dimensions. Use commas for multiple sizes (e.g., "1200x675, 1000x500")
         </p>
+      )}
+      
+      {/* Display specifications from selected standard */}
+      {value?.standardId && value?.specifications && selectedDimensions.length > 0 && (
+        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-blue-600 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs font-medium text-blue-900 mb-1">Standard Specifications</p>
+              <div className="text-xs text-blue-700 space-y-1">
+                <div><span className="font-medium">Formats:</span> {value.specifications.fileFormats?.join(', ')}</div>
+                <div><span className="font-medium">Max Size:</span> {value.specifications.maxFileSize}</div>
+                <div><span className="font-medium">Color:</span> {value.specifications.colorSpace}</div>
+                <div><span className="font-medium">Resolution:</span> {value.specifications.resolution}</div>
+                {value.specifications.animationDuration && (
+                  <div><span className="font-medium">Animation:</span> Max {value.specifications.animationDuration}s</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

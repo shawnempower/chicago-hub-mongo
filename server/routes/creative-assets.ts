@@ -17,7 +17,30 @@ const router = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB max
+    fileSize: 100 * 1024 * 1024 // 100MB max (supports large ZIP files)
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images, PDFs, ZIP files, and common design files
+    const allowedMimes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/svg+xml',
+      'application/pdf',
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/postscript', // AI files
+      'image/vnd.adobe.photoshop', // PSD files
+      'application/octet-stream' // Generic binary (for various design files)
+    ];
+    
+    if (allowedMimes.includes(file.mimetype) || file.originalname.match(/\.(ai|psd|indd|eps)$/i)) {
+      cb(null, true);
+    } else {
+      cb(null, true); // Allow all for now, validation happens server-side
+    }
   }
 });
 
@@ -43,15 +66,42 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
       packageId,
       insertionOrderId,
       publicationId,
+      placementId,
       assetType,
       description,
-      tags
+      tags,
+      specifications,
+      suggestedStandardId,
+      specGroupId
     } = req.body;
 
-    const category = campaignId ? 'campaigns' : packageId ? 'packages' : 'insertion-orders';
+    // Parse specifications if provided as string
+    let parsedSpecs;
+    if (specifications) {
+      try {
+        parsedSpecs = typeof specifications === 'string' ? JSON.parse(specifications) : specifications;
+      } catch (e) {
+        console.warn('Failed to parse specifications:', e);
+      }
+    }
+    
+    // Parse detected specs if provided
+    let detectedSpecs;
+    if (req.body.detectedSpecs) {
+      try {
+        detectedSpecs = typeof req.body.detectedSpecs === 'string' 
+          ? JSON.parse(req.body.detectedSpecs) 
+          : req.body.detectedSpecs;
+      } catch (e) {
+        console.warn('Failed to parse detected specs:', e);
+      }
+    }
+
+    // Determine category and path for S3 storage
+    const category = campaignId ? 'creative-assets/campaigns' : packageId ? 'creative-assets/packages' : 'creative-assets/insertion-orders';
     const subPath = campaignId || packageId || insertionOrderId;
 
-    // Upload file to storage
+    // Upload file to storage (uses S3 if configured)
     const uploadResult = await fileStorage.uploadFile(
       file.buffer,
       file.originalname,
@@ -69,7 +119,7 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
       ? `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() 
       : undefined;
 
-    // Create asset record
+    // Create asset record with specifications and detected specs
     const asset = await creativesService.create({
       metadata: {
         fileName: uploadResult.fileName,
@@ -80,16 +130,36 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
         fileUrl: uploadResult.fileUrl,
         storagePath: uploadResult.storagePath,
         storageProvider: uploadResult.storageProvider,
-        assetType: assetType || 'other',
-        description,
-        tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map((t: string) => t.trim())) : undefined
+        assetType: assetType || 'placement',
+        description: parsedSpecs?.placementName || description,
+        tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map((t: string) => t.trim())) : undefined,
+        // Store detected specs
+        detectedDimensions: detectedSpecs?.dimensions,
+        detectedColorSpace: detectedSpecs?.colorSpace,
+        detectedDPI: detectedSpecs?.estimatedDPI,
+        // Store standard ID and spec group ID for matching
+        suggestedStandardId,
+        specGroupId
       },
       associations: {
         campaignId,
         packageId,
         insertionOrderId,
-        publicationId: publicationId ? parseInt(publicationId) : undefined
+        publicationId: publicationId ? parseInt(publicationId) : (parsedSpecs?.publicationId ? parseInt(parsedSpecs.publicationId) : undefined),
+        placementId
       },
+      // Store specifications with the asset
+      specifications: parsedSpecs ? {
+        placementName: parsedSpecs.placementName,
+        publicationName: parsedSpecs.publicationName,
+        channel: parsedSpecs.channel,
+        dimensions: parsedSpecs.dimensions,
+        fileFormats: parsedSpecs.fileFormats,
+        maxFileSize: parsedSpecs.maxFileSize,
+        colorSpace: parsedSpecs.colorSpace,
+        resolution: parsedSpecs.resolution,
+        additionalRequirements: parsedSpecs.additionalRequirements
+      } : undefined,
       uploadInfo: {
         uploadedAt: new Date(),
         uploadedBy: userId,
@@ -151,6 +221,27 @@ router.get('/', async (req: any, res: Response) => {
   } catch (error) {
     console.error('Error listing creative assets:', error);
     res.status(500).json({ error: 'Failed to list assets' });
+  }
+});
+
+/**
+ * GET /api/creative-assets/campaign/:campaignId
+ * Get all creative assets for a specific campaign
+ */
+router.get('/campaign/:campaignId', async (req: any, res: Response) => {
+  try {
+    const { campaignId } = req.params;
+
+    const filters = { campaignId };
+    const assets = await creativesService.list(filters, 1000, 0);
+
+    res.json({ 
+      assets,
+      count: assets.length 
+    });
+  } catch (error) {
+    console.error('Error fetching campaign assets:', error);
+    res.status(500).json({ error: 'Failed to fetch campaign assets' });
   }
 });
 
@@ -327,6 +418,49 @@ router.delete('/:id', async (req: any, res: Response) => {
   } catch (error) {
     console.error('Error deleting creative asset:', error);
     res.status(500).json({ error: 'Failed to delete asset' });
+  }
+});
+
+/**
+ * POST /api/creative-assets/upload-bulk (ZIP file)
+ * Upload multiple assets via ZIP file
+ * TODO: Implement ZIP extraction and bulk upload
+ * 
+ * Expected format:
+ * - ZIP file containing multiple assets
+ * - Optional mapping file (JSON) to map files to placements
+ * - Extracts all files and uploads individually
+ */
+router.post('/upload-bulk', upload.single('file'), async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Check if it's a ZIP file
+    if (!file.originalname.endsWith('.zip') && file.mimetype !== 'application/zip' && file.mimetype !== 'application/x-zip-compressed') {
+      return res.status(400).json({ error: 'File must be a ZIP archive' });
+    }
+
+    // TODO: Implement ZIP extraction
+    // For now, just upload the ZIP as-is
+    res.status(501).json({ 
+      error: 'ZIP extraction not yet implemented',
+      message: 'Please upload individual files for now. ZIP extraction coming soon!'
+    });
+
+    // Future implementation:
+    // 1. Extract ZIP using adm-zip or jszip
+    // 2. Parse mapping file if provided
+    // 3. Upload each file individually
+    // 4. Return array of uploaded assets
+    
+  } catch (error) {
+    console.error('Error uploading bulk assets:', error);
+    res.status(500).json({ error: 'Failed to process bulk upload' });
   }
 });
 

@@ -8,11 +8,11 @@ import { formatFileSize } from '@/utils/fileUpload';
 interface CreativeAsset {
   assetId: string;
   fileName: string;
-  fileType: string;
+  fileType?: string; // Made optional - may not always be provided
   fileSize: number;
   fileUrl: string;
   thumbnailUrl?: string;
-  assetType: string;
+  assetType?: string; // Made optional - may not always be provided
   uploadedAt: Date;
   uploadedBy?: string;
   uploaderName?: string;
@@ -37,10 +37,10 @@ export function CreativeAssetCard({
   className = ''
 }: CreativeAssetCardProps) {
   const getFileIcon = () => {
-    if (asset.fileType.startsWith('image/')) {
+    if (asset.fileType?.startsWith('image/')) {
       return <Image className="h-5 w-5 text-blue-500" />;
     }
-    if (asset.fileType.startsWith('video/')) {
+    if (asset.fileType?.startsWith('video/')) {
       return <Video className="h-5 w-5 text-purple-500" />;
     }
     if (asset.fileType === 'application/pdf') {
@@ -60,7 +60,7 @@ export function CreativeAssetCard({
     });
   };
 
-  const isImage = asset.fileType.startsWith('image/');
+  const isImage = asset.fileType?.startsWith('image/') || false;
 
   return (
     <Card className={`overflow-hidden ${className}`}>
@@ -91,7 +91,7 @@ export function CreativeAssetCard({
                   {asset.fileName}
                 </h4>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {formatFileSize(asset.fileSize)} • {asset.fileType}
+                  {formatFileSize(asset.fileSize)}{asset.fileType && ` • ${asset.fileType}`}
                 </p>
               </div>
               
@@ -111,10 +111,12 @@ export function CreativeAssetCard({
 
             {/* Metadata */}
             <div className="mt-2 space-y-1">
-              <p className="text-xs text-gray-600">
-                <span className="font-medium">Type:</span>{' '}
-                <span className="capitalize">{asset.assetType.replace(/_/g, ' ')}</span>
-              </p>
+              {asset.assetType && (
+                <p className="text-xs text-gray-600">
+                  <span className="font-medium">Type:</span>{' '}
+                  <span className="capitalize">{asset.assetType.replace(/_/g, ' ')}</span>
+                </p>
+              )}
               <p className="text-xs text-gray-600">
                 <span className="font-medium">Uploaded:</span>{' '}
                 {formatDate(asset.uploadedAt)}

@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { OrderStatusBadge, OrderStatus } from '../orders/OrderStatusBadge';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X, Image, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -20,6 +20,7 @@ interface InsertionOrder {
   status: OrderStatus;
   sentAt?: Date;
   confirmationDate?: Date;
+  creativeAssets?: any[];
 }
 
 interface OrderStats {
@@ -375,7 +376,7 @@ export function HubOrdersManagement() {
                       {renderSortIcon('publicationName')}
                     </button>
                   </TableHead>
-                  <TableHead className="w-[20%]">
+                  <TableHead className="w-[15%]">
                     <button
                       type="button"
                       onClick={() => handleSort('generatedAt')}
@@ -384,6 +385,11 @@ export function HubOrdersManagement() {
                       Generated
                       {renderSortIcon('generatedAt')}
                     </button>
+                  </TableHead>
+                  <TableHead className="w-[10%]">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Assets
+                    </span>
                   </TableHead>
                   <TableHead className="w-[15%]">
                     <button
@@ -410,6 +416,21 @@ export function HubOrdersManagement() {
                     <TableCell className="text-sm">{order.publicationName}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDistanceToNow(new Date(order.generatedAt), { addSuffix: true })}
+                    </TableCell>
+                    <TableCell>
+                      {order.creativeAssets && order.creativeAssets.length > 0 ? (
+                        <div className="flex items-center gap-1 text-xs">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                          <span className="text-green-700 font-medium">
+                            {order.creativeAssets.length} asset{order.creativeAssets.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-xs">
+                          <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                          <span className="text-muted-foreground">No assets</span>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <OrderStatusBadge status={order.status} />

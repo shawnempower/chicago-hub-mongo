@@ -171,9 +171,109 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
       campaign = await campaignsService.getByCampaignId(campaignId);
     }
     
+    // **DYNAMIC ASSET LOADING**: Fetch fresh assets from database
+    let freshCreativeAssets: any[] = [];
+    
+    if (campaign) {
+      const { getDatabase } = await import('../../src/integrations/mongodb/client');
+      const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+      
+      const creativeAssetsCollection = getDatabase().collection(COLLECTIONS.CREATIVE_ASSETS);
+      
+      // Fetch all assets for this campaign
+      // NOTE: Campaign may have both _id (ObjectId) and campaignId (string)
+      // Assets may be associated with either, so we query for both
+      const campaignObjectId = campaign._id?.toString();
+      const campaignStringId = (campaign as any).campaignId;
+      
+      const campaignAssets = await creativeAssetsCollection.find({
+        $or: [
+          { 'associations.campaignId': campaignId }, // Try route parameter
+          { 'associations.campaignId': campaignObjectId }, // Try ObjectId string
+          { 'associations.campaignId': campaignStringId }, // Try campaignId string
+        ],
+        deletedAt: { $exists: false },
+        'uploadInfo.uploadedAt': { $exists: true }
+      }).toArray();
+      
+      // Find this publication's inventory items
+      const publication = campaign.selectedInventory?.publications?.find(
+        (p: any) => p.publicationId.toString() === publicationId.toString()
+      );
+      
+      if (publication && publication.inventoryItems) {
+        // Use the spec extraction utility to properly parse inventory items
+        const { extractRequirementsForSelectedInventory } = await import('../../src/utils/creativeSpecsExtractor');
+        const { generateSpecKey } = await import('../../src/utils/creativeSpecsGrouping');
+        
+        // Transform inventory items to format expected by extractor
+        const inventoryForExtraction = publication.inventoryItems.map((item: any) => ({
+          ...item,
+          publicationId: publication.publicationId,
+          publicationName: publication.publicationName,
+        }));
+        
+        // Extract proper specs (this will infer dimensions from itemName if needed)
+        const extractedRequirements = extractRequirementsForSelectedInventory(inventoryForExtraction);
+        
+        // Match assets to extracted requirements
+        extractedRequirements.forEach((req: any) => {
+          const reqChannel = req.channel || 'general';
+          const reqDimensions = req.dimensions;
+          
+          // Generate spec key for matching
+          const reqSpecKey = reqDimensions ? 
+            `${reqChannel}::dim:${reqDimensions}` : 
+            `${reqChannel}::general`;
+          
+          // Find matching assets
+          const matchingAssets = campaignAssets.filter((asset: any) => {
+            // Primary: Match by spec group ID
+            if (asset.metadata?.specGroupId) {
+              return asset.metadata.specGroupId === reqSpecKey;
+            }
+            
+            // Fallback: Match by channel and dimensions
+            const assetChannel = asset.specifications?.channel || 'general';
+            const assetDimensions = asset.metadata?.detectedDimensions || asset.specifications?.dimensions;
+            
+            return assetChannel === reqChannel && assetDimensions === reqDimensions;
+          });
+          
+          // Add all matching assets for this placement
+          matchingAssets.forEach((matchingAsset: any) => {
+            freshCreativeAssets.push({
+              assetId: matchingAsset._id.toString(),
+              fileName: matchingAsset.metadata?.fileName || 'Unknown',
+              fileUrl: matchingAsset.metadata?.fileUrl || '',
+              fileType: matchingAsset.metadata?.fileType || 'unknown',
+              fileSize: matchingAsset.metadata?.fileSize || 0,
+              uploadedAt: matchingAsset.uploadInfo?.uploadedAt || new Date(),
+              uploadedBy: matchingAsset.uploadInfo?.uploadedBy || '',
+              placementId: req.placementId,
+              placementName: req.placementName,
+              specifications: {
+                dimensions: reqDimensions,
+                channel: reqChannel,
+                format: req.format,
+                fileSize: req.fileSize
+              },
+              detectedSpecs: {
+                dimensions: matchingAsset.metadata?.detectedDimensions,
+                colorSpace: matchingAsset.metadata?.detectedColorSpace,
+                estimatedDPI: matchingAsset.metadata?.detectedDPI
+              }
+            });
+          });
+        });
+      }
+      
+    }
+    
     // Include campaign data with inventory for ad specs
     const orderWithCampaignData = {
       ...order,
+      creativeAssets: freshCreativeAssets, // Use fresh assets instead of cached ones!
       campaignData: campaign ? {
         selectedInventory: campaign.selectedInventory,
         timeline: campaign.timeline,
@@ -181,10 +281,6 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
         basicInfo: campaign.basicInfo
       } : null
     };
-
-    console.log('Order detail - campaignId:', campaignId);
-    console.log('Order detail - found campaign:', !!campaign);
-    console.log('Order detail - campaign data included:', !!orderWithCampaignData.campaignData);
 
     res.json({ order: orderWithCampaignData });
   } catch (error) {

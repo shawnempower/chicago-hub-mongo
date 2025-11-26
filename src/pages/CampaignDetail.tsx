@@ -49,6 +49,8 @@ import { InventoryEditor } from '@/components/admin/InventoryEditor';
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
 import { API_BASE_URL } from '@/config/api';
 import { CreativeRequirementsChecklist } from '@/components/campaign/CreativeRequirementsChecklist';
+import { CampaignCreativeAssetsUploader } from '@/components/campaign/CampaignCreativeAssetsUploader';
+import { extractRequirementsForSelectedInventory } from '@/utils/creativeSpecsExtractor';
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-800',
@@ -83,6 +85,7 @@ export default function CampaignDetail() {
   const [isEditingInventory, setIsEditingInventory] = useState(false);
   const [editedPublications, setEditedPublications] = useState<HubPackagePublication[] | null>(null);
   const [savingInventory, setSavingInventory] = useState(false);
+  const [uploadedAssets, setUploadedAssets] = useState<Map<string, any>>(new Map());
 
   const handleGenerateIO = async () => {
     if (!id) return;
@@ -877,17 +880,47 @@ export default function CampaignDetail() {
               )}
             </TabsContent>
 
-            {/* Creative Requirements Tab */}
+            {/* Creative Assets Tab */}
             <TabsContent value="creative-requirements">
-              <CreativeRequirementsChecklist 
-                campaign={campaign}
-                onUploadAssets={() => {
-                  toast({
-                    title: 'Coming Soon',
-                    description: 'Creative asset upload functionality will be available soon.',
-                  });
-                }}
-              />
+              <div className="space-y-6">
+                {/* Requirements Overview - Collapsible */}
+                <CreativeRequirementsChecklist 
+                  campaign={campaign}
+                  compact={true}
+                />
+                
+                {/* Asset Upload & Management */}
+                <CampaignCreativeAssetsUploader
+                  requirements={(() => {
+                    // Extract requirements from campaign inventory
+                    const allInventoryItems: any[] = [];
+                    
+                    if (campaign?.selectedInventory?.publications) {
+                      campaign.selectedInventory.publications.forEach((pub: any) => {
+                        if (pub.inventoryItems) {
+                          pub.inventoryItems.forEach((item: any) => {
+                            // Skip excluded items
+                            if (item.isExcluded) return;
+                            
+                            allInventoryItems.push({
+                              ...item,
+                              publicationId: pub.publicationId,
+                              publicationName: pub.publicationName,
+                              channel: item.channel || 'general'
+                            });
+                          });
+                        }
+                      });
+                    }
+                    
+                    const requirements = extractRequirementsForSelectedInventory(allInventoryItems);
+                    return requirements;
+                  })()}
+                  uploadedAssets={uploadedAssets}
+                  onAssetsChange={setUploadedAssets}
+                  campaignId={campaign?._id?.toString()}
+                />
+              </div>
             </TabsContent>
 
             {/* Insertion Order Tab */}

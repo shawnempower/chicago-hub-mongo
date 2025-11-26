@@ -373,6 +373,24 @@ export class InsertionOrderService {
       // Import the insertion order generator (uses campaign's pre-calculated values)
       const { insertionOrderGenerator } = await import('../../server/insertionOrderGenerator');
 
+      // Fetch all creative assets for this campaign from the database
+      // NOTE: These assets are cached in the order as a snapshot, but when publications
+      // view their order, fresh assets are loaded dynamically from the database.
+      // This means hub teams can upload/update assets AFTER orders are generated,
+      // and publications will see the latest versions automatically.
+      // See: server/routes/publication-orders.ts (GET /:campaignId/:publicationId)
+      const creativeAssetsCollection = getDatabase().collection(COLLECTIONS.CREATIVE_ASSETS);
+      const campaignAssets = await creativeAssetsCollection.find({
+        'associations.campaignId': campaignId,
+        deletedAt: { $exists: false },
+        'uploadInfo.uploadedAt': { $exists: true } // Only include actually uploaded assets
+      }).toArray();
+
+      // Log asset count for debugging order generation
+      if (campaignAssets.length === 0) {
+        console.warn(`⚠️  No creative assets found for campaign ${campaignId}. Orders will be generated without assets.`);
+      }
+
       for (const pub of publications) {
         // Generate the HTML content for this publication
         let content = '';
@@ -387,6 +405,49 @@ export class InsertionOrderService {
           // Continue with empty content rather than failing
         }
 
+        // Gather creative assets for this publication's inventory items
+        const creativeAssets: any[] = [];
+        
+        // Match creative assets to this publication's inventory items
+        pub.inventoryItems?.forEach((item: any) => {
+          const itemChannel = item.channel || 'general';
+          const itemDimensions = item.specifications?.dimensions || item.dimensions;
+          
+          // Find matching assets by matching the channel and dimensions
+          const matchingAssets = campaignAssets.filter((asset: any) => {
+            // Match by spec group ID if available
+            if (asset.metadata?.specGroupId && item.specGroupId) {
+              return asset.metadata.specGroupId === item.specGroupId;
+            }
+            
+            // Otherwise match by channel and dimensions
+            const assetChannel = asset.specifications?.channel || 'general';
+            const assetDimensions = asset.metadata?.detectedDimensions || asset.specifications?.dimensions;
+            
+            return assetChannel === itemChannel && assetDimensions === itemDimensions;
+          });
+          
+          // Add all matching assets for this placement
+          matchingAssets.forEach((matchingAsset: any) => {
+            creativeAssets.push({
+              assetId: matchingAsset._id.toString(),
+              fileName: matchingAsset.metadata?.fileName || 'Unknown',
+              fileUrl: matchingAsset.metadata?.fileUrl || '',
+              fileType: matchingAsset.metadata?.fileType || 'unknown',
+              fileSize: matchingAsset.metadata?.fileSize || 0,
+              uploadedAt: matchingAsset.uploadInfo?.uploadedAt || new Date(),
+              uploadedBy: matchingAsset.uploadInfo?.uploadedBy || userId,
+              placementId: item.itemPath || item.sourcePath,
+              placementName: item.itemName || item.sourceName,
+              specifications: {
+                dimensions: itemDimensions,
+                channel: itemChannel
+              }
+            });
+          });
+        });
+
+
         const order: PublicationInsertionOrder = {
           _id: new ObjectId().toString(),
           publicationId: pub.publicationId,
@@ -394,15 +455,16 @@ export class InsertionOrderService {
           generatedAt: new Date(),
           format: 'html',
           content, // Now contains actual HTML content
-          status: 'draft',
-          creativeAssets: [],
+          status: 'sent', // Orders are sent to publications when generated
+          sentAt: new Date(),
+          creativeAssets, // Populated from campaign assets
           adSpecifications: [],
           adSpecificationsProvided: false,
           statusHistory: [{
-            status: 'draft',
+            status: 'sent',
             timestamp: new Date(),
             changedBy: userId,
-            notes: 'Order created'
+            notes: 'Order sent to publication'
           }]
         };
 

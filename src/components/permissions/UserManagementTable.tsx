@@ -91,6 +91,9 @@ export function UserManagementTable({
     // Only load if external data is not provided
     if (externalFilteredUsers === undefined && externalFilteredInvitations === undefined) {
       loadUsers();
+    } else {
+      // When external data is provided, we're not loading internally
+      setLoading(false);
     }
   }, [resourceType, resourceId, externalFilteredUsers, externalFilteredInvitations]);
 

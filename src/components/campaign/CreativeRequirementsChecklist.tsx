@@ -101,30 +101,27 @@ export function CreativeRequirementsChecklist({
 
   if (compact) {
     return (
-      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h4 className="font-semibold text-amber-900 mb-1">Creative Assets Required</h4>
-            <p className="text-sm text-amber-800 mb-3">
-              This campaign requires creative materials for <strong>{totalRequirements} ad placements</strong> across {Object.keys(groupedByPublication).length} publications.
-            </p>
-            <div className="text-xs text-amber-700">
-              <strong>Quick Summary:</strong>
-              <ul className="list-disc list-inside mt-1 space-y-0.5">
-                {Object.entries(groupedByPublication).slice(0, 3).map(([pubName, items]) => (
-                  <li key={pubName}>
-                    {pubName}: {items.length} placement{items.length > 1 ? 's' : ''}
-                  </li>
-                ))}
-                {Object.keys(groupedByPublication).length > 3 && (
-                  <li>...and {Object.keys(groupedByPublication).length - 3} more publications</li>
-                )}
-              </ul>
+      <Card className="bg-blue-50 border-blue-200">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <div>
+                <CardTitle className="text-base">Requirements Overview</CardTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  {totalRequirements} placements across {Object.keys(groupedByPublication).length} publications
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-600">
+                {completedRequirements}/{totalRequirements}
+              </div>
+              <div className="text-xs text-gray-500">Assets Ready</div>
             </div>
           </div>
-        </div>
-      </div>
+        </CardHeader>
+      </Card>
     );
   }
 
@@ -155,13 +152,6 @@ export function CreativeRequirementsChecklist({
             />
           </div>
         </div>
-
-        {onUploadAssets && campaign && (
-          <Button onClick={onUploadAssets} className="w-full mt-4">
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Creative Assets
-          </Button>
-        )}
       </CardHeader>
       
       <CardContent className="space-y-6">
