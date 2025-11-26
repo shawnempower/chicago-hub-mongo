@@ -10,12 +10,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Circle, AlertTriangle, Upload, FileText } from 'lucide-react';
 import { Campaign } from '@/integrations/mongodb/campaignSchema';
+import { groupRequirementsBySpec } from '@/utils/creativeSpecsGrouping';
+import { extractRequirementsForSelectedInventory } from '@/utils/creativeSpecsExtractor';
 
 interface CreativeRequirementsChecklistProps {
   campaign: Campaign | null;
   analysisResult?: any; // For pre-creation view
   onUploadAssets?: () => void;
   compact?: boolean;
+  uploadedAssets?: Map<string, any>; // Track uploaded assets
 }
 
 interface RequirementItem {
@@ -39,7 +42,8 @@ export function CreativeRequirementsChecklist({
   campaign,
   analysisResult,
   onUploadAssets,
-  compact = false
+  compact = false,
+  uploadedAssets
 }: CreativeRequirementsChecklistProps) {
   
   // Extract requirements from either campaign or analysis result
@@ -71,9 +75,51 @@ export function CreativeRequirementsChecklist({
   };
 
   const requirements = getRequirements();
-  const totalRequirements = requirements.length;
-  const completedRequirements = requirements.filter(r => r.status === 'approved').length;
-  const progressPercentage = totalRequirements > 0 ? (completedRequirements / totalRequirements) * 100 : 0;
+  const totalPlacements = requirements.length;
+  
+  // Group requirements by unique specs (one asset per spec group)
+  const allInventoryItems: any[] = [];
+  const inventory = campaign?.selectedInventory || analysisResult?.selectedInventory;
+  if (inventory?.publications) {
+    inventory.publications.forEach((pub: any) => {
+      if (pub.inventoryItems) {
+        pub.inventoryItems.forEach((item: any) => {
+          if (!item.isExcluded) {
+            allInventoryItems.push({
+              ...item,
+              publicationId: pub.publicationId,
+              publicationName: pub.publicationName,
+              channel: item.channel || 'general'
+            });
+          }
+        });
+      }
+    });
+  }
+  
+  const extractedRequirements = extractRequirementsForSelectedInventory(allInventoryItems);
+  const groupedSpecs = groupRequirementsBySpec(extractedRequirements);
+  
+  const totalRequirements = groupedSpecs.length; // Total unique spec groups
+  
+  // Count placements covered by uploaded assets (not just asset groups)
+  const placementsCovered = uploadedAssets 
+    ? groupedSpecs
+        .filter(specGroup => {
+          const asset = uploadedAssets.get(specGroup.specGroupId);
+          return asset && (asset.uploadStatus === 'uploaded' || asset.fileUrl || asset.file);
+        })
+        .reduce((sum, specGroup) => sum + specGroup.placementCount, 0)
+    : 0;
+  
+  const completedRequirements = uploadedAssets 
+    ? groupedSpecs.filter(specGroup => {
+        const asset = uploadedAssets.get(specGroup.specGroupId);
+        return asset && (asset.uploadStatus === 'uploaded' || asset.fileUrl || asset.file);
+      }).length
+    : 0;
+  
+  const progressPercentage = totalPlacements > 0 ? (placementsCovered / totalPlacements) * 100 : 0;
 
   // Group by publication for better organization
   const groupedByPublication = requirements.reduce((acc, req) => {
@@ -109,15 +155,20 @@ export function CreativeRequirementsChecklist({
               <div>
                 <CardTitle className="text-base">Requirements Overview</CardTitle>
                 <p className="text-sm text-gray-600 mt-1">
-                  {totalRequirements} placements across {Object.keys(groupedByPublication).length} publications
+                  {totalPlacements} placements across {Object.keys(groupedByPublication).length} publications
                 </p>
               </div>
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-blue-600">
-                {completedRequirements}/{totalRequirements}
+                {placementsCovered}/{totalPlacements}
               </div>
-              <div className="text-xs text-gray-500">Assets Ready</div>
+              <div className="text-xs text-gray-500">
+                Placements Covered ({Math.round(progressPercentage)}%)
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                {completedRequirements}/{totalRequirements} unique assets
+              </div>
             </div>
           </div>
         </CardHeader>

@@ -21,7 +21,7 @@ const HubCentral = () => {
     { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'packages', label: 'Packages', icon: Package },
-    { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
+    { id: 'campaigns', label: 'Campaigns', icon: Megaphone, isLink: true, href: '/campaigns' },
     { id: 'orders', label: 'Orders', icon: FileText },
     { id: 'pricing', label: 'Pricing', icon: DollarSign },
     { id: 'inventory-chat', label: 'AI Chat', icon: Bot },
@@ -50,7 +50,7 @@ const HubCentral = () => {
                     return (
                       <button
                         key={item.id}
-                        onClick={() => handleTabChange(item.id)}
+                        onClick={() => item.isLink ? navigate(item.href!) : handleTabChange(item.id)}
                         className={cn(
                           "w-full flex flex-col items-center gap-1 px-2 py-3 rounded-md transition-colors",
                           isActive

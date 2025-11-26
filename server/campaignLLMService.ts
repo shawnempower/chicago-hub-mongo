@@ -763,6 +763,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
         itemPath: item.itemPath,
         itemName: item.itemName,
         quantity: item.quantity,
+        currentFrequency: item.quantity, // Add currentFrequency to match package structure
         duration: item.duration,
         frequency: item.frequency,
         specifications: item.specifications,

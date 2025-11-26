@@ -210,10 +210,35 @@ router.get('/', async (req: any, res: Response) => {
       parseInt(skip as string)
     );
 
+    // Generate fresh signed URLs for S3 assets
+    const assetsWithFreshUrls = await Promise.all(
+      assets.map(async (asset) => {
+        let fileUrl = asset.fileUrl;
+        
+        // If this is an S3 asset with a storage path, generate a fresh signed URL
+        if (asset.storageProvider === 's3' && asset.storagePath) {
+          try {
+            const freshUrl = await fileStorage.getSignedUrl(asset.storagePath, 86400); // 24 hours
+            if (freshUrl) {
+              fileUrl = freshUrl;
+            }
+          } catch (error) {
+            console.error('Error generating fresh signed URL for asset:', asset.assetId, error);
+            // Keep the old URL as fallback
+          }
+        }
+        
+        return {
+          ...asset,
+          fileUrl
+        };
+      })
+    );
+
     const total = await creativesService.count(filters);
 
     res.json({
-      assets,
+      assets: assetsWithFreshUrls,
       total,
       limit: parseInt(limit as string),
       skip: parseInt(skip as string)
@@ -235,9 +260,37 @@ router.get('/campaign/:campaignId', async (req: any, res: Response) => {
     const filters = { campaignId };
     const assets = await creativesService.list(filters, 1000, 0);
 
+    // Generate fresh signed URLs for S3 assets
+    const assetsWithFreshUrls = await Promise.all(
+      assets.map(async (asset) => {
+        let fileUrl = asset.metadata.fileUrl;
+        
+        // If this is an S3 asset with a storage path, generate a fresh signed URL
+        if (asset.metadata.storageProvider === 's3' && asset.metadata.storagePath) {
+          try {
+            const freshUrl = await fileStorage.getSignedUrl(asset.metadata.storagePath, 86400); // 24 hours
+            if (freshUrl) {
+              fileUrl = freshUrl;
+            }
+          } catch (error) {
+            console.error('Error generating fresh signed URL for asset:', asset._id, error);
+            // Keep the old URL as fallback
+          }
+        }
+        
+        return {
+          ...asset,
+          metadata: {
+            ...asset.metadata,
+            fileUrl
+          }
+        };
+      })
+    );
+
     res.json({ 
-      assets,
-      count: assets.length 
+      assets: assetsWithFreshUrls,
+      count: assetsWithFreshUrls.length 
     });
   } catch (error) {
     console.error('Error fetching campaign assets:', error);
@@ -259,7 +312,29 @@ router.get('/:id', async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Asset not found' });
     }
 
-    res.json({ asset });
+    // Generate fresh signed URL for S3 assets
+    let fileUrl = asset.metadata.fileUrl;
+    if (asset.metadata.storageProvider === 's3' && asset.metadata.storagePath) {
+      try {
+        const freshUrl = await fileStorage.getSignedUrl(asset.metadata.storagePath, 86400); // 24 hours
+        if (freshUrl) {
+          fileUrl = freshUrl;
+        }
+      } catch (error) {
+        console.error('Error generating fresh signed URL for asset:', asset._id, error);
+        // Keep the old URL as fallback
+      }
+    }
+
+    res.json({ 
+      asset: {
+        ...asset,
+        metadata: {
+          ...asset.metadata,
+          fileUrl
+        }
+      }
+    });
   } catch (error) {
     console.error('Error fetching creative asset:', error);
     res.status(500).json({ error: 'Failed to fetch asset' });
@@ -283,10 +358,24 @@ router.get('/:id/download', async (req: any, res: Response) => {
     // Record download
     await creativesService.recordDownload(id);
 
+    // Generate fresh signed URL for S3 assets
+    let downloadUrl = asset.metadata.fileUrl;
+    if (asset.metadata.storageProvider === 's3' && asset.metadata.storagePath) {
+      try {
+        const freshUrl = await fileStorage.getSignedUrl(asset.metadata.storagePath, 3600); // 1 hour for downloads
+        if (freshUrl) {
+          downloadUrl = freshUrl;
+        }
+      } catch (error) {
+        console.error('Error generating fresh signed URL for download:', asset._id, error);
+        // Keep the old URL as fallback
+      }
+    }
+
     // Redirect to file URL or serve file
     // For local storage, we'll redirect to the static file route
-    // For S3, we'd generate a signed URL
-    res.redirect(asset.metadata.fileUrl);
+    // For S3, we redirect to the fresh signed URL
+    res.redirect(downloadUrl);
   } catch (error) {
     console.error('Error downloading creative asset:', error);
     res.status(500).json({ error: 'Failed to download asset' });

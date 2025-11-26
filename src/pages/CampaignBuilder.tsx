@@ -15,7 +15,9 @@ import { useToast } from '@/components/ui/use-toast';
 import { useHubContext } from '@/contexts/HubContext';
 import { useAnalyzeCampaign, useCreateCampaign, useGenerateInsertionOrder } from '@/hooks/useCampaigns';
 import { CampaignAnalysisRequest } from '@/integrations/mongodb/campaignSchema';
-import { ArrowLeft, ArrowRight, Sparkles, CheckCircle2, Eye, Package } from 'lucide-react';
+import { ArrowRight, Sparkles, CheckCircle2, Eye, Package, Megaphone, LayoutDashboard, Users, UserPlus, DollarSign, Bot, FileText } from 'lucide-react';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
+import { cn } from '@/lib/utils';
 
 // Step components
 import { CampaignBasicsStep } from '@/components/campaign/CampaignBasicsStep';
@@ -692,26 +694,58 @@ export default function CampaignBuilder() {
           showDashboardNav={true}
         />
         
-        <main className="container mx-auto px-6 py-8 max-w-4xl">
-          {/* Header */}
-          <div className="mb-8">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/hubcentral?tab=campaigns')}
-              className="mb-4"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Campaigns
-            </Button>
-            
-            <h1 className="text-3xl font-bold mb-2">Create New Campaign</h1>
-            <p className="text-muted-foreground">
-              AI-powered campaign builder with intelligent inventory selection
-            </p>
-          </div>
+        <main className="container mx-auto px-6 py-8">
+          <div className="flex gap-6">
+            {/* Vertical Left Navigation */}
+            <aside className="w-24 flex-shrink-0">
+              <nav className="p-2 sticky top-6">
+                <div className="space-y-1">
+                  {[
+                    { id: 'overview', label: 'Dashboard', icon: LayoutDashboard, href: '/hubcentral?tab=overview' },
+                    { id: 'leads', label: 'Leads', icon: Users, href: '/hubcentral?tab=leads' },
+                    { id: 'packages', label: 'Packages', icon: Package, href: '/hubcentral?tab=packages' },
+                    { id: 'campaigns', label: 'Campaigns', icon: Megaphone, href: '/campaigns', isActive: true },
+                    { id: 'orders', label: 'Orders', icon: FileText, href: '/hubcentral?tab=orders' },
+                    { id: 'pricing', label: 'Pricing', icon: DollarSign, href: '/hubcentral?tab=pricing' },
+                    { id: 'inventory-chat', label: 'AI Chat', icon: Bot, href: '/hubcentral?tab=inventory-chat' },
+                    { id: 'team', label: 'Team', icon: UserPlus, href: '/hubcentral?tab=team' },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => navigate(item.href)}
+                        className={cn(
+                          "w-full flex flex-col items-center gap-1 px-2 py-3 rounded-md transition-colors",
+                          item.isActive
+                            ? "bg-[#EDEAE1] font-bold"
+                            : "hover:bg-[#E2E0D8] font-bold"
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span className="text-[11px]">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
+            </aside>
 
-          {/* Progress Bar */}
-          <Card className="mb-6">
+            {/* Main Content Area */}
+            <div className="flex-1 min-w-0 max-w-4xl">
+              {/* Breadcrumbs */}
+              <div className="mb-6">
+                <Breadcrumb
+                  rootLabel="Campaigns"
+                  rootIcon={Megaphone}
+                  currentLabel="Create New Campaign"
+                  onBackClick={() => navigate('/campaigns')}
+                />
+              </div>
+
+              {/* Progress Bar */}
+              <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
@@ -745,8 +779,8 @@ export default function CampaignBuilder() {
             </CardContent>
           </Card>
 
-          {/* Step Content */}
-          <Card>
+              {/* Step Content */}
+              <Card>
             <CardHeader>
               <CardTitle>{STEPS[currentStep - 1].title}</CardTitle>
               <CardDescription>{STEPS[currentStep - 1].description}</CardDescription>
@@ -820,8 +854,8 @@ export default function CampaignBuilder() {
             </CardContent>
           </Card>
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between mt-6">
+              {/* Navigation Buttons */}
+              <div className="flex justify-between mt-6">
             <Button
               variant="outline"
               onClick={handleBack}
@@ -900,6 +934,8 @@ export default function CampaignBuilder() {
                   </Button>
                 </>
               )}
+            </div>
+              </div>
             </div>
           </div>
         </main>

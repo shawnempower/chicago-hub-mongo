@@ -24,6 +24,11 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
   
   const isHubCentral = location.pathname === '/hubcentral';
   
+  // Check if current page is hub-scoped (should show HubSelector)
+  const isHubScopedPage = location.pathname === '/hubcentral' || 
+                          location.pathname.startsWith('/campaigns') ||
+                          location.pathname.startsWith('/packages');
+  
   // Check if user has hub access (admin or has assigned hubs)
   const hasHubAccess = isAdmin || (user?.permissions?.assignedHubIds && user.permissions.assignedHubIds.length > 0);
   
@@ -42,8 +47,8 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
           {showDashboardNav ? (
             /* Dashboard Navigation with Hubs/Publications Button and Selector */
             <div className="hidden md:flex items-center gap-3">
-              {isHubCentral ? (
-                /* Publications Button and Hub Selector when on Hub Central */
+              {isHubScopedPage ? (
+                /* Hub Selector for hub-scoped pages (Hub Central, Campaigns, Packages) */
                 <>
                   <Button
                     onClick={() => navigate('/dashboard')}
@@ -56,7 +61,7 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
                   <HubSelector />
                 </>
               ) : (
-                /* Hubs Button and Publication Selector when NOT on Hub Central */
+                /* Publication Selector for publication-scoped pages */
                 <>
                   {hasHubAccess && (
                     <Button

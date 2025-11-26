@@ -370,10 +370,14 @@ export function PackageResults({
                         <div class="publication-total">${formatCurrency(pub.publicationTotal)}</div>
                     </div>
                     <table class="inventory-table">
-                        <thead><tr><th>Channel</th><th>Ad Placement</th><th>Quantity</th><th>Audience Estimate</th><th>Cost</th></tr></thead>
+                        <thead><tr><th>Channel</th><th>Ad Placement</th><th>Quantity</th><th>Audience Estimate</th><th>Item Cost</th><th>Total</th></tr></thead>
                         <tbody>
                             ${pub.inventoryItems.filter(item => !item.isExcluded).map(item => {
                                 const hubPrice = item.itemPricing?.hubPrice || 0;
+                                const freq = item.currentFrequency || item.quantity || 1;
+                                
+                                // Calculate line total
+                                const lineTotal = calculateItemCost(item, freq, 1);
                                 
                                 // Use standardized formatting functions
                                 const quantityDisplay = formatInsertionOrderQuantity(item);
@@ -389,7 +393,8 @@ export function PackageResults({
                                     <td>${item.itemName}</td>
                                     <td>${quantityDisplay}</td>
                                     <td style="font-size: 12px; color: #64748b;">${audienceDisplay}</td>
-                                    <td>${formatCurrency(hubPrice)}</td>
+                                    <td style="text-align: right;">${formatCurrency(hubPrice)}</td>
+                                    <td style="text-align: right;"><strong>${formatCurrency(lineTotal)}</strong></td>
                                 </tr>
                             `;
                             }).join('')}
