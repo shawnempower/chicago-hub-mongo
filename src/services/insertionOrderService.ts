@@ -155,7 +155,8 @@ export class InsertionOrderService {
   ): Promise<Array<PublicationInsertionOrder & { campaignId: string; campaignName: string; packageId?: string }>> {
     try {
       const query: any = {
-        'publicationInsertionOrders.publicationId': publicationId
+        'publicationInsertionOrders.publicationId': publicationId,
+        deletedAt: { $exists: false }
       };
 
       // Get campaigns with orders for this publication
@@ -206,7 +207,8 @@ export class InsertionOrderService {
   }): Promise<Array<PublicationInsertionOrder & { campaignId: string; campaignName: string }>> {
     try {
       const query: any = {
-        publicationInsertionOrders: { $exists: true, $ne: [] }
+        publicationInsertionOrders: { $exists: true, $ne: [] },
+        deletedAt: { $exists: false }
       };
 
       if (filters?.campaignId) {
@@ -448,6 +450,15 @@ export class InsertionOrderService {
         });
 
 
+        // Initialize placement statuses (all pending by default)
+        const placementStatuses: Record<string, 'pending'> = {};
+        pub.inventoryItems?.forEach((item: any) => {
+          const placementId = item.itemPath || item.sourcePath;
+          if (placementId) {
+            placementStatuses[placementId] = 'pending';
+          }
+        });
+
         const order: PublicationInsertionOrder = {
           _id: new ObjectId().toString(),
           publicationId: pub.publicationId,
@@ -460,6 +471,8 @@ export class InsertionOrderService {
           creativeAssets, // Populated from campaign assets
           adSpecifications: [],
           adSpecificationsProvided: false,
+          placementStatuses, // Initialize all placements as pending
+          placementStatusHistory: [], // Initialize empty history
           statusHistory: [{
             status: 'sent',
             timestamp: new Date(),

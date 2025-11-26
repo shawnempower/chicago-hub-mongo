@@ -26,7 +26,6 @@ import {
 import { useCampaign, useGenerateInsertionOrder, useUpdateCampaignStatus, useDeleteCampaign, useGeneratePublicationOrders } from '@/hooks/useCampaigns';
 import { format } from 'date-fns';
 import { 
-  ArrowLeft, 
   Download, 
   FileText, 
   Loader2, 
@@ -40,17 +39,22 @@ import {
   Package,
   Trash2,
   AlertTriangle,
-  Edit,
-  Save,
-  X as CloseIcon
+  Megaphone,
+  LayoutDashboard,
+  Users,
+  UserPlus,
+  Bot
 } from 'lucide-react';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
-import { InventoryEditor } from '@/components/admin/InventoryEditor';
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
 import { API_BASE_URL } from '@/config/api';
 import { CreativeRequirementsChecklist } from '@/components/campaign/CreativeRequirementsChecklist';
 import { CampaignCreativeAssetsUploader } from '@/components/campaign/CampaignCreativeAssetsUploader';
 import { extractRequirementsForSelectedInventory } from '@/utils/creativeSpecsExtractor';
+import { formatInsertionOrderQuantity, formatInsertionOrderAudienceWithBadge } from '@/utils/insertionOrderFormatting';
+import { calculateItemCost } from '@/utils/inventoryPricing';
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-800',
@@ -82,9 +86,6 @@ export default function CampaignDetail() {
   const { updateStatus, updating } = useUpdateCampaignStatus();
   const { deleteCampaign, deleting } = useDeleteCampaign();
   const [ioFormat, setIoFormat] = useState<'html' | 'markdown'>('html');
-  const [isEditingInventory, setIsEditingInventory] = useState(false);
-  const [editedPublications, setEditedPublications] = useState<HubPackagePublication[] | null>(null);
-  const [savingInventory, setSavingInventory] = useState(false);
   const [uploadedAssets, setUploadedAssets] = useState<Map<string, any>>(new Map());
 
   const handleGenerateIO = async () => {
@@ -164,59 +165,6 @@ export default function CampaignDetail() {
     }
   };
 
-  const handleEditInventoryClick = () => {
-    if (campaign?.selectedInventory?.publications) {
-      setEditedPublications(campaign.selectedInventory.publications as HubPackagePublication[]);
-      setIsEditingInventory(true);
-    }
-  };
-
-  const handleCancelEditInventory = () => {
-    setIsEditingInventory(false);
-    setEditedPublications(null);
-  };
-
-  const handleSaveInventory = async () => {
-    if (!id || !editedPublications) return;
-
-    setSavingInventory(true);
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/campaigns/${id}/inventory`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          publications: editedPublications,
-          recalculatePricing: true
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update inventory');
-      }
-
-      toast({
-        title: 'Inventory Updated',
-        description: 'Campaign inventory has been updated successfully.',
-      });
-
-      // Refetch campaign data
-      refetch();
-      setIsEditingInventory(false);
-      setEditedPublications(null);
-    } catch (error) {
-      toast({
-        title: 'Update Failed',
-        description: 'Failed to update campaign inventory. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setSavingInventory(false);
-    }
-  };
 
   const downloadInsertionOrder = () => {
     if (!campaign?.insertionOrder) return;
@@ -250,10 +198,16 @@ export default function CampaignDetail() {
         <div className="min-h-screen bg-background">
           <Header onAssistantClick={() => {}} onSurveyClick={() => {}} showDashboardNav={true} />
           <main className="container mx-auto px-6 py-8">
-            <Card className="border-red-200 bg-red-50">
+            <Breadcrumb
+              rootLabel="Campaigns"
+              rootIcon={Megaphone}
+              currentLabel="Campaign Not Found"
+              onBackClick={() => navigate('/campaigns')}
+            />
+            <Card className="border-red-200 bg-red-50 mt-6">
               <CardContent className="pt-6">
                 <p className="text-red-800">Campaign not found</p>
-                <Button onClick={() => navigate('/hubcentral?tab=campaigns')} className="mt-4">
+                <Button onClick={() => navigate('/campaigns')} className="mt-4">
                   Back to Campaigns
                 </Button>
               </CardContent>
@@ -269,46 +223,86 @@ export default function CampaignDetail() {
       <div className="min-h-screen bg-background">
         <Header onAssistantClick={() => {}} onSurveyClick={() => {}} showDashboardNav={true} />
         
-        <main className="container mx-auto px-6 py-8 max-w-6xl">
-          {/* Header */}
-          <div className="mb-8">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/hubcentral?tab=campaigns')}
-              className="mb-4"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Campaigns
-            </Button>
-            
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold mb-2">{campaign.basicInfo.name}</h1>
-                <p className="text-muted-foreground mb-2">
-                  {campaign.basicInfo.advertiserName}
-                </p>
-                {campaign.algorithm && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-sm">
-                      {campaign.algorithm.id === 'all-inclusive' ? '🌍' : 
-                       campaign.algorithm.id === 'budget-friendly' ? '💰' : 
-                       campaign.algorithm.id === 'little-guys' ? '🏘️' : '✨'}
-                    </span>
-                    <span className="text-sm text-purple-700 font-medium bg-purple-100 px-2 py-1 rounded-md">
-                      {campaign.algorithm.name}
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              <Badge className={STATUS_COLORS[campaign.status as keyof typeof STATUS_COLORS]}>
-                {STATUS_LABELS[campaign.status as keyof typeof STATUS_LABELS]}
-              </Badge>
-            </div>
-          </div>
+        <main className="container mx-auto px-6 py-8">
+          <div className="flex gap-6">
+            {/* Vertical Left Navigation */}
+            <aside className="w-24 flex-shrink-0">
+              <nav className="p-2 sticky top-6">
+                <div className="space-y-1">
+                  {[
+                    { id: 'overview', label: 'Dashboard', icon: LayoutDashboard, href: '/hubcentral?tab=overview' },
+                    { id: 'leads', label: 'Leads', icon: Users, href: '/hubcentral?tab=leads' },
+                    { id: 'packages', label: 'Packages', icon: Package, href: '/hubcentral?tab=packages' },
+                    { id: 'campaigns', label: 'Campaigns', icon: Megaphone, href: '/campaigns', isActive: true },
+                    { id: 'orders', label: 'Orders', icon: FileText, href: '/hubcentral?tab=orders' },
+                    { id: 'pricing', label: 'Pricing', icon: DollarSign, href: '/hubcentral?tab=pricing' },
+                    { id: 'inventory-chat', label: 'AI Chat', icon: Bot, href: '/hubcentral?tab=inventory-chat' },
+                    { id: 'team', label: 'Team', icon: UserPlus, href: '/hubcentral?tab=team' },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => navigate(item.href)}
+                        className={cn(
+                          "w-full flex flex-col items-center gap-1 px-2 py-3 rounded-md transition-colors",
+                          item.isActive
+                            ? "bg-[#EDEAE1] font-bold"
+                            : "hover:bg-[#E2E0D8] font-bold"
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span className="text-[11px]">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
+            </aside>
 
-          {/* Key Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            {/* Main Content Area */}
+            <div className="flex-1 min-w-0 max-w-6xl">
+              {/* Breadcrumbs */}
+              <div className="mb-6">
+                <Breadcrumb
+                  rootLabel="Campaigns"
+                  rootIcon={Megaphone}
+                  currentLabel={campaign.basicInfo?.name || 'Campaign Details'}
+                  onBackClick={() => navigate('/campaigns')}
+                />
+              </div>
+
+              {/* Header */}
+              <div className="mb-8">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h1 className="text-3xl font-bold mb-2">{campaign.basicInfo.name}</h1>
+                    <p className="text-muted-foreground mb-2">
+                      {campaign.basicInfo.advertiserName}
+                    </p>
+                    {campaign.algorithm && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-sm">
+                          {campaign.algorithm.id === 'all-inclusive' ? '🌍' : 
+                           campaign.algorithm.id === 'budget-friendly' ? '💰' : 
+                           campaign.algorithm.id === 'little-guys' ? '🏘️' : '✨'}
+                        </span>
+                        <span className="text-sm text-purple-700 font-medium bg-purple-100 px-2 py-1 rounded-md">
+                          {campaign.algorithm.name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Badge className={STATUS_COLORS[campaign.status as keyof typeof STATUS_COLORS]}>
+                    {STATUS_LABELS[campaign.status as keyof typeof STATUS_LABELS]}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Key Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
@@ -370,13 +364,12 @@ export default function CampaignDetail() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+              </div>
 
-          {/* Main Content Tabs */}
-          <Tabs defaultValue="overview" className="space-y-6">
+              {/* Main Content Tabs */}
+              <Tabs defaultValue="overview" className="space-y-6">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="inventory">Inventory</TabsTrigger>
               <TabsTrigger value="creative-requirements">Creative Requirements</TabsTrigger>
               <TabsTrigger value="insertion-order">Insertion Order</TabsTrigger>
             </TabsList>
@@ -528,24 +521,6 @@ export default function CampaignDetail() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {/* Edit Inventory Button */}
-                    {(campaign.status === 'draft' || campaign.status === 'pending_review') && (
-                      <div className="pb-3 border-b">
-                        <Button
-                          onClick={handleEditInventoryClick}
-                          disabled={isEditingInventory}
-                          className="w-full sm:w-auto"
-                          variant="outline"
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Inventory
-                        </Button>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Adjust publication volumes and frequencies to manage costs
-                        </p>
-                      </div>
-                    )}
-
                     {/* Status Update Actions */}
                     <div className="flex flex-wrap gap-2">
                       {campaign.status === 'draft' && (
@@ -639,247 +614,6 @@ export default function CampaignDetail() {
               </Card>
             </TabsContent>
 
-            {/* Inventory Tab */}
-            <TabsContent value="inventory">
-              {isEditingInventory && editedPublications ? (
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>Edit Inventory</CardTitle>
-                        <CardDescription>
-                          Adjust publication volumes and frequencies to manage costs
-                        </CardDescription>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleSaveInventory}
-                          disabled={savingInventory}
-                        >
-                          {savingInventory ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Save className="mr-2 h-4 w-4" />
-                          )}
-                          Save Changes
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={handleCancelEditInventory}
-                          disabled={savingInventory}
-                        >
-                          <CloseIcon className="mr-2 h-4 w-4" />
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <InventoryEditor
-                      publications={editedPublications}
-                      originalPublications={campaign.selectedInventory?.publications as HubPackagePublication[]}
-                      budget={campaign.objectives?.budget?.totalBudget || campaign.objectives?.budget?.monthlyBudget}
-                      duration={campaign.timeline?.durationMonths || 1}
-                      onChange={setEditedPublications}
-                      showSummary={true}
-                    />
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Selected Inventory</CardTitle>
-                    <CardDescription>
-                      {campaign.selectedInventory?.totalInventoryItems || 
-                        (campaign.selectedInventory?.publications || []).reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0) ||
-                        0} placements across{' '}
-                      {campaign.selectedInventory?.totalPublications || (campaign.selectedInventory?.publications || []).length || 0} publications
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                  <div className="space-y-4">
-                    {(campaign.selectedInventory?.publications || []).map((pub) => (
-                      <div key={pub.publicationId} className="border-2 border-gray-300 rounded-lg p-5 bg-gradient-to-r from-gray-50 to-white shadow-sm">
-                        <div className="flex justify-between items-start mb-4 pb-3 border-b-2 border-gray-200">
-                          <div className="flex-1">
-                            <h4 className="font-bold text-lg text-gray-900">{pub.publicationName}</h4>
-                            <Badge variant="outline" className="mt-2">
-                              {pub.inventoryItems?.length || 0} ad placements
-                            </Badge>
-                          </div>
-                          {pub.publicationTotal && (
-                            <div className="text-right">
-                              <p className="text-xs text-gray-500 mb-1">Publication Total</p>
-                              <p className="text-3xl font-bold text-blue-600">
-                                ${pub.publicationTotal.toLocaleString()}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        <div className="space-y-3">
-                          {(pub.inventoryItems || []).map((item, idx) => (
-                            <div key={idx} className="border border-gray-200 bg-white hover:bg-gray-50 p-4 rounded-lg transition-colors">
-                              <div className="flex justify-between items-start gap-4">
-                                <div className="flex-1">
-                                  {/* Item Name - Make it prominent */}
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <h5 className="font-semibold text-base text-gray-900">{item.itemName}</h5>
-                                    {/* Channel badge */}
-                                    <Badge variant="secondary" className="capitalize">
-                                      {item.channel}
-                                    </Badge>
-                                  </div>
-                                  
-                                  {/* Key details */}
-                                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mb-2">
-                                    <span className="flex items-center gap-1">
-                                      <span className="font-medium">Qty:</span> {item.quantity}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <span className="font-medium">Frequency:</span> {item.frequency || 'One-time'}
-                                    </span>
-                                    {item.duration && (
-                                      <span className="flex items-center gap-1">
-                                        <span className="font-medium">Duration:</span> {item.duration}
-                                      </span>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Cost Calculation */}
-                                  <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-100">
-                                    <p className="text-xs font-semibold text-blue-900 mb-1">Cost Calculation:</p>
-                                    <div className="text-xs text-blue-800 space-y-0.5">
-                                      {item.itemPricing?.pricingModel === 'cpm' && (
-                                        <>
-                                          <div>Base CPM Rate: ${item.itemPricing.hubPrice}</div>
-                                          <div>Monthly Impressions: {((item as any).monthlyImpressions)?.toLocaleString() || 'N/A'}</div>
-                                          <div>Campaign Duration: {item.duration || 'N/A'}</div>
-                                          {(item as any).monthlyCost && (
-                                            <div>Monthly Cost: ${((item as any).monthlyCost).toLocaleString()}</div>
-                                          )}
-                                          <div className="font-semibold pt-1 border-t border-blue-200">
-                                            Campaign Total: ${(item.itemPricing.totalCost || (item as any).campaignCost || 0).toLocaleString()}
-                                          </div>
-                                        </>
-                                      )}
-                                      {item.itemPricing?.pricingModel === 'per_send' && (
-                                        <>
-                                          <div>Rate per send: ${item.itemPricing.hubPrice}</div>
-                                          <div>Number of sends: {item.quantity}</div>
-                                          <div>Frequency: {item.frequency || 'one-time'}</div>
-                                          <div className="font-semibold pt-1 border-t border-blue-200">
-                                            Campaign Total: ${(item.itemPricing.totalCost || (item.quantity * item.itemPricing.hubPrice)).toLocaleString()}
-                                          </div>
-                                        </>
-                                      )}
-                                      {item.itemPricing?.pricingModel === 'flat' && (
-                                        <>
-                                          <div>Flat rate for {item.duration || 'campaign duration'}</div>
-                                          <div className="font-semibold pt-1 border-t border-blue-200">
-                                            Campaign Total: ${(item.itemPricing.totalCost || item.itemPricing.hubPrice).toLocaleString()}
-                                          </div>
-                                        </>
-                                      )}
-                                      {item.itemPricing?.pricingModel === 'per_ad' && (
-                                        <>
-                                          <div>Rate per ad: ${item.itemPricing.hubPrice}</div>
-                                          <div>Number of ads: {item.quantity}</div>
-                                          <div className="font-semibold pt-1 border-t border-blue-200">
-                                            Campaign Total: ${(item.itemPricing.totalCost || (item.quantity * item.itemPricing.hubPrice)).toLocaleString()}
-                                          </div>
-                                        </>
-                                      )}
-                                      {item.itemPricing?.pricingModel === 'per_week' && (
-                                        <>
-                                          <div>Rate per week: ${item.itemPricing.hubPrice}</div>
-                                          <div>Number of weeks: {item.quantity}</div>
-                                          <div className="font-semibold pt-1 border-t border-blue-200">
-                                            Campaign Total: ${(item.itemPricing.totalCost || (item.quantity * item.itemPricing.hubPrice)).toLocaleString()}
-                                          </div>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Specifications */}
-                                  {item.specifications && Object.keys(item.specifications).length > 0 && (
-                                    <div className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
-                                      {Object.entries(item.specifications)
-                                        .filter(([_, value]) => value !== null && value !== undefined && value !== '')
-                                        .map(([key, value]) => (
-                                          <span key={key} className="inline-block mr-3 mb-1">
-                                            <span className="font-medium">{key}:</span> {String(value)}
-                                          </span>
-                                        ))}
-                                    </div>
-                                  )}
-                                </div>
-                                
-                                {/* Pricing section - PHASE 4: Display calculated values */}
-                                <div className="text-right flex-shrink-0">
-                                  {(() => {
-                                    // Try to use pre-calculated values first
-                                    let totalCost = item.itemPricing?.totalCost || (item as any).campaignCost;
-                                    
-                                    // If not available, calculate on-the-fly using shared utility
-                                    if (totalCost === undefined || totalCost === null || totalCost === 0) {
-                                      try {
-                                        const { calculateItemCost } = require('@/utils/inventoryPricing');
-                                        const frequency = (item as any).currentFrequency || (item as any).quantity || 1;
-                                        
-                                        // Check if item has proper pricing structure
-                                        if (!item.itemPricing || !item.itemPricing.hubPrice) {
-                                          console.warn('Item missing pricing data:', {
-                                            itemName: item.itemName,
-                                            hasItemPricing: !!item.itemPricing,
-                                            hubPrice: item.itemPricing?.hubPrice,
-                                            pricingModel: item.itemPricing?.pricingModel,
-                                            fullItem: item
-                                          });
-                                          
-                                          // Try to use standardPrice as fallback
-                                          const fallbackPrice = item.itemPricing?.standardPrice || (item as any).standardPrice;
-                                          if (fallbackPrice) {
-                                            totalCost = fallbackPrice * frequency;
-                                            console.log('Using fallback standardPrice calculation:', totalCost);
-                                          } else {
-                                            totalCost = 0;
-                                          }
-                                        } else {
-                                          totalCost = calculateItemCost(item, frequency);
-                                          
-                                          if (totalCost === 0) {
-                                            console.warn('Calculated cost is 0 for item:', item.itemName);
-                                          }
-                                        }
-                                      } catch (error) {
-                                        console.error('Error calculating item cost:', error);
-                                        totalCost = 0;
-                                      }
-                                    }
-                                    
-                                    return (
-                                      <>
-                                        <p className="text-xs text-gray-500 mb-1">Item Total</p>
-                                        <p className="text-2xl font-bold text-green-600">
-                                          ${(totalCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </p>
-                                      </>
-                                    );
-                                  })()}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-              )}
-            </TabsContent>
-
             {/* Creative Assets Tab */}
             <TabsContent value="creative-requirements">
               <div className="space-y-6">
@@ -887,6 +621,7 @@ export default function CampaignDetail() {
                 <CreativeRequirementsChecklist 
                   campaign={campaign}
                   compact={true}
+                  uploadedAssets={uploadedAssets}
                 />
                 
                 {/* Asset Upload & Management */}
@@ -967,9 +702,101 @@ export default function CampaignDetail() {
                       <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
                       <div className="flex-1">
                         <h3 className="font-semibold text-green-900 mb-1">Publication Orders Generated</h3>
-                        <p className="text-sm text-green-800">
+                        <p className="text-sm text-green-800 mb-3">
                           {campaign.publicationInsertionOrders.length} publication orders have been created and are visible to publications.
                         </p>
+                        
+                        {/* Placement Status Summary */}
+                        <div className="mb-3 grid grid-cols-5 gap-2 text-xs">
+                          {(() => {
+                            let totalPlacements = 0;
+                            let acceptedCount = 0;
+                            let inProductionCount = 0;
+                            let deliveredCount = 0;
+                            let rejectedCount = 0;
+                            
+                            campaign.publicationInsertionOrders.forEach((order: any) => {
+                              const statuses = order.placementStatuses || {};
+                              const pub = campaign.selectedInventory?.publications?.find((p: any) => p.publicationId === order.publicationId);
+                              const placementCount = pub?.inventoryItems?.length || 0;
+                              totalPlacements += placementCount;
+                              
+                              Object.values(statuses).forEach((status: any) => {
+                                if (status === 'accepted') acceptedCount++;
+                                if (status === 'in_production') inProductionCount++;
+                                if (status === 'delivered') deliveredCount++;
+                                if (status === 'rejected') rejectedCount++;
+                              });
+                            });
+                            
+                            const pendingCount = totalPlacements - acceptedCount - inProductionCount - deliveredCount - rejectedCount;
+                            
+                            return (
+                              <>
+                                <div className="bg-green-100 p-2 rounded border border-green-300">
+                                  <div className="font-bold text-green-900">{acceptedCount}</div>
+                                  <div className="text-green-700">Accepted</div>
+                                </div>
+                                <div className="bg-blue-100 p-2 rounded border border-blue-300">
+                                  <div className="font-bold text-blue-900">{inProductionCount}</div>
+                                  <div className="text-blue-700">In Production</div>
+                                </div>
+                                <div className="bg-purple-100 p-2 rounded border border-purple-300">
+                                  <div className="font-bold text-purple-900">{deliveredCount}</div>
+                                  <div className="text-purple-700">Delivered</div>
+                                </div>
+                                <div className="bg-yellow-100 p-2 rounded border border-yellow-300">
+                                  <div className="font-bold text-yellow-900">{pendingCount}</div>
+                                  <div className="text-yellow-700">Pending</div>
+                                </div>
+                                <div className="bg-red-100 p-2 rounded border border-red-300">
+                                  <div className="font-bold text-red-900">{rejectedCount}</div>
+                                  <div className="text-red-700">Rejected</div>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                        <Button 
+                          onClick={async () => {
+                            if (!id) return;
+                            // Delete existing orders first
+                            try {
+                              const token = localStorage.getItem('auth_token');
+                              await fetch(`${API_BASE_URL}/admin/orders/${id}/publication-orders`, {
+                                method: 'DELETE',
+                                headers: {
+                                  'Authorization': `Bearer ${token}`
+                                }
+                              });
+                              // Then regenerate
+                              await handleGeneratePublicationOrders();
+                            } catch (error) {
+                              console.error('Error regenerating publication orders:', error);
+                              toast({
+                                title: 'Regeneration Failed',
+                                description: 'Failed to regenerate publication orders. Please try again.',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                          disabled={generatingOrders}
+                          variant="outline"
+                          size="sm"
+                          className="border-green-600 text-green-700 hover:bg-green-100"
+                        >
+                          {generatingOrders ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Regenerating...
+                            </>
+                          ) : (
+                            <>
+                              <Package className="mr-2 h-4 w-4" />
+                              Regenerate Publication Orders
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -1012,10 +839,25 @@ export default function CampaignDetail() {
                         </div>
                       )}
                       {campaign.insertionOrder && (
-                        <Button onClick={downloadInsertionOrder}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </Button>
+                        <>
+                          <Button onClick={handleGenerateIO} disabled={generating} variant="outline">
+                            {generating ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Regenerating...
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Regenerate
+                              </>
+                            )}
+                          </Button>
+                          <Button onClick={downloadInsertionOrder}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1111,38 +953,88 @@ export default function CampaignDetail() {
                                     <th className="text-left py-3 px-3 font-bold">Channel</th>
                                     <th className="text-left py-3 px-3 font-bold">Ad Placement</th>
                                     <th className="text-center py-3 px-3 font-bold">Quantity</th>
-                                    <th className="text-center py-3 px-3 font-bold">Duration</th>
-                                    <th className="text-right py-3 px-3 font-bold">Item Total</th>
+                                    <th className="text-center py-3 px-3 font-bold">Audience Estimate</th>
+                                    <th className="text-right py-3 px-3 font-bold">Item Cost</th>
+                                    <th className="text-right py-3 px-3 font-bold">Total</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {(pub.inventoryItems || []).map((item, idx) => {
-                                    // Calculate item total
-                                    let itemTotal = 0;
-                                    const model = item.itemPricing?.pricingModel;
                                     const rate = item.itemPricing?.hubPrice || 0;
-                                    const qty = item.quantity || 0;
+                                    const currentFreq = (item as any).currentFrequency || item.quantity || 1;
                                     
-                                    if (model === 'cpm') {
-                                      itemTotal = (qty / 1000) * rate;
-                                    } else if (model === 'flat') {
-                                      itemTotal = rate;
-                                    } else {
-                                      itemTotal = qty * rate;
-                                    }
+                                    // Calculate line total using shared utility
+                                    const lineTotal = calculateItemCost(item, currentFreq, 1);
+                                    
+                                    // Use standardized formatting utilities (same as packages)
+                                    const quantityDisplay = formatInsertionOrderQuantity(item);
+                                    
+                                    // Prepare metrics for audience formatting
+                                    const performanceMetrics = {
+                                      impressionsPerMonth: (item as any).monthlyImpressions,
+                                      audienceSize: item.audienceMetrics?.subscribers || item.audienceMetrics?.listeners || item.audienceMetrics?.viewers || (item as any).circulation,
+                                      guaranteed: (item.performanceMetrics as any)?.guaranteed || false
+                                    };
+                                    
+                                    const channelMetrics = {
+                                      monthlyVisitors: item.audienceMetrics?.monthlyVisitors,
+                                      subscribers: item.audienceMetrics?.subscribers,
+                                      circulation: (item as any).circulation,
+                                      listeners: item.audienceMetrics?.listeners,
+                                      viewers: item.audienceMetrics?.viewers
+                                    };
+                                    
+                                    // Format audience with badge using utility
+                                    const audienceInfo = formatInsertionOrderAudienceWithBadge(item, performanceMetrics, channelMetrics);
+                                    
+                                    // Get placement status from publication order if exists
+                                    const publicationOrder = campaign.publicationInsertionOrders?.find((order: any) => order.publicationId === pub.publicationId);
+                                    const placementId = item.itemPath || item.sourcePath || `placement-${idx}`;
+                                    const placementStatus = publicationOrder?.placementStatuses?.[placementId] || 'pending';
                                     
                                     return (
-                                      <tr key={idx} className="border-b last:border-0 hover:bg-blue-50">
+                                      <tr key={idx} className={cn(
+                                        "border-b last:border-0 hover:bg-blue-50",
+                                        placementStatus === 'delivered' && "bg-purple-50/50",
+                                        placementStatus === 'in_production' && "bg-blue-50/50",
+                                        placementStatus === 'accepted' && "bg-green-50/50",
+                                        placementStatus === 'rejected' && "bg-red-50/50"
+                                      )}>
                                         <td className="py-3 px-3">
                                           <Badge variant="secondary" className="capitalize text-xs">
                                             {item.channel}
                                           </Badge>
                                         </td>
-                                        <td className="py-3 px-3 font-medium">{item.itemName}</td>
-                                        <td className="py-3 px-3 text-center text-gray-600">{item.quantity}× {item.frequency || 'one-time'}</td>
-                                        <td className="py-3 px-3 text-center text-gray-600">{item.duration || 'Campaign duration'}</td>
+                                        <td className="py-3 px-3">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium">{item.itemName}</span>
+                                            {placementStatus === 'delivered' && (
+                                              <Badge className="bg-purple-600 text-white text-xs">✓ Delivered</Badge>
+                                            )}
+                                            {placementStatus === 'in_production' && (
+                                              <Badge className="bg-blue-600 text-white text-xs">⚙ In Production</Badge>
+                                            )}
+                                            {placementStatus === 'accepted' && (
+                                              <Badge className="bg-green-600 text-white text-xs">✓ Accepted</Badge>
+                                            )}
+                                            {placementStatus === 'rejected' && (
+                                              <Badge className="bg-red-600 text-white text-xs">✗ Rejected</Badge>
+                                            )}
+                                            {placementStatus === 'pending' && publicationOrder && (
+                                              <Badge variant="outline" className="text-xs">Pending</Badge>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="py-3 px-3 text-center text-gray-600">
+                                          {quantityDisplay}
+                                        </td>
+                                        <td className="py-3 px-3 text-center text-xs text-gray-500" dangerouslySetInnerHTML={{ __html: audienceInfo }}>
+                                        </td>
+                                        <td className="py-3 px-3 text-right text-gray-600">
+                                          ${rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
                                         <td className="py-3 px-3 text-right font-bold text-green-600">
-                                          ${itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          ${lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
                                       </tr>
                                     );
@@ -1232,7 +1124,9 @@ export default function CampaignDetail() {
                 </CardContent>
               </Card>
             </TabsContent>
-          </Tabs>
+              </Tabs>
+            </div>
+          </div>
         </main>
       </div>
     </ProtectedRoute>

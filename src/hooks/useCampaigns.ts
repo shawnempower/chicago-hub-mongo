@@ -22,10 +22,19 @@ export function useCampaigns(filters?: CampaignListFilters) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchCampaigns = useCallback(async () => {
+    // Don't fetch if hubId is required but not provided yet
+    // Keep loading = true so UI shows loading state while waiting for hubId
+    if (!filters?.hubId) {
+      console.log('Waiting for hubId to be available...', filters?.hubId);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching campaigns with hubId:', filters.hubId);
       const { campaigns: fetchedCampaigns } = await campaignsApi.getAll(filters);
+      console.log('Fetched campaigns:', fetchedCampaigns.length);
       setCampaigns(fetchedCampaigns);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch campaigns');

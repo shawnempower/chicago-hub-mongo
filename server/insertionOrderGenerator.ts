@@ -6,6 +6,7 @@
 
 import { Campaign } from '../src/integrations/mongodb/campaignSchema';
 import { HubPackage } from '../src/integrations/mongodb/hubPackageSchema';
+import { calculateItemCost } from '../src/utils/inventoryPricing';
 
 class InsertionOrderGenerator {
   
@@ -453,22 +454,74 @@ class InsertionOrderGenerator {
                                 <th>Channel</th>
                                 <th>Ad Placement</th>
                                 <th>Quantity</th>
-                                <th>Duration</th>
-                                <th>Cost</th>
+                                <th>Audience Estimate</th>
+                                <th>Item Cost</th>
+                                <th>Total</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${pub.inventoryItems.filter(item => !item.isExcluded).map(item => `
+                            ${pub.inventoryItems.filter(item => !item.isExcluded).map(item => {
+                                const pricingModel = item.itemPricing?.pricingModel;
+                                const monthlyImpressions = (item as any).monthlyImpressions;
+                                const currentFreq = item.currentFrequency || item.quantity || 1;
+                                const unitCost = item.itemPricing?.hubPrice || 0;
+                                
+                                // Calculate line total using shared utility
+                                const lineTotal = calculateItemCost(item, currentFreq, 1);
+                                
+                                // Format quantity based on pricing model (match package style)
+                                let quantityDisplay = '';
+                                if (pricingModel === 'cpm' || pricingModel === 'cpv' || pricingModel === 'cpc') {
+                                    quantityDisplay = `${currentFreq}% share`;
+                                } else {
+                                    quantityDisplay = `${currentFreq}× per month`;
+                                }
+                                
+                                // Format audience info to match package style
+                                let audienceInfo = 'N/A';
+                                if (pricingModel === 'cpm' && monthlyImpressions) {
+                                    // Calculate actual share: currentFreq% of total monthlyImpressions
+                                    const actualShare = Math.round(monthlyImpressions * (currentFreq / 100));
+                                    audienceInfo = `${actualShare.toLocaleString()} impressions/month`;
+                                } else if (pricingModel === 'cpv' && monthlyImpressions) {
+                                    const actualShare = Math.round(monthlyImpressions * (currentFreq / 100));
+                                    audienceInfo = `${actualShare.toLocaleString()} views/month`;
+                                } else if (pricingModel === 'cpc' && monthlyImpressions) {
+                                    const actualShare = Math.round(monthlyImpressions * (currentFreq / 100));
+                                    const clicks = Math.round(actualShare * 0.01);
+                                    audienceInfo = `~${clicks.toLocaleString()} clicks/month`;
+                                } else if (pricingModel === 'per_send' || pricingModel === 'per_newsletter') {
+                                    // For newsletters, show sends if available
+                                    const audienceSize = item.audienceMetrics?.subscribers || (item as any).subscribers;
+                                    if (audienceSize && currentFreq) {
+                                        audienceInfo = `${audienceSize.toLocaleString()} subscribers × ${currentFreq} sends`;
+                                    } else {
+                                        audienceInfo = `${currentFreq} sends per month`;
+                                    }
+                                } else if (pricingModel === 'per_spot' || pricingModel === 'per_ad') {
+                                    const audienceSize = item.audienceMetrics?.listeners || item.audienceMetrics?.viewers || (item as any).circulation;
+                                    if (audienceSize && currentFreq) {
+                                        audienceInfo = `${audienceSize.toLocaleString()} listeners/viewers × ${currentFreq} spots`;
+                                    } else {
+                                        audienceInfo = `${currentFreq} placements per month`;
+                                    }
+                                } else if (pricingModel === 'monthly' || pricingModel === 'flat') {
+                                    audienceInfo = 'Monthly rate';
+                                }
+                                
+                                return `
                                 <tr>
                                     <td>
                                         <span class="channel-badge channel-${item.channel}">${item.channel}</span>
                                     </td>
                                     <td>${item.itemName}</td>
-                                    <td>${item.quantity}× ${item.frequency || ''}</td>
-                                    <td>${item.duration || 'Campaign duration'}</td>
-                                    <td>${this.formatCurrency(item.itemPricing?.hubPrice || 0)}</td>
+                                    <td>${quantityDisplay}</td>
+                                    <td style="font-size: 12px; color: #64748b;">${audienceInfo}</td>
+                                    <td>${this.formatCurrency(unitCost)}</td>
+                                    <td><strong>${this.formatCurrency(lineTotal)}</strong></td>
                                 </tr>
-                            `).join('')}
+                            `;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -585,11 +638,54 @@ ${(campaign.selectedInventory?.publications || []).map(pub => `
 ### ${pub.publicationName}
 **Publication Total:** ${this.formatCurrency(pub.publicationTotal)}
 
-| Channel | Ad Placement | Quantity | Duration | Cost |
-|---------|--------------|----------|----------|------|
-${pub.inventoryItems.filter(item => !item.isExcluded).map(item => 
-  `| ${item.channel} | ${item.itemName} | ${item.quantity}× ${item.frequency || ''} | ${item.duration || 'Campaign duration'} | ${this.formatCurrency(item.itemPricing?.hubPrice || 0)} |`
-).join('\n')}
+| Channel | Ad Placement | Quantity | Audience Estimate | Item Cost | Total |
+|---------|--------------|----------|-------------------|-----------|-------|
+${pub.inventoryItems.filter(item => !item.isExcluded).map(item => {
+  const pricingModel = item.itemPricing?.pricingModel;
+  const monthlyImpressions = (item as any).monthlyImpressions;
+  const currentFreq = item.currentFrequency || item.quantity || 1;
+  
+  // Format quantity based on pricing model
+  let quantityDisplay = '';
+  if (pricingModel === 'cpm' || pricingModel === 'cpv' || pricingModel === 'cpc') {
+    quantityDisplay = `${currentFreq}% share`;
+  } else {
+    quantityDisplay = `${currentFreq}× per month`;
+  }
+  
+  // Format audience info
+  let audienceInfo = 'N/A';
+  if (pricingModel === 'cpm' && monthlyImpressions) {
+    audienceInfo = `${monthlyImpressions.toLocaleString()} impressions/month`;
+  } else if (pricingModel === 'cpv' && monthlyImpressions) {
+    audienceInfo = `${monthlyImpressions.toLocaleString()} views/month`;
+  } else if (pricingModel === 'cpc' && monthlyImpressions) {
+    const clicks = Math.round(monthlyImpressions * 0.01);
+    audienceInfo = `~${clicks.toLocaleString()} clicks/month`;
+  } else if (pricingModel === 'per_send' || pricingModel === 'per_newsletter') {
+    const audienceSize = item.audienceMetrics?.subscribers || (item as any).subscribers;
+    if (audienceSize && currentFreq) {
+      audienceInfo = `${audienceSize.toLocaleString()} subscribers × ${currentFreq} sends`;
+    } else {
+      audienceInfo = `${currentFreq} sends per month`;
+    }
+  } else if (pricingModel === 'per_spot' || pricingModel === 'per_ad') {
+    const audienceSize = item.audienceMetrics?.listeners || item.audienceMetrics?.viewers || (item as any).circulation;
+    if (audienceSize && currentFreq) {
+      audienceInfo = `${audienceSize.toLocaleString()} listeners/viewers × ${currentFreq} spots`;
+    } else {
+      audienceInfo = `${currentFreq} placements per month`;
+    }
+  } else if (pricingModel === 'monthly' || pricingModel === 'flat') {
+    audienceInfo = 'Monthly rate';
+  }
+  
+  // Calculate line total using shared utility
+  const unitCost = item.itemPricing?.hubPrice || 0;
+  const lineTotal = calculateItemCost(item, currentFreq, 1);
+  
+  return `| ${item.channel} | ${item.itemName} | ${quantityDisplay} | ${audienceInfo} | ${this.formatCurrency(unitCost)} | **${this.formatCurrency(lineTotal)}** |`;
+}).join('\n')}
 `).join('\n')}
 
 ---
@@ -854,22 +950,70 @@ Campaign ID: ${campaign.campaignId}
                         <th>Channel</th>
                         <th>Ad Placement</th>
                         <th style="text-align: center;">Quantity</th>
-                        <th style="text-align: center;">Duration</th>
-                        <th style="text-align: right;">Cost</th>
+                        <th style="text-align: center;">Audience Estimate</th>
+                        <th style="text-align: right;">Item Cost</th>
+                        <th style="text-align: right;">Total</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${(publication.inventoryItems || []).map(item => `
-                    <tr>
-                        <td><strong>${item.channel}</strong></td>
-                        <td>${item.itemName}</td>
-                        <td style="text-align: center;">${item.quantity}× ${item.frequency || 'one-time'}</td>
-                        <td style="text-align: center;">${item.duration || 'Campaign duration'}</td>
-                        <td style="text-align: right;">${this.formatCurrency(item.itemPricing?.hubPrice || 0)}</td>
-                    </tr>
-                    `).join('')}
+                    ${(publication.inventoryItems || []).map(item => {
+                        const pricingModel = item.itemPricing?.pricingModel;
+                        const monthlyImpressions = (item as any).monthlyImpressions;
+                        const currentFreq = item.currentFrequency || item.quantity || 1;
+                        const unitCost = item.itemPricing?.hubPrice || 0;
+                        
+                        // Calculate line total using shared utility
+                        const lineTotal = calculateItemCost(item, currentFreq, 1);
+                        
+                        // Format quantity based on pricing model
+                        let quantityDisplay = '';
+                        if (pricingModel === 'cpm' || pricingModel === 'cpv' || pricingModel === 'cpc') {
+                            quantityDisplay = `${currentFreq}% share`;
+                        } else {
+                            quantityDisplay = `${currentFreq}× per month`;
+                        }
+                        
+                        // Format audience info
+                        let audienceInfo = 'N/A';
+                        if (pricingModel === 'cpm' && monthlyImpressions) {
+                            const actualShare = Math.round(monthlyImpressions * (currentFreq / 100));
+                            audienceInfo = `${actualShare.toLocaleString()} impressions/month`;
+                        } else if (pricingModel === 'per_send') {
+                            const subscribers = item.audienceMetrics?.subscribers;
+                            if (subscribers && currentFreq) {
+                                audienceInfo = `${subscribers.toLocaleString()} subscribers × ${currentFreq} sends ✓ Guaranteed`;
+                            } else {
+                                audienceInfo = `${currentFreq} sends per month`;
+                            }
+                        } else if (pricingModel === 'per_spot' || pricingModel === 'per_ad') {
+                            const audienceSize = item.audienceMetrics?.listeners || item.audienceMetrics?.viewers;
+                            if (audienceSize && currentFreq) {
+                                audienceInfo = `${audienceSize.toLocaleString()} listeners/viewers × ${currentFreq} spots ✓ Guaranteed`;
+                            } else {
+                                audienceInfo = `${currentFreq} placements per month`;
+                            }
+                        } else if (pricingModel === 'per_week') {
+                            const visitors = item.audienceMetrics?.monthlyVisitors;
+                            if (visitors) {
+                                audienceInfo = `${visitors.toLocaleString()} monthly visitors ✓ Guaranteed`;
+                            } else {
+                                audienceInfo = 'Monthly rate';
+                            }
+                        }
+                        
+                        return `
+                        <tr>
+                            <td><strong>${item.channel}</strong></td>
+                            <td>${item.itemName}</td>
+                            <td style="text-align: center;">${quantityDisplay}</td>
+                            <td style="text-align: center;">${audienceInfo}</td>
+                            <td style="text-align: right;">${this.formatCurrency(unitCost)}</td>
+                            <td style="text-align: right;">${this.formatCurrency(lineTotal)}</td>
+                        </tr>
+                        `;
+                    }).join('')}
                     <tr class="total-row">
-                        <td colspan="4" style="text-align: right;">Total for ${publication.publicationName}:</td>
+                        <td colspan="5" style="text-align: right;">Total for ${publication.publicationName}:</td>
                         <td style="text-align: right;">${this.formatCurrency(publication.publicationTotal || 0)}</td>
                     </tr>
                 </tbody>
@@ -1299,27 +1443,56 @@ Campaign ID: ${campaign.campaignId}
                                 <th>Ad Placement</th>
                                 <th>Quantity</th>
                                 <th>Audience Estimate</th>
-                                <th>Duration</th>
-                                <th>Cost</th>
+                                <th>Item Cost</th>
+                                <th>Total</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${pub.inventoryItems.filter(item => !item.isExcluded).map(item => {
                                 const pricingModel = item.itemPricing?.pricingModel;
                                 const monthlyImpressions = (item as any).monthlyImpressions;
+                                const currentFreq = item.currentFrequency || item.quantity || 1;
+                                const unitCost = item.itemPricing?.hubPrice || 0;
                                 
+                                // Calculate line total using shared utility
+                                const lineTotal = calculateItemCost(item, currentFreq, 1);
+                                
+                                // Format quantity based on pricing model (match package style)
+                                let quantityDisplay = '';
+                                if (pricingModel === 'cpm' || pricingModel === 'cpv' || pricingModel === 'cpc') {
+                                    quantityDisplay = `${currentFreq}% share`;
+                                } else {
+                                    quantityDisplay = `${currentFreq}× per month`;
+                                }
+                                
+                                // Format audience info to match package style
                                 let audienceInfo = 'N/A';
                                 if (pricingModel === 'cpm' && monthlyImpressions) {
-                                    audienceInfo = `${monthlyImpressions.toLocaleString()} impressions/mo`;
+                                    // Calculate actual share: currentFreq% of total monthlyImpressions
+                                    const actualShare = Math.round(monthlyImpressions * (currentFreq / 100));
+                                    audienceInfo = `${actualShare.toLocaleString()} impressions/month`;
                                 } else if (pricingModel === 'cpv' && monthlyImpressions) {
-                                    audienceInfo = `${monthlyImpressions.toLocaleString()} views/mo`;
+                                    const actualShare = Math.round(monthlyImpressions * (currentFreq / 100));
+                                    audienceInfo = `${actualShare.toLocaleString()} views/month`;
                                 } else if (pricingModel === 'cpc' && monthlyImpressions) {
-                                    const clicks = Math.round(monthlyImpressions * 0.01);
-                                    audienceInfo = `~${clicks.toLocaleString()} clicks/mo`;
+                                    const actualShare = Math.round(monthlyImpressions * (currentFreq / 100));
+                                    const clicks = Math.round(actualShare * 0.01);
+                                    audienceInfo = `~${clicks.toLocaleString()} clicks/month`;
                                 } else if (pricingModel === 'per_send' || pricingModel === 'per_newsletter') {
-                                    audienceInfo = 'Per send';
+                                    // For newsletters, show sends if available
+                                    const audienceSize = item.audienceMetrics?.subscribers || (item as any).subscribers;
+                                    if (audienceSize && currentFreq) {
+                                        audienceInfo = `${audienceSize.toLocaleString()} subscribers × ${currentFreq} sends`;
+                                    } else {
+                                        audienceInfo = `${currentFreq} sends per month`;
+                                    }
                                 } else if (pricingModel === 'per_spot' || pricingModel === 'per_ad') {
-                                    audienceInfo = 'Per placement';
+                                    const audienceSize = item.audienceMetrics?.listeners || item.audienceMetrics?.viewers || (item as any).circulation;
+                                    if (audienceSize && currentFreq) {
+                                        audienceInfo = `${audienceSize.toLocaleString()} listeners/viewers × ${currentFreq} spots`;
+                                    } else {
+                                        audienceInfo = `${currentFreq} placements per month`;
+                                    }
                                 } else if (pricingModel === 'monthly' || pricingModel === 'flat') {
                                     audienceInfo = 'Monthly rate';
                                 }
@@ -1330,10 +1503,10 @@ Campaign ID: ${campaign.campaignId}
                                         <span class="channel-badge channel-${item.channel}">${item.channel}</span>
                                     </td>
                                     <td>${item.itemName}</td>
-                                    <td>${item.currentFrequency || item.quantity || 1}× ${item.frequency || 'monthly'}</td>
+                                    <td>${quantityDisplay}</td>
                                     <td style="font-size: 12px; color: #64748b;">${audienceInfo}</td>
-                                    <td>${item.duration || 'Campaign duration'}</td>
-                                    <td>${this.formatCurrency(item.itemPricing?.hubPrice || 0)}</td>
+                                    <td>${this.formatCurrency(unitCost)}</td>
+                                    <td><strong>${this.formatCurrency(lineTotal)}</strong></td>
                                 </tr>
                             `;
                             }).join('')}
@@ -1474,29 +1647,53 @@ ${hubPackage.components.publications.map(pub => `
 ### ${pub.publicationName}
 **Publication Total:** ${this.formatCurrency(pub.publicationTotal)}/month
 
-| Channel | Ad Placement | Quantity | Audience Estimate | Duration | Cost |
-|---------|--------------|----------|-------------------|----------|------|
+| Channel | Ad Placement | Quantity | Audience Estimate | Item Cost | Total |
+|---------|--------------|----------|-------------------|-----------|-------|
 ${pub.inventoryItems.filter(item => !item.isExcluded).map(item => {
   const pricingModel = item.itemPricing?.pricingModel;
   const monthlyImpressions = (item as any).monthlyImpressions;
+  const currentFreq = item.currentFrequency || item.quantity || 1;
   
+  // Format quantity based on pricing model
+  let quantityDisplay = '';
+  if (pricingModel === 'cpm' || pricingModel === 'cpv' || pricingModel === 'cpc') {
+    quantityDisplay = `${currentFreq}% share`;
+  } else {
+    quantityDisplay = `${currentFreq}× per month`;
+  }
+  
+  // Format audience info
   let audienceInfo = 'N/A';
   if (pricingModel === 'cpm' && monthlyImpressions) {
-    audienceInfo = `${monthlyImpressions.toLocaleString()} impressions/mo`;
+    audienceInfo = `${monthlyImpressions.toLocaleString()} impressions/month`;
   } else if (pricingModel === 'cpv' && monthlyImpressions) {
-    audienceInfo = `${monthlyImpressions.toLocaleString()} views/mo`;
+    audienceInfo = `${monthlyImpressions.toLocaleString()} views/month`;
   } else if (pricingModel === 'cpc' && monthlyImpressions) {
     const clicks = Math.round(monthlyImpressions * 0.01);
-    audienceInfo = `~${clicks.toLocaleString()} clicks/mo`;
+    audienceInfo = `~${clicks.toLocaleString()} clicks/month`;
   } else if (pricingModel === 'per_send' || pricingModel === 'per_newsletter') {
-    audienceInfo = 'Per send';
+    const audienceSize = item.audienceMetrics?.subscribers || (item as any).subscribers;
+    if (audienceSize && currentFreq) {
+      audienceInfo = `${audienceSize.toLocaleString()} subscribers × ${currentFreq} sends`;
+    } else {
+      audienceInfo = `${currentFreq} sends per month`;
+    }
   } else if (pricingModel === 'per_spot' || pricingModel === 'per_ad') {
-    audienceInfo = 'Per placement';
+    const audienceSize = item.audienceMetrics?.listeners || item.audienceMetrics?.viewers || (item as any).circulation;
+    if (audienceSize && currentFreq) {
+      audienceInfo = `${audienceSize.toLocaleString()} listeners/viewers × ${currentFreq} spots`;
+    } else {
+      audienceInfo = `${currentFreq} placements per month`;
+    }
   } else if (pricingModel === 'monthly' || pricingModel === 'flat') {
     audienceInfo = 'Monthly rate';
   }
   
-  return `| ${item.channel} | ${item.itemName} | ${item.currentFrequency || item.quantity || 1}× ${item.frequency || 'monthly'} | ${audienceInfo} | ${item.duration || 'Campaign duration'} | ${this.formatCurrency(item.itemPricing?.hubPrice || 0)} |`;
+  // Calculate line total using shared utility
+  const unitCost = item.itemPricing?.hubPrice || 0;
+  const lineTotal = calculateItemCost(item, currentFreq, 1);
+  
+  return `| ${item.channel} | ${item.itemName} | ${quantityDisplay} | ${audienceInfo} | ${this.formatCurrency(unitCost)} | **${this.formatCurrency(lineTotal)}** |`;
 }).join('\n')}
 `).join('\n')}
 

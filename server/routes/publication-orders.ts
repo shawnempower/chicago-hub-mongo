@@ -509,6 +509,155 @@ router.post('/:campaignId/:publicationId/notes', async (req: any, res: Response)
 });
 
 /**
+ * PUT /api/publication-orders/:campaignId/:publicationId/placement-status
+ * Update individual placement status (accept/reject)
+ */
+router.put('/:campaignId/:publicationId/placement-status', async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { campaignId, publicationId } = req.params;
+    const { placementId, status, notes } = req.body;
+
+    if (!placementId || !status) {
+      return res.status(400).json({ error: 'Placement ID and status are required' });
+    }
+
+    if (!['accepted', 'rejected', 'pending', 'in_production', 'delivered'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    // Verify access
+    const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
+    const profile = await userProfilesService.getByUserId(userId);
+    
+    let hasAccess = false;
+    if (profile?.isAdmin) {
+      hasAccess = true;
+    } else {
+      try {
+        hasAccess = await permissionsService.canAccessPublication(userId, publicationId);
+      } catch (err) {
+        if (profile?.publicationId && profile.publicationId.toString() === publicationId) {
+          hasAccess = true;
+        }
+      }
+    }
+
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Update placement status
+    const { getDatabase } = await import('../../src/integrations/mongodb/client');
+    const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+    const { ObjectId } = await import('mongodb');
+    const { autoConfirmIfAllAccepted } = req.body;
+    
+    const db = getDatabase();
+    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
+
+    // Find campaign
+    let campaign;
+    try {
+      const objectId = new ObjectId(campaignId);
+      campaign = await campaignsCollection.findOne({ _id: objectId });
+    } catch {
+      campaign = await campaignsCollection.findOne({ campaignId });
+    }
+
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    // Find the order
+    const orderIndex = campaign.publicationInsertionOrders?.findIndex(
+      (o: any) => o.publicationId === parseInt(publicationId)
+    );
+
+    if (orderIndex === undefined || orderIndex === -1) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const order = campaign.publicationInsertionOrders[orderIndex];
+
+    // Initialize placementStatuses if it doesn't exist
+    const currentStatuses = order.placementStatuses || {};
+    
+    // Update the placement status in the statuses object
+    // We need to do this properly to handle placementIds with dots and brackets
+    const updatedStatuses = {
+      ...currentStatuses,
+      [placementId]: status // This creates a flat key, not nested
+    };
+
+    // Update both status and history in one operation
+    await campaignsCollection.updateOne(
+      { _id: campaign._id },
+      { 
+        $set: { 
+          [`publicationInsertionOrders.${orderIndex}.placementStatuses`]: updatedStatuses
+        },
+        $push: {
+          [`publicationInsertionOrders.${orderIndex}.placementStatusHistory`]: {
+            placementId,
+            status,
+            timestamp: new Date(),
+            changedBy: userId,
+            notes
+          }
+        }
+      }
+    );
+
+    console.log('Placement status updated:', { campaignId, publicationId, placementId, status });
+
+    // Check if all placements are accepted and auto-confirm order
+    let orderConfirmed = false;
+    if (autoConfirmIfAllAccepted && status === 'accepted') {
+      // Get the publication's inventory to count total placements
+      const publication = campaign.selectedInventory?.publications?.find(
+        (p: any) => p.publicationId === parseInt(publicationId)
+      );
+      
+      if (publication) {
+        const totalPlacements = publication.inventoryItems?.length || 0;
+        const acceptedCount = Object.values(updatedStatuses).filter((s: any) => s === 'accepted').length;
+        
+        console.log('Checking auto-confirm:', { totalPlacements, acceptedCount, currentStatus: order.status });
+        
+        // If all placements are accepted, confirm the order
+        if (acceptedCount === totalPlacements && order.status === 'sent') {
+          await campaignsCollection.updateOne(
+            { _id: campaign._id },
+            {
+              $set: {
+                [`publicationInsertionOrders.${orderIndex}.status`]: 'confirmed',
+                [`publicationInsertionOrders.${orderIndex}.confirmationDate`]: new Date()
+              },
+              $push: {
+                [`publicationInsertionOrders.${orderIndex}.statusHistory`]: {
+                  status: 'confirmed',
+                  timestamp: new Date(),
+                  changedBy: userId,
+                  notes: 'Auto-confirmed: All placements accepted'
+                }
+              }
+            }
+          );
+          console.log('Order auto-confirmed!');
+          orderConfirmed = true;
+        }
+      }
+    }
+
+    res.json({ success: true, orderConfirmed });
+  } catch (error) {
+    console.error('Error updating placement status:', error);
+    res.status(500).json({ error: 'Failed to update placement status' });
+  }
+});
+
+/**
  * POST /api/publication-orders/:campaignId/:publicationId/proof
  * Upload proof of performance (post-campaign)
  */

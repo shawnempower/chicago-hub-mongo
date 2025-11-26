@@ -152,6 +152,16 @@ export interface PublicationInsertionOrder {
   publicationNotes?: string; // Notes from publication side
   hubNotes?: string; // Internal notes from hub team
   
+  // Individual placement lifecycle tracking
+  placementStatuses?: Record<string, 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered'>;
+  placementStatusHistory?: Array<{
+    placementId: string;
+    status: 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered';
+    timestamp: Date;
+    changedBy: string;
+    notes?: string;
+  }>;
+  
   // Proof of performance (post-campaign)
   proofOfPerformance?: {
     uploadedAt?: Date;

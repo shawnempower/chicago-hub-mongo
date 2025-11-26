@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { OrderStatusBadge, OrderStatus } from '../orders/OrderStatusBadge';
 import { OrderTimeline } from '../orders/OrderTimeline';
 import { CreativeAssetCard } from '../orders/CreativeAssetCard';
 import { AdSpecsForm } from '../orders/AdSpecsForm';
 import { OrderMessaging } from '../orders/OrderMessaging';
-import { ArrowLeft, Check, X, AlertCircle, FileText, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Check, X, AlertCircle, FileText, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
@@ -27,7 +28,9 @@ export function PublicationOrderDetail() {
   const [order, setOrder] = useState<OrderDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [placementStatuses, setPlacementStatuses] = useState<Record<string, 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered'>>({});
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingPlacementId, setRejectingPlacementId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
@@ -51,7 +54,35 @@ export function PublicationOrderDetail() {
       if (!response.ok) throw new Error('Failed to fetch order');
 
       const data = await response.json();
+      console.log('Fetched order data:', { 
+        placementStatuses: data.order?.placementStatuses,
+        publicationId: data.order?.publicationId 
+      });
+      
       setOrder(data.order);
+      
+      // Initialize placement statuses from order data or create default 'pending' for all
+      if (data.order?.placementStatuses) {
+        console.log('Setting placement statuses from order:', data.order.placementStatuses);
+        setPlacementStatuses(data.order.placementStatuses);
+      } else {
+        // Initialize all placements as pending if no statuses exist yet
+        console.log('No placement statuses in order, initializing as pending');
+        const campaignData = data.order?.campaignData;
+        const publication = campaignData?.selectedInventory?.publications?.find(
+          (pub: any) => pub.publicationId === data.order.publicationId
+        );
+        
+        if (publication?.inventoryItems) {
+          const initialStatuses: Record<string, 'pending'> = {};
+          publication.inventoryItems.forEach((item: any, idx: number) => {
+            const placementId = item.itemPath || item.sourcePath || `placement-${idx}`;
+            initialStatuses[placementId] = 'pending';
+          });
+          console.log('Initialized placement statuses:', initialStatuses);
+          setPlacementStatuses(initialStatuses);
+        }
+      }
     } catch (error) {
       console.error('Error fetching order:', error);
       toast({
@@ -64,88 +95,6 @@ export function PublicationOrderDetail() {
     }
   };
 
-  const handleConfirm = async () => {
-    if (!order) return;
-
-    try {
-      setUpdating(true);
-      const token = localStorage.getItem('auth_token');
-
-      const response = await fetch(
-        `/api/publication-orders/${campaignId}/${publicationId}/confirm`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            notes: 'Order confirmed by publication'
-          })
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to confirm order');
-
-      toast({
-        title: 'Success',
-        description: 'Order confirmed successfully'
-      });
-
-      fetchOrderDetail();
-    } catch (error) {
-      console.error('Error confirming order:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to confirm order',
-        variant: 'destructive'
-      });
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const handleReject = async (reason: string) => {
-    if (!order) return;
-
-    try {
-      setUpdating(true);
-      const token = localStorage.getItem('auth_token');
-
-      const response = await fetch(
-        `/api/publication-orders/${campaignId}/${publicationId}/status`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ 
-            status: 'rejected',
-            notes: reason
-          })
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to reject order');
-
-      toast({
-        title: 'Order Rejected',
-        description: 'The hub team has been notified of your feedback.'
-      });
-
-      fetchOrderDetail();
-    } catch (error) {
-      console.error('Error rejecting order:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reject order',
-        variant: 'destructive'
-      });
-    } finally {
-      setUpdating(false);
-    }
-  };
 
   const handleUpdateStatus = async (newStatus: OrderStatus, notes?: string) => {
     if (!order) return;
@@ -258,6 +207,94 @@ export function PublicationOrderDetail() {
     }
   };
 
+  const handlePlacementAction = async (
+    placementId: string, 
+    newStatus: 'accepted' | 'rejected' | 'in_production' | 'delivered', 
+    reason?: string
+  ) => {
+    console.log('handlePlacementAction called:', { placementId, newStatus, reason });
+    
+    try {
+      setUpdating(true);
+      const token = localStorage.getItem('auth_token');
+
+      const url = `/api/publication-orders/${campaignId}/${publicationId}/placement-status`;
+      console.log('Calling API:', url);
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          placementId,
+          status: newStatus,
+          notes: reason,
+          autoConfirmIfAllAccepted: true // Flag to auto-confirm order when all placements accepted
+        })
+      });
+
+      console.log('API response:', { ok: response.ok, status: response.status });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        throw new Error('Failed to update placement status');
+      }
+
+      const result = await response.json();
+
+      // Update local state immediately for responsive UI
+      console.log('Updating placement status locally:', { placementId, newStatus });
+      setPlacementStatuses(prev => {
+        const updated = {
+          ...prev,
+          [placementId]: newStatus
+        };
+        console.log('Updated placement statuses:', updated);
+        return updated;
+      });
+
+      // Show appropriate message
+      if (result.orderConfirmed) {
+        toast({
+          title: '🎉 All Placements Accepted!',
+          description: 'Order has been automatically confirmed. The hub team has been notified.'
+        });
+      } else {
+        const messages = {
+          accepted: 'Placement Accepted',
+          rejected: 'Placement Rejected',
+          in_production: 'Marked In Production',
+          delivered: 'Marked as Delivered'
+        };
+        const descriptions = {
+          accepted: 'You have accepted this ad placement.',
+          rejected: 'The hub team has been notified of your concerns.',
+          in_production: 'This placement is now in production.',
+          delivered: 'This placement has been marked as delivered.'
+        };
+        
+        toast({
+          title: messages[newStatus],
+          description: descriptions[newStatus]
+        });
+      }
+
+      fetchOrderDetail();
+    } catch (error) {
+      console.error('Error updating placement status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update placement status',
+        variant: 'destructive'
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -312,32 +349,11 @@ export function PublicationOrderDetail() {
         <OrderStatusBadge status={order.status as OrderStatus} />
       </div>
 
-      {/* Action Buttons */}
-      {(canConfirm || canMarkInProduction || canMarkDelivered) && (
+      {/* Status Update Actions for Confirmed Orders */}
+      {(canMarkInProduction || canMarkDelivered) && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex gap-3">
-              {canConfirm && (
-                <>
-                  <Button
-                    onClick={handleConfirm}
-                    disabled={updating}
-                    className="flex-1"
-                  >
-                    <Check className="h-4 w-4 mr-2" />
-                    Accept Order
-                  </Button>
-                  <Button
-                    onClick={() => setShowRejectDialog(true)}
-                    disabled={updating}
-                    variant="destructive"
-                    className="flex-1"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Reject Order
-                  </Button>
-                </>
-              )}
               {canMarkInProduction && (
                 <Button
                   onClick={() => handleUpdateStatus('in_production')}
@@ -363,63 +379,57 @@ export function PublicationOrderDetail() {
         </Card>
       )}
 
-      {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Reject Order
-            </DialogTitle>
-            <DialogDescription>
-              Please provide a reason for rejecting this order. The hub team will be notified and can make adjustments.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Rejection Reason
-              </label>
-              <Textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="e.g., Creative assets don't meet our specifications, incorrect dimensions, missing required elements..."
-                rows={4}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowRejectDialog(false);
-                setRejectionReason('');
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (rejectionReason.trim()) {
-                  handleReject(rejectionReason);
-                  setShowRejectDialog(false);
-                  setRejectionReason('');
-                } else {
-                  toast({
-                    title: 'Reason Required',
-                    description: 'Please provide a reason for rejecting this order',
-                    variant: 'destructive'
-                  });
-                }
-              }}
-              disabled={!rejectionReason.trim()}
-            >
-              Reject Order
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Placement Review Status */}
+      {order.status === 'sent' && (() => {
+        const campaignData = (order as any).campaignData;
+        const publication = campaignData?.selectedInventory?.publications?.find(
+          (pub: any) => pub.publicationId === order.publicationId
+        );
+        const totalPlacements = publication?.inventoryItems?.length || 0;
+        const acceptedCount = Object.values(placementStatuses).filter(s => s === 'accepted').length;
+        const inProductionCount = Object.values(placementStatuses).filter(s => s === 'in_production').length;
+        const deliveredCount = Object.values(placementStatuses).filter(s => s === 'delivered').length;
+        const rejectedCount = Object.values(placementStatuses).filter(s => s === 'rejected').length;
+        const pendingCount = totalPlacements - acceptedCount - inProductionCount - deliveredCount - rejectedCount;
+
+        return (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <AlertCircle className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900 mb-2">Review Individual Placements</h3>
+                  <p className="text-sm text-blue-800 mb-4">
+                    Please review and accept or reject each ad placement below. Once all placements are accepted, your order will be automatically confirmed.
+                  </p>
+                  <div className="grid grid-cols-5 gap-2 text-xs">
+                    <div className="bg-green-100 p-2 rounded border border-green-300">
+                      <div className="font-bold text-green-900">{acceptedCount}</div>
+                      <div className="text-green-700">Accepted</div>
+                    </div>
+                    <div className="bg-blue-100 p-2 rounded border border-blue-300">
+                      <div className="font-bold text-blue-900">{inProductionCount}</div>
+                      <div className="text-blue-700">In Production</div>
+                    </div>
+                    <div className="bg-purple-100 p-2 rounded border border-purple-300">
+                      <div className="font-bold text-purple-900">{deliveredCount}</div>
+                      <div className="text-purple-700">Delivered</div>
+                    </div>
+                    <div className="bg-yellow-100 p-2 rounded border border-yellow-300">
+                      <div className="font-bold text-yellow-900">{pendingCount}</div>
+                      <div className="text-yellow-700">Pending</div>
+                    </div>
+                    <div className="bg-red-100 p-2 rounded border border-red-300">
+                      <div className="font-bold text-red-900">{rejectedCount}</div>
+                      <div className="text-red-700">Rejected</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content - Left Side */}
@@ -558,7 +568,7 @@ export function PublicationOrderDetail() {
                         }
 
                         return (
-                          <div className="space-y-3">
+                          <div className="space-y-4">
                             {inventoryItems.map((item: any, index: number) => {
                               // Find creative assets for this specific placement
                               const itemPath = item.itemPath || item.sourcePath;
@@ -566,81 +576,252 @@ export function PublicationOrderDetail() {
                                 asset.placementId === itemPath
                               ) || [];
 
+                              // Format with action-oriented language for publishers
+                              const pricingModel = item.itemPricing?.pricingModel;
+                              const monthlyImpressions = (item as any).monthlyImpressions;
+                              const currentFreq = item.currentFrequency || item.quantity || 1;
+                              
+                              let executionInstructions = '';
+                              let deliveryTarget = '';
+                              
+                              if (pricingModel === 'cpm' || pricingModel === 'cpv' || pricingModel === 'cpc') {
+                                if (monthlyImpressions) {
+                                  const actualShare = Math.round(monthlyImpressions * (currentFreq / 100));
+                                  const metric = pricingModel === 'cpv' ? 'views' : pricingModel === 'cpc' ? 'clicks' : 'impressions';
+                                  executionInstructions = `Display continuously on your ${item.channel}`;
+                                  deliveryTarget = `Deliver ${actualShare.toLocaleString()} ${metric} per month`;
+                                } else {
+                                  executionInstructions = `Allocate ${currentFreq}% of ${item.channel} inventory`;
+                                  deliveryTarget = 'Run continuously';
+                                }
+                              } else if (pricingModel === 'per_send') {
+                                const subscribers = item.audienceMetrics?.subscribers;
+                                executionInstructions = `Include in ${currentFreq} newsletter${currentFreq > 1 ? 's' : ''} per month`;
+                                if (subscribers) {
+                                  deliveryTarget = `Send to all ${subscribers.toLocaleString()} subscribers`;
+                                } else {
+                                  deliveryTarget = `Send to your full subscriber list`;
+                                }
+                              } else if (pricingModel === 'per_spot' || pricingModel === 'per_ad') {
+                                const audienceSize = item.audienceMetrics?.listeners || item.audienceMetrics?.viewers;
+                                if (item.channel === 'radio' || item.channel === 'podcast') {
+                                  executionInstructions = `Air ${currentFreq} spot${currentFreq > 1 ? 's' : ''} per month`;
+                                } else if (item.channel === 'print') {
+                                  executionInstructions = `Publish in ${currentFreq} issue${currentFreq > 1 ? 's' : ''} per month`;
+                                } else {
+                                  executionInstructions = `Run ${currentFreq} time${currentFreq > 1 ? 's' : ''} per month`;
+                                }
+                                if (audienceSize) {
+                                  deliveryTarget = `Reach ${audienceSize.toLocaleString()} ${item.audienceMetrics?.listeners ? 'listeners' : 'viewers'}`;
+                                } else {
+                                  deliveryTarget = 'Run as scheduled';
+                                }
+                              } else if (pricingModel === 'per_week') {
+                                executionInstructions = `Display for ${currentFreq} week${currentFreq > 1 ? 's' : ''}`;
+                                const visitors = item.audienceMetrics?.monthlyVisitors;
+                                if (visitors) {
+                                  deliveryTarget = `${visitors.toLocaleString()} monthly visitors`;
+                                } else {
+                                  deliveryTarget = 'Run continuously during period';
+                                }
+                              } else {
+                                executionInstructions = `Run ${currentFreq}× per month`;
+                                deliveryTarget = 'As scheduled';
+                              }
+
+                              const unitCost = item.itemPricing?.hubPrice || 0;
+                              const lineTotal = item.itemPricing?.totalCost || (unitCost * currentFreq);
+                              const placementId = itemPath || `placement-${index}`;
+                              const placementStatus = placementStatuses[placementId] || 'pending';
+
+                              // Determine border and header colors based on status
+                              const borderColor = 
+                                placementStatus === 'delivered' ? 'border-purple-300' :
+                                placementStatus === 'in_production' ? 'border-blue-300' :
+                                placementStatus === 'accepted' ? 'border-green-300' : 
+                                placementStatus === 'rejected' ? 'border-red-300' : 
+                                'border-gray-200';
+                              const headerGradient = 
+                                placementStatus === 'delivered' ? 'from-purple-50 to-purple-100' :
+                                placementStatus === 'in_production' ? 'from-blue-50 to-blue-100' :
+                                placementStatus === 'accepted' ? 'from-green-50 to-green-100' : 
+                                placementStatus === 'rejected' ? 'from-red-50 to-red-100' : 
+                                'from-blue-50 to-blue-100';
+                              const headerBorder = 
+                                placementStatus === 'delivered' ? 'border-purple-200' :
+                                placementStatus === 'in_production' ? 'border-blue-200' :
+                                placementStatus === 'accepted' ? 'border-green-200' : 
+                                placementStatus === 'rejected' ? 'border-red-200' : 
+                                'border-blue-200';
+
                               return (
-                                <div key={index} className="p-4 bg-gray-50 rounded-lg border">
-                                  <div className="flex items-start justify-between mb-2">
-                                    <div className="flex-1">
-                                      <h4 className="font-semibold text-base">
-                                        {item.itemName || item.sourceName || 'Ad Placement'}
-                                      </h4>
-                                      <p className="text-sm text-muted-foreground capitalize">
-                                        {item.channel} {item.sourceName ? `• ${item.sourceName}` : ''}
-                                      </p>
-                                    </div>
-                                    {item.campaignCost && (
-                                      <div className="text-right">
-                                        <p className="font-semibold text-lg">${item.campaignCost.toFixed(2)}</p>
-                                        <p className="text-xs text-muted-foreground">Campaign Total</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="grid grid-cols-3 gap-3 mt-3 text-sm">
-                                    {item.quantity && (
-                                      <div>
-                                        <span className="text-muted-foreground">Quantity:</span>
-                                        <p className="font-medium">{item.quantity}</p>
-                                      </div>
-                                    )}
-                                    {item.duration && (
-                                      <div>
-                                        <span className="text-muted-foreground">Duration:</span>
-                                        <p className="font-medium">{item.duration}</p>
-                                      </div>
-                                    )}
-                                    {item.frequency && (
-                                      <div>
-                                        <span className="text-muted-foreground">Frequency:</span>
-                                        <p className="font-medium capitalize">{item.frequency}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {item.specifications && Object.keys(item.specifications).length > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-gray-200">
-                                      <p className="text-xs text-muted-foreground mb-1">Specifications:</p>
-                                      <div className="flex flex-wrap gap-2">
-                                        {Object.entries(item.specifications).map(([key, value]) => (
-                                          <span key={key} className="text-xs bg-white px-2 py-1 rounded border">
-                                            {key}: {String(value)}
+                                <div key={index} className={`border-2 ${borderColor} rounded-lg overflow-hidden bg-white`}>
+                                  {/* Header */}
+                                  <div className={`bg-gradient-to-r ${headerGradient} px-5 py-4 border-b-2 ${headerBorder}`}>
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="inline-block px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded uppercase">
+                                            {item.channel}
                                           </span>
-                                        ))}
+                                          {placementStatus === 'delivered' && (
+                                            <span className="inline-block px-2 py-1 bg-purple-600 text-white text-xs font-semibold rounded">
+                                              ✓ Delivered
+                                            </span>
+                                          )}
+                                          {placementStatus === 'in_production' && (
+                                            <span className="inline-block px-2 py-1 bg-blue-700 text-white text-xs font-semibold rounded">
+                                              ⚙ In Production
+                                            </span>
+                                          )}
+                                          {placementStatus === 'accepted' && (
+                                            <span className="inline-block px-2 py-1 bg-green-600 text-white text-xs font-semibold rounded">
+                                              ✓ Accepted
+                                            </span>
+                                          )}
+                                          {placementStatus === 'rejected' && (
+                                            <span className="inline-block px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded">
+                                              ✗ Rejected
+                                            </span>
+                                          )}
+                                          {placementStatus === 'pending' && (
+                                            <Badge variant="outline" className="text-xs">Pending Review</Badge>
+                                          )}
+                                        </div>
+                                        <h4 className="font-bold text-xl text-gray-900">
+                                          {item.itemName || item.sourceName || 'Ad Placement'}
+                                        </h4>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-xs text-gray-600 mb-1">Your Payment</p>
+                                        <p className="font-bold text-2xl text-green-600">${lineTotal.toFixed(2)}</p>
                                       </div>
                                     </div>
-                                  )}
-                                  
-                                  {/* Creative Assets for this placement */}
-                                  {placementAssets.length > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-gray-200">
-                                      <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                                        <FileText className="h-3 w-3" />
-                                        Creative Assets ({placementAssets.length})
-                                      </p>
-                                      <div className="space-y-2">
-                                        {placementAssets.map((asset: any) => (
-                                          <CreativeAssetCard
-                                            key={asset.assetId}
-                                            asset={{
-                                              ...asset,
-                                              uploadedAt: new Date(asset.uploadedAt)
-                                            }}
-                                            onDownload={(asset) => {
-                                              window.open(asset.fileUrl, '_blank');
-                                            }}
-                                            showActions={true}
-                                          />
-                                        ))}
+                                  </div>
+
+                                  {/* Execution Details */}
+                                  <div className="px-5 py-4">
+                                    <div className="grid grid-cols-1 gap-3 mb-4">
+                                      <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
+                                        <p className="text-xs font-bold text-blue-900 uppercase mb-2">📅 What to Do</p>
+                                        <p className="text-base font-bold text-blue-900">{executionInstructions}</p>
+                                      </div>
+                                      <div className="bg-purple-50 p-4 rounded-lg border-2 border-purple-300">
+                                        <p className="text-xs font-bold text-purple-900 uppercase mb-2">🎯 Delivery Target</p>
+                                        <p className="text-base font-bold text-purple-900">{deliveryTarget}</p>
                                       </div>
                                     </div>
-                                  )}
+
+                                    {/* Technical Specifications */}
+                                    {item.specifications && Object.keys(item.specifications).length > 0 && (
+                                      <div className="mb-4 p-3 bg-amber-50 rounded border border-amber-200">
+                                        <p className="text-xs font-bold text-amber-900 uppercase mb-2 flex items-center gap-1">
+                                          📋 Technical Requirements
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          {Object.entries(item.specifications).map(([key, value]) => (
+                                            <div key={key} className="text-sm">
+                                              <span className="font-semibold text-gray-700">{key}:</span>{' '}
+                                              <span className="text-gray-900">{String(value)}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Creative Assets */}
+                                    {placementAssets.length > 0 ? (
+                                      <div className="p-3 bg-green-50 rounded border border-green-200">
+                                        <p className="text-xs font-bold text-green-900 uppercase mb-2 flex items-center gap-1">
+                                          <FileText className="h-4 w-4" />
+                                          Creative Assets Ready ({placementAssets.length})
+                                        </p>
+                                        <div className="space-y-2">
+                                          {placementAssets.map((asset: any) => (
+                                            <CreativeAssetCard
+                                              key={asset.assetId}
+                                              asset={{
+                                                ...asset,
+                                                uploadedAt: new Date(asset.uploadedAt)
+                                              }}
+                                              onDownload={(asset) => {
+                                                window.open(asset.fileUrl, '_blank');
+                                              }}
+                                              showActions={true}
+                                            />
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="p-3 bg-yellow-50 rounded border border-yellow-200">
+                                        <p className="text-sm text-yellow-800">
+                                          ⚠️ Awaiting creative assets from advertiser
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Placement Actions Based on Status */}
+                                    <div className="mt-4 pt-4 border-t">
+                                      {placementStatus === 'pending' && (
+                                        <div className="flex gap-3">
+                                          <Button
+                                            onClick={() => handlePlacementAction(placementId, 'accepted')}
+                                            disabled={updating}
+                                            className="flex-1 bg-green-600 hover:bg-green-700"
+                                          >
+                                            <Check className="h-4 w-4 mr-2" />
+                                            Accept This Placement
+                                          </Button>
+                                          <Button
+                                            onClick={() => {
+                                              setRejectingPlacementId(placementId);
+                                              setRejectDialogOpen(true);
+                                            }}
+                                            disabled={updating}
+                                            variant="outline"
+                                            className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
+                                          >
+                                            <X className="h-4 w-4 mr-2" />
+                                            Reject This Placement
+                                          </Button>
+                                        </div>
+                                      )}
+                                      
+                                      {placementStatus === 'accepted' && (
+                                        <Button
+                                          onClick={() => handlePlacementAction(placementId, 'in_production')}
+                                          disabled={updating}
+                                          className="w-full bg-blue-600 hover:bg-blue-700"
+                                        >
+                                          <Loader2 className="h-4 w-4 mr-2" />
+                                          Mark In Production
+                                        </Button>
+                                      )}
+                                      
+                                      {placementStatus === 'in_production' && (
+                                        <Button
+                                          onClick={() => handlePlacementAction(placementId, 'delivered')}
+                                          disabled={updating}
+                                          className="w-full bg-purple-600 hover:bg-purple-700"
+                                        >
+                                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                                          Mark as Delivered
+                                        </Button>
+                                      )}
+                                      
+                                      {placementStatus === 'delivered' && (
+                                        <div className="text-center text-sm text-green-700 font-semibold py-2">
+                                          ✓ Delivered Successfully
+                                        </div>
+                                      )}
+                                      
+                                      {placementStatus === 'rejected' && (
+                                        <div className="text-center text-sm text-red-700 font-semibold py-2">
+                                          ✗ Rejected - Hub team notified
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               );
                             })}
@@ -692,6 +873,70 @@ export function PublicationOrderDetail() {
           />
         </div>
       </div>
+
+      {/* Reject Placement Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Reject Ad Placement
+            </DialogTitle>
+            <DialogDescription>
+              Please explain why you cannot run this placement. The hub team will review your feedback and may offer alternatives.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Reason for Rejection
+              </label>
+              <Textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Example: This placement doesn't align with our editorial standards, we don't have technical capability for this ad format, scheduling conflict with other advertisers..."
+                rows={5}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Being specific helps the hub team find a solution or alternative placement.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setRejectingPlacementId(null);
+                setRejectionReason('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (rejectionReason.trim() && rejectingPlacementId) {
+                  handlePlacementAction(rejectingPlacementId, 'rejected', rejectionReason);
+                  setRejectDialogOpen(false);
+                  setRejectingPlacementId(null);
+                  setRejectionReason('');
+                } else {
+                  toast({
+                    title: 'Reason Required',
+                    description: 'Please provide a reason for rejecting this placement',
+                    variant: 'destructive'
+                  });
+                }
+              }}
+              disabled={!rejectionReason.trim()}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Reject Placement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

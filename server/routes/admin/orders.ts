@@ -232,6 +232,49 @@ router.post('/generate/:campaignId', async (req: any, res: Response) => {
 });
 
 /**
+ * DELETE /api/admin/orders/:campaignId/publication-orders
+ * Delete publication orders for a campaign (to allow regeneration)
+ */
+router.delete('/:campaignId/publication-orders', async (req: any, res: Response) => {
+  try {
+    const { campaignId } = req.params;
+    const { ObjectId } = await import('mongodb');
+    const { getDatabase } = await import('../../../src/integrations/mongodb/client');
+    const { COLLECTIONS } = await import('../../../src/integrations/mongodb/schemas');
+    
+    const db = getDatabase();
+    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
+
+    // Find campaign by either _id or campaignId string
+    let campaign;
+    try {
+      const objectId = new ObjectId(campaignId);
+      campaign = await campaignsCollection.findOne({ _id: objectId });
+    } catch {
+      campaign = await campaignsCollection.findOne({ campaignId });
+    }
+
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    // Delete publication orders
+    await campaignsCollection.updateOne(
+      { _id: campaign._id },
+      { $set: { publicationInsertionOrders: [] } }
+    );
+
+    res.json({ 
+      success: true,
+      message: 'Publication orders deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting publication orders:', error);
+    res.status(500).json({ error: 'Failed to delete publication orders' });
+  }
+});
+
+/**
  * POST /api/admin/orders/bulk-update-status
  * Bulk update status for multiple orders
  */
