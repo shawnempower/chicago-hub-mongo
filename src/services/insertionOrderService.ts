@@ -230,27 +230,49 @@ export class InsertionOrderService {
       const creativeAssetsCollection = getDatabase().collection(COLLECTIONS.CREATIVE_ASSETS);
       const campaignIds = campaigns.map(c => c.campaignId);
       
-      console.log('🔍 [getAllOrders] Fetching asset counts for campaigns:', campaignIds);
+      console.log('🔍 [getAllOrders] Campaign IDs to query:', JSON.stringify(campaignIds, null, 2));
       
       // First, let's see what assets exist at all
       const totalAssets = await creativeAssetsCollection.countDocuments({
-        deletedAt: { $exists: false },
-        'uploadInfo.uploadedAt': { $exists: true }
-      });
-      console.log('📊 [getAllOrders] Total uploaded assets in database:', totalAssets);
-      
-      // Check if any assets have these campaign IDs
-      const assetsWithCampaigns = await creativeAssetsCollection.find({
-        'associations.campaignId': { $exists: true },
         deletedAt: { $exists: false }
-      }).limit(5).toArray();
-      console.log('📦 [getAllOrders] Sample assets with campaignId:', 
-        assetsWithCampaigns.map(a => ({ 
+      });
+      console.log('📊 [getAllOrders] Total non-deleted assets:', totalAssets);
+      
+      // Check ALL assets with associations.campaignId field
+      const allAssetsWithCampaigns = await creativeAssetsCollection.find({
+        'associations.campaignId': { $exists: true, $ne: null },
+        deletedAt: { $exists: false }
+      }).toArray();
+      
+      console.log('📦 [getAllOrders] All assets with campaignId field:', allAssetsWithCampaigns.length);
+      console.log('📦 [getAllOrders] Sample assets:', 
+        allAssetsWithCampaigns.slice(0, 3).map(a => ({ 
+          _id: a._id,
           campaignId: a.associations?.campaignId, 
-          fileName: a.metadata?.fileName 
+          fileName: a.metadata?.fileName,
+          uploadedAt: a.uploadInfo?.uploadedAt
         }))
       );
       
+      // Try the aggregation WITHOUT the uploadedAt filter first
+      const assetCountsNoFilter = await creativeAssetsCollection.aggregate([
+        {
+          $match: {
+            'associations.campaignId': { $in: campaignIds },
+            deletedAt: { $exists: false }
+          }
+        },
+        {
+          $group: {
+            _id: '$associations.campaignId',
+            count: { $sum: 1 }
+          }
+        }
+      ]).toArray();
+
+      console.log('📈 [getAllOrders] Asset counts (no uploadedAt filter):', JSON.stringify(assetCountsNoFilter, null, 2));
+      
+      // Now try WITH the uploadedAt filter
       const assetCounts = await creativeAssetsCollection.aggregate([
         {
           $match: {
@@ -267,9 +289,9 @@ export class InsertionOrderService {
         }
       ]).toArray();
 
-      console.log('📈 [getAllOrders] Asset counts by campaign:', assetCounts);
+      console.log('📈 [getAllOrders] Asset counts (with uploadedAt filter):', JSON.stringify(assetCounts, null, 2));
 
-      const assetCountMap = new Map(assetCounts.map((ac: any) => [ac._id, ac.count]));
+      const assetCountMap = new Map(assetCountsNoFilter.map((ac: any) => [ac._id, ac.count]));
 
       const orders: Array<PublicationInsertionOrder & { 
         campaignId: string; 
