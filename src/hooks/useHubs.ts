@@ -15,34 +15,60 @@ export const useHubs = (filters?: HubFilters) => {
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    let retryTimeout: NodeJS.Timeout;
+    
     const fetchHubs = async () => {
       try {
         setLoading(true);
         setError(null);
+        console.log('🔄 Fetching hubs...', { retryCount });
         const data = await hubsApi.getAll(filters);
+        console.log('✅ Hubs fetched successfully:', data.length);
         setHubs(data);
+        setRetryCount(0); // Reset retry count on success
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch hubs');
-        console.error('Error fetching hubs:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch hubs';
+        setError(errorMessage);
+        console.error('❌ Error fetching hubs:', err);
+        
+        // Auto-retry up to 3 times with exponential backoff
+        if (retryCount < 3) {
+          const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Max 5s
+          console.log(`⏳ Retrying in ${retryDelay}ms... (attempt ${retryCount + 1}/3)`);
+          retryTimeout = setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, retryDelay);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchHubs();
-  }, [filters?.status, filters?.includeInactive]);
+    
+    return () => {
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+    };
+  }, [filters?.status, filters?.includeInactive, retryCount]);
 
   const refetch = async () => {
     try {
       setLoading(true);
       setError(null);
+      setRetryCount(0);
+      console.log('🔄 Manual refetch of hubs...');
       const data = await hubsApi.getAll(filters);
+      console.log('✅ Hubs refetched successfully:', data.length);
       setHubs(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch hubs');
-      console.error('Error fetching hubs:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch hubs';
+      setError(errorMessage);
+      console.error('❌ Error refetching hubs:', err);
     } finally {
       setLoading(false);
     }

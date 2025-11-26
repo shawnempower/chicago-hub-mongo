@@ -32,7 +32,8 @@ import {
   UserPlus,
   DollarSign,
   Bot,
-  FileText
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -58,7 +59,7 @@ const STATUS_LABELS = {
 
 export default function CampaignList() {
   const navigate = useNavigate();
-  const { selectedHubId } = useHubContext();
+  const { selectedHubId, loading: hubLoading, error: hubError } = useHubContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
@@ -141,6 +142,53 @@ export default function CampaignList() {
                   Create Campaign
                 </Button>
               </div>
+
+              {/* Hub Loading/Error State */}
+              {hubLoading && !selectedHubId ? (
+                <Card className="border-blue-200 bg-blue-50 mb-6">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                      <div>
+                        <p className="font-medium text-blue-900">Loading hubs...</p>
+                        <p className="text-sm text-blue-700">Please wait while we fetch available hubs</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : hubError ? (
+                <Card className="border-red-200 bg-red-50 mb-6">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-medium text-red-900 mb-1">Unable to load hubs</p>
+                        <p className="text-sm text-red-700 mb-3">{hubError}</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => window.location.reload()}
+                          className="text-red-700 border-red-300 hover:bg-red-100"
+                        >
+                          Reload Page
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : !selectedHubId ? (
+                <Card className="border-yellow-200 bg-yellow-50 mb-6">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-yellow-900 mb-1">No hub selected</p>
+                        <p className="text-sm text-yellow-700">Please select a hub from the navigation to view campaigns</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
 
               {/* Filters */}
               <Card className="mb-6">

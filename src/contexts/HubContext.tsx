@@ -23,10 +23,21 @@ interface HubContextType {
 const HubContext = createContext<HubContextType | undefined>(undefined);
 
 export const HubProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { hubs: allHubs, loading, error } = useHubs({ status: 'active' });
+  const { hubs: allHubs, loading, error, refetch } = useHubs({ status: 'active' });
   const { user } = useAuth();
   const [selectedHubId, setSelectedHubId] = useState<string | null>(null);
   const [selectedHub, setSelectedHub] = useState<Hub | null>(null);
+
+  // Log hub context state for debugging
+  useEffect(() => {
+    console.log('🎯 HubContext State:', {
+      loading,
+      error,
+      hubsCount: allHubs.length,
+      selectedHubId,
+      hasUser: !!user
+    });
+  }, [loading, error, allHubs.length, selectedHubId, user]);
 
   // Filter hubs based on user permissions (if not admin)
   const hubs = useMemo(() => {
