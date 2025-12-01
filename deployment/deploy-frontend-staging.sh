@@ -32,6 +32,9 @@ echo ""
 echo "📦 Step 1: Building frontend..."
 cd "$PROJECT_ROOT"
 
+# Set Vite environment variable for build
+export VITE_API_BASE_URL="$API_URL"
+
 npm run build
 
 if [ $? -ne 0 ]; then
