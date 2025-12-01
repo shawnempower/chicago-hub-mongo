@@ -255,7 +255,7 @@ export default function CampaignList() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <h3 className="text-lg font-semibold">
+                              <h3 className="text-lg font-semibold font-sans">
                                 {campaign.basicInfo?.name || 'Untitled Campaign'}
                               </h3>
                               <Badge className={STATUS_COLORS[campaign.status as keyof typeof STATUS_COLORS]}>

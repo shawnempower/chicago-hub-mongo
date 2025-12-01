@@ -901,14 +901,14 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Campaign Builder</CardTitle>
+              <CardTitle className="font-sans">Campaign Builder</CardTitle>
               <CardDescription>
                 Create AI-powered campaigns with intelligent inventory selection
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-900 mb-2">🚀 AI-Powered Campaign Builder</h4>
+                <h4 className="font-semibold text-blue-900 mb-2 font-sans">🚀 AI-Powered Campaign Builder</h4>
                 <p className="text-sm text-blue-800 mb-4">
                   The Campaign Builder uses AI to automatically select optimal publication inventory 
                   based on your budget, goals, and target audience. It follows Press Forward principles 
@@ -946,7 +946,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </div>
 
               <div className="border-t pt-4 mt-4">
-                <h4 className="font-semibold mb-2">How It Works:</h4>
+                <h4 className="font-semibold mb-2 font-sans">How It Works:</h4>
                 <ol className="text-sm text-muted-foreground space-y-2 ml-4 list-decimal">
                   <li>Enter campaign details (name, advertiser, goals, budget, timeline)</li>
                   <li>Select desired channels (print, website, newsletter, etc.)</li>
@@ -958,7 +958,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </div>
 
               <div className="border-t pt-4 mt-4">
-                <h4 className="font-semibold mb-2">Example Use Case:</h4>
+                <h4 className="font-semibold mb-2 font-sans">Example Use Case:</h4>
                 <div className="bg-gray-50 rounded-lg p-4 text-sm">
                   <p className="font-medium mb-2">Summer Brand Awareness Campaign</p>
                   <ul className="space-y-1 text-muted-foreground">

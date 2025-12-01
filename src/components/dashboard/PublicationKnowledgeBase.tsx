@@ -225,7 +225,7 @@ export const PublicationKnowledgeBase: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-muted-foreground font-serif">
+          <p className="text-muted-foreground font-sans">
             Knowledge base (media kits, rate cards, and resources) for {selectedPublication.basicInfo.publicationName}
           </p>
         </div>
@@ -390,8 +390,8 @@ export const PublicationKnowledgeBase: React.FC = () => {
                   <div className="flex items-center gap-4">
                     {getFileIcon(file.fileType)}
                     <div>
-                      <h3 className="font-medium">{file.originalFileName}</h3>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <h3 className="font-medium font-sans">{file.originalFileName}</h3>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground font-sans">
                         <span>{formatFileSize(file.fileSize)}</span>
                         <span>•</span>
                         <Calendar className="h-3 w-3" />
@@ -404,12 +404,12 @@ export const PublicationKnowledgeBase: React.FC = () => {
                         )}
                       </div>
                       {file.description && (
-                        <p className="text-sm text-muted-foreground mt-1">{file.description}</p>
+                        <p className="text-sm text-muted-foreground mt-1 font-sans">{file.description}</p>
                       )}
                       {file.tags && file.tags.length > 0 && (
                         <div className="flex gap-1 mt-2">
                           {file.tags.map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
+                            <Badge key={index} variant="outline" className="text-xs font-sans">
                               {tag}
                             </Badge>
                           ))}

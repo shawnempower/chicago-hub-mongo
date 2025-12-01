@@ -141,10 +141,10 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
 
   return (
     <>
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col font-sans">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-border/40">
-          <h3 className="text-sm font-semibold text-foreground">Chat History</h3>
+          <h3 className="text-sm font-semibold text-foreground font-sans">Chat History</h3>
           <Button
             size="sm"
             onClick={handleCreateConversation}
@@ -156,7 +156,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
             ) : (
               <>
                 <MessageSquarePlus className="h-3.5 w-3.5 mr-1.5" />
-                <span className="text-xs font-medium">New Chat</span>
+                <span className="text-xs font-medium font-sans">New Chat</span>
               </>
             )}
           </Button>
@@ -169,14 +169,14 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : conversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center font-sans">
               <div className="mb-4 p-3 rounded-full bg-primary/10">
                 <MessageSquare className="h-6 w-6 text-primary" />
               </div>
-              <p className="text-sm font-medium text-foreground mb-1">
+              <p className="text-sm font-medium text-foreground mb-1 font-sans">
                 No conversations yet
               </p>
-              <p className="text-xs text-muted-foreground mb-4">
+              <p className="text-xs text-muted-foreground mb-4 font-sans">
                 Start a new chat to explore your inventory
               </p>
               <Button 
@@ -186,40 +186,26 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
                 className="h-8 px-4"
               >
                 <MessageSquarePlus className="h-3.5 w-3.5 mr-1.5" />
-                New Chat
+                <span className="font-sans">New Chat</span>
               </Button>
             </div>
           ) : (
             <ScrollArea className="h-full">
-              <div className="p-2 space-y-1">
+              <div className="p-2 space-y-0">
                 {conversations.map((conversation) => (
                   <div
                     key={conversation.conversationId}
                     className={cn(
-                      'group relative flex items-start gap-2 p-3 rounded-lg cursor-pointer transition-all',
+                      'group relative flex items-center gap-2 p-3 cursor-pointer transition-all font-sans border-b border-border/40',
                       selectedConversationId === conversation.conversationId
-                        ? 'bg-background shadow-sm border border-border'
-                        : 'hover:bg-background/50'
+                        ? 'bg-background/50'
+                        : 'hover:bg-background/30'
                     )}
                     onClick={() => onSelectConversation(conversation.conversationId)}
                   >
-                    <MessageSquare className={cn(
-                      "h-4 w-4 mt-0.5 flex-shrink-0",
-                      selectedConversationId === conversation.conversationId ? "text-primary" : "text-muted-foreground"
-                    )} />
-                    
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-xs truncate leading-tight text-foreground">
+                      <div className="font-medium text-xs truncate leading-tight text-foreground font-sans">
                         {conversation.title}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                        <span>{conversation.metadata.messageCount} msg{conversation.metadata.messageCount !== 1 ? 's' : ''}</span>
-                        <span>•</span>
-                        <span>
-                          {conversation.metadata.lastMessageAt
-                            ? formatDistanceToNow(new Date(conversation.metadata.lastMessageAt), { addSuffix: true }).replace(' ago', '')
-                            : format(new Date(conversation.metadata.createdAt), 'MMM d')}
-                        </span>
                       </div>
                     </div>
                     

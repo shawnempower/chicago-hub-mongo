@@ -25,15 +25,15 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, class
       if (listItems.length > 0) {
         const ListTag = isNumbered ? 'ol' : 'ul';
         const listClass = isNumbered 
-          ? "list-decimal list-inside space-y-1 my-2" 
-          : "list-disc list-inside space-y-1 my-2";
+          ? "list-decimal list-inside space-y-1 my-2 font-sans" 
+          : "list-disc list-inside space-y-1 my-2 font-sans";
         
         elements.push(
           React.createElement(
             ListTag,
             { key: `list-${key++}`, className: listClass },
             listItems.map((item, idx) => (
-              <li key={idx} dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+              <li key={idx} className="font-sans" dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
             ))
           )
         );
@@ -43,15 +43,15 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, class
 
     const formatInline = (text: string): string => {
       // Bold: **text** or __text__
-      text = text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>');
-      text = text.replace(/__(.+?)__/g, '<strong class="font-semibold">$1</strong>');
+      text = text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold font-sans">$1</strong>');
+      text = text.replace(/__(.+?)__/g, '<strong class="font-semibold font-sans">$1</strong>');
       
       // Italic: *text* or _text_
-      text = text.replace(/\*(.+?)\*/g, '<em class="italic">$1</em>');
-      text = text.replace(/_(.+?)_/g, '<em class="italic">$1</em>');
+      text = text.replace(/\*(.+?)\*/g, '<em class="italic font-sans">$1</em>');
+      text = text.replace(/_(.+?)_/g, '<em class="italic font-sans">$1</em>');
       
       // Inline code: `code`
-      text = text.replace(/`(.+?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs">$1</code>');
+      text = text.replace(/`(.+?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs font-mono">$1</code>');
       
       return text;
     };
@@ -63,21 +63,21 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, class
         inList = false;
         isNumberedList = false;
         elements.push(
-          <h1 key={`h1-${key++}`} className="text-xl font-bold mt-4 mb-2" dangerouslySetInnerHTML={{ __html: formatInline(line.slice(2)) }} />
+          <h1 key={`h1-${key++}`} className="text-xl font-bold mt-4 mb-2 font-sans" dangerouslySetInnerHTML={{ __html: formatInline(line.slice(2)) }} />
         );
       } else if (line.startsWith('## ')) {
         flushList(isNumberedList);
         inList = false;
         isNumberedList = false;
         elements.push(
-          <h2 key={`h2-${key++}`} className="text-lg font-semibold mt-3 mb-2" dangerouslySetInnerHTML={{ __html: formatInline(line.slice(3)) }} />
+          <h2 key={`h2-${key++}`} className="text-lg font-semibold mt-3 mb-2 font-sans" dangerouslySetInnerHTML={{ __html: formatInline(line.slice(3)) }} />
         );
       } else if (line.startsWith('### ')) {
         flushList(isNumberedList);
         inList = false;
         isNumberedList = false;
         elements.push(
-          <h3 key={`h3-${key++}`} className="text-base font-semibold mt-2 mb-1" dangerouslySetInnerHTML={{ __html: formatInline(line.slice(4)) }} />
+          <h3 key={`h3-${key++}`} className="text-base font-semibold mt-2 mb-1 font-sans" dangerouslySetInnerHTML={{ __html: formatInline(line.slice(4)) }} />
         );
       }
       // Bullet lists
@@ -140,7 +140,7 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, class
           isNumberedList = false;
         }
         elements.push(
-          <p key={`p-${key++}`} className="leading-relaxed" dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
+          <p key={`p-${key++}`} className="leading-relaxed font-sans" dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
         );
       }
     });
@@ -152,7 +152,7 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, class
   };
 
   return (
-    <div className={`prose prose-sm max-w-none ${className}`}>
+    <div className={`prose prose-sm max-w-none font-sans ${className}`}>
       {parseMarkdown(content)}
     </div>
   );

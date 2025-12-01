@@ -192,7 +192,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
   // Regular version for dashboard
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[1.09375rem] font-medium text-muted-foreground whitespace-nowrap font-serif">
+      <span className="text-[1.09375rem] font-medium text-muted-foreground whitespace-nowrap font-sans">
         Active Publication
       </span>
       <Popover open={open} onOpenChange={(isOpen) => {

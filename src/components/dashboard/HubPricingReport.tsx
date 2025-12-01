@@ -731,7 +731,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
             Back to Dashboard
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Hub Pricing Report</h1>
+            <h1 className="text-2xl font-bold font-sans">Hub Pricing Report</h1>
             <p className="text-sm text-muted-foreground">{publication.basicInfo.publicationName}</p>
           </div>
         </div>
@@ -750,7 +750,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       {/* Filters */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
+          <CardTitle className="text-lg font-sans">Filters</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -790,7 +790,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Inventory</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Total Inventory</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
@@ -803,7 +803,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Standard Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Standard Revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
@@ -816,7 +816,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Hub Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Hub Revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
@@ -829,7 +829,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Discount</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Avg Discount</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
@@ -849,7 +849,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Inventory Details</CardTitle>
+              <CardTitle className="font-sans">Inventory Details</CardTitle>
               <CardDescription>
                 {selectedHub === 'all' 
                   ? 'Showing all inventory across all hubs' 
@@ -895,7 +895,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
                         )}
                         <Icon className="h-5 w-5 text-blue-600" />
                         <div className="text-left">
-                          <h3 className="font-semibold text-lg">{channel}</h3>
+                          <h3 className="font-semibold text-lg font-sans">{channel}</h3>
                           <p className="text-sm text-muted-foreground">{items.length} items</p>
                         </div>
                       </div>
@@ -916,7 +916,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
                       <div className="flex items-center gap-3">
                         <Icon className="h-5 w-5 text-blue-600" />
                         <div>
-                          <h4 className="font-semibold">{item.name}</h4>
+                          <h4 className="font-semibold font-sans">{item.name}</h4>
                           <div className="flex gap-2 mt-1 text-sm text-muted-foreground">
                             <Badge variant="outline">{item.channel}</Badge>
                             {item.format && <span>• {item.format}</span>}

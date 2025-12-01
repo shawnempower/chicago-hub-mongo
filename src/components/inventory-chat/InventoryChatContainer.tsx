@@ -64,9 +64,9 @@ export const InventoryChatContainer: React.FC = () => {
   if (!selectedHubId) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <p className="text-lg font-semibold mb-2">No Hub Selected</p>
-          <p className="text-sm text-muted-foreground">
+        <div className="text-center font-sans">
+          <p className="text-lg font-semibold mb-2 font-sans">No Hub Selected</p>
+          <p className="text-sm text-muted-foreground font-sans">
             Please select a hub to start exploring inventory.
           </p>
         </div>
@@ -75,7 +75,7 @@ export const InventoryChatContainer: React.FC = () => {
   }
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <div className="flex h-full w-full overflow-hidden border border-border rounded-lg font-sans">
       {/* Collapsible Conversation Sidebar */}
       <div
         className={cn(
@@ -95,25 +95,21 @@ export const InventoryChatContainer: React.FC = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-background">
-        {/* Minimal Header */}
-        <div className="flex items-center justify-between border-b border-border/40 px-6 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="h-9 w-9 hover:bg-muted"
-              title={isSidebarOpen ? "Hide conversations" : "Show conversations"}
-            >
-              {isSidebarOpen ? (
-                <PanelLeftClose className="h-4 w-4" />
-              ) : (
-                <PanelLeft className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
+      <div className="flex-1 flex flex-col overflow-hidden bg-white relative">
+        {/* Floating Toggle Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          className="absolute top-4 left-4 z-10 h-9 w-9 hover:bg-gray-100 bg-white/80 backdrop-blur-sm shadow-md border border-gray-200 rounded-full"
+          title={isSidebarOpen ? "Hide conversations" : "Show conversations"}
+        >
+          {isSidebarOpen ? (
+            <PanelLeftClose className="h-4 w-4" />
+          ) : (
+            <PanelLeft className="h-4 w-4" />
+          )}
+        </Button>
 
         {/* Chat Interface */}
         <div className="flex-1 overflow-hidden">
