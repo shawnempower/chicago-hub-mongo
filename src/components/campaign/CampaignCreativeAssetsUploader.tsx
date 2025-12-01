@@ -72,6 +72,7 @@ import {
   InventoryTypeStandard,
   validateAgainstStandard
 } from '@/config/inventoryStandards';
+import { API_BASE_URL } from '@/config/api';
 
 interface CampaignCreativeAssetsUploaderProps {
   requirements: CreativeRequirement[];
@@ -124,7 +125,7 @@ export function CampaignCreativeAssetsUploader({
       setLoadingExisting(true);
       try {
         const token = localStorage.getItem('auth_token');
-        const response = await fetch(`/api/creative-assets/campaign/${campaignId}`, {
+        const response = await fetch(`${API_BASE_URL}/creative-assets/campaign/${campaignId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -638,7 +639,7 @@ export function CampaignCreativeAssetsUploader({
 
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/creative-assets/${assetToDelete.assetId}`, {
+      const response = await fetch(`${API_BASE_URL}/creative-assets/${assetToDelete.assetId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -724,7 +725,7 @@ export function CampaignCreativeAssetsUploader({
       }
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/creative-assets/upload', {
+      const response = await fetch(`${API_BASE_URL}/creative-assets/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -844,7 +845,7 @@ export function CampaignCreativeAssetsUploader({
           }
 
           const token = localStorage.getItem('auth_token');
-          const response = await fetch('/api/creative-assets/upload', {
+          const response = await fetch(`${API_BASE_URL}/creative-assets/upload`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`

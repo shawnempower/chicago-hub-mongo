@@ -11,6 +11,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X } from 'lucide-rea
 import { usePublication } from '@/contexts/PublicationContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { API_BASE_URL } from '@/config/api';
 
 interface InsertionOrder {
   _id?: string;
@@ -65,8 +66,8 @@ export function PublicationOrders() {
       
       // Add publication ID filter if a publication is selected
       const url = selectedPublication 
-        ? `/api/publication-orders?publicationId=${selectedPublication.publicationId}`
-        : '/api/publication-orders';
+        ? `${API_BASE_URL}/publication-orders?publicationId=${selectedPublication.publicationId}`
+        : `${API_BASE_URL}/publication-orders`;
       
       const response = await fetch(url, {
         headers: {

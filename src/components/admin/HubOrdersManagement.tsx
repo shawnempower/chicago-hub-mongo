@@ -12,6 +12,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X, Image, AlertCircl
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '@/config/api';
 
 interface InsertionOrder {
   _id?: string;
@@ -81,7 +82,7 @@ export function HubOrdersManagement() {
       setLoading(true);
       const token = localStorage.getItem('auth_token');
 
-      const response = await fetch(`/api/admin/orders`, {
+      const response = await fetch(`${API_BASE_URL}/admin/orders`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

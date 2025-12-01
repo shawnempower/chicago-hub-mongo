@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Package, CheckCircle2, Users, MapPin, DollarSign, Calendar } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { API_BASE_URL } from '@/config/api';
 
 // Currency formatting helper
 const formatCurrency = (amount: number) => 
@@ -48,7 +49,7 @@ export function CampaignPackageSelectionStep({
         setError(null);
         
         // Fetch all packages for the hub via API
-        const response = await fetch(`/api/hub-packages?hubId=${selectedHubId}&isActive=true`);
+        const response = await fetch(`${API_BASE_URL}/hub-packages?hubId=${selectedHubId}&isActive=true`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch packages');

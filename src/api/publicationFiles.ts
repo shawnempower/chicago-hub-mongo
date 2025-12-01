@@ -217,7 +217,7 @@ export const deletePublicationFile = async (publicationId: string, fileId: strin
 // Get download URL for a file
 export const getFileDownloadUrl = async (publicationId: string, fileId: string): Promise<string> => {
   try {
-    const response = await fetch(`/api/publications/${publicationId}/files/${fileId}/download`, {
+    const response = await fetch(`${API_BASE_URL}/publications/${publicationId}/files/${fileId}/download`, {
       headers: getAuthHeaders(),
     });
 

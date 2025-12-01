@@ -30,6 +30,7 @@ import {
   formatDimensions,
   UploadedAssetWithSpecs
 } from '@/utils/creativeSpecsGrouping';
+import { API_BASE_URL } from '@/config/api';
 
 interface CampaignCreativeAssetsStepGroupedProps {
   requirements: CreativeRequirement[];
@@ -142,7 +143,7 @@ export function CampaignCreativeAssetsStepGrouped({
       formData.append('specGroupId', specGroup.specGroupId);
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/creative-assets/upload', {
+      const response = await fetch(`${API_BASE_URL}/creative-assets/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

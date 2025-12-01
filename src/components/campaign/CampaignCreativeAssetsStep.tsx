@@ -30,6 +30,7 @@ import {
   FileText,
   Info
 } from 'lucide-react';
+import { API_BASE_URL } from '@/config/api';
 
 interface UploadedAsset {
   placementId: string;
@@ -131,7 +132,7 @@ export function CampaignCreativeAssetsStep({
       formData.append('specifications', JSON.stringify(specifications));
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/creative-assets/upload', {
+      const response = await fetch(`${API_BASE_URL}/creative-assets/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

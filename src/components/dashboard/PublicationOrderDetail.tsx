@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { PublicationInsertionOrder, AdSpecification } from '@/integrations/mongodb/campaignSchema';
+import { API_BASE_URL } from '@/config/api';
 
 interface OrderDetailData extends PublicationInsertionOrder {
   campaignId: string;
@@ -45,7 +46,7 @@ export function PublicationOrderDetail() {
       const token = localStorage.getItem('auth_token');
 
       const response = await fetch(
-        `/api/publication-orders/${campaignId}/${publicationId}`,
+        `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -104,7 +105,7 @@ export function PublicationOrderDetail() {
       const token = localStorage.getItem('auth_token');
 
       const response = await fetch(
-        `/api/publication-orders/${campaignId}/${publicationId}/status`,
+        `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/status`,
         {
           method: 'PUT',
           headers: {
@@ -140,7 +141,7 @@ export function PublicationOrderDetail() {
       const token = localStorage.getItem('auth_token');
 
       const response = await fetch(
-        `/api/publication-orders/${campaignId}/${publicationId}/ad-specs`,
+        `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/ad-specs`,
         {
           method: 'POST',
           headers: {
@@ -174,7 +175,7 @@ export function PublicationOrderDetail() {
       const token = localStorage.getItem('auth_token');
 
       const response = await fetch(
-        `/api/publication-orders/${campaignId}/${publicationId}/notes`,
+        `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/notes`,
         {
           method: 'POST',
           headers: {
@@ -218,7 +219,7 @@ export function PublicationOrderDetail() {
       setUpdating(true);
       const token = localStorage.getItem('auth_token');
 
-      const url = `/api/publication-orders/${campaignId}/${publicationId}/placement-status`;
+      const url = `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/placement-status`;
       console.log('Calling API:', url);
 
       const response = await fetch(url, {
