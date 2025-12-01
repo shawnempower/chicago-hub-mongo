@@ -4,11 +4,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { PricingAnalytics, ChannelPricingAnalytics } from '@/hooks/useDashboardStats';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
-import { Loader2, TrendingUp, TrendingDown, AlertCircle, Info, Star, ThumbsUp, AlertTriangle, CheckCircle } from 'lucide-react';
-import { assessPricing, calculatePricingHealth, getSuggestedPrice, type PricingStatus } from '@/utils/pricingBenchmarks';
+import { Loader2, TrendingUp, AlertCircle, Info, Star, ThumbsUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { assessPricing, getSuggestedPrice } from '@/utils/pricingBenchmarks';
 
 interface HubPricingAnalyticsProps {
   pricingAnalytics?: PricingAnalytics;
@@ -430,59 +429,33 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
     };
   }, [pricingAnalytics]);
 
-  // Calculate overall pricing health and identify issues
+  // Calculate overall pricing health based on detailed inventory
   const pricingHealth = useMemo(() => {
-    if (!pricingAnalytics) return null;
+    if (detailedInventory.length === 0) return null;
 
-    const allItems: Array<{ channel: string; pricingModel: string; unitPrice: number; data: any }> = [];
-    
-    CHANNELS.forEach(({ key }) => {
-      const data = pricingAnalytics[key as keyof PricingAnalytics] as ChannelPricingAnalytics;
-      if (!data) return;
-      
-      Object.entries(data).forEach(([model, modelData]) => {
-        if (modelData.unitPrice.count > 0) {
-          allItems.push({
-            channel: key,
-            pricingModel: model,
-            unitPrice: modelData.unitPrice.avg,
-            data: modelData
-          });
-        }
-      });
-    });
+    // Count items by status
+    const breakdown = {
+      excellent: detailedInventory.filter(item => item.assessment.status === 'excellent').length,
+      good: detailedInventory.filter(item => item.assessment.status === 'good').length,
+      fair: detailedInventory.filter(item => item.assessment.status === 'fair').length,
+      review: detailedInventory.filter(item => item.assessment.status === 'review').length,
+      critical: detailedInventory.filter(item => item.assessment.status === 'critical').length
+    };
 
-    if (allItems.length === 0) return null;
-
-    const health = calculatePricingHealth(allItems);
-    
-    // Find outliers (critical and review status)
-    const outliers = allItems
-      .map(item => ({
-        ...item,
-        assessment: assessPricing(item.channel, item.pricingModel, item.unitPrice)
-      }))
-      .filter(item => item.assessment.status === 'critical' || item.assessment.status === 'review')
-      .sort((a, b) => b.assessment.multiplier - a.assessment.multiplier)
-      .slice(0, 10);
-
-    // Find package-ready items (excellent and good status)
-    const packageReady = allItems
-      .map(item => ({
-        ...item,
-        assessment: assessPricing(item.channel, item.pricingModel, item.unitPrice)
-      }))
-      .filter(item => item.assessment.status === 'excellent' || item.assessment.status === 'good')
-      .sort((a, b) => a.unitPrice - b.unitPrice)
-      .slice(0, 10);
+    // Calculate health score (0-100)
+    const total = detailedInventory.length;
+    const score = Math.round(
+      ((breakdown.excellent * 1.0 + breakdown.good * 0.8 + breakdown.fair * 0.5 + breakdown.review * 0.2 + breakdown.critical * 0) / total) * 100
+    );
 
     return {
-      health,
-      outliers,
-      packageReady,
-      totalItems: allItems.length
+      health: {
+        score,
+        breakdown
+      },
+      totalItems: total
     };
-  }, [pricingAnalytics]);
+  }, [detailedInventory]);
 
   if (loading) {
     return (
@@ -606,190 +579,211 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
         </Card>
       )}
 
-      {/* Pricing Alerts & Opportunities */}
+      {/* All Publications by Pricing Status */}
       {detailedInventory.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Outliers - Items Needing Review */}
-          {(() => {
-            const outliers = detailedInventory
-              .filter(item => item.assessment.status === 'critical' || item.assessment.status === 'review')
-              .sort((a, b) => b.assessment.multiplier - a.assessment.multiplier)
-              .slice(0, 5);
-            
-            if (outliers.length === 0) return null;
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2 font-sans">
+              <AlertCircle className="h-5 w-5" />
+              All Publications by Pricing Status
+            </CardTitle>
+            <CardDescription>
+              Complete inventory breakdown showing which publications are priced fairly, too high, or way too high
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="way-too-high" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="way-too-high" className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  Way Too High ({detailedInventory.filter(item => item.assessment.status === 'critical').length})
+                </TabsTrigger>
+                <TabsTrigger value="too-high" className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  Too High ({detailedInventory.filter(item => item.assessment.status === 'review').length})
+                </TabsTrigger>
+                <TabsTrigger value="fair" className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-yellow-600" />
+                  Fair ({detailedInventory.filter(item => item.assessment.status === 'fair').length})
+                </TabsTrigger>
+              </TabsList>
 
-            // Get comparison items (well-priced items in same channel)
-            const getComparisons = (channel: string) => {
-              return detailedInventory
-                .filter(item => item.channel === channel && (item.assessment.status === 'excellent' || item.assessment.status === 'good'))
-                .sort((a, b) => a.unitPrice - b.unitPrice)
-                .slice(0, 3);
-            };
-
-            return (
-              <Card className="border-gray-300 bg-gray-50/30">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2 font-sans">
-                    <AlertCircle className="h-5 w-5 text-red-600" />
-                    Pricing Problems
-                    <Badge variant="destructive">{outliers.length}</Badge>
-                  </CardTitle>
-                  <CardDescription className="text-gray-700">
-                    These items are priced way above market rates - fix these to improve sales
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {outliers.map((item, idx) => {
-                    const suggested = getSuggestedPrice(item.channel, item.pricingModel, item.audience);
-                    const comparisons = getComparisons(item.channel);
-                    
+              {/* Way Too High */}
+              <TabsContent value="way-too-high" className="mt-4">
+                {(() => {
+                  const criticalItems = detailedInventory
+                    .filter(item => item.assessment.status === 'critical')
+                    .sort((a, b) => b.assessment.multiplier - a.assessment.multiplier);
+                  
+                  if (criticalItems.length === 0) {
                     return (
-                      <div key={idx} className="border rounded-lg p-4" style={{ backgroundColor: '#FAEFEF', borderColor: '#E9DADA' }}>
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="font-bold font-sans text-base text-red-900 mb-1">
-                              {item.publicationName}
-                            </div>
-                            <div className="text-sm text-gray-700 mb-2">
-                              {item.itemName} • <Badge variant="outline" className="capitalize">{item.channel}</Badge>
-                            </div>
-                          </div>
-                          <span className="text-2xl">{item.assessment.icon}</span>
-                        </div>
-
-                        <div className="rounded p-3 mb-3 space-y-2" style={{ backgroundColor: '#F2E6E6' }}>
-                          <div className="text-sm">
-                            <span className="font-semibold font-sans text-red-900">The Problem:</span>
-                            <div className="mt-1">Charging <strong>${item.price.toLocaleString()}/month</strong> to reach only <strong>{item.audience.toLocaleString()} people</strong></div>
-                            <div className="text-red-700 font-medium mt-1">
-                              That's ${item.unitPrice.toFixed(2)} per 1,000 people
-                            </div>
-                          </div>
-                        </div>
-
-                        {comparisons.length > 0 && (
-                          <div className="bg-gray-100 rounded p-3 mb-3">
-                            <div className="text-sm font-semibold font-sans text-gray-900 mb-2">What Similar Outlets Charge:</div>
-                            <div className="space-y-1 text-sm">
-                              {comparisons.map((comp, i) => (
-                                <div key={i} className="text-gray-700">
-                                  • {comp.publicationName} ({comp.audience.toLocaleString()} audience): <strong>${comp.unitPrice.toFixed(2)} per 1K</strong>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="rounded p-3 mb-3" style={{ backgroundColor: '#E1EFE5' }}>
-                          <div className="text-sm">
-                            <span className="font-semibold font-sans text-green-900">Your Options:</span>
-                            <div className="mt-2 space-y-1">
-                              {suggested && (
-                                <>
-                                  <div className="text-green-800">
-                                    1. <strong>Lower price to ${suggested.low}-${suggested.target}/month</strong> (match market rate)
-                                  </div>
-                                  <div className="text-green-800">
-                                    2. Grow audience to {Math.round(item.price / suggested.target * 1000).toLocaleString()}+ to justify current price
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="text-xs">
-                            Contact Publisher
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-xs">
-                            View Details
-                          </Button>
-                        </div>
+                      <div className="text-center py-8 text-green-600">
+                        <CheckCircle className="h-12 w-12 mx-auto mb-3" />
+                        <p className="font-semibold">No Critical Pricing Issues!</p>
+                        <p className="text-sm text-muted-foreground">All items are priced reasonably.</p>
                       </div>
                     );
-                  })}
-                </CardContent>
-              </Card>
-            );
-          })()}
+                  }
 
-          {/* Package-Ready Inventory */}
-          {(() => {
-            const packageReady = detailedInventory
-              .filter(item => item.assessment.status === 'excellent' || item.assessment.status === 'good')
-              .sort((a, b) => a.unitPrice - b.unitPrice)
-              .slice(0, 5);
-            
-            if (packageReady.length === 0) return null;
-
-            return (
-              <Card className="border-gray-300 bg-gray-50/30">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2 font-sans">
-                    <Star className="h-5 w-5 text-green-600" />
-                    Great Value Inventory
-                    <Badge className="bg-green-600">{packageReady.length}</Badge>
-                  </CardTitle>
-                  <CardDescription className="text-gray-700">
-                    These are priced right - perfect for packages!
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {packageReady.map((item, idx) => (
-                    <div key={idx} className="border rounded-lg p-4" style={{ backgroundColor: '#FAFFFC', borderColor: '#DAE9DD' }}>
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="font-bold font-sans text-base text-green-900 mb-1">
-                            {item.publicationName}
-                          </div>
-                          <div className="text-sm text-gray-700 mb-2">
-                            {item.itemName} • <Badge variant="outline" className="capitalize border-green-600 text-green-700">{item.channel}</Badge>
-                          </div>
-                        </div>
-                        <span className="text-2xl">{item.assessment.icon}</span>
+                  return (
+                    <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground mb-3">
+                        These items are 10x+ over benchmark pricing. They need immediate attention.
                       </div>
-
-                      <div className="rounded p-3 mb-3" style={{ backgroundColor: '#E1EFE5' }}>
-                        <div className="text-sm space-y-2">
-                          <div>
-                            <span className="font-semibold font-sans text-green-900">Why This Works:</span>
-                            <div className="mt-1 text-green-800">
-                              <strong>${item.price.toLocaleString()}/month</strong> to reach <strong>{item.audience.toLocaleString()} people</strong>
-                            </div>
-                            <div className="text-green-700 font-medium mt-1">
-                              Only ${item.unitPrice.toFixed(2)} per 1,000 people - {item.assessment.message.toLowerCase()}
+                      {criticalItems.map((item, idx) => {
+                        const suggested = getSuggestedPrice(item.channel, item.pricingModel, item.audience);
+                        return (
+                          <div key={idx} className="border rounded-lg p-4 bg-red-50/50 border-red-200">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="font-bold text-base mb-1">
+                                  {item.publicationName}
+                                </div>
+                                <div className="text-sm text-gray-700 mb-2">
+                                  {item.itemName} • <Badge variant="outline" className="capitalize">{item.channel}</Badge> • {PRICING_MODEL_LABELS[item.pricingModel] || item.pricingModel}
+                                </div>
+                                <div className="text-sm space-y-1">
+                                  <div>
+                                    <span className="text-red-700">Charging ${item.price.toLocaleString()}/month to reach {item.audience.toLocaleString()} people</span>
+                                  </div>
+                                  <div className="font-semibold text-red-900">
+                                    ${item.unitPrice.toFixed(2)} per 1K • {item.assessment.multiplier.toFixed(1)}x over benchmark
+                                  </div>
+                                  {suggested && (
+                                    <div className="text-green-700">
+                                      Suggested: ${suggested.low}-${suggested.high}/month (${suggested.target} target)
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-3xl ml-4">{item.assessment.icon}</span>
                             </div>
                           </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-100 rounded p-3 mb-3">
-                        <div className="text-sm">
-                          <span className="font-semibold font-sans text-gray-900">Package Potential:</span>
-                          <div className="mt-1 space-y-1 text-gray-700">
-                            <div>• Total Reach: {item.audience.toLocaleString()} {getAudienceMetricLabel(item.channel).toLowerCase()}</div>
-                            <div>• Cost-effective pricing at ${item.unitPrice.toFixed(2)} per 1K</div>
-                            <div>• Ready to add to any package</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-xs">
-                          Add to Package
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-xs">
-                          View Details
-                        </Button>
-                      </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            );
-          })()}
-        </div>
+                  );
+                })()}
+              </TabsContent>
+
+              {/* Too High */}
+              <TabsContent value="too-high" className="mt-4">
+                {(() => {
+                  const reviewItems = detailedInventory
+                    .filter(item => item.assessment.status === 'review')
+                    .sort((a, b) => b.assessment.multiplier - a.assessment.multiplier);
+                  
+                  if (reviewItems.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-green-600">
+                        <CheckCircle className="h-12 w-12 mx-auto mb-3" />
+                        <p className="font-semibold">No Items Need Review!</p>
+                        <p className="text-sm text-muted-foreground">All items are priced within acceptable ranges.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground mb-3">
+                        These items are 2-10x over benchmark pricing. Consider reviewing and adjusting.
+                      </div>
+                      {reviewItems.map((item, idx) => {
+                        const suggested = getSuggestedPrice(item.channel, item.pricingModel, item.audience);
+                        return (
+                          <div key={idx} className="border rounded-lg p-4 bg-orange-50/50 border-orange-200">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="font-bold text-base mb-1">
+                                  {item.publicationName}
+                                </div>
+                                <div className="text-sm text-gray-700 mb-2">
+                                  {item.itemName} • <Badge variant="outline" className="capitalize">{item.channel}</Badge> • {PRICING_MODEL_LABELS[item.pricingModel] || item.pricingModel}
+                                </div>
+                                <div className="text-sm space-y-1">
+                                  <div>
+                                    <span className="text-orange-700">Charging ${item.price.toLocaleString()}/month to reach {item.audience.toLocaleString()} people</span>
+                                  </div>
+                                  <div className="font-semibold text-orange-900">
+                                    ${item.unitPrice.toFixed(2)} per 1K • {item.assessment.multiplier.toFixed(1)}x over benchmark
+                                  </div>
+                                  {suggested && (
+                                    <div className="text-green-700">
+                                      Suggested: ${suggested.low}-${suggested.high}/month (${suggested.target} target)
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-3xl ml-4">{item.assessment.icon}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </TabsContent>
+
+              {/* Fair */}
+              <TabsContent value="fair" className="mt-4">
+                {(() => {
+                  const fairItems = detailedInventory
+                    .filter(item => item.assessment.status === 'fair')
+                    .sort((a, b) => a.unitPrice - b.unitPrice);
+                  
+                  if (fairItems.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Info className="h-12 w-12 mx-auto mb-3" />
+                        <p className="font-semibold">No Items in Fair Range</p>
+                        <p className="text-sm">Items are either great value or need adjustment.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground mb-3">
+                        These items are priced acceptably but could be optimized for better package performance.
+                      </div>
+                      {fairItems.map((item, idx) => {
+                        const suggested = getSuggestedPrice(item.channel, item.pricingModel, item.audience);
+                        return (
+                          <div key={idx} className="border rounded-lg p-4 bg-yellow-50/30 border-yellow-200">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="font-bold text-base mb-1">
+                                  {item.publicationName}
+                                </div>
+                                <div className="text-sm text-gray-700 mb-2">
+                                  {item.itemName} • <Badge variant="outline" className="capitalize">{item.channel}</Badge> • {PRICING_MODEL_LABELS[item.pricingModel] || item.pricingModel}
+                                </div>
+                                <div className="text-sm space-y-1">
+                                  <div>
+                                    <span className="text-yellow-700">Charging ${item.price.toLocaleString()}/month to reach {item.audience.toLocaleString()} people</span>
+                                  </div>
+                                  <div className="font-semibold text-yellow-900">
+                                    ${item.unitPrice.toFixed(2)} per 1K • {item.assessment.multiplier.toFixed(1)}x benchmark
+                                  </div>
+                                  {suggested && (
+                                    <div className="text-green-700">
+                                      Optimal: ${suggested.low}-${suggested.high}/month (${suggested.target} target)
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-3xl ml-4">{item.assessment.icon}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       )}
 
       {/* Total Audience Reach Across All Channels */}
