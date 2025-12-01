@@ -605,11 +605,21 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
 // Save a built package
 router.post('/save-package', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const packageData = req.body;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    // Check if user has permission to create package for this hub
+    if (!isAdmin) {
+      const packageHubId = packageData.hubInfo?.hubId;
+      if (!packageHubId) {
+        return res.status(400).json({ error: 'Package must be associated with a hub' });
+      }
+      
+      if (!assignedHubIds.includes(packageHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to create packages for this hub' });
+      }
+    }
     
     // Ensure builder metadata is included
     if (!packageData.metadata) {
@@ -632,12 +642,24 @@ router.post('/save-package', authenticateToken, async (req: any, res: Response) 
 // Update a built package
 router.put('/packages/:id', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { id } = req.params;
     const updateData = req.body;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    // For non-admins, verify they have access to this package's hub
+    if (!isAdmin) {
+      // Get the existing package to check hub ownership
+      const existingPackage = await hubPackagesService.getById(id);
+      if (!existingPackage) {
+        return res.status(404).json({ error: 'Package not found' });
+      }
+      
+      const packageHubId = existingPackage.hubInfo?.hubId;
+      if (!packageHubId || !assignedHubIds.includes(packageHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to update packages for this hub' });
+      }
+    }
     
     // Update lastBuilderEdit timestamp
     if (updateData.metadata?.builderInfo) {
@@ -694,15 +716,22 @@ router.post('/packages/:id/duplicate', authenticateToken, async (req: any, res: 
 // Export package as CSV
 router.get('/packages/:id/export-csv', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { id } = req.params;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
     const package_ = await hubPackagesService.getById(id);
     
     if (!package_) {
       return res.status(404).json({ error: 'Package not found' });
+    }
+    
+    // For non-admins, verify they have access to this package's hub
+    if (!isAdmin) {
+      const packageHubId = package_.hubInfo?.hubId;
+      if (!packageHubId || !assignedHubIds.includes(packageHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to export packages for this hub' });
+      }
     }
 
     // Build CSV content
@@ -757,10 +786,8 @@ router.get('/packages/:id/export-csv', authenticateToken, async (req: any, res: 
 // Get packages created via builder
 router.get('/packages', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
     const { hub_id } = req.query;
     
     const filters: any = {};
@@ -770,9 +797,16 @@ router.get('/packages', authenticateToken, async (req: any, res: Response) => {
     const allPackages = await hubPackagesService.getAll(filters);
     
     // Filter to only builder-created packages
-    const builderPackages = allPackages.filter((pkg: any) => 
+    let builderPackages = allPackages.filter((pkg: any) => 
       pkg.metadata?.builderInfo?.creationMethod === 'builder'
     );
+    
+    // For non-admins, filter to only packages in their assigned hubs
+    if (!isAdmin) {
+      builderPackages = builderPackages.filter((pkg: any) => 
+        pkg.hubInfo?.hubId && assignedHubIds.includes(pkg.hubInfo.hubId)
+      );
+    }
     
     res.json({ packages: builderPackages });
   } catch (error) {
@@ -786,17 +820,23 @@ router.get('/packages', authenticateToken, async (req: any, res: Response) => {
 // Run health check on a single package
 router.get('/packages/:id/health-check', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { id } = req.params;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
     const { packageHealthService } = await import('../../src/services/packageHealthService');
     
     const package_ = await hubPackagesService.getById(id);
     
     if (!package_) {
       return res.status(404).json({ error: 'Package not found' });
+    }
+    
+    // For non-admins, verify they have access to this package's hub
+    if (!isAdmin) {
+      const packageHubId = package_.hubInfo?.hubId;
+      if (!packageHubId || !assignedHubIds.includes(packageHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to check health for packages in this hub' });
+      }
     }
 
     const healthCheck = await packageHealthService.runHealthCheck(package_);
@@ -810,18 +850,24 @@ router.get('/packages/:id/health-check', authenticateToken, async (req: any, res
 // Recalculate and update package with current values
 router.post('/packages/:id/recalculate', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { id } = req.params;
     const { updatePricing = true, updateReach = true } = req.body;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
     const { packageHealthService } = await import('../../src/services/packageHealthService');
     
     const package_ = await hubPackagesService.getById(id);
     
     if (!package_) {
       return res.status(404).json({ error: 'Package not found' });
+    }
+    
+    // For non-admins, verify they have access to this package's hub
+    if (!isAdmin) {
+      const packageHubId = package_.hubInfo?.hubId;
+      if (!packageHubId || !assignedHubIds.includes(packageHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to recalculate packages for this hub' });
+      }
     }
 
     // Store old values
@@ -907,12 +953,15 @@ router.post('/packages/:id/recalculate', authenticateToken, async (req: any, res
 // Get health summary for multiple packages
 router.post('/packages/bulk-health-check', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { packageIds, hubId } = req.body;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
     const { packageHealthService } = await import('../../src/services/packageHealthService');
+    
+    // For non-admins, validate hub access
+    if (!isAdmin && hubId && !assignedHubIds.includes(hubId)) {
+      return res.status(403).json({ error: 'You do not have permission to check health for packages in this hub' });
+    }
     
     let packages = [];
     
@@ -944,12 +993,18 @@ router.post('/packages/bulk-health-check', authenticateToken, async (req: any, r
 // Get health summary (for dashboard widget)
 router.get('/packages/health-summary', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { hubId } = req.query;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
     const { packageHealthService } = await import('../../src/services/packageHealthService');
+    
+    // For non-admins, validate hub access if hubId is specified
+    if (!isAdmin) {
+      if (hubId && !assignedHubIds.includes(hubId as string)) {
+        return res.status(403).json({ error: 'You do not have permission to view health summary for this hub' });
+      }
+      // If no hubId specified, we'll filter results below
+    }
     
     const packages = await hubPackagesService.list({ 
       hubId: hubId as string | undefined 

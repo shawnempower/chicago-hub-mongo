@@ -1633,11 +1633,22 @@ router.delete('/algorithms/:algorithmId', authenticateToken, async (req: any, re
 
 // ===== HUB PACKAGES MANAGEMENT =====
 
-// Create new hub package (admin only)
+// Create new hub package (admin or hub user)
 router.post('/hub-packages', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    // Check if user has permission to create package for this hub
+    if (!isAdmin) {
+      const packageHubId = req.body.hubInfo?.hubId;
+      if (!packageHubId) {
+        return res.status(400).json({ error: 'Package must be associated with a hub' });
+      }
+      
+      if (!assignedHubIds.includes(packageHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to create packages for this hub' });
+      }
     }
     
     const pkg = await hubPackagesService.create(req.body, req.user.id);
@@ -1647,14 +1658,27 @@ router.post('/hub-packages', authenticateToken, async (req: any, res: Response) 
   }
 });
 
-// Update hub package (admin only)
+// Update hub package (admin or hub user)
 router.put('/hub-packages/:id', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { id } = req.params;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    // For non-admins, verify they have access to this package's hub
+    if (!isAdmin) {
+      // Get the existing package to check hub ownership
+      const existingPackage = await hubPackagesService.getById(id);
+      if (!existingPackage) {
+        return res.status(404).json({ error: 'Package not found' });
+      }
+      
+      const packageHubId = existingPackage.hubInfo?.hubId;
+      if (!packageHubId || !assignedHubIds.includes(packageHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to update packages for this hub' });
+      }
     }
     
-    const { id } = req.params;
     const pkg = await hubPackagesService.update(id, req.body, req.user.id);
     
     if (!pkg) {
@@ -1667,14 +1691,27 @@ router.put('/hub-packages/:id', authenticateToken, async (req: any, res: Respons
   }
 });
 
-// Delete hub package (admin only - soft delete)
+// Delete hub package (admin or hub user - soft delete)
 router.delete('/hub-packages/:id', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { id } = req.params;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    // For non-admins, verify they have access to this package's hub
+    if (!isAdmin) {
+      // Get the existing package to check hub ownership
+      const existingPackage = await hubPackagesService.getById(id);
+      if (!existingPackage) {
+        return res.status(404).json({ error: 'Package not found' });
+      }
+      
+      const packageHubId = existingPackage.hubInfo?.hubId;
+      if (!packageHubId || !assignedHubIds.includes(packageHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to delete packages for this hub' });
+      }
     }
     
-    const { id } = req.params;
     const success = await hubPackagesService.delete(id, false); // soft delete
     
     if (!success) {
@@ -1687,14 +1724,27 @@ router.delete('/hub-packages/:id', authenticateToken, async (req: any, res: Resp
   }
 });
 
-// Restore deleted package (admin only)
+// Restore deleted package (admin or hub user)
 router.post('/hub-packages/:id/restore', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { id } = req.params;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    // For non-admins, verify they have access to this package's hub
+    if (!isAdmin) {
+      // Get the existing package to check hub ownership (even if deleted)
+      const existingPackage = await hubPackagesService.getById(id);
+      if (!existingPackage) {
+        return res.status(404).json({ error: 'Package not found' });
+      }
+      
+      const packageHubId = existingPackage.hubInfo?.hubId;
+      if (!packageHubId || !assignedHubIds.includes(packageHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to restore packages for this hub' });
+      }
     }
     
-    const { id } = req.params;
     const success = await hubPackagesService.restore(id);
     
     if (!success) {
