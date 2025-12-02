@@ -6,6 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Download,
   Save,
   Package as PackageIcon,
@@ -17,7 +27,8 @@ import {
   Trash2,
   X,
   Plus,
-  Edit
+  Edit,
+  RefreshCw
 } from 'lucide-react';
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
 import { BuilderResult } from '@/services/packageBuilderService';
@@ -40,6 +51,7 @@ interface PackageResultsProps {
   onSave: (packageName: string) => Promise<void>;
   onExportCSV: () => void;
   onUpdatePublications: (publications: HubPackagePublication[]) => void;
+  onRefresh?: () => Promise<void>;
   loading?: boolean;
   initialPackageName?: string;
 }
@@ -52,6 +64,7 @@ export function PackageResults({
   onSave,
   onExportCSV,
   onUpdatePublications,
+  onRefresh,
   loading,
   initialPackageName = ''
 }: PackageResultsProps) {
@@ -62,6 +75,8 @@ export function PackageResults({
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempPackageName, setTempPackageName] = useState(initialPackageName);
   const [generatingIO, setGeneratingIO] = useState(false);
+  const [showRefreshDialog, setShowRefreshDialog] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Store original publications to track removed items
   const [originalPublications] = useState<HubPackagePublication[]>(() => 
@@ -130,6 +145,30 @@ export function PackageResults({
       return;
     }
     await onSave(packageName.trim());
+  };
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    if (!onRefresh) return;
+    
+    setRefreshing(true);
+    try {
+      await onRefresh();
+      toast({
+        title: 'Package Refreshed',
+        description: 'Publication inventory and pricing have been updated with the latest data.',
+      });
+    } catch (error) {
+      console.error('Error refreshing package:', error);
+      toast({
+        title: 'Refresh Failed',
+        description: error instanceof Error ? error.message : 'Failed to refresh package data',
+        variant: 'destructive'
+      });
+    } finally {
+      setRefreshing(false);
+      setShowRefreshDialog(false);
+    }
   };
 
   // Toggle channel expansion
@@ -478,6 +517,9 @@ export function PackageResults({
 </html>`;
   };
 
+  // Helper: Get base path without tier suffix (e.g., "path[0]-tier1" -> "path[0]")
+  const getBasePath = (path: string) => path.replace(/-tier\d+$/, '');
+  
   // Helper: Get removed items for a publication
   const getRemovedItemsForPublication = (publicationId: number) => {
     const original = originalPublications.find(p => p.publicationId === publicationId);
@@ -485,11 +527,21 @@ export function PackageResults({
     
     if (!original || !current) return [];
     
+    // Build sets of both exact paths and base paths from current items
     const currentItemPaths = new Set(current.inventoryItems?.map(i => i.itemPath) || []);
+    const currentBasePaths = new Set(current.inventoryItems?.map(i => getBasePath(i.itemPath)) || []);
     
-    return (original.inventoryItems || []).filter(
-      item => !currentItemPaths.has(item.itemPath)
-    );
+    return (original.inventoryItems || []).filter(item => {
+      // Don't show as removed if exact path exists
+      if (currentItemPaths.has(item.itemPath)) return false;
+      
+      // Don't show as removed if this item's path (or base path) exists in current items
+      // This handles the case where "Monthly Banner Ad" was replaced by "Monthly Banner Ad (Monthly)" and "(Weekly)"
+      const basePath = getBasePath(item.itemPath);
+      if (currentBasePaths.has(basePath) || currentBasePaths.has(item.itemPath)) return false;
+      
+      return true; // Actually removed
+    });
   };
 
   // Helper: Get removed items for a publication AND channel
@@ -617,6 +669,8 @@ export function PackageResults({
         ...item,
         publicationId: pub.publicationId,  // Ensure publicationId is present
         publicationName: pub.publicationName,
+        publicationFrequencyType: item.publicationFrequencyType || pub.publicationFrequencyType,  // Include frequency type
+        frequency: item.frequency,  // Include frequency string (e.g., "Weekly")
         itemCost
       });
     });
@@ -709,6 +763,22 @@ export function PackageResults({
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
+              
+              {onRefresh && (
+                <Button
+                  onClick={() => setShowRefreshDialog(true)}
+                  variant="outline"
+                  size="sm"
+                  disabled={loading || refreshing}
+                  title="Refresh package data with latest publications and pricing"
+                >
+                  {refreshing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
               
               <Button
                 onClick={handleGenerateInsertionOrder}
@@ -961,7 +1031,12 @@ export function PackageResults({
                       if (!acc[item.channel]) {
                         acc[item.channel] = [];
                       }
-                      acc[item.channel].push(item);
+                      // Ensure frequency type and frequency string are included from publication level if not on item
+                      acc[item.channel].push({
+                        ...item,
+                        publicationFrequencyType: item.publicationFrequencyType || pub.publicationFrequencyType,
+                        frequency: item.frequency  // Explicitly include frequency string
+                      });
                       return acc;
                     }, {} as Record<string, any[]>);
 
@@ -1078,6 +1153,57 @@ export function PackageResults({
               />
             </TabsContent>
       </Tabs>
+
+      {/* Refresh Confirmation Dialog */}
+      <AlertDialog open={showRefreshDialog} onOpenChange={setShowRefreshDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Refresh Package Data?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                This will refresh the package with the latest publication data while <strong>preserving your customizations</strong>:
+              </p>
+              <div className="bg-green-50 border border-green-200 rounded p-3">
+                <p className="font-semibold text-green-800 mb-2">✓ What will be preserved:</p>
+                <ul className="list-disc pl-6 space-y-1 text-green-700 text-sm">
+                  <li>Excluded items stay excluded</li>
+                  <li>Frequency adjustments are maintained</li>
+                  <li>All manual customizations</li>
+                </ul>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="font-semibold text-blue-800 mb-2">↻ What will be updated:</p>
+                <ul className="list-disc pl-6 space-y-1 text-blue-700 text-sm">
+                  <li>Latest pricing information</li>
+                  <li>Updated specifications</li>
+                  <li>New inventory items added</li>
+                  <li>Current availability data</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={refreshing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {refreshing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh Package
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

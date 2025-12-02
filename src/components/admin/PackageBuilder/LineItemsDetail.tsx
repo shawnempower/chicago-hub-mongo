@@ -68,6 +68,9 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
     });
   };
 
+  // Helper: Get base path without tier suffix (e.g., "path[0]-tier1" -> "path[0]")
+  const getBasePath = (path: string) => path.replace(/-tier\d+$/, '');
+  
   // Helper: Get removed items for a publication
   const getRemovedItemsForPublication = (publicationId: number) => {
     const original = originalPublications.find(p => p.publicationId === publicationId);
@@ -75,11 +78,21 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
     
     if (!original || !current) return [];
     
+    // Build sets of both exact paths and base paths from current items
     const currentItemPaths = new Set(current.inventoryItems?.map(i => i.itemPath) || []);
+    const currentBasePaths = new Set(current.inventoryItems?.map(i => getBasePath(i.itemPath)) || []);
     
-    return (original.inventoryItems || []).filter(
-      item => !currentItemPaths.has(item.itemPath)
-    );
+    return (original.inventoryItems || []).filter(item => {
+      // Don't show as removed if exact path exists
+      if (currentItemPaths.has(item.itemPath)) return false;
+      
+      // Don't show as removed if this item's path (or base path) exists in current items
+      // This handles the case where "Monthly Banner Ad" was replaced by "Monthly Banner Ad (Monthly)" and "(Weekly)"
+      const basePath = getBasePath(item.itemPath);
+      if (currentBasePaths.has(basePath) || currentBasePaths.has(item.itemPath)) return false;
+      
+      return true; // Actually removed
+    });
   };
 
   // Handler: Add item back
@@ -226,6 +239,19 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
       return labels[model] || model.toUpperCase();
     };
 
+    // Get publication frequency label
+    const getPublicationFrequencyLabel = (type?: PublicationFrequencyType, frequency?: string) => {
+      // Prefer the frequency string if available (more specific)
+      if (frequency && frequency !== 'custom') {
+        return frequency.charAt(0).toUpperCase() + frequency.slice(1);
+      }
+      // Fall back to publicationFrequencyType
+      if (type && type !== 'custom') {
+        return type.charAt(0).toUpperCase() + type.slice(1).replace('-', ' ');
+      }
+      return null;
+    };
+
     return (
       <div key={`${pub.publicationId}-${itemIndex}`} className={`border rounded-lg p-4 space-y-3 ${isExcluded ? 'opacity-30 bg-gray-50' : ''}`}>
         {/* Item Header */}
@@ -241,6 +267,11 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
               <Badge variant="outline" className="text-xs capitalize">
                 {item.channel}
               </Badge>
+              {getPublicationFrequencyLabel(item.publicationFrequencyType, item.frequency) && (
+                <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                  {getPublicationFrequencyLabel(item.publicationFrequencyType, item.frequency)}
+                </Badge>
+              )}
               <Badge variant="secondary" className="text-xs">
                 {getPricingModelLabel(pricingModel)}
               </Badge>

@@ -123,6 +123,19 @@ export function LineItemEditor({
     return labels[model] || model.toUpperCase();
   };
 
+  // Get publication frequency label
+  const getPublicationFrequencyLabel = (type?: PublicationFrequencyType, frequency?: string) => {
+    // Prefer the frequency string if available (more specific)
+    if (frequency && frequency !== 'custom') {
+      return frequency.charAt(0).toUpperCase() + frequency.slice(1);
+    }
+    // Fall back to publicationFrequencyType
+    if (type && type !== 'custom') {
+      return type.charAt(0).toUpperCase() + type.slice(1).replace('-', ' ');
+    }
+    return null;
+  };
+
   // Render frequency control
   const renderFrequencyControl = () => {
     // For impression-based pricing (CPM/CPV/CPC), show percentage selector
@@ -266,6 +279,11 @@ export function LineItemEditor({
             <Badge variant="outline" className="text-xs capitalize">
               {item.channel}
             </Badge>
+            {getPublicationFrequencyLabel(item.publicationFrequencyType, item.frequency) && (
+              <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                {getPublicationFrequencyLabel(item.publicationFrequencyType, item.frequency)}
+              </Badge>
+            )}
             <Badge variant="secondary" className="text-xs">
               {getPricingModelLabel(pricingModel)}
             </Badge>
@@ -337,6 +355,11 @@ export function LineItemEditor({
             <Badge variant="outline" className="text-xs capitalize">
               {item.channel}
             </Badge>
+            {getPublicationFrequencyLabel(item.publicationFrequencyType, item.frequency) && (
+              <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                {getPublicationFrequencyLabel(item.publicationFrequencyType, item.frequency)}
+              </Badge>
+            )}
             <Badge variant="secondary" className="text-xs">
               {getPricingModelLabel(pricingModel)}
             </Badge>

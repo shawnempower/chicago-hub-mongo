@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronDown, ChevronUp, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { HubPackageInventoryItem } from '@/integrations/mongodb/hubPackageSchema';
+import { HubPackageInventoryItem, PublicationFrequencyType } from '@/integrations/mongodb/hubPackageSchema';
 import {
   getFrequencyOptionsWithLabels,
   isAtMaxFrequency
@@ -82,6 +82,19 @@ export function LineItemsTable({
       'cpd': 'CPD'
     };
     return labels[model] || model.toUpperCase();
+  };
+
+  // Get publication frequency label
+  const getPublicationFrequencyLabel = (type?: PublicationFrequencyType, frequency?: string) => {
+    // Prefer the frequency string if available (more specific)
+    if (frequency && frequency !== 'custom') {
+      return frequency.charAt(0).toUpperCase() + frequency.slice(1);
+    }
+    // Fall back to publicationFrequencyType
+    if (type && type !== 'custom') {
+      return type.charAt(0).toUpperCase() + type.slice(1).replace('-', ' ');
+    }
+    return null;
   };
 
   // Build frequency options based on pricing model
@@ -275,6 +288,13 @@ export function LineItemsTable({
                       </Badge>
                     )}
                     
+                    {/* Original Frequency Badge (e.g., "Show: weekly") */}
+                    {(item as any).originalFrequency && (
+                      <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700">
+                        Show: {(item as any).originalFrequency}
+                      </Badge>
+                    )}
+                    
                     {/* Non-Pricing Specifications */}
                     {item.specifications && Object.keys(item.specifications).length > 0 && (
                       <div className="flex items-center gap-3 flex-wrap text-xs">
@@ -293,7 +313,7 @@ export function LineItemsTable({
                 
                 {/* Pricing Info */}
                 <td className="px-4 py-3 border-l border-gray-200">
-                  <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="secondary" className="text-xs font-medium">
                       {getPricingModelLabel(pricingModel)}
                     </Badge>

@@ -198,8 +198,27 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
         opportunities.forEach((opp: any, idx: number) => {
           const hubPricing = opp.hubPricing?.find((hp: any) => hp.hubId === hubId && hp.available);
           if (hubPricing?.pricing) {
-            const pricing = selectBestPricingTier(hubPricing.pricing);
-            const pricingModel = pricing.pricingModel || 'flat';
+            // Get all pricing tiers (could be array or single object)
+            const rawPricingTiers = Array.isArray(hubPricing.pricing) 
+              ? hubPricing.pricing 
+              : [hubPricing.pricing];
+            
+            // Keep only ONE tier per pricing MODEL (e.g., one 'monthly', one 'per_week')
+            // This filters out volume discount tiers (multiple prices for same model)
+            // but keeps different billing models as separate items
+            const seenModels = new Set<string>();
+            const pricingTiers = rawPricingTiers.filter((tier: any) => {
+              const model = tier.pricingModel || 'flat';
+              if (seenModels.has(model)) {
+                return false; // Skip - already have this pricing model
+              }
+              seenModels.add(model);
+              return true;
+            });
+            
+            // Create inventory item for each unique pricing MODEL
+            pricingTiers.forEach((pricing: any, tierIndex: number) => {
+              const pricingModel = pricing.pricingModel || 'flat';
             
             // Extract price based on pricing model (with fallbacks)
             let hubPrice = 0;
@@ -304,14 +323,34 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
                 }
               }
               
+              // Create unique path and name for each pricing tier
+              const tierSuffix = pricingTiers.length > 1 ? `-tier${tierIndex}` : '';
+              const baseItemName = opp.title || opp.name || `${channelName} Ad`;
+              const getPricingModelLabel = (model: string) => {
+                const labels: Record<string, string> = {
+                  'flat': 'Monthly',
+                  'monthly': 'Monthly',
+                  'per_week': 'Weekly',
+                  'per_day': 'Daily',
+                  'per_send': 'Per Send',
+                  'per_spot': 'Per Spot',
+                  'per_ad': 'Per Ad'
+                };
+                return labels[model] || model;
+              };
+              const itemName = pricingTiers.length > 1
+                ? `${baseItemName} (${getPricingModelLabel(pricingModel)})`
+                : baseItemName;
+              
               const item: any = {
                 channel: channelName,
-                itemPath: `${path}[${idx}]`,
-                itemName: opp.title || opp.name || `${channelName} Ad`,
+                itemPath: `${path}[${idx}]${tierSuffix}`,
+                itemName: itemName,
                 quantity: frequency,
                 currentFrequency: frequency,
                 maxFrequency: pubType === 'daily' ? 30 : pubType === 'weekly' ? 4 : pubType === 'bi-weekly' ? 2 : 1,
                 publicationFrequencyType: pubType,
+                frequency: itemFrequencyString || pub.printFrequency,  // Use item-specific frequency or publication frequency
                 itemPricing: {
                   standardPrice: hubPrice,
                   hubPrice,
@@ -346,7 +385,8 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
               }
               
               inventoryItems.push(item);
-            }
+            } // End if (hubPrice > 0)
+            }); // End pricingTiers.forEach
           }
         });
       };
@@ -693,8 +733,8 @@ router.post('/packages/:id/duplicate', authenticateToken, async (req: any, res: 
       return res.status(404).json({ error: 'Package not found' });
     }
 
-    // Create a copy with modified fields
-    const { _id, metadata, ...packageData } = originalPackage as any;
+    // Create a copy with modified fields - PRESERVE metadata (especially builderInfo)
+    const { _id, ...packageData } = originalPackage as any;
     
     const duplicatedPackage = {
       ...packageData,
@@ -702,6 +742,13 @@ router.post('/packages/:id/duplicate', authenticateToken, async (req: any, res: 
       basicInfo: {
         ...packageData.basicInfo,
         name: `${packageData.basicInfo.name} (Copy)`
+      },
+      // Preserve metadata but update creation info
+      metadata: {
+        ...packageData.metadata,
+        createdAt: undefined, // Will be set by create()
+        updatedAt: undefined,
+        version: 1
       }
     };
 
@@ -1019,6 +1066,474 @@ router.get('/packages/health-summary', authenticateToken, async (req: any, res: 
   } catch (error) {
     console.error('Error fetching health summary:', error);
     res.status(500).json({ error: 'Failed to fetch health summary' });
+  }
+});
+
+/**
+ * Smart refresh endpoint - updates package data while preserving customizations
+ * POST /api/admin/builder/refresh
+ */
+router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { 
+      hubId, 
+      currentPublications, // Current package state with exclusions/frequencies
+      filters // Original builder filters (channels, geography, etc.)
+    } = req.body;
+
+    if (!hubId || !currentPublications || !filters) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: hubId, currentPublications, filters' 
+      });
+    }
+
+    // Get publications collection
+    const db = await getDatabase();
+    const publicationsCollection = db.collection(COLLECTIONS.PUBLICATIONS);
+    
+    // Get the publication IDs from current package
+    const publicationIds = currentPublications.map((p: any) => p.publicationId);
+    
+    // Fetch fresh publication data
+    const freshPublications = await publicationsCollection
+      .find({ 
+        publicationId: { $in: publicationIds },
+        'hubIds': hubId 
+      })
+      .toArray();
+
+    // Helper to detect publication frequency type
+    const detectFrequencyType = (printFrequency?: string): string => {
+      if (!printFrequency) return 'custom';
+      const freq = printFrequency.toLowerCase();
+      if (freq.includes('daily')) return 'daily';
+      if (freq.includes('weekly') && !freq.includes('bi')) return 'weekly';
+      if (freq.includes('bi-weekly') || freq.includes('biweekly')) return 'bi-weekly';
+      if (freq.includes('monthly')) return 'monthly';
+      return 'custom';
+    };
+
+    // Merge logic: update pricing and add new items while preserving customizations
+    const mergedPublications = currentPublications.map((currentPub: any) => {
+      const freshPub = freshPublications.find((fp: any) => fp.publicationId === currentPub.publicationId);
+      
+      if (!freshPub) {
+        // Publication no longer exists or not in hub - keep current state
+        return currentPub;
+      }
+
+      const pubType = detectFrequencyType(freshPub.printFrequency);
+      
+      // Build a map of current items by itemPath for quick lookup
+      const currentItemsMap = new Map(
+        (currentPub.inventoryItems || []).map((item: any) => [item.itemPath, item])
+      );
+      
+      // Get all channels that are currently in the package (to preserve them during refresh)
+      const currentChannels = new Set((currentPub.inventoryItems || []).map((item: any) => item.channel));
+      // Merge with filter channels to also include any newly selected channels
+      const channelsToRefresh = Array.from(new Set([...currentChannels, ...(filters.channels || [])]));
+      
+      // Only show detailed logs for Chicago News Weekly
+      const isDebugPub = currentPub.publicationName?.includes('Chicago News Weekly');
+      
+      // Debug logging removed for production
+
+      // Extract fresh inventory from the publication
+      const freshInventory: any[] = [];
+      
+      // Helper to extract items from a channel
+      const extractFromChannel = (channelName: string, channelData: any, path: string, itemFrequencyString?: string, sourceInfo?: any) => {
+        if (!channelsToRefresh.includes(channelName)) return;
+        
+        // Consolidate all channel-level metrics from sourceInfo
+        const channelMetrics = {
+          ...sourceInfo?.websiteMetrics,
+          ...sourceInfo?.newsletterMetrics,
+          ...sourceInfo?.printMetrics,
+          ...sourceInfo?.socialMetrics,
+          ...sourceInfo?.radioMetrics,
+          ...sourceInfo?.podcastMetrics
+        };
+        
+        let opportunities = [];
+        if (Array.isArray(channelData)) {
+          opportunities = channelData.flatMap((item: any) => 
+            item.advertisingOpportunities || []
+          );
+        } else if (channelData.advertisingOpportunities) {
+          opportunities = channelData.advertisingOpportunities;
+        }
+
+        opportunities.forEach((opp: any, idx: number) => {
+          // Find hub pricing
+          const hubPricing = opp.hubPricing?.find((hp: any) => hp.hubId === hubId);
+          if (!hubPricing?.pricing) return;
+
+          // Get all pricing tiers (could be array or single object)
+          const rawPricingTiers = Array.isArray(hubPricing.pricing) 
+            ? hubPricing.pricing 
+            : [hubPricing.pricing];
+          
+          // Keep only ONE tier per pricing MODEL (e.g., one 'monthly', one 'per_week')
+          // This filters out volume discount tiers (multiple prices for same model)
+          // but keeps different billing models as separate items
+          const seenModels = new Set<string>();
+          const pricingTiers = rawPricingTiers.filter((tier: any) => {
+            const model = tier.pricingModel || 'flat';
+            if (seenModels.has(model)) {
+              return false; // Skip - already have this pricing model
+            }
+            seenModels.add(model);
+            return true;
+          });
+          
+          // Create inventory item for each unique pricing MODEL
+          pricingTiers.forEach((pricing: any, tierIndex: number) => {
+            const pricingModel = pricing.pricingModel || 'flat';
+            
+            // Extract price based on pricing model
+            let hubPrice = 0;
+            switch (pricingModel) {
+              case 'monthly':
+                hubPrice = pricing.monthly || pricing.flatRate || pricing.rate || 0;
+                break;
+              case 'per_week':
+                hubPrice = pricing.perWeek || pricing.flatRate || pricing.rate || 0;
+                break;
+              case 'per_day':
+                hubPrice = pricing.perDay || pricing.flatRate || pricing.rate || 0;
+                break;
+              case 'per_send':
+                hubPrice = pricing.perSend || pricing.rate || pricing.flatRate || 0;
+                break;
+              case 'per_spot':
+                hubPrice = pricing.perSpot || pricing.rate || pricing.flatRate || 0;
+                break;
+              case 'per_post':
+                hubPrice = pricing.perPost || pricing.rate || pricing.flatRate || 0;
+                break;
+              case 'per_episode':
+                hubPrice = pricing.perEpisode || pricing.rate || pricing.flatRate || 0;
+                break;
+              case 'per_ad':
+              case 'per_insertion':
+                hubPrice = pricing.rate || pricing.flatRate || 0;
+                break;
+              case 'cpm':
+                hubPrice = pricing.cpm || pricing.flatRate || pricing.rate || 0;
+                break;
+              case 'cpv':
+                hubPrice = pricing.cpv || pricing.flatRate || pricing.rate || 0;
+                break;
+              case 'cpc':
+                hubPrice = pricing.cpc || pricing.flatRate || pricing.rate || 0;
+                break;
+              case 'flat':
+              default:
+                hubPrice = pricing.flatRate || pricing.rate || pricing.monthly || 0;
+                break;
+            }
+            
+            if (hubPrice === 0) return; // Skip if no valid price
+
+            // Create unique path and name for each pricing tier
+            const tierSuffix = pricingTiers.length > 1 ? `-tier${tierIndex}` : '';
+            const baseItemName = opp.title || opp.name || `${channelName} Ad`;
+            const getPricingModelLabel = (model: string) => {
+              const labels: Record<string, string> = {
+                'flat': 'Monthly',
+                'monthly': 'Monthly',
+                'per_week': 'Weekly',
+                'per_day': 'Daily',
+                'per_send': 'Per Send',
+                'per_spot': 'Per Spot',
+                'per_ad': 'Per Ad'
+              };
+              return labels[model] || model;
+            };
+            const itemName = pricingTiers.length > 1
+              ? `${baseItemName} (${getPricingModelLabel(pricingModel)})`
+              : baseItemName;
+
+            const freshItem: any = {
+              itemPath: `${path}[${idx}]${tierSuffix}`,
+              channel: channelName,
+              itemName: itemName,
+              itemPricing: {
+                standardPrice: hubPrice,
+                hubPrice,
+                pricingModel: pricingModel
+              },
+              specifications: opp.specifications,
+              frequency: itemFrequencyString || freshPub.printFrequency,
+              publicationFrequencyType: pubType,
+              audienceMetrics: Object.keys(channelMetrics).length > 0 ? channelMetrics : undefined,
+              performanceMetrics: opp.performanceMetrics || undefined,
+              sourceName: sourceInfo?.sourceName
+            };
+            
+            // For CPM/CPV/CPC pricing, extract impression data (same logic as analyze endpoint)
+            if (pricingModel === 'cpm' || pricingModel === 'cpv' || pricingModel === 'cpc') {
+              const impressions = opp.monthlyImpressions || 
+                                opp.performanceMetrics?.impressionsPerMonth ||
+                                opp.metrics?.monthlyImpressions || 
+                                0;
+              
+              if (impressions > 0) {
+                freshItem.monthlyImpressions = impressions;
+              }
+            }
+            
+            // Store original frequency string for reference (for "Show: weekly" badge)
+            if (itemFrequencyString) {
+              freshItem.originalFrequency = itemFrequencyString;
+            }
+            freshInventory.push(freshItem);
+          }); // End pricingTiers.forEach
+        });
+      };
+
+      // Extract from all channels
+      if (freshPub.distributionChannels) {
+        const dc = freshPub.distributionChannels;
+        
+        if (dc.website) {
+          const websiteMetrics = {
+            monthlyVisitors: dc.website.metrics?.monthlyVisitors,
+            monthlyPageViews: dc.website.metrics?.monthlyPageViews,
+            monthlyImpressions: dc.website.metrics?.monthlyImpressions
+          };
+          extractFromChannel('website', dc.website, 'distributionChannels.website.advertisingOpportunities', undefined, { websiteMetrics });
+        }
+        
+        if (dc.newsletters && Array.isArray(dc.newsletters)) {
+          dc.newsletters.forEach((newsletter: any, nlIdx: number) => {
+            if (newsletter.advertisingOpportunities) {
+              const newsletterName = newsletter.name || newsletter.subject || 'Newsletter';
+              const newsletterMetrics = {
+                subscribers: newsletter.subscribers,
+                openRate: newsletter.openRate,
+                clickThroughRate: newsletter.clickThroughRate
+              };
+              extractFromChannel('newsletter', [newsletter], 
+                `distributionChannels.newsletters[${nlIdx}].advertisingOpportunities`, 
+                newsletter.frequency,
+                { sourceName: newsletterName, newsletterMetrics });
+            }
+          });
+        }
+        
+        if (dc.print) {
+          const printPubs = Array.isArray(dc.print) ? dc.print : [dc.print];
+          printPubs.forEach((printPub: any, printIdx: number) => {
+            if (printPub.advertisingOpportunities) {
+              const printFreq = printPub.frequency || freshPub.printFrequency;
+              const printName = printPub.section || printPub.name || freshPub.basicInfo?.publicationName || 'Print';
+              const printMetrics = {
+                circulation: printPub.circulation,
+                distributionArea: printPub.distributionArea
+              };
+              extractFromChannel('print', [printPub], 
+                `distributionChannels.print[${printIdx}].advertisingOpportunities`, 
+                printFreq,
+                { sourceName: printName, printMetrics });
+            }
+          });
+        }
+        
+        if (dc.socialMedia && Array.isArray(dc.socialMedia)) {
+          dc.socialMedia.forEach((social: any, socialIdx: number) => {
+            if (social.advertisingOpportunities) {
+              const socialMetrics = {
+                followers: social.followers,
+                platform: social.platform
+              };
+              extractFromChannel('social', [social], 
+                `distributionChannels.socialMedia[${socialIdx}].advertisingOpportunities`,
+                undefined,
+                { socialMetrics });
+            }
+          });
+        }
+        
+        if (dc.radio && Array.isArray(dc.radio)) {
+          dc.radio.forEach((radioShow: any, radioIdx: number) => {
+            if (radioShow.advertisingOpportunities) {
+              const radioName = radioShow.showName || 'Radio Show';
+              const radioMetrics = {
+                listeners: radioShow.metrics?.weeklyListeners || radioShow.weeklyListeners
+              };
+              extractFromChannel('radio', [radioShow], 
+                `distributionChannels.radio[${radioIdx}].advertisingOpportunities`,
+                undefined,
+                { sourceName: radioName, radioMetrics });
+            }
+          });
+        }
+        
+        if (dc.podcast && Array.isArray(dc.podcast)) {
+          dc.podcast.forEach((podcast: any, podIdx: number) => {
+            if (podcast.advertisingOpportunities) {
+              const podcastName = podcast.name || 'Podcast';
+              const podcastMetrics = {
+                listeners: podcast.metrics?.monthlyListeners || podcast.averageDownloads
+              };
+              extractFromChannel('podcast', [podcast], 
+                `distributionChannels.podcast[${podIdx}].advertisingOpportunities`,
+                undefined,
+                { sourceName: podcastName, podcastMetrics });
+            }
+          });
+        }
+        
+        if (dc.streaming) {
+          extractFromChannel('streaming', dc.streaming, 
+            'distributionChannels.streaming.advertisingOpportunities');
+        }
+        
+        if (dc.events && Array.isArray(dc.events)) {
+          dc.events.forEach((event: any, eventIdx: number) => {
+            if (event.advertisingOpportunities) {
+              extractFromChannel('events', [event], 
+                `distributionChannels.events[${eventIdx}].advertisingOpportunities`);
+            }
+          });
+        }
+      }
+
+      // Helper to get base path without tier suffix (e.g., "path[0]-tier1" -> "path[0]")
+      const getBasePath = (path: string) => path.replace(/-tier\d+$/, '');
+      
+      // Merge: preserve customizations, update data, add new items
+      // Track which current items were matched so we can preserve unmatched ones
+      const matchedPaths = new Set<string>();
+      const matchedBasePaths = new Set<string>(); // Track base paths for tier-based items
+      
+      const mergedItems = freshInventory.map((freshItem: any) => {
+        // Try exact match first
+        let currentItem = currentItemsMap.get(freshItem.itemPath);
+        
+        // If no exact match and this is a tier-based item, try matching the base path
+        if (!currentItem && freshItem.itemPath.includes('-tier')) {
+          const basePath = getBasePath(freshItem.itemPath);
+          currentItem = currentItemsMap.get(basePath);
+          if (currentItem) {
+            matchedBasePaths.add(basePath); // Mark base path as matched
+          }
+        }
+        
+        if (currentItem) {
+          // Item exists - preserve customizations, update data
+          matchedPaths.add(freshItem.itemPath);
+          return {
+            ...freshItem, // Fresh data (pricing, specs, metrics, frequency)
+            currentFrequency: currentItem.currentFrequency, // Preserve frequency adjustment
+            quantity: currentItem.quantity, // Preserve quantity
+            isExcluded: currentItem.isExcluded, // Preserve exclusion
+            maxFrequency: currentItem.maxFrequency // Preserve max frequency
+          };
+        } else {
+          // Track the base path so we don't preserve old items that are being replaced by tier items
+          if (freshItem.itemPath.includes('-tier')) {
+            matchedBasePaths.add(getBasePath(freshItem.itemPath));
+          }
+          
+          // New item - use defaults
+          const standardFreq = pubType === 'daily' ? 12 : 
+                              pubType === 'weekly' ? 4 : 
+                              pubType === 'bi-weekly' ? 2 : 1;
+          
+          return {
+            ...freshItem,
+            quantity: standardFreq,
+            currentFrequency: standardFreq,
+            maxFrequency: pubType === 'daily' ? 30 : 
+                         pubType === 'weekly' ? 4 : 
+                         pubType === 'bi-weekly' ? 2 : 1,
+            isExcluded: false
+          };
+        }
+      });
+      
+      // IMPORTANT: Preserve current items that weren't in fresh inventory
+      // BUT don't preserve items whose base path is now being served by tier-based items
+      const preservedItems = (currentPub.inventoryItems || []).filter((item: any) => {
+        // Don't preserve if it was directly matched
+        if (matchedPaths.has(item.itemPath)) return false;
+        
+        // Don't preserve if this item's path is now served by tier-based items
+        if (matchedBasePaths.has(item.itemPath)) return false;
+        
+        // Don't preserve if it exactly matches a fresh item
+        if (freshInventory.some((fresh: any) => fresh.itemPath === item.itemPath)) return false;
+        
+        // Don't preserve if it's an old tier-based item and fresh has new tiers for same base path
+        if (item.itemPath.includes('-tier')) {
+          const basePath = getBasePath(item.itemPath);
+          if (matchedBasePaths.has(basePath)) return false;
+        }
+        
+        return true;
+      });
+      // Debug logging removed for production
+      
+      // Combine merged items with preserved items
+      const allItems = [...mergedItems, ...preservedItems];
+
+      // Calculate publication total
+      const pubTotal = allItems
+        .filter((item: any) => !item.isExcluded)
+        .reduce((sum: number, item: any) => {
+          const cost = calculateItemCost(item, item.currentFrequency || item.quantity || 1);
+          return sum + cost;
+        }, 0);
+
+      return {
+        ...currentPub,
+        publicationName: freshPub.basicInfo?.publicationName || currentPub.publicationName,
+        inventoryItems: allItems,
+        publicationTotal: pubTotal,
+        publicationFrequencyType: pubType
+      };
+    });
+
+    // Calculate total cost
+    const totalCost = mergedPublications.reduce((sum: number, pub: any) => 
+      sum + (pub.publicationTotal || 0), 0
+    );
+
+    // Calculate reach
+    const reachSummary = calculatePackageReach(mergedPublications);
+
+    // Return refreshed package data
+    res.json({
+      publications: mergedPublications,
+      summary: {
+        totalOutlets: mergedPublications.length,
+        monthlyCost: totalCost,
+        totalCost: totalCost * (filters.duration || 1),
+        duration: filters.duration || 1,
+        totalChannels: reachSummary.channelsCount,
+        totalUnits: mergedPublications.reduce((sum: number, pub: any) => 
+          sum + (pub.inventoryItems || []).reduce((pSum: number, item: any) => 
+            pSum + (item.isExcluded ? 0 : (item.currentFrequency || item.quantity || 1)), 0
+          ), 0
+        )
+      },
+      reach: reachSummary
+    });
+
+  } catch (error) {
+    console.error('Error refreshing package:', error);
+    res.status(500).json({ 
+      error: 'Failed to refresh package',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 

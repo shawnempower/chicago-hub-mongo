@@ -919,6 +919,94 @@ export const HubPackageManagement = () => {
         }}
         onSave={handleSave}
         onExportCSV={handleExportCSV}
+        onRefresh={async () => {
+          // Smart refresh: preserve customizations, update data, and auto-save
+          setLoading(true);
+          try {
+            // Use current package publications if editing, otherwise use builder result
+            const publicationsToRefresh = editingPackage?.components?.publications || builderResult.publications;
+            
+            const response = await fetch(`${API_BASE_URL}/admin/builder/refresh`, {
+              method: 'POST',
+              headers: getAuthHeaders(),
+              body: JSON.stringify({
+                hubId: selectedHubId,
+                currentPublications: publicationsToRefresh,
+                filters: builderFilters
+              })
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.message || 'Failed to refresh package');
+            }
+
+            const result: BuilderResult = await response.json();
+            setBuilderResult(result);
+            
+            // Auto-save the refreshed package if editing
+            console.log('🔄 Auto-save check:', { 
+              hasEditingPackage: !!editingPackage, 
+              hasId: !!editingPackage?._id,
+              id: editingPackage?._id 
+            });
+            if (editingPackage && editingPackage._id) {
+              const updateData = {
+                components: {
+                  publications: result.publications
+                },
+                pricing: {
+                  ...editingPackage.pricing,
+                  breakdown: {
+                    totalStandardPrice: result.summary.monthlyCost,
+                    totalHubPrice: result.summary.monthlyCost,
+                    packageDiscount: 0,
+                    finalPrice: result.summary.monthlyCost
+                  },
+                  displayPrice: `$${result.summary.monthlyCost.toLocaleString()}/month`
+                },
+                metadata: {
+                  ...editingPackage.metadata,
+                  builderInfo: {
+                    ...editingPackage.metadata?.builderInfo,
+                    lastRefreshed: new Date().toISOString()
+                  }
+                }
+              };
+
+              const updateResponse = await fetch(`${API_BASE_URL}/admin/hub-packages/${editingPackage._id}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(updateData)
+              });
+
+              if (!updateResponse.ok) {
+                const errorData = await updateResponse.json().catch(() => ({ message: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.message || 'Failed to save refreshed package');
+              }
+
+              toast({
+                title: 'Success!',
+                description: 'Package refreshed and saved successfully'
+              });
+            } else {
+              toast({
+                title: 'Success!',
+                description: 'Package refreshed (remember to save when ready)'
+              });
+            }
+          } catch (error) {
+            console.error('Error refreshing package:', error);
+            toast({
+              title: 'Error',
+              description: error instanceof Error ? error.message : 'Failed to refresh package',
+              variant: 'destructive'
+            });
+            throw error; // Re-throw so PackageResults can handle it
+          } finally {
+            setLoading(false);
+          }
+        }}
         onUpdatePublications={(publications) => {
           // Recalculate all summary stats
           const monthlyCost = publications.reduce((sum, pub) => sum + (pub.publicationTotal || 0), 0);

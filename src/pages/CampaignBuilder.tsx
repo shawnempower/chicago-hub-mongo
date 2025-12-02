@@ -15,7 +15,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useHubContext } from '@/contexts/HubContext';
 import { useAnalyzeCampaign, useCreateCampaign, useGenerateInsertionOrder } from '@/hooks/useCampaigns';
 import { CampaignAnalysisRequest } from '@/integrations/mongodb/campaignSchema';
-import { ArrowRight, Sparkles, CheckCircle2, Eye, Package, Megaphone, LayoutDashboard, Users, UserPlus, DollarSign, Bot, FileText } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles, CheckCircle2, Eye, Package, Megaphone, LayoutDashboard, Users, UserPlus, DollarSign, Bot, FileText } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +26,7 @@ import { CampaignTimelineStep } from '@/components/campaign/CampaignTimelineStep
 import { CampaignAnalysisStep } from '@/components/campaign/CampaignAnalysisStep';
 import { CampaignPackageSelectionStep } from '@/components/campaign/CampaignPackageSelectionStep';
 import { CampaignCreativeAssetsUploader } from '@/components/campaign/CampaignCreativeAssetsUploader';
+import { CampaignCreativeAssetsStep } from '@/components/campaign/CampaignCreativeAssetsStep';
 import { CampaignReviewStep } from '@/components/campaign/CampaignReviewStep';
 import { extractRequirementsForSelectedInventory, CreativeRequirement } from '@/utils/creativeSpecsExtractor';
 
@@ -449,14 +450,6 @@ export default function CampaignBuilder() {
             
             const itemCost = calculateItemCost(item, frequency);
             
-            console.log(`Calculated cost for ${item.itemName}:`, {
-              frequency,
-              itemCost,
-              hasItemPricing: !!item.itemPricing,
-              hubPrice: item.itemPricing?.hubPrice,
-              pricingModel: item.itemPricing?.pricingModel
-            });
-            
             return {
               ...item,
               // Ensure itemPricing exists with totalCost
@@ -511,7 +504,6 @@ export default function CampaignBuilder() {
       
       if (!packageHasReach && filteredPublications.length > 0) {
         // Package has no reach data (old package), calculate from inventory
-        console.log('Package has no reach data, calculating from inventory...');
         const { calculatePackageReach } = await import('@/utils/reachCalculations');
         const reachSummary = calculatePackageReach(filteredPublications);
         
