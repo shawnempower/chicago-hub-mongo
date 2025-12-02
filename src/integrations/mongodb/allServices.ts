@@ -1233,6 +1233,175 @@ export class PublicationsService {
     }
   }
 
+  async bulkImport(publications: PublicationInsert[], overwrite: boolean = false): Promise<Array<{
+    action: 'create' | 'update' | 'skip' | 'error';
+    publication: any;
+    existing?: any;
+    changes?: any;
+    error?: string;
+    reason?: string;
+  }>> {
+    try {
+      const now = new Date();
+      const results: Array<{
+        action: 'create' | 'update' | 'skip' | 'error';
+        publication: any;
+        existing?: any;
+        changes?: any;
+        error?: string;
+        reason?: string;
+      }> = [];
+
+      for (const pub of publications) {
+        try {
+          // Check if publication already exists
+          const existing = await this.getByPublicationId(pub.publicationId);
+          
+          if (existing) {
+            if (overwrite) {
+              // Update existing
+              const { metadata, ...updateData } = pub;
+              await this.update(existing._id!.toString(), updateData);
+              results.push({
+                action: 'update',
+                publication: pub,
+                existing,
+                reason: 'Publication updated (overwrite enabled)'
+              });
+            } else {
+              // Skip existing
+              results.push({
+                action: 'skip',
+                publication: pub,
+                existing,
+                reason: 'Publication already exists (overwrite disabled)'
+              });
+            }
+          } else {
+            // Create new
+            const newPub: Publication = {
+              ...pub,
+              metadata: {
+                ...pub.metadata,
+                createdAt: now,
+                lastUpdated: now,
+                verificationStatus: pub.metadata?.verificationStatus || 'needs_verification',
+                extractedFrom: pub.metadata?.extractedFrom || ['api']
+              }
+            };
+            
+            await this.collection.insertOne(newPub);
+            results.push({
+              action: 'create',
+              publication: pub,
+              reason: 'Publication created successfully'
+            });
+          }
+        } catch (error) {
+          results.push({
+            action: 'error',
+            publication: pub,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            reason: 'Failed to process publication'
+          });
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error bulk importing publications:', error);
+      throw error;
+    }
+  }
+
+  async previewImport(publications: PublicationInsert[]): Promise<Array<{
+    action: 'create' | 'update' | 'skip' | 'error';
+    publication: any;
+    existing?: any;
+    changes?: any;
+    error?: string;
+    reason?: string;
+  }>> {
+    try {
+      const results: Array<{
+        action: 'create' | 'update' | 'skip' | 'error';
+        publication: any;
+        existing?: any;
+        changes?: any;
+        error?: string;
+        reason?: string;
+      }> = [];
+
+      for (const pub of publications) {
+        try {
+          // Validate publication has required fields
+          if (!pub.publicationId) {
+            results.push({
+              action: 'error',
+              publication: pub,
+              error: 'Missing required field: publicationId',
+              reason: 'Invalid publication data'
+            });
+            continue;
+          }
+
+          if (!pub.basicInfo?.publicationName) {
+            results.push({
+              action: 'error',
+              publication: pub,
+              error: 'Missing required field: basicInfo.publicationName',
+              reason: 'Invalid publication data'
+            });
+            continue;
+          }
+
+          // Check if publication already exists
+          const existing = await this.getByPublicationId(pub.publicationId);
+          
+          if (existing) {
+            // Compare fields to determine what would change
+            const changes: any = {};
+            if (JSON.stringify(pub.basicInfo) !== JSON.stringify(existing.basicInfo)) {
+              changes.basicInfo = 'would update';
+            }
+            if (JSON.stringify(pub.contactInfo) !== JSON.stringify(existing.contactInfo)) {
+              changes.contactInfo = 'would update';
+            }
+            if (JSON.stringify(pub.distributionChannels) !== JSON.stringify(existing.distributionChannels)) {
+              changes.distributionChannels = 'would update';
+            }
+            
+            results.push({
+              action: 'update',
+              publication: pub,
+              existing,
+              changes: Object.keys(changes).length > 0 ? changes : undefined,
+              reason: 'Would update existing publication'
+            });
+          } else {
+            results.push({
+              action: 'create',
+              publication: pub,
+              reason: 'Would create new publication'
+            });
+          }
+        } catch (error) {
+          results.push({
+            action: 'error',
+            publication: pub,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            reason: 'Validation failed'
+          });
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error previewing import:', error);
+      throw error;
+    }
+  }
+
   async getCategories(): Promise<Array<{ id: string; name: string; count: number }>> {
     try {
       const pipeline = [
