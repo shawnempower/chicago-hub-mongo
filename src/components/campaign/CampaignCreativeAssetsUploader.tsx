@@ -887,7 +887,7 @@ export function CampaignCreativeAssetsUploader({
     return (
       <Card className="border-amber-200 bg-amber-50">
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="text-lg font-sans flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-amber-600" />
             No Creative Requirements Found
           </CardTitle>
@@ -955,7 +955,7 @@ export function CampaignCreativeAssetsUploader({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h3 className="text-lg font-semibold mb-2">Creative Assets</h3>
+        <h3 className="text-lg font-semibold font-sans mb-2">Creative Assets</h3>
         <p className="text-sm text-gray-600">
           Manage uploaded assets and upload new files for your campaign.
         </p>
@@ -965,7 +965,7 @@ export function CampaignCreativeAssetsUploader({
       {(assignedAssets.length > 0 || libraryAssets.length > 0 || loadingExisting) && (
         <Card className="border-2 border-green-200 bg-green-50">
           <CardHeader className="bg-green-100">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-base font-sans flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-600" />
               Saved Assets Library
             </CardTitle>
@@ -1006,7 +1006,7 @@ export function CampaignCreativeAssetsUploader({
                 {/* Assigned Assets */}
                 {assignedAssets.length > 0 && (
                   <div>
-                    <h4 className="font-semibold text-sm text-green-800 mb-3">Assigned to Placements</h4>
+                    <h4 className="font-semibold font-sans text-sm text-green-800 mb-3">Assigned to Placements</h4>
                     <div className="space-y-2">
                       {assignedAssets.map(([specGroupId, asset]) => {
                         const specGroup = groupedSpecs.find(g => g.specGroupId === specGroupId);
@@ -1066,7 +1066,7 @@ export function CampaignCreativeAssetsUploader({
                 {/* Library Assets (Unassigned) */}
                 {libraryAssets.length > 0 && (
                   <div>
-                    <h4 className="font-semibold text-sm text-gray-700 mb-3">
+                    <h4 className="font-semibold font-sans text-sm text-gray-700 mb-3">
                       Library Assets (Not Assigned)
                     </h4>
                     <div className="space-y-2">
@@ -1125,13 +1125,13 @@ export function CampaignCreativeAssetsUploader({
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-semibold text-gray-900">Upload Progress</h4>
+                  <h4 className="font-semibold font-sans text-gray-900">Upload Progress</h4>
                   <p className="text-sm text-gray-600 mt-1">
                     {uploadedCount} of {totalSpecGroups} specifications completed
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-bold text-blue-600">{progressPercent}%</div>
+                  <div className="text-lg font-bold text-blue-600">{progressPercent}%</div>
                   <div className="text-xs text-gray-500">Complete</div>
                 </div>
               </div>
@@ -1150,7 +1150,7 @@ export function CampaignCreativeAssetsUploader({
           {hasAnyFiles && (
             <Card className="border-2 border-blue-200">
               <CardHeader className="bg-blue-50">
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="text-base font-sans flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-blue-600" />
                   Coverage Report
                 </CardTitle>
@@ -1162,7 +1162,7 @@ export function CampaignCreativeAssetsUploader({
                 <div className="space-y-4">
                   {/* Uploaded/Pending Assets & Their Coverage */}
                   <div>
-                    <h4 className="font-semibold text-sm text-blue-700 mb-2 flex items-center gap-2">
+                    <h4 className="font-semibold font-sans text-sm text-blue-700 mb-2 flex items-center gap-2">
                       <Upload className="h-4 w-4" />
                       📤 Files Uploaded ({pendingFiles.size + assignedCount})
                     </h4>
@@ -1231,7 +1231,7 @@ export function CampaignCreativeAssetsUploader({
                   {/* Missing Assets - but check if pending files could cover them */}
                   {dimensionSummary.filter(item => !item.isUploaded).length > 0 && (
                     <div>
-                      <h4 className="font-semibold text-sm text-orange-700 mb-2 flex items-center gap-2">
+                      <h4 className="font-semibold font-sans text-sm text-orange-700 mb-2 flex items-center gap-2">
                         <AlertCircle className="h-4 w-4" />
                         📭 Still Needed ({dimensionSummary.filter(item => !item.isUploaded).length})
                       </h4>
@@ -1288,7 +1288,7 @@ export function CampaignCreativeAssetsUploader({
           {/* Detailed Checklist */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Detailed Requirements Checklist</CardTitle>
+              <CardTitle className="text-base font-sans">Detailed Requirements Checklist</CardTitle>
               <CardDescription>
                 {uploadedCount} of {totalSpecGroups} assets uploaded
               </CardDescription>
@@ -1322,7 +1322,7 @@ export function CampaignCreativeAssetsUploader({
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-sm">
+                          <h4 className="font-medium font-sans text-sm">
                             {getSpecDisplayName(specGroup)}
                           </h4>
                           <p className="text-xs text-gray-600 mt-1">
@@ -1397,7 +1397,7 @@ export function CampaignCreativeAssetsUploader({
         <div className="lg:col-span-2">
           <Card className="border-2 border-blue-300 bg-blue-50 lg:sticky lg:top-20">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="text-lg font-sans flex items-center gap-2">
             <Upload className="h-5 w-5" />
             Upload Creative Assets
           </CardTitle>
@@ -1434,7 +1434,7 @@ export function CampaignCreativeAssetsUploader({
           {/* Pending Files - Show right below upload zone */}
           {pendingFiles.size > 0 && (
             <div className="mt-6 space-y-3">
-              <h4 className="font-medium text-sm text-gray-900">Files Ready to Assign</h4>
+              <h4 className="font-medium font-sans text-sm text-gray-900">Files Ready to Assign</h4>
               {Array.from(pendingFiles.entries()).map(([fileId, { file, previewUrl, detectedSpecs, suggestedStandard, matchConfidence, isAnalyzing, uploadStatus, errorMessage }]) => (
                 <Card key={fileId} className="border-blue-200">
                   <CardContent className="pt-4">
@@ -1459,7 +1459,7 @@ export function CampaignCreativeAssetsUploader({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-sm truncate">{file.name}</h4>
+                            <h4 className="font-medium font-sans text-sm truncate">{file.name}</h4>
                             <div className="flex items-center gap-3 mt-1">
                               <span className="text-sm font-semibold text-gray-900">{formatBytes(file.size)}</span>
                               <span className="text-sm text-gray-500">📄 {file.type.split('/')[1]?.toUpperCase() || 'FILE'}</span>
@@ -1560,7 +1560,7 @@ export function CampaignCreativeAssetsUploader({
     <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Asset?</AlertDialogTitle>
+          <AlertDialogTitle className="font-sans">Delete Asset?</AlertDialogTitle>
           <AlertDialogDescription>
             Are you sure you want to delete <strong>{assetToDelete?.fileName}</strong>?
             <br /><br />

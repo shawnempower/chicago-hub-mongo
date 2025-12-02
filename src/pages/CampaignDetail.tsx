@@ -57,7 +57,7 @@ import { formatInsertionOrderQuantity, formatInsertionOrderAudienceWithBadge } f
 import { calculateItemCost } from '@/utils/inventoryPricing';
 
 const STATUS_COLORS = {
-  draft: 'bg-gray-100 text-gray-800',
+  draft: 'bg-gray-100 text-gray-800 border border-gray-300 hover:bg-gray-100',
   pending_review: 'bg-yellow-100 text-yellow-800',
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
@@ -273,152 +273,223 @@ export default function CampaignDetail() {
                 />
               </div>
 
-              {/* Header */}
-              <div className="mb-8">
-                <div className="flex items-start justify-between">
+              {/* Unified Header Container */}
+              <div className="bg-white rounded-lg border border-slate-200 p-6 mb-6">
+                {/* Title Row with Actions */}
+                <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
-                    <h1 className="text-3xl font-bold mb-2">{campaign.basicInfo.name}</h1>
-                    <p className="text-muted-foreground mb-2">
-                      {campaign.basicInfo.advertiserName}
-                    </p>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h1 className="text-lg font-semibold font-sans">{campaign.basicInfo.name}</h1>
+                      <span className="text-lg font-sans text-muted-foreground">
+                        {campaign.basicInfo.advertiserName}
+                      </span>
+                    </div>
                     {campaign.algorithm && (
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-sm">
-                          {campaign.algorithm.id === 'all-inclusive' ? '🌍' : 
-                           campaign.algorithm.id === 'budget-friendly' ? '💰' : 
-                           campaign.algorithm.id === 'little-guys' ? '🏘️' : '✨'}
-                        </span>
-                        <span className="text-sm text-purple-700 font-medium bg-purple-100 px-2 py-1 rounded-md">
+                        <span className="text-sm text-purple-700 font-medium font-sans bg-purple-100 px-2 py-1 rounded-md">
                           {campaign.algorithm.name}
                         </span>
                       </div>
                     )}
                   </div>
                   
-                  <Badge className={STATUS_COLORS[campaign.status as keyof typeof STATUS_COLORS]}>
-                    {STATUS_LABELS[campaign.status as keyof typeof STATUS_LABELS]}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Key Metrics */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Investment</p>
-                    <p className="text-xl font-bold">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</p>
+                  <div className="flex items-center gap-3">
+                    <Badge className={STATUS_COLORS[campaign.status as keyof typeof STATUS_COLORS]}>
+                      {STATUS_LABELS[campaign.status as keyof typeof STATUS_LABELS]}
+                    </Badge>
+                    
+                    {/* Status-based Action Buttons */}
+                    {campaign.status === 'draft' && (
+                      <Button
+                        onClick={() => handleStatusUpdate('pending_review')}
+                        disabled={updating}
+                        size="sm"
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        Submit for Review
+                      </Button>
+                    )}
+                    
+                    {campaign.status === 'pending_review' && (
+                      <>
+                        <Button
+                          onClick={() => handleStatusUpdate('approved')}
+                          disabled={updating}
+                          size="sm"
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Approve
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => handleStatusUpdate('rejected')}
+                          disabled={updating}
+                          size="sm"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    
+                    {campaign.status === 'approved' && (
+                      <Button
+                        onClick={() => handleStatusUpdate('active')}
+                        disabled={updating}
+                        size="sm"
+                      >
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Mark as Active
+                      </Button>
+                    )}
+                    
+                    {/* Delete Button - Icon Only */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={deleting}
+                          className="px-2"
+                        >
+                          {deleting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-600" />
+                            Are you absolutely sure?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the campaign
+                            <strong className="text-foreground"> "{campaign.basicInfo?.name || 'Unnamed Campaign'}"</strong> and
+                            all associated data including:
+                            <ul className="list-disc list-inside mt-2 space-y-1">
+                              <li>Selected inventory and placements</li>
+                              <li>Pricing and budget information</li>
+                              <li>Performance estimates</li>
+                              <li>Insertion orders (if generated)</li>
+                            </ul>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete Campaign
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <Building2 className="h-5 w-5 text-purple-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Publications</p>
-                    <p className="text-xl font-bold">{campaign.selectedInventory?.totalPublications || campaign.selectedInventory?.publications?.length || 0}</p>
+                {/* Key Metrics */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="text-sm text-muted-foreground font-sans">Investment</p>
+                      <p className="text-lg font-bold font-sans">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                    <Building2 className="h-5 w-5 text-purple-600" />
+                    <div>
+                      <p className="text-sm text-muted-foreground font-sans">Publications</p>
+                      <p className="text-lg font-bold font-sans">{campaign.selectedInventory?.totalPublications || campaign.selectedInventory?.publications?.length || 0}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                    <Package className="h-5 w-5 text-indigo-600" />
+                    <div>
+                      <p className="text-sm text-muted-foreground font-sans">Placements</p>
+                      <p className="text-lg font-bold font-sans">{campaign.selectedInventory?.totalInventoryItems || 0}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                    <Target className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <p className="text-sm text-muted-foreground font-sans">Est. Reach</p>
+                      <p className="text-lg font-bold font-sans">
+                        {campaign.estimatedPerformance?.reach?.min?.toLocaleString() || 'N/A'}+
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                    <Calendar className="h-5 w-5 text-amber-600" />
+                    <div>
+                      <p className="text-sm text-muted-foreground font-sans">Duration</p>
+                      <p className="text-lg font-bold font-sans">{campaign.timeline.durationMonths} months</p>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <Package className="h-5 w-5 text-indigo-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Placements</p>
-                    <p className="text-xl font-bold">{campaign.selectedInventory?.totalInventoryItems || 0}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <Target className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Est. Reach</p>
-                    <p className="text-xl font-bold">
-                      {campaign.estimatedPerformance?.reach?.min?.toLocaleString() || 'N/A'}+
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-amber-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Duration</p>
-                    <p className="text-xl font-bold">{campaign.timeline.durationMonths} months</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
               </div>
 
               {/* Main Content Tabs */}
-              <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList>
+              <Tabs defaultValue="overview">
+            <TabsList className="grid w-full grid-cols-3 gap-0">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="creative-requirements">Creative Requirements</TabsTrigger>
               <TabsTrigger value="insertion-order">Insertion Order</TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
+            <TabsContent value="overview" className="space-y-6 mt-0">
               <Card>
                 <CardHeader>
-                  <CardTitle>Campaign Details</CardTitle>
+                  <CardTitle className="font-sans text-lg">Campaign Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-muted-foreground">Campaign Name</p>
-                      <p className="font-semibold">{campaign.basicInfo.name}</p>
+                      <p className="text-muted-foreground font-sans">Campaign Name</p>
+                      <p className="font-semibold font-sans">{campaign.basicInfo.name}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Advertiser</p>
-                      <p className="font-semibold">{campaign.basicInfo.advertiserName}</p>
+                      <p className="text-muted-foreground font-sans">Advertiser</p>
+                      <p className="font-semibold font-sans">{campaign.basicInfo.advertiserName}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Primary Goal</p>
-                      <p className="font-semibold capitalize">{campaign.objectives?.primaryGoal || 'N/A'}</p>
+                      <p className="text-muted-foreground font-sans">Primary Goal</p>
+                      <p className="font-semibold font-sans capitalize">{campaign.objectives?.primaryGoal || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Hub</p>
-                      <p className="font-semibold">{campaign.hubName}</p>
+                      <p className="text-muted-foreground font-sans">Hub</p>
+                      <p className="font-semibold font-sans">{campaign.hubName}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Start Date</p>
-                      <p className="font-semibold">{format(new Date(campaign.timeline.startDate), 'MMM d, yyyy')}</p>
+                      <p className="text-muted-foreground font-sans">Start Date</p>
+                      <p className="font-semibold font-sans">{format(new Date(campaign.timeline.startDate), 'MMM d, yyyy')}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">End Date</p>
-                      <p className="font-semibold">{format(new Date(campaign.timeline.endDate), 'MMM d, yyyy')}</p>
+                      <p className="text-muted-foreground font-sans">End Date</p>
+                      <p className="font-semibold font-sans">{format(new Date(campaign.timeline.endDate), 'MMM d, yyyy')}</p>
                     </div>
                   </div>
 
                   {campaign.basicInfo.description && (
                     <div className="pt-4 border-t">
-                      <p className="text-sm text-muted-foreground mb-1">Description</p>
-                      <p className="text-sm">{campaign.basicInfo.description}</p>
+                      <p className="text-sm text-muted-foreground font-sans mb-1">Description</p>
+                      <p className="text-sm font-sans">{campaign.basicInfo.description}</p>
                     </div>
                   )}
 
                   {campaign.objectives?.targetAudience && (
                     <div className="pt-4 border-t">
-                      <p className="text-sm text-muted-foreground mb-1">Target Audience</p>
-                      <p className="text-sm">{campaign.objectives.targetAudience}</p>
+                      <p className="text-sm text-muted-foreground font-sans mb-1">Target Audience</p>
+                      <p className="text-sm font-sans">{campaign.objectives.targetAudience}</p>
                     </div>
                   )}
                 </CardContent>
@@ -428,29 +499,23 @@ export default function CampaignDetail() {
               {campaign.algorithm && (
                 <Card className="border-purple-200 bg-purple-50/50">
                   <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">
-                        {campaign.algorithm.id === 'all-inclusive' ? '🌍' : 
-                         campaign.algorithm.id === 'budget-friendly' ? '💰' : 
-                         campaign.algorithm.id === 'little-guys' ? '🏘️' : 
-                         campaign.algorithm.id === 'package-based' ? '📦' : '✨'}
-                      </span>
-                      <CardTitle>{campaign.algorithm.id === 'package-based' ? 'Package-Based Campaign' : 'AI Campaign Strategy'}</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="font-sans text-lg">{campaign.algorithm.id === 'package-based' ? 'Package-Based Campaign' : 'AI Campaign Strategy'}</CardTitle>
+                      <p className="text-sm font-sans text-muted-foreground">
+                        Version {campaign.algorithm.version}
+                        {campaign.algorithm.executedAt && (
+                          <> • Generated on {format(new Date(campaign.algorithm.executedAt), 'MMM d, yyyy \'at\' h:mm a')}</>
+                        )}
+                      </p>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-start gap-3">
                       <div className="flex-1">
-                        <p className="font-semibold text-purple-900 mb-1">{campaign.algorithm.name}</p>
-                        <p className="text-sm text-purple-800 mb-2">
-                          Version {campaign.algorithm.version}
-                          {campaign.algorithm.executedAt && (
-                            <> • Generated on {format(new Date(campaign.algorithm.executedAt), 'MMM d, yyyy \'at\' h:mm a')}</>
-                          )}
-                        </p>
+                        <p className="font-semibold font-sans text-purple-900 mb-2">{campaign.algorithm.name}</p>
                         <div className="bg-white/60 rounded-lg p-3 border border-purple-200">
-                          <p className="text-xs text-purple-700 font-medium mb-1">Strategy Used:</p>
-                          <p className="text-sm text-gray-700">
+                          <p className="text-xs font-sans text-purple-700 font-medium mb-1">Strategy Used:</p>
+                          <p className="text-sm font-sans text-gray-700">
                             {campaign.algorithm.id === 'all-inclusive' 
                               ? 'This campaign was generated using the All-Inclusive strategy, which prioritizes supporting the entire local news ecosystem by including as many publications as possible while maintaining quality and effectiveness.'
                               : campaign.algorithm.id === 'budget-friendly'
@@ -470,7 +535,7 @@ export default function CampaignDetail() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Pricing & Performance</CardTitle>
+                  <CardTitle className="font-sans text-lg">Pricing & Performance</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
@@ -490,7 +555,7 @@ export default function CampaignDetail() {
 
                   {campaign.estimatedPerformance && (
                     <div className="pt-4 border-t">
-                      <h4 className="font-semibold mb-3">Performance Estimates</h4>
+                      <h4 className="font-semibold font-sans mb-3">Performance Estimates</h4>
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Estimated Reach</p>
@@ -514,108 +579,10 @@ export default function CampaignDetail() {
                 </CardContent>
               </Card>
 
-              {/* Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {/* Status Update Actions */}
-                    <div className="flex flex-wrap gap-2">
-                      {campaign.status === 'draft' && (
-                        <Button
-                          onClick={() => handleStatusUpdate('pending_review')}
-                          disabled={updating}
-                        >
-                          <Clock className="mr-2 h-4 w-4" />
-                          Submit for Review
-                        </Button>
-                      )}
-                      {campaign.status === 'pending_review' && (
-                        <>
-                          <Button
-                            onClick={() => handleStatusUpdate('approved')}
-                            disabled={updating}
-                          >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Approve
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={() => handleStatusUpdate('rejected')}
-                            disabled={updating}
-                          >
-                            <XCircle className="mr-2 h-4 w-4" />
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                      {campaign.status === 'approved' && (
-                        <Button
-                          onClick={() => handleStatusUpdate('active')}
-                          disabled={updating}
-                        >
-                          <CheckCircle2 className="mr-2 h-4 w-4" />
-                          Mark as Active
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Delete Campaign Button with Warning */}
-                    <div className="pt-3 border-t">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="destructive"
-                            disabled={deleting}
-                            className="w-full sm:w-auto"
-                          >
-                            {deleting ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="mr-2 h-4 w-4" />
-                            )}
-                            Delete Campaign
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="flex items-center gap-2">
-                              <AlertTriangle className="h-5 w-5 text-red-600" />
-                              Are you absolutely sure?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the campaign
-                              <strong className="text-foreground"> "{campaign.basicInfo?.name || 'Unnamed Campaign'}"</strong> and
-                              all associated data including:
-                              <ul className="list-disc list-inside mt-2 space-y-1">
-                                <li>Selected inventory and placements</li>
-                                <li>Pricing and budget information</li>
-                                <li>Performance estimates</li>
-                                <li>Insertion orders (if generated)</li>
-                              </ul>
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleDelete}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Delete Permanently
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
 
             {/* Creative Assets Tab */}
-            <TabsContent value="creative-requirements">
+            <TabsContent value="creative-requirements" className="mt-0">
               <div className="space-y-6">
                 {/* Requirements Overview - Collapsible */}
                 <CreativeRequirementsChecklist 
@@ -659,7 +626,7 @@ export default function CampaignDetail() {
             </TabsContent>
 
             {/* Insertion Order Tab */}
-            <TabsContent value="insertion-order">
+            <TabsContent value="insertion-order" className="mt-0">
               {/* Publication Orders Alert */}
               {!campaign.publicationInsertionOrders || campaign.publicationInsertionOrders.length === 0 ? (
                 <Card className="mb-6 border-amber-200 bg-amber-50">
@@ -667,7 +634,7 @@ export default function CampaignDetail() {
                     <div className="flex items-start gap-4">
                       <AlertTriangle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-1" />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-amber-900 mb-2">Publication Orders Not Generated</h3>
+                        <h3 className="font-semibold font-sans text-amber-900 mb-2">Publication Orders Not Generated</h3>
                         <p className="text-sm text-amber-800 mb-4">
                           Publication insertion orders create individual order records for each publication in this campaign. 
                           Once generated, these orders will be visible to publications in their dashboard where they can review, 
@@ -701,7 +668,7 @@ export default function CampaignDetail() {
                     <div className="flex items-start gap-4">
                       <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-green-900 mb-1">Publication Orders Generated</h3>
+                        <h3 className="font-semibold font-sans text-green-900 mb-1">Publication Orders Generated</h3>
                         <p className="text-sm text-green-800 mb-3">
                           {campaign.publicationInsertionOrders.length} publication orders have been created and are visible to publications.
                         </p>
@@ -807,7 +774,7 @@ export default function CampaignDetail() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>Insertion Order</CardTitle>
+                      <CardTitle className="font-sans">Insertion Order</CardTitle>
                       <CardDescription>
                         Professional insertion order document for this campaign
                       </CardDescription>
@@ -867,7 +834,7 @@ export default function CampaignDetail() {
                     <div className="space-y-6">
                       {/* Campaign Info Section */}
                       <div className="border rounded-lg p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
-                        <h3 className="text-xl font-bold mb-4">Campaign Information</h3>
+                        <h3 className="text-lg font-bold font-sans mb-4">Campaign Information</h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p className="text-sm font-medium text-gray-600">Campaign Name</p>
@@ -891,7 +858,7 @@ export default function CampaignDetail() {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-600">Total Investment</p>
-                            <p className="text-xl font-bold text-blue-600">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</p>
+                            <p className="text-lg font-bold text-blue-600">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</p>
                           </div>
                         </div>
                       </div>
@@ -899,7 +866,7 @@ export default function CampaignDetail() {
                       {/* Campaign Objectives */}
                       {campaign.objectives && (
                         <div className="border rounded-lg p-6">
-                          <h3 className="text-lg font-bold mb-4">Campaign Objectives</h3>
+                          <h3 className="text-lg font-bold font-sans mb-4">Campaign Objectives</h3>
                           <div className="space-y-3">
                             {campaign.objectives.primaryGoal && (
                               <div>
@@ -919,7 +886,7 @@ export default function CampaignDetail() {
 
                       {/* Selected Publications & Inventory */}
                       <div className="border rounded-lg p-6">
-                        <h3 className="text-lg font-bold mb-4">Selected Publications & Inventory</h3>
+                        <h3 className="text-lg font-bold font-sans mb-4">Selected Publications & Inventory</h3>
                         <p className="text-sm text-gray-600 mb-4">
                           {campaign.selectedInventory?.totalInventoryItems || 
                             (campaign.selectedInventory?.publications || []).reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0) ||
@@ -932,7 +899,7 @@ export default function CampaignDetail() {
                             <div key={pub.publicationId} className="border-2 border-gray-300 rounded-lg p-5 bg-gradient-to-r from-gray-50 to-white shadow-sm">
                               <div className="flex justify-between items-start mb-4 pb-3 border-b-2 border-gray-200">
                                 <div className="flex-1">
-                                  <h4 className="font-bold text-lg text-gray-900">{pub.publicationName}</h4>
+                                  <h4 className="font-bold font-sans text-lg text-gray-900">{pub.publicationName}</h4>
                                   <Badge variant="outline" className="mt-2">
                                     {pub.inventoryItems?.length || 0} ad placements
                                   </Badge>
@@ -940,7 +907,7 @@ export default function CampaignDetail() {
                                 {pub.publicationTotal && (
                                   <div className="text-right">
                                     <p className="text-xs text-gray-500 mb-1">Publication Total</p>
-                                    <p className="text-2xl font-bold text-blue-600">
+                                    <p className="text-lg font-bold text-blue-600">
                                       ${pub.publicationTotal.toLocaleString()}
                                     </p>
                                   </div>
@@ -1049,7 +1016,7 @@ export default function CampaignDetail() {
                       {/* Performance Estimates */}
                       {campaign.estimatedPerformance && (
                         <div className="border rounded-lg p-6 bg-green-50">
-                          <h3 className="text-lg font-bold mb-4">Estimated Performance</h3>
+                          <h3 className="text-lg font-bold font-sans mb-4">Estimated Performance</h3>
                           <div className="grid grid-cols-3 gap-4">
                             {campaign.estimatedPerformance.reach && (
                               <div>
@@ -1079,7 +1046,7 @@ export default function CampaignDetail() {
 
                       {/* Investment Summary */}
                       <div className="border rounded-lg p-6 bg-gradient-to-br from-purple-50 to-pink-50">
-                        <h3 className="text-lg font-bold mb-4">Investment Summary</h3>
+                        <h3 className="text-lg font-bold font-sans mb-4">Investment Summary</h3>
                         <div className="space-y-2">
                           {(campaign.pricing?.monthlyTotal || campaign.pricing?.monthlyPrice) && (
                             <div className="flex justify-between text-base">
@@ -1093,7 +1060,7 @@ export default function CampaignDetail() {
                               <span className="font-semibold">{campaign.timeline.durationMonths} {campaign.timeline.durationMonths === 1 ? 'month' : 'months'}</span>
                             </div>
                           )}
-                          <div className="flex justify-between text-xl pt-3 border-t border-purple-200">
+                          <div className="flex justify-between text-lg pt-3 border-t border-purple-200">
                             <span className="font-bold">Total Campaign Investment:</span>
                             <span className="font-bold text-purple-600">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</span>
                           </div>

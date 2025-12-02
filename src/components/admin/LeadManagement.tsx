@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { leadsApi, type Lead, type LeadFilters, type LeadSource, type LeadStatus } from '@/api/leads';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -516,9 +516,173 @@ export const LeadManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold font-sans text-slate-900">Lead Management</h2>
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Header with title, filters, and search - all in one row */}
+      <div className="flex items-center justify-between gap-4 bg-white rounded-lg border border-slate-200 px-6 py-4">
+        <div className="flex items-center gap-4">
+          <h2 className="text-base font-semibold text-slate-900 whitespace-nowrap">
+            All Leads ({visibleCount}
+            {hasActiveFilters ? ` of ${leads.length}` : ''})
+          </h2>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Status Filter Dropdown */}
+          <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={`${filterTriggerClass} ${
+                  statusFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                }`}
+              >
+                {getStatusFilterLabel()}
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 space-y-4">
+              <div className="space-y-3">
+                {statusOptions.map(option => {
+                  const checked = statusFilterDraft.includes(option.value);
+                  return (
+                    <label key={option.value} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() => {
+                          setStatusFilterDraft(prev =>
+                            checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
+                          );
+                        }}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between border-t pt-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setStatusFilter([]);
+                    setStatusFilterDraft([]);
+                    setStatusPopoverOpen(false);
+                  }}
+                >
+                  Clear
+                </Button>
+                <Button size="sm" onClick={applyStatusFilter}>
+                  Apply
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Source Filter Dropdown */}
+          <Popover open={sourcePopoverOpen} onOpenChange={setSourcePopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={`${filterTriggerClass} ${
+                  sourceFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                }`}
+              >
+                {getSourceFilterLabel()}
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 space-y-4">
+              <div className="space-y-3">
+                {sourceOptions.map(option => {
+                  const checked = sourceFilterDraft.includes(option.value);
+                  return (
+                    <label key={option.value} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() => {
+                          setSourceFilterDraft(prev =>
+                            checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
+                          );
+                        }}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between border-t pt-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSourceFilter([]);
+                    setSourceFilterDraft([]);
+                    setSourcePopoverOpen(false);
+                  }}
+                >
+                  Clear
+                </Button>
+                <Button size="sm" onClick={applySourceFilter}>
+                  Apply
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Publication Filter Dropdown */}
+          <Popover open={publicationPopoverOpen} onOpenChange={setPublicationPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={`${filterTriggerClass} ${
+                  publicationFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
+                }`}
+              >
+                {getPublicationFilterLabel()}
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 space-y-4">
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {publicationOptions.map(option => {
+                  const checked = publicationFilterDraft.includes(option.value);
+                  return (
+                    <label key={option.value} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() => {
+                          setPublicationFilterDraft(prev =>
+                            checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
+                          );
+                        }}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between border-t pt-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setPublicationFilter([]);
+                    setPublicationFilterDraft([]);
+                    setPublicationPopoverOpen(false);
+                  }}
+                >
+                  Clear
+                </Button>
+                <Button size="sm" onClick={applyPublicationFilter}>
+                  Apply
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Show Archived Toggle */}
           <Button
             variant={showArchived ? 'default' : 'outline'}
             size="sm"
@@ -526,12 +690,37 @@ export const LeadManagement = () => {
               setShowArchived(prev => !prev);
               setFilters(prev => ({ ...prev, includeArchived: !showArchived }));
             }}
+            className={filterTriggerClass}
           >
             {showArchived ? 'Hide Archived' : 'Show Archived'}
           </Button>
+
+          {/* Search Bar */}
+          <div className="relative min-w-[200px]">
+            <Input
+              placeholder="Search leads…"
+              value={searchTerm}
+              onChange={event => setSearchTerm(event.target.value)}
+              className={`${filterTriggerClass} pr-9 ${
+                searchTerm ? 'border-primary/40 bg-primary/10 text-primary' : ''
+              }`}
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0"
+                onClick={() => setSearchTerm('')}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* More Options Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={seeding}>
+              <Button variant="outline" size="sm" disabled={seeding} className={filterTriggerClass}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -551,192 +740,8 @@ export const LeadManagement = () => {
         </div>
       </div>
 
-      {/* Inline filters rendered within table header */}
-
+      {/* Table Card */}
       <Card className="bg-white">
-        <CardHeader className="border-b">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-base font-semibold font-sans text-slate-900">
-              All Leads ({visibleCount}
-              {hasActiveFilters ? ` of ${leads.length}` : ''})
-            </CardTitle>
-            <div className="flex items-center gap-2 overflow-x-auto">
-              <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`${filterTriggerClass} ${
-                      statusFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
-                    }`}
-                  >
-                    {getStatusFilterLabel()}
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64 space-y-4">
-                  <div className="space-y-3">
-                    {statusOptions.map(option => {
-                      const checked = statusFilterDraft.includes(option.value);
-                      return (
-                        <label key={option.value} className="flex items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={() => {
-                              setStatusFilterDraft(prev =>
-                                checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
-                              );
-                            }}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <div className="flex items-center justify-between border-t pt-3">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setStatusFilter([]);
-                        setStatusFilterDraft([]);
-                        setStatusPopoverOpen(false);
-                      }}
-                    >
-                      Clear
-                    </Button>
-                    <Button size="sm" onClick={applyStatusFilter}>
-                      Apply
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Popover open={sourcePopoverOpen} onOpenChange={setSourcePopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`${filterTriggerClass} ${
-                      sourceFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
-                    }`}
-                  >
-                    {getSourceFilterLabel()}
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64 space-y-4">
-                  <div className="space-y-3">
-                    {sourceOptions.map(option => {
-                      const checked = sourceFilterDraft.includes(option.value);
-                      return (
-                        <label key={option.value} className="flex items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={() => {
-                              setSourceFilterDraft(prev =>
-                                checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
-                              );
-                            }}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <div className="flex items-center justify-between border-t pt-3">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSourceFilter([]);
-                        setSourceFilterDraft([]);
-                        setSourcePopoverOpen(false);
-                      }}
-                    >
-                      Clear
-                    </Button>
-                    <Button size="sm" onClick={applySourceFilter}>
-                      Apply
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Popover open={publicationPopoverOpen} onOpenChange={setPublicationPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`${filterTriggerClass} ${
-                      publicationFilter.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''
-                    }`}
-                  >
-                    {getPublicationFilterLabel()}
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64 space-y-4">
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {publicationOptions.map(option => {
-                      const checked = publicationFilterDraft.includes(option.value);
-                      return (
-                        <label key={option.value} className="flex items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={() => {
-                              setPublicationFilterDraft(prev =>
-                                checked ? prev.filter(value => value !== option.value) : [...prev, option.value],
-                              );
-                            }}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <div className="flex items-center justify-between border-t pt-3">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setPublicationFilter([]);
-                        setPublicationFilterDraft([]);
-                        setPublicationPopoverOpen(false);
-                      }}
-                    >
-                      Clear
-                    </Button>
-                    <Button size="sm" onClick={applyPublicationFilter}>
-                      Apply
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <div className="relative min-w-[200px]">
-                <Input
-                  placeholder="Search leads…"
-                  value={searchTerm}
-                  onChange={event => setSearchTerm(event.target.value)}
-                  className={`${filterTriggerClass} pr-9 ${
-                    searchTerm ? 'border-primary/40 bg-primary/10 text-primary' : ''
-                  }`}
-                />
-                {searchTerm && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0"
-                    onClick={() => setSearchTerm('')}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardHeader>
         <CardContent className="p-0">
           {leads.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">No leads available yet.</div>

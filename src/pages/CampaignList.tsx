@@ -128,21 +128,6 @@ export default function CampaignList() {
 
             {/* Main Content Area */}
             <div className="flex-1 min-w-0">
-              {/* Header */}
-              <div className="mb-8 flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold mb-2">Campaigns</h1>
-                  <p className="text-muted-foreground">
-                    Manage and review all campaigns
-                  </p>
-                </div>
-                
-                <Button onClick={() => navigate('/campaigns/new')} size="lg">
-                  <Plus className="mr-2 h-5 w-5" />
-                  Create Campaign
-                </Button>
-              </div>
-
               {/* Hub Loading/Error State */}
               {hubLoading && !selectedHubId ? (
                 <Card className="border-blue-200 bg-blue-50 mb-6">
@@ -190,37 +175,46 @@ export default function CampaignList() {
                 </Card>
               ) : null}
 
-              {/* Filters */}
-              <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
+              {/* Header with filters and search - all in one row */}
+              <div className="flex items-center justify-between gap-4 bg-white rounded-lg border border-slate-200 px-6 py-4 mb-6">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-base font-semibold font-sans text-slate-900 whitespace-nowrap">
+                    All Campaigns ({campaigns.length})
+                  </h2>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {/* Status Filter Dropdown */}
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9 w-[180px] border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Search Bar */}
+                  <div className="relative min-w-[240px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search campaigns..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 h-9 border-input bg-white hover:bg-[#F9F8F3] shadow-sm transition-all duration-200"
                     />
                   </div>
+
+                  {/* Create Campaign Button */}
+                  <Button onClick={() => navigate('/campaigns/new')} size="sm" className="h-9">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Campaign
+                  </Button>
                 </div>
-                
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <Filter className="mr-2 h-4 w-4" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
-            </CardContent>
-          </Card>
 
               {/* Campaign List */}
               {loading ? (
@@ -250,7 +244,11 @@ export default function CampaignList() {
               ) : (
                 <div className="space-y-4">
                   {campaigns.map((campaign) => (
-                    <Card key={campaign._id?.toString()} className="hover:shadow-md transition-shadow">
+                    <Card 
+                      key={campaign._id?.toString()} 
+                      className="group cursor-pointer transition-all duration-200 hover:shadow-lg border-gray-200"
+                      onClick={() => handleViewCampaign(campaign._id?.toString() || '')}
+                    >
                       <CardContent className="pt-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -295,7 +293,11 @@ export default function CampaignList() {
                             </div>
                           </div>
                           
-                          <div className="flex gap-2 ml-4">
+                          {/* Action buttons - appear on hover */}
+                          <div 
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2 ml-4"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Button
                               variant="outline"
                               size="sm"
