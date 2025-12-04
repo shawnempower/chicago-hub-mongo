@@ -51,8 +51,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
 import { API_BASE_URL } from '@/config/api';
-import { CreativeRequirementsChecklist } from '@/components/campaign/CreativeRequirementsChecklist';
-import { CampaignCreativeAssetsUploader } from '@/components/campaign/CampaignCreativeAssetsUploader';
+import { CreativeAssetsManager } from '@/components/campaign/CreativeAssetsManager';
 import { extractRequirementsForSelectedInventory } from '@/utils/creativeSpecsExtractor';
 import { formatInsertionOrderQuantity, formatInsertionOrderAudienceWithBadge } from '@/utils/insertionOrderFormatting';
 import { calculateItemCost } from '@/utils/inventoryPricing';
@@ -584,46 +583,36 @@ export default function CampaignDetail() {
 
             {/* Creative Assets Tab */}
             <TabsContent value="creative-requirements" className="mt-0">
-              <div className="space-y-6">
-                {/* Requirements Overview - Collapsible */}
-                <CreativeRequirementsChecklist 
-                  campaign={campaign}
-                  compact={true}
-                  uploadedAssets={uploadedAssets}
-                />
-                
-                {/* Asset Upload & Management */}
-                <CampaignCreativeAssetsUploader
-                  requirements={(() => {
-                    // Extract requirements from campaign inventory
-                    const allInventoryItems: any[] = [];
-                    
-                    if (campaign?.selectedInventory?.publications) {
-                      campaign.selectedInventory.publications.forEach((pub: any) => {
-                        if (pub.inventoryItems) {
-                          pub.inventoryItems.forEach((item: any) => {
-                            // Skip excluded items
-                            if (item.isExcluded) return;
-                            
-                            allInventoryItems.push({
-                              ...item,
-                              publicationId: pub.publicationId,
-                              publicationName: pub.publicationName,
-                              channel: item.channel || 'general'
-                            });
+              <CreativeAssetsManager
+                requirements={(() => {
+                  // Extract requirements from campaign inventory
+                  const allInventoryItems: any[] = [];
+                  
+                  if (campaign?.selectedInventory?.publications) {
+                    campaign.selectedInventory.publications.forEach((pub: any) => {
+                      if (pub.inventoryItems) {
+                        pub.inventoryItems.forEach((item: any) => {
+                          // Skip excluded items
+                          if (item.isExcluded) return;
+                          
+                          allInventoryItems.push({
+                            ...item,
+                            publicationId: pub.publicationId,
+                            publicationName: pub.publicationName,
+                            channel: item.channel || 'general'
                           });
-                        }
-                      });
-                    }
-                    
-                    const requirements = extractRequirementsForSelectedInventory(allInventoryItems);
-                    return requirements;
-                  })()}
-                  uploadedAssets={uploadedAssets}
-                  onAssetsChange={setUploadedAssets}
-                  campaignId={campaign?.campaignId}
-                />
-              </div>
+                        });
+                      }
+                    });
+                  }
+                  
+                  const requirements = extractRequirementsForSelectedInventory(allInventoryItems);
+                  return requirements;
+                })()}
+                uploadedAssets={uploadedAssets}
+                onAssetsChange={setUploadedAssets}
+                campaignId={campaign?.campaignId}
+              />
             </TabsContent>
 
             {/* Insertion Order Tab */}
