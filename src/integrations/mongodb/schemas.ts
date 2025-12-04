@@ -353,7 +353,7 @@ export interface UserInteraction {
     | 'order_create' | 'order_update' | 'order_delete'
     | 'inventory_update' | 'publication_update'
     | 'lead_create' | 'lead_update' | 'lead_delete'
-    | 'package_create' | 'package_update' | 'package_delete'
+    | 'package_create' | 'package_update' | 'package_delete' | 'package_refresh'
     | 'settings_update' | 'storefront_update'
     | 'user_login' | 'user_logout';
   

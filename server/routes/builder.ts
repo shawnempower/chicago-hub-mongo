@@ -342,6 +342,18 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
                 ? `${baseItemName} (${getPricingModelLabel(pricingModel)})`
                 : baseItemName;
               
+              // Merge dimensions into specifications (fix for print/other channels)
+              const specifications = { ...opp.specifications };
+              if (opp.dimensions && !specifications.dimensions) {
+                specifications.dimensions = opp.dimensions;
+              }
+              if (opp.adFormat && !specifications.adFormat) {
+                specifications.adFormat = opp.adFormat;
+              }
+              if (opp.color && !specifications.color) {
+                specifications.color = opp.color;
+              }
+              
               const item: any = {
                 channel: channelName,
                 itemPath: `${path}[${idx}]${tierSuffix}`,
@@ -356,7 +368,7 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
                   hubPrice,
                   pricingModel: pricing.pricingModel || 'flat'
                 },
-                specifications: opp.specifications,
+                specifications,
                 audienceMetrics: Object.keys(channelMetrics).length > 0 ? channelMetrics : undefined,  // Add channel-level metrics (only if not empty)
                 performanceMetrics: opp.performanceMetrics || undefined  // Add item-level metrics
               };
@@ -1260,6 +1272,19 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
               ? `${baseItemName} (${getPricingModelLabel(pricingModel)})`
               : baseItemName;
 
+            // Merge dimensions into specifications (fix for print/other channels)
+            const specifications = { ...opp.specifications };
+            if (opp.dimensions && !specifications.dimensions) {
+              specifications.dimensions = opp.dimensions;
+              console.log(`[Package Refresh] ✅ Added dimensions to ${opp.title || opp.name}: ${opp.dimensions}`);
+            }
+            if (opp.adFormat && !specifications.adFormat) {
+              specifications.adFormat = opp.adFormat;
+            }
+            if (opp.color && !specifications.color) {
+              specifications.color = opp.color;
+            }
+
             const freshItem: any = {
               itemPath: `${path}[${idx}]${tierSuffix}`,
               channel: channelName,
@@ -1269,7 +1294,7 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
                 hubPrice,
                 pricingModel: pricingModel
               },
-              specifications: opp.specifications,
+              specifications,
               frequency: itemFrequencyString || freshPub.printFrequency,
               publicationFrequencyType: pubType,
               audienceMetrics: Object.keys(channelMetrics).length > 0 ? channelMetrics : undefined,

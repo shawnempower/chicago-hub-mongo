@@ -426,6 +426,200 @@ export const WEBSITE_STANDARDS: Record<string, InventoryTypeStandard> = {
 };
 
 // =====================================================
+// PRINT STANDARDS
+// =====================================================
+
+/**
+ * Print advertising standards
+ * 
+ * Unlike website ads (which have standardized IAB sizes), print ad dimensions
+ * are publication-specific based on physical newspaper/magazine layouts.
+ * 
+ * These standards define requirements by AD FORMAT (full page, half page, etc.)
+ * rather than exact dimensions, as actual sizes vary by publication.
+ */
+export const PRINT_STANDARDS: Record<string, InventoryTypeStandard> = {
+  // Full Page Print Ad
+  FULL_PAGE: {
+    id: 'print_full_page',
+    channel: 'print',
+    name: 'Full Page Print Ad',
+    description: 'Full page advertisement. Exact dimensions vary by publication.',
+    defaultSpecs: {
+      fileFormats: ['PDF', 'TIFF', 'EPS', 'AI'],
+      maxFileSize: '50MB',
+      colorSpace: 'CMYK',
+      resolution: '300dpi',
+      bleed: '0.125 inches',
+      additionalRequirements: 'All fonts must be embedded or outlined. Images must be 300dpi CMYK. Check with publication for exact trim size.'
+    },
+    validation: {
+      required: ['colorSpace', 'resolution'],
+      optional: ['bleed', 'trim', 'safeArea']
+    },
+    examples: [
+      'Full page newspaper ad',
+      'Full page magazine ad',
+      'Full page newsletter ad'
+    ]
+  },
+
+  // Half Page Print Ad
+  HALF_PAGE: {
+    id: 'print_half_page',
+    channel: 'print',
+    name: 'Half Page Print Ad',
+    description: 'Half page advertisement. Can be horizontal or vertical. Dimensions vary by publication.',
+    defaultSpecs: {
+      fileFormats: ['PDF', 'TIFF', 'EPS', 'AI'],
+      maxFileSize: '25MB',
+      colorSpace: 'CMYK',
+      resolution: '300dpi',
+      bleed: '0.125 inches',
+      additionalRequirements: 'Specify horizontal or vertical orientation. All fonts must be embedded. Images must be 300dpi CMYK.'
+    },
+    validation: {
+      required: ['colorSpace', 'resolution'],
+      optional: ['bleed', 'trim']
+    },
+    examples: [
+      'Half page horizontal',
+      'Half page vertical'
+    ]
+  },
+
+  // Quarter Page Print Ad
+  QUARTER_PAGE: {
+    id: 'print_quarter_page',
+    channel: 'print',
+    name: 'Quarter Page Print Ad',
+    description: 'Quarter page advertisement. Dimensions vary by publication.',
+    defaultSpecs: {
+      fileFormats: ['PDF', 'TIFF', 'EPS', 'AI'],
+      maxFileSize: '15MB',
+      colorSpace: 'CMYK',
+      resolution: '300dpi',
+      bleed: '0.125 inches',
+      additionalRequirements: 'All fonts must be embedded. Images must be 300dpi CMYK. Maintain minimum 6pt text size.'
+    },
+    validation: {
+      required: ['colorSpace', 'resolution'],
+      optional: ['bleed']
+    },
+    examples: [
+      'Quarter page vertical',
+      'Quarter page horizontal'
+    ]
+  },
+
+  // Eighth Page Print Ad
+  EIGHTH_PAGE: {
+    id: 'print_eighth_page',
+    channel: 'print',
+    name: 'Eighth Page Print Ad',
+    description: 'Eighth page advertisement. Smaller format ad.',
+    defaultSpecs: {
+      fileFormats: ['PDF', 'TIFF', 'JPG'],
+      maxFileSize: '10MB',
+      colorSpace: 'CMYK',
+      resolution: '300dpi',
+      additionalRequirements: 'Keep text large and readable (minimum 8pt). Simple designs work best at this size.'
+    },
+    validation: {
+      required: ['colorSpace', 'resolution'],
+      optional: []
+    }
+  },
+
+  // Business Card Size Ad
+  BUSINESS_CARD: {
+    id: 'print_business_card',
+    channel: 'print',
+    name: 'Business Card Ad',
+    description: 'Business card sized advertisement, typically 3.5" x 2"',
+    defaultSpecs: {
+      dimensions: '3.5x2',
+      fileFormats: ['PDF', 'TIFF', 'JPG'],
+      maxFileSize: '5MB',
+      colorSpace: 'CMYK',
+      resolution: '300dpi',
+      additionalRequirements: 'Minimum text size 6pt. Keep design simple and legible at small size.'
+    },
+    commonSizes: ['3.5x2', '2x3.5'],
+    validation: {
+      required: ['colorSpace', 'resolution'],
+      optional: []
+    }
+  },
+
+  // Classified Ad
+  CLASSIFIED: {
+    id: 'print_classified',
+    channel: 'print',
+    name: 'Classified Ad',
+    description: 'Classified advertisement, typically text-based or small display',
+    defaultSpecs: {
+      fileFormats: ['PDF', 'JPG', 'TEXT'],
+      maxFileSize: '5MB',
+      colorSpace: 'CMYK',
+      resolution: '300dpi',
+      additionalRequirements: 'Text-based ads may be submitted as plain text. Display classifieds require CMYK files.'
+    },
+    validation: {
+      required: ['resolution'],
+      optional: ['colorSpace']
+    },
+    examples: [
+      'Text classified',
+      'Display classified'
+    ]
+  },
+
+  // Insert
+  INSERT: {
+    id: 'print_insert',
+    channel: 'print',
+    name: 'Print Insert',
+    description: 'Separate insert to be included with publication. Customer usually provides pre-printed materials.',
+    defaultSpecs: {
+      fileFormats: ['PDF'],
+      maxFileSize: '100MB',
+      colorSpace: 'CMYK',
+      resolution: '300dpi',
+      additionalRequirements: 'Dimensions, paper stock, and quantity must be confirmed with publication. Files must be print-ready PDF/X-1a if printing through publication.'
+    },
+    validation: {
+      required: ['resolution'],
+      optional: ['colorSpace', 'bleed', 'trim']
+    },
+    examples: [
+      'Flyer insert',
+      'Brochure insert',
+      'Pre-printed promotional piece'
+    ]
+  },
+
+  // Custom Print Ad
+  CUSTOM: {
+    id: 'print_custom',
+    channel: 'print',
+    name: 'Custom Print Ad',
+    description: 'Custom-sized print advertisement with publication-specific requirements',
+    defaultSpecs: {
+      fileFormats: ['PDF', 'TIFF', 'EPS'],
+      maxFileSize: '50MB',
+      colorSpace: 'CMYK',
+      resolution: '300dpi',
+      additionalRequirements: 'Confirm all specifications with publication before creating artwork. Include bleed if required.'
+    },
+    validation: {
+      required: ['colorSpace', 'resolution'],
+      optional: ['bleed', 'trim', 'safeArea']
+    }
+  }
+};
+
+// =====================================================
 // HELPER FUNCTIONS
 // =====================================================
 
@@ -433,7 +627,7 @@ export const WEBSITE_STANDARDS: Record<string, InventoryTypeStandard> = {
  * Get standard specs by ID
  */
 export function getInventoryStandard(standardId: string): InventoryTypeStandard | null {
-  return WEBSITE_STANDARDS[standardId] || null;
+  return WEBSITE_STANDARDS[standardId] || PRINT_STANDARDS[standardId] || null;
 }
 
 /**
@@ -444,7 +638,39 @@ export function getWebsiteStandards(): InventoryTypeStandard[] {
 }
 
 /**
- * Get IAB standard sizes only
+ * Get all print standards
+ */
+export function getPrintStandards(): InventoryTypeStandard[] {
+  return Object.values(PRINT_STANDARDS);
+}
+
+/**
+ * Get standards by channel
+ */
+export function getStandardsByChannel(channel: InventoryChannel): InventoryTypeStandard[] {
+  switch (channel) {
+    case 'website':
+      return Object.values(WEBSITE_STANDARDS);
+    case 'print':
+      return Object.values(PRINT_STANDARDS);
+    // Add other channels as they're developed
+    default:
+      return [];
+  }
+}
+
+/**
+ * Get all standards across all channels
+ */
+export function getAllStandards(): InventoryTypeStandard[] {
+  return [
+    ...Object.values(WEBSITE_STANDARDS),
+    ...Object.values(PRINT_STANDARDS)
+  ];
+}
+
+/**
+ * Get IAB standard sizes only (website)
  */
 export function getIABStandards(): InventoryTypeStandard[] {
   return Object.values(WEBSITE_STANDARDS).filter(s => s.iabStandard);
@@ -452,11 +678,32 @@ export function getIABStandards(): InventoryTypeStandard[] {
 
 /**
  * Find standard by dimensions
+ * Note: For print, dimensions are publication-specific, so this primarily works for website
  */
-export function findStandardByDimensions(dimensions: string): InventoryTypeStandard | null {
-  return Object.values(WEBSITE_STANDARDS).find(
+export function findStandardByDimensions(dimensions: string, channel: InventoryChannel = 'website'): InventoryTypeStandard | null {
+  const standards = getStandardsByChannel(channel);
+  return standards.find(
     s => s.defaultSpecs.dimensions === dimensions
   ) || null;
+}
+
+/**
+ * Find print standard by ad format
+ */
+export function findPrintStandardByFormat(adFormat: string): InventoryTypeStandard | null {
+  const formatMap: Record<string, string> = {
+    'full page': 'FULL_PAGE',
+    'half page': 'HALF_PAGE',
+    'quarter page': 'QUARTER_PAGE',
+    'eighth page': 'EIGHTH_PAGE',
+    'business card': 'BUSINESS_CARD',
+    'classified': 'CLASSIFIED',
+    'insert': 'INSERT',
+    'custom': 'CUSTOM'
+  };
+  
+  const standardKey = formatMap[adFormat.toLowerCase()];
+  return standardKey ? PRINT_STANDARDS[standardKey] : null;
 }
 
 /**
@@ -623,11 +870,23 @@ function formatBytes(bytes: number): string {
 // =====================================================
 
 export default {
-  standards: WEBSITE_STANDARDS,
+  // Standards collections
+  websiteStandards: WEBSITE_STANDARDS,
+  printStandards: PRINT_STANDARDS,
+  
+  // Getters
   getStandard: getInventoryStandard,
-  getAllStandards: getWebsiteStandards,
+  getWebsiteStandards,
+  getPrintStandards,
+  getStandardsByChannel,
+  getAllStandards,
   getIABStandards,
+  
+  // Finders
   findByDimensions: findStandardByDimensions,
+  findPrintByFormat: findPrintStandardByFormat,
+  
+  // Utilities
   generateSpecGroupId: generateSpecGroupIdFromStandard,
   validate: validateAgainstStandard,
   getRecommendations: getStandardRecommendations

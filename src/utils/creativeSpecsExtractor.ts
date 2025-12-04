@@ -163,9 +163,12 @@ function extractFromInventoryItem(
     itemPath,
   };
 
-  // Extract dimensions from format.dimensions or legacy sizes field
+  // Extract dimensions from multiple possible locations
   if (item.format?.dimensions) {
     requirement.dimensions = item.format.dimensions;
+  } else if (item.specifications?.dimensions) {
+    // Check specifications.dimensions (added by package refresh fix)
+    requirement.dimensions = item.specifications.dimensions;
   } else if (item.sizes && Array.isArray(item.sizes)) {
     requirement.dimensions = item.sizes;
   } else if (item.dimensions) {
@@ -401,15 +404,7 @@ export function extractRequirementsForSelectedInventory(
     }
     
     // Debug log
-    console.log(`Processing inventory item ${index}:`, {
-      itemName: item.itemName || item.name,
-      channel: item.channel,
-      publicationId: item.publicationId,
-      publicationName: item.publicationName,
-      itemPath: item.itemPath,
-      hasSpecs: !!item.specifications,
-      hasFormat: !!item.format
-    });
+    // Removed verbose logging
     
     const requirement = extractFromInventoryItem(
       item,

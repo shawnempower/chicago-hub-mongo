@@ -107,6 +107,7 @@
     "multer": "^2.0.2",
     "next-themes": "^0.3.0",
     "openai": "^6.8.1",
+    "pdfjs-dist": "^5.4.449",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",

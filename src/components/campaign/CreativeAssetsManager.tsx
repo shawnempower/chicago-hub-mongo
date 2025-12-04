@@ -70,6 +70,7 @@ import {
 import {
   detectFileSpecs,
   DetectedFileSpecs,
+  autoMatchFileToSpecs,
 } from '@/utils/fileSpecDetection';
 import {
   getWebsiteStandards,
@@ -363,6 +364,9 @@ export function CreativeAssetsManager({
   const handleFilesSelected = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     
+    console.log(`[Upload] Processing ${fileArray.length} file(s)`);
+    console.log(`[Upload] Available spec groups:`, groupedSpecs.length);
+    
     for (const file of fileArray) {
       const fileId = `${file.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
@@ -386,22 +390,70 @@ export function CreativeAssetsManager({
       // Detect file specs
       try {
         const detectedSpecs = await detectFileSpecs(file);
+        console.log(`[File Detection] Detected specs for ${file.name}:`, detectedSpecs);
         
-        // Find matching standard
-        let suggestedStandard: InventoryTypeStandard | undefined;
-        let matchConfidence = 0;
+        // Match against actual campaign requirements
+        const matches = autoMatchFileToSpecs(detectedSpecs, groupedSpecs);
+        console.log(`[File Matching] Found ${matches.length} potential matches for ${file.name}`);
         
-        if (detectedSpecs.dimensions) {
-          const match = findStandardByDimensions(
-            detectedSpecs.dimensions.width,
-            detectedSpecs.dimensions.height
-          );
-          if (match) {
-            suggestedStandard = match.standard;
-            matchConfidence = match.confidence;
-          }
+        if (matches.length > 0) {
+          console.log(`[File Matching] Top 3 matches:`, matches.slice(0, 3).map(m => ({
+            spec: m.specGroupId,
+            score: m.matchScore,
+            reasons: m.matchReasons,
+            mismatches: m.mismatches
+          })));
         }
         
+        let bestMatch = matches.length > 0 ? matches[0] : null;
+        let matchConfidence = bestMatch ? bestMatch.matchScore : 0;
+        
+        // Auto-assign if good match (score >= 50)
+        if (bestMatch && matchConfidence >= 50) {
+          console.log(`✅ Auto-assigning ${file.name} → ${bestMatch.specGroupId} (${matchConfidence}%)`);
+          console.log(`   Matched requirements:`, bestMatch.matchReasons);
+          
+          // Auto-assign to the best matching spec group
+          const matchingGroup = groupedSpecs.find(g => g.specGroupId === bestMatch.specGroupId);
+          if (matchingGroup) {
+            console.log(`   Found matching group:`, matchingGroup.channel, matchingGroup.dimensions);
+            
+            // Add to uploadedAssets
+            const updatedAssets = new Map(uploadedAssets);
+            updatedAssets.set(matchingGroup.specGroupId, {
+              specGroupId: matchingGroup.specGroupId,
+              file,
+              previewUrl,
+              uploadStatus: 'pending',
+              appliesTo: matchingGroup.placements.map(p => ({
+                placementId: p.placementId,
+                publicationId: p.publicationId,
+                publicationName: p.publicationName
+              }))
+            });
+            onAssetsChange(updatedAssets);
+            
+            // Remove from pending files since it's auto-assigned
+            setPendingFiles(prev => {
+              const next = new Map(prev);
+              next.delete(fileId);
+              return next;
+            });
+            
+            console.log(`   ✅ Successfully auto-assigned and removed from pending!`);
+            
+            // Don't add to pending files
+            continue;
+          } else {
+            console.warn(`   ⚠️ Could not find matching group for ${bestMatch.specGroupId}`);
+          }
+        } else if (matchConfidence > 0) {
+          console.log(`⚠️ Low match confidence for ${file.name} (${matchConfidence}%), leaving in "Ready to Assign"`);
+        } else {
+          console.log(`❌ No match found for ${file.name}`);
+        }
+        
+        // Add to pending files with detected specs
         setPendingFiles(prev => {
           const next = new Map(prev);
           const existing = next.get(fileId);
@@ -409,7 +461,7 @@ export function CreativeAssetsManager({
             next.set(fileId, {
               ...existing,
               detectedSpecs,
-              suggestedStandard,
+              matches,
               matchConfidence,
               isAnalyzing: false,
             });
@@ -431,7 +483,7 @@ export function CreativeAssetsManager({
         });
       }
     }
-  }, []);
+  }, [groupedSpecs, uploadedAssets, onAssetsChange]);
 
   // Dropzone
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
@@ -733,29 +785,16 @@ export function CreativeAssetsManager({
                     Ready to assign ({pendingFiles.size})
                   </p>
                   {Array.from(pendingFiles.entries()).map(([id, fileData]) => (
-                    <div key={id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <FileImage className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <span className="truncate">{fileData.file.name}</span>
-                        {fileData.isAnalyzing && (
-                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {!fileData.isAnalyzing && (
-                          <Select onValueChange={(value) => handleAssignToSpec(id, value)}>
-                            <SelectTrigger className="h-7 w-[140px] text-xs">
-                              <SelectValue placeholder="Assign to..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {groupedSpecs.map((spec) => (
-                                <SelectItem key={spec.specGroupId} value={spec.specGroupId}>
-                                  {formatDimensions(spec.dimensions)} - {spec.channel}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                    <div key={id} className="flex flex-col gap-2 p-3 bg-muted/50 rounded text-sm border border-muted">
+                      {/* File name and actions row */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <FileImage className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate font-medium">{fileData.file.name}</span>
+                          {fileData.isAnalyzing && (
+                            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
                         <Button 
                           variant="ghost" 
                           size="sm" 
@@ -765,6 +804,79 @@ export function CreativeAssetsManager({
                           <X className="h-3 w-3" />
                         </Button>
                       </div>
+                      
+                      {/* Detected specs row */}
+                      {fileData.detectedSpecs && !fileData.isAnalyzing && (
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground pl-6">
+                          {fileData.detectedSpecs.dimensions && (
+                            <span className="font-mono">
+                              📏 {fileData.detectedSpecs.dimensions.formatted}
+                            </span>
+                          )}
+                          <span>{fileData.detectedSpecs.fileExtension}</span>
+                          <span>{fileData.detectedSpecs.fileSizeFormatted}</span>
+                          {fileData.detectedSpecs.colorSpace && (
+                            <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
+                              {fileData.detectedSpecs.colorSpace}
+                            </span>
+                          )}
+                          {fileData.matchConfidence !== undefined && fileData.matchConfidence > 0 && (
+                            <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
+                              {fileData.matchConfidence}% match
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Assignment dropdown */}
+                      {!fileData.isAnalyzing && (
+                        <div className="pl-6">
+                          <Select onValueChange={(value) => handleAssignToSpec(id, value)}>
+                            <SelectTrigger className="h-8 w-full text-xs">
+                              <SelectValue placeholder="Assign to..." />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[300px]">
+                              {(() => {
+                                // Group specs by channel
+                                const byChannel = groupedSpecs.reduce((acc, spec) => {
+                                  const channel = spec.channel || 'other';
+                                  if (!acc[channel]) acc[channel] = [];
+                                  acc[channel].push(spec);
+                                  return acc;
+                                }, {} as Record<string, typeof groupedSpecs>);
+                                
+                                // Sort channels: print first, then alphabetically
+                                const channelOrder = ['print', 'website', 'newsletter', 'podcast', 'radio', 'streaming', 'social', 'events'];
+                                const sortedChannels = Object.keys(byChannel).sort((a, b) => {
+                                  const aIdx = channelOrder.indexOf(a);
+                                  const bIdx = channelOrder.indexOf(b);
+                                  if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+                                  if (aIdx === -1) return 1;
+                                  if (bIdx === -1) return -1;
+                                  return aIdx - bIdx;
+                                });
+                                
+                                return sortedChannels.map(channel => (
+                                  <div key={channel}>
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase bg-muted/50 sticky top-0">
+                                      {channel} ({byChannel[channel].length})
+                                    </div>
+                                    {byChannel[channel].map((spec) => (
+                                      <SelectItem key={spec.specGroupId} value={spec.specGroupId}>
+                                        {formatDimensions(spec.dimensions)}
+                                        {spec.fileFormats && ` - ${spec.fileFormats.slice(0, 2).join('/')}`}
+                                        <span className="text-muted-foreground ml-1">
+                                          ({spec.placementCount} {spec.placementCount === 1 ? 'placement' : 'placements'})
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                  </div>
+                                ));
+                              })()}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

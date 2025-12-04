@@ -5,6 +5,16 @@
  * from uploaded files to enable auto-matching with requirements.
  */
 
+// Use legacy build for better browser compatibility
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+
+// Configure worker using locally served file (copied to public folder)
+if (typeof window !== 'undefined') {
+  // Use local worker file served from public folder
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  console.log('[PDF Detection] PDF.js legacy build configured with local worker');
+}
+
 export interface DetectedFileSpecs {
   // Basic info
   fileName: string;
@@ -69,13 +79,114 @@ export async function detectFileSpecs(file: File): Promise<DetectedFileSpecs> {
   }
   
   // Detect PDF info
-  if (file.type === 'application/pdf') {
-    // PDF detection would require a library like pdf.js
-    // For now, mark as unknown
-    specs.pageCount = undefined; // TODO: Implement PDF page count detection
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+    console.log('[PDF Detection] Detecting PDF specs for:', file.name);
+    const pdfInfo = await detectPDFSpecs(file);
+    if (pdfInfo) {
+      console.log('[PDF Detection] Successfully detected:', pdfInfo);
+      specs.dimensions = pdfInfo.dimensions;
+      specs.pageCount = pdfInfo.pageCount;
+      specs.colorSpace = pdfInfo.colorSpace;
+      specs.estimatedDPI = 300; // PDFs for print are typically 300 DPI
+    } else {
+      console.warn('[PDF Detection] Failed to detect PDF specifications for:', file.name);
+    }
   }
 
   return specs;
+}
+
+/**
+ * Detect PDF specifications including dimensions
+ */
+async function detectPDFSpecs(file: File): Promise<{
+  dimensions: { width: number; height: number; formatted: string };
+  pageCount: number;
+  colorSpace?: 'RGB' | 'CMYK' | 'Grayscale' | 'Unknown';
+} | null> {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    
+    // Get first page to determine dimensions
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1.0 });
+    
+    // Convert points to inches (72 points = 1 inch for print)
+    const widthInches = viewport.width / 72;
+    const heightInches = viewport.height / 72;
+    
+    // Round to 2 decimal places for cleaner display
+    const widthRounded = Math.round(widthInches * 100) / 100;
+    const heightRounded = Math.round(heightInches * 100) / 100;
+    
+    // Format for display (e.g., "10" x 12.5")
+    const formatted = `${widthRounded}" x ${heightRounded}"`;
+    
+    // Try to detect color space from PDF metadata
+    let colorSpace: 'RGB' | 'CMYK' | 'Grayscale' | 'Unknown' = 'Unknown';
+    try {
+      const metadata = await pdf.getMetadata();
+      // Check for CMYK or RGB in metadata
+      // Note: This is basic detection - actual color space detection 
+      // would require analyzing page content/images
+      if (metadata.info && typeof metadata.info === 'object') {
+        const info = metadata.info as any;
+        // Some PDFs include color space in keywords or subject
+        const keywords = info.Keywords?.toLowerCase() || '';
+        const subject = info.Subject?.toLowerCase() || '';
+        
+        if (keywords.includes('cmyk') || subject.includes('cmyk')) {
+          colorSpace = 'CMYK';
+        } else if (keywords.includes('rgb') || subject.includes('rgb')) {
+          colorSpace = 'RGB';
+        }
+      }
+    } catch (metadataError) {
+      console.log('Could not detect PDF color space from metadata');
+    }
+    
+    // If no color space detected, assume CMYK for print-sized PDFs
+    if (colorSpace === 'Unknown') {
+      // Print documents are typically letter size or smaller in inches
+      // and larger than typical web graphics
+      if (widthInches >= 3 && widthInches <= 20 && heightInches >= 3 && heightInches <= 20) {
+        colorSpace = 'CMYK'; // Likely a print document
+      } else {
+        colorSpace = 'RGB'; // Likely a web/screen document
+      }
+    }
+    
+    return {
+      dimensions: {
+        width: widthRounded,
+        height: heightRounded,
+        formatted
+      },
+      pageCount: pdf.numPages,
+      colorSpace
+    };
+  } catch (error) {
+    console.error('[PDF Detection] Failed to detect PDF specifications:', error);
+    console.error('[PDF Detection] Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      fullError: error // Log the whole error object
+    });
+    
+    // Check if it's a worker issue
+    if (error && typeof error === 'object' && 'message' in error) {
+      const err = error as any;
+      if (err.message && err.message.includes('worker')) {
+        console.error('[PDF Detection] This appears to be a worker loading issue');
+        console.error('[PDF Detection] Worker URL:', pdfjsLib.GlobalWorkerOptions.workerSrc);
+      }
+    }
+    
+    return null;
+  }
 }
 
 /**
@@ -237,17 +348,21 @@ export function autoMatchFileToSpecs(
       const requiredDims = Array.isArray(spec.dimensions) ? spec.dimensions : [spec.dimensions];
       const detectedDim = detectedSpecs.dimensions.formatted;
       
-      if (requiredDims.some(dim => dim === detectedDim)) {
+      // Try exact string match first (works for both "300x250" and '10" x 12.5"')
+      if (requiredDims.some(dim => normalizesDimension(dim) === normalizesDimension(detectedDim))) {
         score += 70; // Perfect dimension match - INCREASED WEIGHT
         reasons.push(`Dimensions match exactly: ${detectedDim}`);
       } else {
-        // Check if close enough (within 5%)
+        // Check if close enough (within 5% for print, 0% for website)
         const closeMatch = requiredDims.some(dim => {
           const parsed = parseDimension(dim);
           if (parsed && detectedSpecs.dimensions) {
             const widthDiff = Math.abs(parsed.width - detectedSpecs.dimensions.width) / parsed.width;
             const heightDiff = Math.abs(parsed.height - detectedSpecs.dimensions.height) / parsed.height;
-            return widthDiff < 0.05 && heightDiff < 0.05;
+            // For print (inch dimensions), allow small variance due to rounding
+            // For website (pixel dimensions), require exact match
+            const tolerance = spec.channel === 'print' ? 0.05 : 0.01;
+            return widthDiff < tolerance && heightDiff < tolerance;
           }
           return false;
         });
@@ -333,15 +448,35 @@ export function autoMatchFileToSpecs(
 }
 
 /**
- * Parse dimension string like "300x250" to {width, height}
+ * Normalize dimension string for comparison
+ * Handles both pixel dimensions (300x250) and inch dimensions (10" x 12.5")
+ */
+function normalizesDimension(dim: string): string {
+  // Remove quotes, spaces, and normalize to lowercase
+  return dim.replace(/["\s]/g, '').toLowerCase()
+    .replace(/×/g, 'x') // Normalize multiplication symbol
+    .replace(/inches?/gi, '') // Remove "inch" or "inches"
+    .replace(/in\b/gi, '') // Remove "in" suffix
+    .replace(/[wh]/gi, ''); // Remove "W" and "H" indicators
+}
+
+/**
+ * Parse dimension string like "300x250" or '10" x 12.5"' or "10" W x 12.625" H' to {width, height}
  */
 function parseDimension(dim: string): { width: number; height: number } | null {
-  const match = dim.match(/^(\d+)\s*[x×]\s*(\d+)$/i);
+  // Remove quotes, W, H indicators and extra spaces
+  const cleaned = dim.replace(/["']/g, '').replace(/\s*[WwHh]\s*/g, ' ').trim();
+  
+  // Try to match various formats:
+  // - "300x250" (pixels)
+  // - "10 x 12.5" (inches)
+  // - "10 x 12.625" (inches with W/H removed)
+  const match = cleaned.match(/^(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)(?:\s*(?:inches?|in))?/i);
   if (!match) return null;
   
   return {
-    width: parseInt(match[1]),
-    height: parseInt(match[2])
+    width: parseFloat(match[1]),
+    height: parseFloat(match[2])
   };
 }
 

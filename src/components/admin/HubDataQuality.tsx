@@ -225,6 +225,52 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
           }
         }
 
+        // Issue 8: Print dimension validation (CRITICAL for creative asset matching)
+        if (channel.toLowerCase() === 'print') {
+          const dimensions = item.dimensions;
+          
+          if (!dimensions) {
+            issues.push({
+              severity: 'high',
+              type: 'Missing Print Dimensions',
+              count: 1,
+              description: 'Dimensions required for PDF asset matching',
+              items: [itemName]
+            });
+          } else {
+            // Check if dimensions are parseable (inline check to avoid external dependencies)
+            const isParseable = (dim: string) => {
+              let cleaned = dim.replace(/["']/g, '').trim().split(/\s+or\s+/i)[0].trim();
+              const patterns = [
+                /^\d+(?:[-.]\d+)?(?:\/\d+)?\s*(?:"|inches?)?\s*wide\s*[x×]\s*\d+/i,
+                /^\d+(?:[-.]\d+)?(?:\/\d+)?\s*(?:"|inches?)?\s*[Ww]\s*[x×]\s*\d+/i,
+                /^\d+(?:\.\d+)?\s*(?:"|inches?)?\s*[x×]\s*\d+/i,
+                /trim:\s*\d+(?:\.\d+)?\s*[x×]\s*\d+/i
+              ];
+              return patterns.some(p => p.test(cleaned));
+            };
+            
+            if (!isParseable(dimensions)) {
+              issues.push({
+                severity: 'high',
+                type: 'Invalid Print Dimensions',
+                count: 1,
+                description: `Cannot parse "${dimensions.substring(0, 30)}${dimensions.length > 30 ? '...' : ''}"`,
+                items: [itemName]
+              });
+            } else if (!/^\d+(?:\.\d+)?"\s*x\s*\d+(?:\.\d+)?"$/.test(dimensions)) {
+              // Parseable but not standard format
+              issues.push({
+                severity: 'warning',
+                type: 'Inconsistent Dimension Format',
+                count: 1,
+                description: 'Dimension format varies across inventory',
+                items: [itemName]
+              });
+            }
+          }
+        }
+
         return issues;
       };
 

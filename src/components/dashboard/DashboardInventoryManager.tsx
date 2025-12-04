@@ -5256,13 +5256,69 @@ export const DashboardInventoryManager = () => {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="dimensions">Dimensions</Label>
-                      <Input
-                        id="dimensions"
-                        value={editingItem.dimensions || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, dimensions: e.target.value })}
-                        placeholder="10.25 x 13.75 inches"
-                      />
+                      <Label htmlFor="dimensions">
+                        Dimensions *
+                        {editingItem.dimensions && (() => {
+                          // Validate dimension format
+                          const isValid = /^\d+(?:\.\d+)?["']?\s*[x×]\s*\d+(?:\.\d+)?["']?/.test(editingItem.dimensions);
+                          return isValid ? (
+                            <span className="ml-2 text-xs text-green-600">✓ Valid</span>
+                          ) : (
+                            <span className="ml-2 text-xs text-amber-600">⚠️ Check format</span>
+                          );
+                        })()}
+                      </Label>
+                      <div className="space-y-2">
+                        <Select
+                          value={editingItem.dimensions || 'custom'}
+                          onValueChange={(value) => {
+                            if (value !== 'custom') {
+                              setEditingItem({ ...editingItem, dimensions: value });
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select standard size or custom" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="custom">Custom size (enter below)</SelectItem>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                              Full Page
+                            </div>
+                            <SelectItem value='8.5" x 11"'>Letter - 8.5" x 11"</SelectItem>
+                            <SelectItem value='10" x 12.625"'>Tabloid - 10" x 12.625"</SelectItem>
+                            <SelectItem value='10.5" x 13.5"'>Broadsheet - 10.5" x 13.5"</SelectItem>
+                            <SelectItem value='9.75" x 9.875"'>Compact - 9.75" x 9.875"</SelectItem>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-1">
+                              Half Page
+                            </div>
+                            <SelectItem value='8.5" x 5.5"'>Horizontal - 8.5" x 5.5"</SelectItem>
+                            <SelectItem value='4.25" x 11"'>Vertical - 4.25" x 11"</SelectItem>
+                            <SelectItem value='10" x 6"'>Tabloid Half - 10" x 6"</SelectItem>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-1">
+                              Quarter Page
+                            </div>
+                            <SelectItem value='4.25" x 5.5"'>Standard - 4.25" x 5.5"</SelectItem>
+                            <SelectItem value='5" x 6"'>Square - 5" x 6"</SelectItem>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-1">
+                              Other
+                            </div>
+                            <SelectItem value='4.25" x 2.75"'>Eighth Page - 4.25" x 2.75"</SelectItem>
+                            <SelectItem value='3.5" x 2"'>Business Card - 3.5" x 2"</SelectItem>
+                            <SelectItem value='2" x 2"'>Classified - 2" x 2"</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          id="dimensions"
+                          value={editingItem.dimensions || ''}
+                          onChange={(e) => setEditingItem({ ...editingItem, dimensions: e.target.value })}
+                          placeholder='Example: 10.5" x 13.5" or 8.5 x 11'
+                          className={!editingItem.dimensions ? 'border-amber-300' : ''}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Format: Width x Height with units (e.g., 8.5" x 11" or 10 x 12.625 inches)
+                        </p>
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="color">Color Options</Label>

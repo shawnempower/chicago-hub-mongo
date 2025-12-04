@@ -450,6 +450,16 @@ export default function CampaignBuilder() {
             
             const itemCost = calculateItemCost(item, frequency);
             
+            // Debug: Check if specifications have dimensions
+            if (item.channel === 'print') {
+              console.log('[Campaign Creation] Print item from package:', {
+                itemName: item.itemName,
+                hasDimensions: !!item.specifications?.dimensions,
+                dimensions: item.specifications?.dimensions,
+                fullSpecs: item.specifications
+              });
+            }
+            
             return {
               ...item,
               // Ensure itemPricing exists with totalCost

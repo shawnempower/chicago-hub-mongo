@@ -38,12 +38,27 @@ const ROUTE_ACTIVITY_MAP: Record<string, { create: string; update: string; delet
     update: 'package_update',
     delete: 'package_delete'
   },
+  '/api/admin/hub-packages': {
+    create: 'package_create',
+    update: 'package_update',
+    delete: 'package_delete'
+  },
   '/api/publication-orders': {
     create: 'order_create',
     update: 'order_update',
     delete: 'order_delete'
   },
+  '/api/admin/orders': {
+    create: 'order_create',
+    update: 'order_update',
+    delete: 'order_delete'
+  },
   '/api/builder/leads': {
+    create: 'lead_create',
+    update: 'lead_update',
+    delete: 'lead_delete'
+  },
+  '/api/admin/builder/leads': {
     create: 'lead_create',
     update: 'lead_update',
     delete: 'lead_delete'
@@ -64,8 +79,13 @@ const ROUTE_ACTIVITY_MAP: Record<string, { create: string; update: string; delet
 const SPECIAL_ROUTES: Record<string, string> = {
   'PUT /api/builder/inventory': 'inventory_update',
   'PATCH /api/builder/inventory': 'inventory_update',
+  'PUT /api/admin/builder/inventory': 'inventory_update',
+  'PATCH /api/admin/builder/inventory': 'inventory_update',
   'PUT /api/builder/settings': 'settings_update',
-  'PATCH /api/builder/settings': 'settings_update'
+  'PATCH /api/builder/settings': 'settings_update',
+  'POST /api/admin/builder/refresh': 'package_refresh',
+  'POST /api/campaigns/save': 'campaign_create',
+  'PUT /api/campaigns/save': 'campaign_update'
 };
 
 /**
@@ -212,6 +232,8 @@ export function activityTrackingMiddleware(req: any, res: Response, next: NextFu
       // Track asynchronously (non-blocking)
       setImmediate(async () => {
         try {
+          logger.info(`🎯 Tracking activity: ${activityType} by user ${req.user.id} on ${req.method} ${req.path}`);
+          
           await userInteractionsService.track({
             userId: req.user.id,
             interactionType: activityType as any,
@@ -233,10 +255,10 @@ export function activityTrackingMiddleware(req: any, res: Response, next: NextFu
             }
           });
           
-          logger.debug(`Tracked activity: ${activityType} by user ${req.user.id}`);
+          logger.info(`✅ Activity tracked successfully: ${activityType}`);
         } catch (error) {
           // Log but don't throw - tracking failures shouldn't affect the request
-          logger.error('Failed to track activity:', error);
+          logger.error('❌ Failed to track activity:', error);
         }
       });
     }

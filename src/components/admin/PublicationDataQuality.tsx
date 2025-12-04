@@ -40,6 +40,39 @@ interface Props {
 }
 
 /**
+ * Helper: Check if print dimension format is parseable
+ */
+function validatePrintDimensionFormat(dim: string): boolean {
+  if (!dim) return false;
+  
+  // Remove quotes and extra spaces
+  let cleaned = dim.replace(/["']/g, '').trim();
+  
+  // Handle "or" - take first option
+  cleaned = cleaned.split(/\s+or\s+/i)[0].trim();
+  cleaned = cleaned.split(',')[0].trim();
+  
+  // Try various patterns
+  const patterns = [
+    /^\d+(?:[-.]\d+)?(?:\/\d+)?\s*(?:"|inches?)?\s*wide\s*[x×]\s*\d+(?:[-.]\d+)?(?:\/\d+)?\s*(?:"|inches?)?\s*(?:high|tall)/i,
+    /^\d+(?:[-.]\d+)?(?:\/\d+)?\s*(?:"|inches?)?\s*[Ww]\s*[x×]\s*\d+(?:[-.]\d+)?(?:\/\d+)?\s*(?:"|inches?)?\s*[Hh]/i,
+    /^\d+(?:\.\d+)?\s*(?:"|inches?)?\s*[x×]\s*\d+(?:\.\d+)?\s*(?:"|inches?)?/i,
+    /^\d+(?:-\d+\/\d+)?\s*(?:"|inches?)?\s*[x×]\s*\d+(?:-\d+\/\d+)?\s*(?:"|inches?)?/i,
+    /trim:\s*\d+(?:\.\d+)?\s*[x×]\s*\d+(?:\.\d+)?/i,
+    /bleed:\s*\d+(?:\.\d+)?\s*[x×]\s*\d+(?:\.\d+)?/i
+  ];
+  
+  return patterns.some(pattern => pattern.test(cleaned));
+}
+
+/**
+ * Helper: Check if dimension uses standard format
+ */
+function isStandardFormat(dim: string): boolean {
+  return /^\d+(?:\.\d+)?"\s*x\s*\d+(?:\.\d+)?"$/.test(dim);
+}
+
+/**
  * Analyzes a single inventory item for data quality issues
  */
 function analyzeInventoryItem(
@@ -208,6 +241,43 @@ function analyzeInventoryItem(
         description: `Hub pricing has duplicate entries for: ${[...new Set(duplicates)].join(', ')}. Needs migration to consolidate tiers.`,
         items: [itemName]
       });
+    }
+  }
+
+  // Issue 9: Print dimension validation (CRITICAL for creative asset matching)
+  if (channel.toLowerCase() === 'print') {
+    const dimensions = item.dimensions;
+    
+    if (!dimensions) {
+      issues.push({
+        severity: 'high',
+        type: 'Missing Print Dimensions',
+        count: 1,
+        description: 'Dimensions required for PDF asset matching. Add format like "8.5" x 11"',
+        items: [itemName]
+      });
+    } else {
+      // Check if dimensions are parseable
+      const isParseable = validatePrintDimensionFormat(dimensions);
+      
+      if (!isParseable) {
+        issues.push({
+          severity: 'high',
+          type: 'Invalid Print Dimensions',
+          count: 1,
+          description: `Cannot parse "${dimensions}". Use format: Width x Height (e.g., "10" x 12.625")`,
+          items: [itemName]
+        });
+      } else if (!isStandardFormat(dimensions)) {
+        // Parseable but inconsistent format
+        issues.push({
+          severity: 'warning',
+          type: 'Inconsistent Dimension Format',
+          count: 1,
+          description: `Dimension format varies: "${dimensions}". Consider standardizing.`,
+          items: [itemName]
+        });
+      }
     }
   }
 

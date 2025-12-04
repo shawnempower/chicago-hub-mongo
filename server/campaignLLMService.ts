@@ -180,6 +180,20 @@ export class CampaignLLMService {
                     : [hubPricingForHub.pricing];
 
                   pricings.forEach((pricing: any, pricingIdx: number) => {
+                    // Merge dimensions into specifications for print/other channels
+                    const specifications = { ...opp.specifications };
+                    if (opp.dimensions && !specifications.dimensions) {
+                      specifications.dimensions = opp.dimensions;
+                      console.log(`[Dimensions Fix] ✅ Added dimensions to ${opp.name}: ${opp.dimensions}`);
+                    }
+                    // Also include other print-specific fields
+                    if (opp.adFormat && !specifications.adFormat) {
+                      specifications.adFormat = opp.adFormat;
+                    }
+                    if (opp.color && !specifications.color) {
+                      specifications.color = opp.color;
+                    }
+                    
                     const item: InventoryItem = {
                       name: opp.name || `${mapping.name} Ad`,
                       path: `distributionChannels.${mapping.key}[${channelIdx}].advertisingOpportunities[${oppIdx}]`,
@@ -187,7 +201,7 @@ export class CampaignLLMService {
                       standardPrice: opp.pricing?.flatRate || opp.pricing?.rate,
                       pricingModel: pricing.pricingModel || 'flat',
                       frequency: pricing.frequency,
-                      specifications: opp.specifications,
+                      specifications,
                       audienceMetric: this.extractAudienceMetric(channelItem, mapping.name)
                     };
                     if (item.hubPrice > 0) {
@@ -210,6 +224,12 @@ export class CampaignLLMService {
                   : [hubPricingForHub.pricing];
 
                 pricings.forEach((pricing: any) => {
+                  // Merge dimensions into specifications if present
+                  const specifications = { ...opp.specifications };
+                  if (opp.dimensions && !specifications.dimensions) {
+                    specifications.dimensions = opp.dimensions;
+                  }
+                  
                   const item: InventoryItem = {
                     name: opp.name || 'Website Ad',
                     path: `distributionChannels.website.advertisingOpportunities[${oppIdx}]`,
@@ -217,7 +237,7 @@ export class CampaignLLMService {
                     standardPrice: opp.pricing?.flatRate || opp.pricing?.cpm,
                     pricingModel: pricing.pricingModel || opp.pricing?.pricingModel || 'flat',
                     frequency: pricing.frequency,
-                    specifications: opp.specifications,
+                    specifications,
                     audienceMetric: {
                       type: 'monthlyVisitors',
                       value: channelData.metrics?.monthlyVisitors || 0
@@ -567,7 +587,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
             "monthlyCost": number,
             "campaignCost": number
           },
-          "specifications": object,
+          "specifications": object (IMPORTANT: For print items, MUST include "dimensions" field from source publication),
           "audienceMetric": {
             "type": "string",
             "value": number
@@ -752,36 +772,61 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
     request: CampaignAnalysisRequest,
     llmPrompt: string,
     rawResponse: string,
-    algorithm: AlgorithmConfig
+    algorithm: AlgorithmConfig,
+    sourcePublications: PublicationWithInventory[]
   ): CampaignAnalysisResponse {
     // Transform into HubPackagePublication format
-    const publications: HubPackagePublication[] = llmResponse.selectedPublications.map((pub: any) => ({
-      publicationId: pub.publicationId,
-      publicationName: pub.publicationName,
-      inventoryItems: pub.inventoryItems.map((item: any) => ({
-        channel: item.channel,
-        itemPath: item.itemPath,
-        itemName: item.itemName,
-        quantity: item.quantity,
-        currentFrequency: item.quantity, // Add currentFrequency to match package structure
-        duration: item.duration,
-        frequency: item.frequency,
-        specifications: item.specifications,
-        // Store monthly impressions and costs from LLM calculation
-        monthlyImpressions: item.pricing?.monthlyImpressions,
-        monthlyCost: item.pricing?.monthlyCost,
-        campaignCost: item.pricing?.campaignCost,
-        itemPricing: {
-          standardPrice: 0, // Not provided in this flow
-          hubPrice: item.pricing.rate,
-          pricingModel: item.pricing.model,
-          totalCost: item.pricing?.campaignCost || item.pricing?.monthlyCost || 0
-        }
-      })),
-      publicationTotal: pub.publicationTotal,
-      sizeScore: pub.sizeScore, // Store size score for proportional algorithm
-      sizeJustification: pub.sizeJustification
-    }));
+    const publications: HubPackagePublication[] = llmResponse.selectedPublications.map((pub: any) => {
+      // Find source publication for fallback data
+      const sourcePub = sourcePublications.find(p => p.publicationId === pub.publicationId);
+      
+      return {
+        publicationId: pub.publicationId,
+        publicationName: pub.publicationName,
+        inventoryItems: pub.inventoryItems.map((item: any) => {
+          let specifications = item.specifications || {};
+          
+          // Fallback: If print item is missing dimensions, try to get from source
+          if (item.channel === 'print' && !specifications.dimensions && sourcePub) {
+            const channel = sourcePub.channels[item.channel];
+            if (channel) {
+              const sourceItem = channel.find((invItem: any) => invItem.path === item.itemPath);
+              if (sourceItem?.specifications?.dimensions) {
+                specifications = {
+                  ...specifications,
+                  dimensions: sourceItem.specifications.dimensions
+                };
+                console.log(`[Campaign Transform] Added missing dimensions for ${item.itemName}: ${sourceItem.specifications.dimensions}`);
+              }
+            }
+          }
+          
+          return {
+            channel: item.channel,
+            itemPath: item.itemPath,
+            itemName: item.itemName,
+            quantity: item.quantity,
+            currentFrequency: item.quantity, // Add currentFrequency to match package structure
+            duration: item.duration,
+            frequency: item.frequency,
+            specifications,
+            // Store monthly impressions and costs from LLM calculation
+            monthlyImpressions: item.pricing?.monthlyImpressions,
+            monthlyCost: item.pricing?.monthlyCost,
+            campaignCost: item.pricing?.campaignCost,
+            itemPricing: {
+              standardPrice: 0, // Not provided in this flow
+              hubPrice: item.pricing.rate,
+              pricingModel: item.pricing.model,
+              totalCost: item.pricing?.campaignCost || item.pricing?.monthlyCost || 0
+            }
+          };
+        }),
+        publicationTotal: pub.publicationTotal,
+        sizeScore: pub.sizeScore, // Store size score for proportional algorithm
+        sizeJustification: pub.sizeJustification
+      };
+    });
 
     // Size-Weighted Algorithm: Just log scores, don't modify LLM output
     if (algorithm.id === 'proportional') {
@@ -1059,7 +1104,8 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
         request,
         prompt,
         rawResponse,
-        algorithm
+        algorithm,
+        publications // Pass source publications for dimension fallback
       );
 
       console.log('Campaign analysis complete', {
