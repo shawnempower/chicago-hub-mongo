@@ -103,14 +103,14 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
   if (compact) {
     // Compact version for navbar
     return (
-      <div className="flex items-center border border-border rounded-lg overflow-hidden h-9">
+      <div className="flex items-center rounded-lg overflow-hidden h-10" style={{ border: '1px solid #D4D1C7' }}>
         {/* Label Section */}
-        <div className="px-3 h-full flex items-center whitespace-nowrap text-xs font-medium" style={{ backgroundColor: '#EDEAE1', color: '#6C685D' }}>
+        <div className="px-3 h-full flex items-center whitespace-nowrap font-medium" style={{ backgroundColor: '#EDEAE1', color: '#6C685D', fontSize: '14px' }}>
           Active Publication
         </div>
         
         {/* Divider */}
-        <div className="w-px h-full bg-border" />
+        <div className="w-px h-full" style={{ backgroundColor: '#D4D1C7' }} />
         
         {/* Dropdown Section */}
         <Popover open={open} onOpenChange={(isOpen) => {
@@ -122,7 +122,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
               variant="ghost"
               role="combobox"
               aria-expanded={open}
-              className="w-auto min-w-[160px] h-full text-xs bg-white border-0 rounded-none shadow-none focus:ring-0 hover:bg-gray-50 justify-between"
+              className="w-auto min-w-[160px] h-full bg-white border-0 rounded-none shadow-none focus:ring-0 hover:bg-gray-50 justify-between text-[14px]"
             >
               <div className="flex items-center gap-1.5">
                 <div 

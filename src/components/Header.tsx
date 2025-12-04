@@ -45,39 +45,57 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
           </Link>
           
           {showDashboardNav ? (
-            /* Dashboard Navigation with Hubs/Publications Button and Selector */
+            /* Dashboard Navigation with Hubs/Publications Toggle and Selector */
             <div className="hidden md:flex items-center gap-3">
-              {isHubScopedPage ? (
-                /* Hub Selector for hub-scoped pages (Hub Central, Campaigns, Packages) */
-                <>
-                  <Button
-                    onClick={() => navigate('/dashboard')}
-                    variant="outline"
-                    className="h-9 px-3 text-sm font-medium"
+              {/* Toggle between Hubs and Publications */}
+              {hasHubAccess && (
+                <div 
+                  className="flex items-center h-10 rounded-lg p-0.5 border"
+                  style={{ backgroundColor: '#EDEAE1', borderColor: '#D4D1C7' }}
+                >
+                  <button
+                    onClick={() => {
+                      console.log('🔘 Hubs toggle clicked, navigating to /hubcentral');
+                      navigate('/hubcentral');
+                    }}
+                    className={`flex items-center gap-1.5 px-3 h-9 rounded-md font-medium transition-all ${
+                      isHubScopedPage 
+                        ? 'bg-white border shadow-sm' 
+                        : 'hover:bg-white/30'
+                    }`}
+                    style={{ 
+                      fontSize: '14px',
+                      color: isHubScopedPage ? '#1a1a1a' : '#6C685D',
+                      borderColor: isHubScopedPage ? '#D4D1C7' : 'transparent'
+                    }}
                   >
-                    <BookOpen className="h-4 w-4 mr-1" />
+                    <Globe className="h-4 w-4" />
+                    Hubs
+                  </button>
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className={`flex items-center gap-1.5 px-3 h-9 rounded-md font-medium transition-all ${
+                      !isHubScopedPage 
+                        ? 'bg-white border shadow-sm' 
+                        : 'hover:bg-white/30'
+                    }`}
+                    style={{ 
+                      fontSize: '14px',
+                      color: !isHubScopedPage ? '#1a1a1a' : '#6C685D',
+                      borderColor: !isHubScopedPage ? '#D4D1C7' : 'transparent'
+                    }}
+                  >
+                    <BookOpen className="h-4 w-4" />
                     Publications
-                  </Button>
-                  <HubSelector />
-                </>
+                  </button>
+                </div>
+              )}
+              
+              {/* Show appropriate selector based on current page */}
+              {isHubScopedPage ? (
+                <HubSelector />
               ) : (
-                /* Publication Selector for publication-scoped pages */
-                <>
-                  {hasHubAccess && (
-                    <Button
-                      onClick={() => {
-                        console.log('🔘 Hubs button clicked, navigating to /hubcentral');
-                        navigate('/hubcentral');
-                      }}
-                      variant="outline"
-                      className="h-9 px-3 text-sm font-medium"
-                    >
-                      <Globe className="h-4 w-4 mr-1" />
-                      Hubs
-                    </Button>
-                  )}
-                  <PublicationSelector compact={true} />
-                </>
+                <PublicationSelector compact={true} />
               )}
             </div>
           ) : (

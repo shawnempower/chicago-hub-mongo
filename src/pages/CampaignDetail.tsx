@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -770,301 +771,325 @@ export default function CampaignDetail() {
                 </Card>
               )}
               
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="font-sans">Insertion Order</CardTitle>
-                      <CardDescription>
-                        Professional insertion order document for this campaign
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      {!campaign.insertionOrder && (
-                        <div className="flex gap-2">
-                          <select
-                            value={ioFormat}
-                            onChange={(e) => setIoFormat(e.target.value as 'html' | 'markdown')}
-                            className="border rounded px-3 py-1 text-sm"
-                          >
-                            <option value="html">HTML</option>
-                            <option value="markdown">Markdown</option>
-                          </select>
-                          <Button onClick={handleGenerateIO} disabled={generating}>
-                            {generating ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Generate IO
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                      {campaign.insertionOrder && (
-                        <>
-                          <Button onClick={handleGenerateIO} disabled={generating} variant="outline">
-                            {generating ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Regenerating...
-                              </>
-                            ) : (
-                              <>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Regenerate
-                              </>
-                            )}
-                          </Button>
-                          <Button onClick={downloadInsertionOrder}>
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
-                          </Button>
-                        </>
-                      )}
-                    </div>
+              <div className="space-y-6">
+                {/* Insertion Order Header */}
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold font-sans">Insertion Order</h2>
+                  <div className="flex gap-2">
+                    {!campaign.insertionOrder && (
+                      <div className="flex gap-2">
+                        <select
+                          value={ioFormat}
+                          onChange={(e) => setIoFormat(e.target.value as 'html' | 'markdown')}
+                          className="border rounded px-3 py-1 text-sm"
+                        >
+                          <option value="html">HTML</option>
+                          <option value="markdown">Markdown</option>
+                        </select>
+                        <Button onClick={handleGenerateIO} disabled={generating}>
+                          {generating ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Generate IO
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {campaign.insertionOrder && (
+                      <>
+                        <Button onClick={handleGenerateIO} disabled={generating} variant="outline">
+                          {generating ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Regenerating...
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Regenerate
+                            </>
+                          )}
+                        </Button>
+                        <Button onClick={downloadInsertionOrder}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </Button>
+                      </>
+                    )}
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+                
+                {/* Insertion Order Content */}
+                <div>
                   {campaign.insertionOrder ? (
                     <div className="space-y-6">
-                      {/* Campaign Info Section */}
-                      <div className="border rounded-lg p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
-                        <h3 className="text-lg font-bold font-sans mb-4">Campaign Information</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Campaign Name</p>
-                            <p className="text-base font-semibold">{campaign.basicInfo.name}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Advertiser</p>
-                            <p className="text-base font-semibold">{campaign.basicInfo.advertiserName}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Start Date</p>
-                            <p className="text-base">{new Date(campaign.timeline.startDate).toLocaleDateString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">End Date</p>
-                            <p className="text-base">{new Date(campaign.timeline.endDate).toLocaleDateString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Duration</p>
-                            <p className="text-base">{campaign.timeline.durationMonths} {campaign.timeline.durationMonths === 1 ? 'month' : 'months'} ({campaign.timeline.durationWeeks} weeks)</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Total Investment</p>
-                            <p className="text-lg font-bold text-blue-600">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</p>
+                      {/* Campaign Info & Objectives */}
+                      <div className="border rounded-lg p-6 bg-white space-y-4">
+                        {/* Campaign Information */}
+                        <div>
+                          <h3 className="text-base font-semibold font-sans mb-3">Campaign Information</h3>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <p className="text-muted-foreground font-sans">Campaign Name</p>
+                              <p className="font-semibold font-sans">{campaign.basicInfo.name}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground font-sans">Advertiser</p>
+                              <p className="font-semibold font-sans">{campaign.basicInfo.advertiserName}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground font-sans">Start Date</p>
+                              <p className="font-semibold font-sans">{format(new Date(campaign.timeline.startDate), 'MMM d, yyyy')}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground font-sans">End Date</p>
+                              <p className="font-semibold font-sans">{format(new Date(campaign.timeline.endDate), 'MMM d, yyyy')}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground font-sans">Duration</p>
+                              <p className="font-semibold font-sans">{campaign.timeline.durationMonths} {campaign.timeline.durationMonths === 1 ? 'month' : 'months'} ({campaign.timeline.durationWeeks} weeks)</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground font-sans">Total Investment</p>
+                              <p className="font-semibold font-sans text-blue-600">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</p>
+                            </div>
                           </div>
                         </div>
+                        
+                        {/* Campaign Objectives */}
+                        {campaign.objectives && (
+                          <div className="border-t pt-4">
+                            <h3 className="text-base font-semibold font-sans mb-3">Campaign Objectives</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                              {campaign.objectives.primaryGoal && (
+                                <div>
+                                  <p className="text-sm text-muted-foreground font-sans mb-1">Primary Goal</p>
+                                  <p className="text-sm font-semibold font-sans capitalize">{campaign.objectives.primaryGoal}</p>
+                                </div>
+                              )}
+                              {campaign.objectives.targetAudience && (
+                                <div>
+                                  <p className="text-sm text-muted-foreground font-sans mb-1">Target Audience</p>
+                                  <p className="text-sm font-sans">{campaign.objectives.targetAudience}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-
-                      {/* Campaign Objectives */}
-                      {campaign.objectives && (
-                        <div className="border rounded-lg p-6">
-                          <h3 className="text-lg font-bold font-sans mb-4">Campaign Objectives</h3>
-                          <div className="space-y-3">
-                            {campaign.objectives.primaryGoal && (
-                              <div>
-                                <p className="text-sm font-medium text-gray-600">Primary Goal</p>
-                                <p className="text-base">{campaign.objectives.primaryGoal}</p>
-                              </div>
-                            )}
-                            {campaign.objectives.targetAudience && (
-                              <div>
-                                <p className="text-sm font-medium text-gray-600">Target Audience</p>
-                                <p className="text-base">{campaign.objectives.targetAudience}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
 
                       {/* Selected Publications & Inventory */}
                       <div className="border rounded-lg p-6">
-                        <h3 className="text-lg font-bold font-sans mb-4">Selected Publications & Inventory</h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          {campaign.selectedInventory?.totalInventoryItems || 
-                            (campaign.selectedInventory?.publications || []).reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0) ||
-                            0} placements across{' '}
-                          {campaign.selectedInventory?.totalPublications || (campaign.selectedInventory?.publications || []).length || 0} publications
-                        </p>
+                        <div className="flex items-baseline justify-between mb-4">
+                          <h3 className="text-base font-semibold font-sans">Selected Publications & Inventory</h3>
+                          <span className="text-sm text-muted-foreground">
+                            {campaign.selectedInventory?.totalInventoryItems || 
+                              (campaign.selectedInventory?.publications || []).reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0) ||
+                              0} placements across{' '}
+                            {campaign.selectedInventory?.totalPublications || (campaign.selectedInventory?.publications || []).length || 0} publications
+                          </span>
+                        </div>
                         
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                           {(campaign.selectedInventory?.publications || []).map((pub) => (
-                            <div key={pub.publicationId} className="border-2 border-gray-300 rounded-lg p-5 bg-gradient-to-r from-gray-50 to-white shadow-sm">
-                              <div className="flex justify-between items-start mb-4 pb-3 border-b-2 border-gray-200">
-                                <div className="flex-1">
-                                  <h4 className="font-bold font-sans text-lg text-gray-900">{pub.publicationName}</h4>
-                                  <Badge variant="outline" className="mt-2">
-                                    {pub.inventoryItems?.length || 0} ad placements
-                                  </Badge>
-                                </div>
-                                {pub.publicationTotal && (
-                                  <div className="text-right">
-                                    <p className="text-xs text-gray-500 mb-1">Publication Total</p>
-                                    <p className="text-lg font-bold text-blue-600">
-                                      ${pub.publicationTotal.toLocaleString()}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <table className="w-full text-sm">
-                                <thead className="bg-white">
-                                  <tr className="border-b-2 border-gray-300">
-                                    <th className="text-left py-3 px-3 font-bold">Channel</th>
-                                    <th className="text-left py-3 px-3 font-bold">Ad Placement</th>
-                                    <th className="text-center py-3 px-3 font-bold">Quantity</th>
-                                    <th className="text-center py-3 px-3 font-bold">Audience Estimate</th>
-                                    <th className="text-right py-3 px-3 font-bold">Item Cost</th>
-                                    <th className="text-right py-3 px-3 font-bold">Total</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {(pub.inventoryItems || []).map((item, idx) => {
-                                    const rate = item.itemPricing?.hubPrice || 0;
-                                    const currentFreq = (item as any).currentFrequency || item.quantity || 1;
-                                    
-                                    // Calculate line total using shared utility
-                                    const lineTotal = calculateItemCost(item, currentFreq, 1);
-                                    
-                                    // Use standardized formatting utilities (same as packages)
-                                    const quantityDisplay = formatInsertionOrderQuantity(item);
-                                    
-                                    // Prepare metrics for audience formatting
-                                    const performanceMetrics = {
-                                      impressionsPerMonth: (item as any).monthlyImpressions,
-                                      audienceSize: item.audienceMetrics?.subscribers || item.audienceMetrics?.listeners || item.audienceMetrics?.viewers || (item as any).circulation,
-                                      guaranteed: (item.performanceMetrics as any)?.guaranteed || false
-                                    };
-                                    
-                                    const channelMetrics = {
-                                      monthlyVisitors: item.audienceMetrics?.monthlyVisitors,
-                                      subscribers: item.audienceMetrics?.subscribers,
-                                      circulation: (item as any).circulation,
-                                      listeners: item.audienceMetrics?.listeners,
-                                      viewers: item.audienceMetrics?.viewers
-                                    };
-                                    
-                                    // Format audience with badge using utility
-                                    const audienceInfo = formatInsertionOrderAudienceWithBadge(item, performanceMetrics, channelMetrics);
-                                    
-                                    // Get placement status from publication order if exists
-                                    const publicationOrder = campaign.publicationInsertionOrders?.find((order: any) => order.publicationId === pub.publicationId);
-                                    const placementId = item.itemPath || item.sourcePath || `placement-${idx}`;
-                                    const placementStatus = publicationOrder?.placementStatuses?.[placementId] || 'pending';
-                                    
-                                    return (
-                                      <tr key={idx} className={cn(
-                                        "border-b last:border-0 hover:bg-blue-50",
-                                        placementStatus === 'delivered' && "bg-purple-50/50",
-                                        placementStatus === 'in_production' && "bg-blue-50/50",
-                                        placementStatus === 'accepted' && "bg-green-50/50",
-                                        placementStatus === 'rejected' && "bg-red-50/50"
-                                      )}>
-                                        <td className="py-3 px-3">
-                                          <Badge variant="secondary" className="capitalize text-xs">
-                                            {item.channel}
-                                          </Badge>
-                                        </td>
-                                        <td className="py-3 px-3">
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-medium">{item.itemName}</span>
-                                            {placementStatus === 'delivered' && (
-                                              <Badge className="bg-purple-600 text-white text-xs">✓ Delivered</Badge>
-                                            )}
-                                            {placementStatus === 'in_production' && (
-                                              <Badge className="bg-blue-600 text-white text-xs">⚙ In Production</Badge>
-                                            )}
-                                            {placementStatus === 'accepted' && (
-                                              <Badge className="bg-green-600 text-white text-xs">✓ Accepted</Badge>
-                                            )}
-                                            {placementStatus === 'rejected' && (
-                                              <Badge className="bg-red-600 text-white text-xs">✗ Rejected</Badge>
-                                            )}
-                                            {placementStatus === 'pending' && publicationOrder && (
-                                              <Badge variant="outline" className="text-xs">Pending</Badge>
-                                            )}
+                            <Card key={pub.publicationId} className="bg-white">
+                              <CardContent className="p-0">
+                                <Table>
+                                  <TableHeader>
+                                    {/* Publication Header Row */}
+                                    <TableRow className="border-b bg-gray-50/50 hover:bg-gray-50/50">
+                                      <TableHead colSpan={4} className="py-4">
+                                        <div className="flex items-baseline gap-2">
+                                          <span className="font-semibold text-foreground text-base">{pub.publicationName}</span>
+                                          <span className="text-xs text-muted-foreground font-normal">
+                                            {pub.inventoryItems?.length || 0} placements
+                                          </span>
+                                        </div>
+                                      </TableHead>
+                                      <TableHead colSpan={2} className="py-4 text-right">
+                                        {pub.publicationTotal && (
+                                          <div className="flex items-baseline justify-end gap-2">
+                                            <span className="text-xs text-muted-foreground font-normal">Total</span>
+                                            <span className="font-semibold text-foreground text-base">
+                                              ${pub.publicationTotal.toLocaleString()}
+                                            </span>
                                           </div>
-                                        </td>
-                                        <td className="py-3 px-3 text-center text-gray-600">
-                                          {quantityDisplay}
-                                        </td>
-                                        <td className="py-3 px-3 text-center text-xs text-gray-500" dangerouslySetInnerHTML={{ __html: audienceInfo }}>
-                                        </td>
-                                        <td className="py-3 px-3 text-right text-gray-600">
-                                          ${rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </td>
-                                        <td className="py-3 px-3 text-right font-bold text-green-600">
-                                          ${lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
+                                        )}
+                                      </TableHead>
+                                    </TableRow>
+                                    {/* Column Labels Row */}
+                                    <TableRow>
+                                      <TableHead className="w-[12%]">Channel</TableHead>
+                                      <TableHead className="w-[30%]">Ad Placement</TableHead>
+                                      <TableHead className="w-[14%] text-center">Quantity</TableHead>
+                                      <TableHead className="w-[18%] text-center">Audience</TableHead>
+                                      <TableHead className="w-[13%] text-right">Unit Cost</TableHead>
+                                      <TableHead className="w-[13%] text-right">Total</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                    <TableBody>
+                                      {(pub.inventoryItems || []).map((item, idx) => {
+                                        const rate = item.itemPricing?.hubPrice || 0;
+                                        const currentFreq = (item as any).currentFrequency || item.quantity || 1;
+                                        
+                                        // Calculate line total using shared utility
+                                        const lineTotal = calculateItemCost(item, currentFreq, 1);
+                                        
+                                        // Use standardized formatting utilities (same as packages)
+                                        const quantityDisplay = formatInsertionOrderQuantity(item);
+                                        
+                                        // Prepare metrics for audience formatting
+                                        const performanceMetrics = {
+                                          impressionsPerMonth: (item as any).monthlyImpressions,
+                                          audienceSize: item.audienceMetrics?.subscribers || item.audienceMetrics?.listeners || item.audienceMetrics?.viewers || (item as any).circulation,
+                                          guaranteed: (item.performanceMetrics as any)?.guaranteed || false
+                                        };
+                                        
+                                        const channelMetrics = {
+                                          monthlyVisitors: item.audienceMetrics?.monthlyVisitors,
+                                          subscribers: item.audienceMetrics?.subscribers,
+                                          circulation: (item as any).circulation,
+                                          listeners: item.audienceMetrics?.listeners,
+                                          viewers: item.audienceMetrics?.viewers
+                                        };
+                                        
+                                        // Format audience with badge using utility
+                                        const audienceInfo = formatInsertionOrderAudienceWithBadge(item, performanceMetrics, channelMetrics);
+                                        
+                                        // Get placement status from publication order if exists
+                                        const publicationOrder = campaign.publicationInsertionOrders?.find((order: any) => order.publicationId === pub.publicationId);
+                                        const placementId = item.itemPath || item.sourcePath || `placement-${idx}`;
+                                        const placementStatus = publicationOrder?.placementStatuses?.[placementId] || 'pending';
+                                        
+                                        return (
+                                          <TableRow 
+                                            key={idx} 
+                                            className={cn(
+                                              "hover:bg-gray-50 transition-colors",
+                                              placementStatus === 'delivered' && "bg-purple-50/50",
+                                              placementStatus === 'in_production' && "bg-blue-50/50",
+                                              placementStatus === 'accepted' && "bg-green-50/50",
+                                              placementStatus === 'rejected' && "bg-red-50/50"
+                                            )}
+                                          >
+                                            <TableCell>
+                                              <Badge variant="secondary" className="capitalize text-xs">
+                                                {item.channel}
+                                              </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-sm font-medium">{item.itemName}</span>
+                                                {placementStatus === 'delivered' && (
+                                                  <Badge className="bg-purple-600 text-white text-xs">✓ Delivered</Badge>
+                                                )}
+                                                {placementStatus === 'in_production' && (
+                                                  <Badge className="bg-blue-600 text-white text-xs">⚙ In Production</Badge>
+                                                )}
+                                                {placementStatus === 'accepted' && (
+                                                  <Badge className="bg-green-600 text-white text-xs">✓ Accepted</Badge>
+                                                )}
+                                                {placementStatus === 'rejected' && (
+                                                  <Badge className="bg-red-600 text-white text-xs">✗ Rejected</Badge>
+                                                )}
+                                                {placementStatus === 'pending' && publicationOrder && (
+                                                  <Badge variant="outline" className="text-xs">Pending</Badge>
+                                                )}
+                                              </div>
+                                            </TableCell>
+                                            <TableCell className="text-center text-sm text-muted-foreground">
+                                              {quantityDisplay}
+                                            </TableCell>
+                                            <TableCell className="text-center text-xs text-muted-foreground" dangerouslySetInnerHTML={{ __html: audienceInfo }}>
+                                            </TableCell>
+                                            <TableCell className="text-right text-sm text-muted-foreground">
+                                              ${rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </TableCell>
+                                            <TableCell className="text-right text-sm font-semibold">
+                                              ${lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </CardContent>
+                              </Card>
                           ))}
                         </div>
                       </div>
 
-                      {/* Performance Estimates */}
-                      {campaign.estimatedPerformance && (
-                        <div className="border rounded-lg p-6 bg-green-50">
-                          <h3 className="text-lg font-bold font-sans mb-4">Estimated Performance</h3>
-                          <div className="grid grid-cols-3 gap-4">
-                            {campaign.estimatedPerformance.reach && (
-                              <div>
-                                <p className="text-sm font-medium text-gray-600">Estimated Reach</p>
-                                <p className="text-lg font-semibold">
-                                  {campaign.estimatedPerformance.reach.min?.toLocaleString()} - {campaign.estimatedPerformance.reach.max?.toLocaleString()}
-                                </p>
-                              </div>
-                            )}
-                            {campaign.estimatedPerformance.impressions && (
-                              <div>
-                                <p className="text-sm font-medium text-gray-600">Estimated Impressions</p>
-                                <p className="text-lg font-semibold">
-                                  {campaign.estimatedPerformance.impressions.min?.toLocaleString()} - {campaign.estimatedPerformance.impressions.max?.toLocaleString()}
-                                </p>
-                              </div>
-                            )}
-                            {campaign.estimatedPerformance.cpm && (
-                              <div>
-                                <p className="text-sm font-medium text-gray-600">Cost Per Thousand (CPM)</p>
-                                <p className="text-lg font-semibold">${campaign.estimatedPerformance.cpm.toFixed(2)}</p>
-                              </div>
-                            )}
+                      {/* Performance & Investment Summary */}
+                      <div className="border rounded-lg p-6 bg-white space-y-6">
+                        {/* Estimated Performance */}
+                        {campaign.estimatedPerformance && (
+                          <div>
+                            <h3 className="text-base font-semibold font-sans mb-4">Estimated Performance</h3>
+                            <div className="grid grid-cols-3 gap-4">
+                              {campaign.estimatedPerformance.reach && (
+                                <div>
+                                  <p className="text-sm text-muted-foreground">Estimated Reach</p>
+                                  <p className="text-lg font-semibold">
+                                    {campaign.estimatedPerformance.reach.min?.toLocaleString()} - {campaign.estimatedPerformance.reach.max?.toLocaleString()}
+                                  </p>
+                                </div>
+                              )}
+                              {campaign.estimatedPerformance.impressions && (
+                                <div>
+                                  <p className="text-sm text-muted-foreground">Estimated Impressions</p>
+                                  <p className="text-lg font-semibold">
+                                    {campaign.estimatedPerformance.impressions.min?.toLocaleString()} - {campaign.estimatedPerformance.impressions.max?.toLocaleString()}
+                                  </p>
+                                </div>
+                              )}
+                              {campaign.estimatedPerformance.cpm && (
+                                <div>
+                                  <p className="text-sm text-muted-foreground">Cost Per Thousand (CPM)</p>
+                                  <p className="text-lg font-semibold">${campaign.estimatedPerformance.cpm.toFixed(2)}</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Investment Summary */}
-                      <div className="border rounded-lg p-6 bg-gradient-to-br from-purple-50 to-pink-50">
-                        <h3 className="text-lg font-bold font-sans mb-4">Investment Summary</h3>
-                        <div className="space-y-2">
-                          {(campaign.pricing?.monthlyTotal || campaign.pricing?.monthlyPrice) && (
-                            <div className="flex justify-between text-base">
-                              <span className="font-medium">Monthly Total:</span>
-                              <span className="font-semibold">${(campaign.pricing?.monthlyTotal || campaign.pricing?.monthlyPrice || 0).toLocaleString()}</span>
+                        {/* Divider */}
+                        <hr className="border-t" />
+
+                        {/* Investment Summary */}
+                        <Card className="bg-white">
+                          <CardContent className="p-0">
+                            {/* Header */}
+                            <div className="flex justify-between items-center px-4 py-3 bg-gray-50/50 border-b">
+                              <span className="font-semibold text-foreground text-base">Investment Summary</span>
                             </div>
-                          )}
-                          {campaign.timeline.durationMonths && (
-                            <div className="flex justify-between text-base">
-                              <span className="font-medium">Campaign Duration:</span>
-                              <span className="font-semibold">{campaign.timeline.durationMonths} {campaign.timeline.durationMonths === 1 ? 'month' : 'months'}</span>
+                            {/* Content */}
+                            <div className="px-4 py-3 space-y-3">
+                              {(campaign.pricing?.monthlyTotal || campaign.pricing?.monthlyPrice) && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">Monthly Total</span>
+                                  <span className="font-medium">${(campaign.pricing?.monthlyTotal || campaign.pricing?.monthlyPrice || 0).toLocaleString()}</span>
+                                </div>
+                              )}
+                              {campaign.timeline.durationMonths && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">Campaign Duration</span>
+                                  <span className="font-medium">{campaign.timeline.durationMonths} {campaign.timeline.durationMonths === 1 ? 'month' : 'months'}</span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                          <div className="flex justify-between text-lg pt-3 border-t border-purple-200">
-                            <span className="font-bold">Total Campaign Investment:</span>
-                            <span className="font-bold text-purple-600">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</span>
-                          </div>
-                        </div>
+                            {/* Total Row */}
+                            <div className="flex justify-between items-center px-4 py-3 bg-gray-50/50 border-t">
+                              <span className="font-semibold text-sm">Total Campaign Investment</span>
+                              <span className="font-bold text-base">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </div>
                     </div>
                   ) : (
@@ -1088,8 +1113,8 @@ export default function CampaignDetail() {
                       </Button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </TabsContent>
               </Tabs>
             </div>
