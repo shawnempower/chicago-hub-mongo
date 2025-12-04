@@ -17,13 +17,41 @@ import {
 } from "lucide-react";
 import { calculateRevenue } from '@/utils/pricingCalculations';
 import { PublicationDataQuality, calculateDataQuality } from '@/components/admin/PublicationDataQuality';
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
+import { getPublicationActivities, UserInteraction } from '@/api/activities';
+import { formatDistanceToNow } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 // MongoDB services removed - using API calls instead
 
 export function DashboardOverview() {
   const { selectedPublication } = usePublication();
   const navigate = useNavigate();
   const inventoryQualityRef = useRef<HTMLDivElement>(null);
+  const [recentActivity, setRecentActivity] = useState<UserInteraction[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
+
+  // Fetch recent activities for the selected publication
+  useEffect(() => {
+    if (!selectedPublication?._id) return;
+    
+    const fetchActivities = async () => {
+      setLoadingActivity(true);
+      try {
+        const response = await getPublicationActivities(selectedPublication._id, {
+          limit: 5,
+          offset: 0
+        });
+        setRecentActivity(response.activities);
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+        // Fail silently - activity is not critical for dashboard
+      } finally {
+        setLoadingActivity(false);
+      }
+    };
+    
+    fetchActivities();
+  }, [selectedPublication?._id]);
 
   if (!selectedPublication) {
     return (
@@ -33,12 +61,22 @@ export function DashboardOverview() {
     );
   }
 
-  const recentActivity = [
-    { type: "booking", message: "New ad booking for Newsletter Header", time: "2 hours ago" },
-    { type: "inquiry", message: "Inquiry for Website Banner placement", time: "5 hours ago" },
-    { type: "file", message: "Media kit updated", time: "1 day ago" },
-    { type: "payment", message: "Payment received for Print Ad", time: "2 days ago" }
-  ];
+  const getActivityLabel = (activity: UserInteraction) => {
+    const labels: Record<string, string> = {
+      campaign_create: 'Campaign created',
+      campaign_update: 'Campaign updated',
+      order_create: 'Order created',
+      order_update: 'Order updated',
+      package_create: 'Package created',
+      package_update: 'Package updated',
+      lead_create: 'New lead received',
+      lead_update: 'Lead updated',
+      publication_update: 'Publication updated',
+      inventory_update: 'Inventory updated',
+      storefront_update: 'Storefront updated',
+    };
+    return labels[activity.interactionType] || activity.interactionType;
+  };
 
   const quickActions = [
     { 
@@ -401,18 +439,40 @@ export function DashboardOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.message}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
+            {loadingActivity ? (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                Loading activities...
+              </div>
+            ) : recentActivity.length === 0 ? (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                No recent activity
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentActivity.map((activity, index) => (
+                  <div key={activity._id || index} className="flex items-start gap-3">
+                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{getActivityLabel(activity)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+                      </p>
+                      {activity.metadata?.resourceId && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          ID: {activity.metadata.resourceId.substring(0, 8)}...
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <Button variant="outline" size="sm" className="w-full mt-4">
+                ))}
+              </div>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full mt-4"
+              onClick={() => navigate('/dashboard?tab=activity')}
+            >
               View All Activity
             </Button>
           </CardContent>

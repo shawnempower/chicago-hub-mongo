@@ -679,15 +679,177 @@ export class UserInteractionsService {
     }
   }
 
-  async getByUserId(userId: string, limit = 100): Promise<UserInteraction[]> {
+  async getByUserId(userId: string, limit = 100, offset = 0): Promise<UserInteraction[]> {
     try {
       return await this.collection
         .find({ userId })
         .sort({ createdAt: -1 })
+        .skip(offset)
         .limit(limit)
         .toArray();
     } catch (error) {
       console.error('Error fetching user interactions:', error);
+      throw error;
+    }
+  }
+
+  async getByPublication(
+    publicationId: string, 
+    options: { limit?: number; offset?: number; activityType?: string; startDate?: Date; endDate?: Date } = {}
+  ): Promise<UserInteraction[]> {
+    try {
+      const { limit = 100, offset = 0, activityType, startDate, endDate } = options;
+      const query: any = { publicationId };
+      
+      if (activityType) {
+        query.interactionType = activityType;
+      }
+      
+      if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) query.createdAt.$gte = startDate;
+        if (endDate) query.createdAt.$lte = endDate;
+      }
+      
+      return await this.collection
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit)
+        .toArray();
+    } catch (error) {
+      console.error('Error fetching publication interactions:', error);
+      throw error;
+    }
+  }
+
+  async getByHub(
+    hubId: string, 
+    options: { limit?: number; offset?: number; activityType?: string; startDate?: Date; endDate?: Date } = {}
+  ): Promise<UserInteraction[]> {
+    try {
+      const { limit = 100, offset = 0, activityType, startDate, endDate } = options;
+      const query: any = { hubId };
+      
+      if (activityType) {
+        query.interactionType = activityType;
+      }
+      
+      if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) query.createdAt.$gte = startDate;
+        if (endDate) query.createdAt.$lte = endDate;
+      }
+      
+      return await this.collection
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit)
+        .toArray();
+    } catch (error) {
+      console.error('Error fetching hub interactions:', error);
+      throw error;
+    }
+  }
+
+  async getByDateRange(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    options: { limit?: number; offset?: number } = {}
+  ): Promise<UserInteraction[]> {
+    try {
+      const { limit = 100, offset = 0 } = options;
+      return await this.collection
+        .find({
+          userId,
+          createdAt: { $gte: startDate, $lte: endDate }
+        })
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit)
+        .toArray();
+    } catch (error) {
+      console.error('Error fetching interactions by date range:', error);
+      throw error;
+    }
+  }
+
+  async getByActivityType(
+    activityType: string,
+    options: { userId?: string; hubId?: string; publicationId?: string; limit?: number; offset?: number } = {}
+  ): Promise<UserInteraction[]> {
+    try {
+      const { userId, hubId, publicationId, limit = 100, offset = 0 } = options;
+      const query: any = { interactionType: activityType };
+      
+      if (userId) query.userId = userId;
+      if (hubId) query.hubId = hubId;
+      if (publicationId) query.publicationId = publicationId;
+      
+      return await this.collection
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit)
+        .toArray();
+    } catch (error) {
+      console.error('Error fetching interactions by activity type:', error);
+      throw error;
+    }
+  }
+
+  async getSessionActivities(sessionId: string): Promise<UserInteraction[]> {
+    try {
+      return await this.collection
+        .find({ sessionId })
+        .sort({ createdAt: 1 }) // Chronological order for session replay
+        .toArray();
+    } catch (error) {
+      console.error('Error fetching session activities:', error);
+      throw error;
+    }
+  }
+
+  async countByPublication(publicationId: string, filters?: { activityType?: string; startDate?: Date; endDate?: Date }): Promise<number> {
+    try {
+      const query: any = { publicationId };
+      
+      if (filters?.activityType) {
+        query.interactionType = filters.activityType;
+      }
+      
+      if (filters?.startDate || filters?.endDate) {
+        query.createdAt = {};
+        if (filters.startDate) query.createdAt.$gte = filters.startDate;
+        if (filters.endDate) query.createdAt.$lte = filters.endDate;
+      }
+      
+      return await this.collection.countDocuments(query);
+    } catch (error) {
+      console.error('Error counting publication interactions:', error);
+      throw error;
+    }
+  }
+
+  async countByHub(hubId: string, filters?: { activityType?: string; startDate?: Date; endDate?: Date }): Promise<number> {
+    try {
+      const query: any = { hubId };
+      
+      if (filters?.activityType) {
+        query.interactionType = filters.activityType;
+      }
+      
+      if (filters?.startDate || filters?.endDate) {
+        query.createdAt = {};
+        if (filters.startDate) query.createdAt.$gte = filters.startDate;
+        if (filters.endDate) query.createdAt.$lte = filters.endDate;
+      }
+      
+      return await this.collection.countDocuments(query);
+    } catch (error) {
+      console.error('Error counting hub interactions:', error);
       throw error;
     }
   }

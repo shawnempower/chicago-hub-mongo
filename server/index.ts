@@ -68,7 +68,9 @@ import inventoryChatRouter from './routes/inventory-chat';
 import publicationOrdersRouter from './routes/publication-orders';
 import adminOrdersRouter from './routes/admin/orders';
 import creativeAssetsRouter from './routes/creative-assets';
+import activityTrackingRouter from './routes/activity-tracking';
 import { authenticateToken } from './middleware/authenticate';
+import { activityTrackingMiddleware } from './middleware/activityTracking';
 import { createLogger } from '../src/utils/logger';
 
 const logger = createLogger('Server');
@@ -166,17 +168,20 @@ const upload = multer({
 // Register route modules with appropriate prefixes
 app.use('/api/auth', authRouter);
 app.use('/api/permissions', permissionsRouter); // User permissions and invitations
-app.use('/api/admin', adminRouter);
-app.use('/api/admin/builder', builderRouter); // Admin-only package builder routes
-app.use('/api/admin/orders', adminOrdersRouter); // Admin order management
-app.use('/api/publications', publicationsRouter);
-app.use('/api/publication-orders', publicationOrdersRouter); // Publication insertion orders
-app.use('/api/storefront', storefrontRouter);
-app.use('/api/hub-packages', hubPackagesRouter);
-app.use('/api/hubs', hubsRouter);
-app.use('/api/campaigns', campaignsRouter);
-app.use('/api/creative-assets', creativeAssetsRouter); // Creative assets management
+
+// Apply activity tracking middleware to routes that modify data (after authentication)
+app.use('/api/admin', activityTrackingMiddleware, adminRouter);
+app.use('/api/admin/builder', activityTrackingMiddleware, builderRouter); // Admin-only package builder routes
+app.use('/api/admin/orders', activityTrackingMiddleware, adminOrdersRouter); // Admin order management
+app.use('/api/publications', activityTrackingMiddleware, publicationsRouter);
+app.use('/api/publication-orders', activityTrackingMiddleware, publicationOrdersRouter); // Publication insertion orders
+app.use('/api/storefront', activityTrackingMiddleware, storefrontRouter);
+app.use('/api/hub-packages', activityTrackingMiddleware, hubPackagesRouter);
+app.use('/api/hubs', activityTrackingMiddleware, hubsRouter);
+app.use('/api/campaigns', activityTrackingMiddleware, campaignsRouter);
+app.use('/api/creative-assets', activityTrackingMiddleware, creativeAssetsRouter); // Creative assets management
 app.use('/api/inventory-chat', inventoryChatRouter);
+app.use('/api/activities', authenticateToken, activityTrackingRouter); // Activity tracking and audit logs
 
 // ===== STANDALONE ROUTES =====
 // Health check

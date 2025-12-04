@@ -343,8 +343,32 @@ export interface SavedPackage {
 export interface UserInteraction {
   _id?: string | ObjectId;
   userId: string;
-  interactionType: 'page_view' | 'package_view' | 'outlet_view' | 'search' | 'filter' | 'download' | 'inquiry';
+  
+  // Activity type - expanded to cover database operations for audit trail
+  interactionType: 
+    // Original UI interaction types
+    | 'page_view' | 'package_view' | 'outlet_view' | 'search' | 'filter' | 'download' | 'inquiry'
+    // Database operation types for audit trail
+    | 'campaign_create' | 'campaign_update' | 'campaign_delete'
+    | 'order_create' | 'order_update' | 'order_delete'
+    | 'inventory_update' | 'publication_update'
+    | 'lead_create' | 'lead_update' | 'lead_delete'
+    | 'package_create' | 'package_update' | 'package_delete'
+    | 'settings_update' | 'storefront_update'
+    | 'user_login' | 'user_logout';
+  
+  // Context for filtering by publication or hub
+  hubId?: string;
+  publicationId?: string;
+  
+  // Session and audit context
+  sessionId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  
+  // Flexible metadata for activity-specific details
   metadata?: {
+    // Original UI interaction metadata
     pageUrl?: string;
     packageId?: string;
     outletId?: string;
@@ -352,7 +376,16 @@ export interface UserInteraction {
     filterApplied?: Record<string, any>;
     downloadType?: string;
     inquiryType?: string;
+    
+    // Database operation metadata
+    resourceId?: string;      // ID of the resource that was modified
+    resourceType?: string;    // Type of resource (campaign, order, etc.)
+    action?: string;          // Additional action context
+    changes?: string[];       // High-level list of what changed (e.g., ['status', 'budget'])
+    batchId?: string;         // For grouping bulk operations
+    [key: string]: any;       // Allow additional fields
   };
+  
   createdAt: Date;
 }
 
@@ -1431,7 +1464,10 @@ export const INDEXES = {
   user_interactions: [
     { userId: 1 },
     { interactionType: 1 },
-    { createdAt: -1 }
+    { createdAt: -1 },
+    { hubId: 1, createdAt: -1 }, // Filter by hub with time ordering
+    { publicationId: 1, createdAt: -1 }, // Filter by publication with time ordering
+    { sessionId: 1 } // Group activities by session
   ],
   assistant_instructions: [
     { version: 1 },

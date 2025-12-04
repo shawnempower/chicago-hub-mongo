@@ -11,6 +11,7 @@ import { HubPricingAnalytics } from './HubPricingAnalytics';
 import { InventoryChatContainer } from '../inventory-chat/InventoryChatContainer';
 import { HubOrdersManagement } from './HubOrdersManagement';
 import { ErrorBoundary } from '../ErrorBoundary';
+import { ActivityLog } from './ActivityLog';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
 import { useHubPublications } from '@/hooks/useHubs';
@@ -740,43 +741,10 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </CardContent>
             </Card>
 
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-sans text-base">
-                  <Users className="h-5 w-5" />
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">New lead from Chicago Bakery</p>
-                      <p className="text-xs text-muted-foreground">2 minutes ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Package updated: Radio Premium</p>
-                      <p className="text-xs text-muted-foreground">1 hour ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">New outlet added: WCPT 820</p>
-                      <p className="text-xs text-muted-foreground">3 hours ago</p>
-                    </div>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="w-full mt-4">
-                  View All Activity
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Recent Activity - Real Data */}
+            {selectedHubId && (
+              <ActivityLog hubId={selectedHubId} showFilters={false} />
+            )}
           </div>
 
           {/* Geographic & Content Distribution */}
@@ -982,6 +950,16 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
       return (
         <div className="h-[calc(100vh-12rem)]">
           <InventoryChatContainer />
+        </div>
+      );
+    }
+
+    if (activeTab === 'activity') {
+      return (
+        <div className="space-y-6">
+          {selectedHubId && (
+            <ActivityLog hubId={selectedHubId} showFilters={true} />
+          )}
         </div>
       );
     }
