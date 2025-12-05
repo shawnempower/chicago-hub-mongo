@@ -45,6 +45,9 @@ geography.csv
 # Export files
 exports/
 
+# Local uploads (all uploads go to S3)
+uploads/
+
 # Build zip files
 production-frontend-*.zip
 production-backend-*.zip

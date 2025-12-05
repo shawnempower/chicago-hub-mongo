@@ -297,7 +297,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
               {
                 name: 'New Newsletter Ad',
                 position: 'header' as const,
-                dimensions: '600x100',
+                format: { dimensions: '600x100' },  // Use canonical format.dimensions, not legacy
                 pricing: {
                   flatRate: 200,
                   pricingModel: 'per_send'
@@ -1252,7 +1252,6 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                     value={ad.format || null}
                     onChange={(format) => updateWebsiteAd(index, 'format', format)}
                     allowMultiple={true}
-                    legacyDimensions={ad.sizes ? ad.sizes.join(', ') : undefined}
                   />
                 </div>
                 
@@ -1457,7 +1456,6 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           value={ad.format || null}
                           onChange={(format) => updateNewsletterAd(newsletterIndex, adIndex, 'format', format)}
                           allowMultiple={true}
-                          legacyDimensions={ad.dimensions}
                         />
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

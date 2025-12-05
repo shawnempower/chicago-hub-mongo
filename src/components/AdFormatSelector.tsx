@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { 
   NewsletterAdFormat,
   DIMENSION_OPTIONS,
@@ -15,10 +15,9 @@ interface AdFormatSelectorProps {
   onChange: (format: NewsletterAdFormat | null) => void;
   className?: string;
   allowMultiple?: boolean;  // Allow selecting multiple dimensions
-  legacyDimensions?: string;  // Show legacy dimensions field (read-only)
 }
 
-export function AdFormatSelector({ value, onChange, className = '', allowMultiple = true, legacyDimensions }: AdFormatSelectorProps) {
+export function AdFormatSelector({ value, onChange, className = '', allowMultiple = true }: AdFormatSelectorProps) {
   const allDims = value?.dimensions ? getAllDimensions(value.dimensions) : [];
   
   const [selectedDimensions, setSelectedDimensions] = useState<string[]>(allDims);
@@ -26,7 +25,6 @@ export function AdFormatSelector({ value, onChange, className = '', allowMultipl
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [showCustomWarning, setShowCustomWarning] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [legacyExpanded, setLegacyExpanded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -134,41 +132,6 @@ export function AdFormatSelector({ value, onChange, className = '', allowMultipl
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Legacy Dimensions (Accordion) */}
-      {legacyDimensions && (
-        <div className="bg-amber-50 border border-amber-200 rounded-md overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setLegacyExpanded(!legacyExpanded)}
-            className="w-full p-2 flex items-center gap-2 hover:bg-amber-100 transition-colors"
-          >
-            <div className="text-amber-600">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="flex-1 text-left">
-              <div className="text-[11px] font-medium text-amber-800">Legacy Dimensions</div>
-            </div>
-            {legacyExpanded ? (
-              <ChevronUp className="h-3.5 w-3.5 text-amber-600" />
-            ) : (
-              <ChevronDown className="h-3.5 w-3.5 text-amber-600" />
-            )}
-          </button>
-          {legacyExpanded && (
-            <div className="px-2 pb-2 pt-1 border-t border-amber-200">
-              <div className="text-[11px] text-amber-700">
-                Original value: <span className="font-mono bg-amber-100 px-1.5 py-0.5 rounded">{legacyDimensions}</span>
-              </div>
-              <div className="text-[10px] text-amber-600 mt-1">
-                This will be replaced when you save the new format below.
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Custom Warning Dialog */}
       {showCustomWarning && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

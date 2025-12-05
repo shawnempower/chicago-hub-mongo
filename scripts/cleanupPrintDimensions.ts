@@ -162,8 +162,8 @@ async function cleanupPrintDimensions(dryRun: boolean = true) {
     await client.connect();
     console.log('✅ Connected to MongoDB\n');
     
-    const db = client.db('staging-chicago-hub');
-    console.log('🎯 Using database: staging-chicago-hub');
+    const db = client.db('chicago-hub');
+    console.log('🎯 Using database: chicago-hub (PRODUCTION)');
     console.log(`📝 Mode: ${dryRun ? 'DRY RUN (no changes)' : 'LIVE UPDATE'}\n`);
     
     const publicationsCollection = db.collection('publications');

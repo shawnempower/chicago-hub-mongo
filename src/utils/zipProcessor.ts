@@ -187,7 +187,11 @@ function getMimeType(fileName: string): string {
     'mov': 'video/quicktime',
     'avi': 'video/x-msvideo',
     'mp3': 'audio/mpeg',
-    'wav': 'audio/wav'
+    'wav': 'audio/wav',
+    // Text files for text-only/native newsletter ads
+    'txt': 'text/plain',
+    'html': 'text/html',
+    'htm': 'text/html'
   };
   
   return mimeTypes[ext || ''] || 'application/octet-stream';

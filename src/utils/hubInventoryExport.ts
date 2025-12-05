@@ -418,7 +418,7 @@ export function exportHubInventoryToCSV(
             inventoryId: ad.adId || `newsletter-${nlIdx}-${adIdx}`,
             inventoryName: `${newsletter.name} - ${ad.name || ad.position || 'Ad'}`,
             position: ad.position,
-            specifications: ad.dimensions || ad.specifications?.dimensions,
+            specifications: ad.format?.dimensions || ad.specifications?.dimensions || ad.dimensions,
             subscribers: newsletter.subscribers,
             estimatedMonthlyReach: reach,
             frequency: newsletter.frequency,
@@ -646,41 +646,45 @@ export function exportHubInventoryToCSV(
       });
     }
 
-    // Radio Stations
+    // Radio Stations - iterate through shows (canonical location for ads)
     if (pub.distributionChannels?.radioStations) {
       pub.distributionChannels.radioStations.forEach((station, rIdx) => {
-        station.advertisingOpportunities?.forEach((ad, adIdx) => {
-          const hubPricing = getHubPricing(ad.hubPricing, hubId);
-          
-          // Calculate reach and revenue
-          const reach = calculateMonthlyReach('radio', {
-            subscribers: station.listeners,
-          }, ad.pricing?.frequency);
-          
-          const hubRevenue = hubPricing ? calculateMonthlyRevenue('radio',
-            hubPricing.pricing || ad.pricing,
-            {
-              subscribers: station.listeners,
-            }, ad.pricing?.frequency) : 0;
-          
-          const hubPricingDisplay = getHubPricingDisplayValues(hubPricing);
-          
-          rows.push({
-            ...pubInfo,
-            channel: 'Radio',
-            inventoryId: ad.adId || `radio-${rIdx}-${adIdx}`,
-            inventoryName: `${station.callSign || station.name} - ${ad.name || ad.adFormat || 'Ad'}`,
-            adFormat: ad.adFormat,
-            specifications: formatSpecifications(ad.specifications),
-            frequency: ad.pricing?.frequency,
-            subscribers: station.listeners,
-            estimatedMonthlyReach: reach,
-            hubAvailable: hubPricing?.available ?? ad.available ?? true,
-            hubPricingModel: hubPricingDisplay.pricingModel,
-            hubFlatRate: hubPricingDisplay.flatRate,
-            hubDiscount: hubPricing?.discount,
-            hubMinimumCommitment: hubPricing?.minimumCommitment,
-            available: ad.available ?? true,
+        const shows = station.shows || [];
+        shows.forEach((show: any, showIdx: number) => {
+          (show.advertisingOpportunities || []).forEach((ad: any, adIdx: number) => {
+            const hubPricing = getHubPricing(ad.hubPricing, hubId);
+            
+            // Calculate reach and revenue - use show's average listeners if available
+            const listeners = show.averageListeners || station.listeners;
+            const reach = calculateMonthlyReach('radio', {
+              subscribers: listeners,
+            }, show.frequency);
+            
+            const hubRevenue = hubPricing ? calculateMonthlyRevenue('radio',
+              hubPricing.pricing || ad.pricing,
+              {
+                subscribers: listeners,
+              }, show.frequency) : 0;
+            
+            const hubPricingDisplay = getHubPricingDisplayValues(hubPricing);
+            
+            rows.push({
+              ...pubInfo,
+              channel: 'Radio',
+              inventoryId: ad.adId || `radio-${rIdx}-${showIdx}-${adIdx}`,
+              inventoryName: `${station.callSign || station.name} - ${show.name} - ${ad.name || ad.adFormat || 'Ad'}`,
+              adFormat: ad.adFormat,
+              specifications: ad.format?.dimensions || formatSpecifications(ad.specifications),
+              frequency: show.frequency,
+              subscribers: listeners,
+              estimatedMonthlyReach: reach,
+              hubAvailable: hubPricing?.available ?? ad.available ?? true,
+              hubPricingModel: hubPricingDisplay.pricingModel,
+              hubFlatRate: hubPricingDisplay.flatRate,
+              hubDiscount: hubPricing?.discount,
+              hubMinimumCommitment: hubPricing?.minimumCommitment,
+              available: ad.available ?? true,
+            });
           });
         });
       });
