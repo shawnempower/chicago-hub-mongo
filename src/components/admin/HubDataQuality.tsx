@@ -227,7 +227,7 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
 
         // Issue 8: Print dimension validation (CRITICAL for creative asset matching)
         if (channel.toLowerCase() === 'print') {
-          const dimensions = item.dimensions;
+          const dimensions = item.format?.dimensions;
           
           if (!dimensions) {
             issues.push({
@@ -273,8 +273,8 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
 
         // Issue 9: Newsletter dimension validation (for creative asset matching)
         if (channel.toLowerCase() === 'newsletter') {
-          // Prefer format.dimensions (canonical) over legacy dimensions field
-          const dimensions = item.format?.dimensions || item.dimensions;
+          // Get dimensions from format object
+          const dimensions = item.format?.dimensions;
           
           if (!dimensions) {
             issues.push({
@@ -355,9 +355,9 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
         // Issue 10: Radio dimension/format validation (for creative asset matching)
         if (channel.toLowerCase() === 'radio') {
           const dimensions = item.format?.dimensions;
-          const duration = item.specifications?.duration;
+          const duration = item.format?.duration;
           const adFormat = item.adFormat;
-          const fileFormats = item.specifications?.fileFormats;
+          const fileFormats = item.format?.fileFormats;
           
           // Check if radio dimension is valid
           const isValidRadioDim = (dim: string): boolean => {
@@ -418,9 +418,9 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
         // Issue 11: Podcast dimension/format validation (for creative asset matching)
         if (channel.toLowerCase() === 'podcast') {
           const dimensions = item.format?.dimensions;
-          const duration = item.specifications?.duration;
+          const duration = item.format?.duration;
           const adFormat = item.adFormat;
-          const fileFormats = item.specifications?.fileFormats;
+          const fileFormats = item.format?.fileFormats;
           
           // Check if podcast dimension is valid
           const isValidPodcastDim = (dim: string): boolean => {

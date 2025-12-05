@@ -307,7 +307,7 @@ export class HubPackagesService {
                   model: ad.pricing?.pricingModel || 'flat'
                 },
                 impressions: ad.monthlyImpressions,
-                specifications: ad.specifications
+                format: ad.format
               };
             });
 
@@ -334,7 +334,7 @@ export class HubPackagesService {
                     hub: hubPricing?.pricing?.flatRate || ad.pricing?.flatRate || ad.pricing?.perSend || 0,
                     model: ad.pricing?.pricingModel || 'per_send'
                   },
-                  specifications: ad.specifications
+                  format: ad.format
                 });
               }
             });
@@ -363,7 +363,7 @@ export class HubPackagesService {
                     hub: hubPricing?.pricing?.perPost || ad.pricing?.perPost || ad.pricing?.monthly || 0,
                     model: ad.pricing?.pricingModel || 'per_post'
                   },
-                  specifications: ad.specifications
+                  format: ad.format
                 });
               }
             });
@@ -391,7 +391,7 @@ export class HubPackagesService {
                   hub: hubPricing?.pricing?.flatRate || ad.pricing?.flatRate || 0,
                   model: ad.pricing?.pricingModel || 'flat'
                 },
-                specifications: ad.specifications
+                format: ad.format
               };
             });
 

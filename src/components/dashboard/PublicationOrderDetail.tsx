@@ -714,13 +714,13 @@ export function PublicationOrderDetail() {
                                     </div>
 
                                     {/* Technical Specifications */}
-                                    {item.specifications && Object.keys(item.specifications).length > 0 && (
+                                    {item.format && Object.keys(item.format).length > 0 && (
                                       <div className="mb-4 p-3 bg-amber-50 rounded border border-amber-200">
                                         <p className="text-xs font-bold text-amber-900 uppercase mb-2 flex items-center gap-1">
                                           📋 Technical Requirements
                                         </p>
                                         <div className="grid grid-cols-2 gap-2">
-                                          {Object.entries(item.specifications).map(([key, value]) => (
+                                          {Object.entries(item.format).map(([key, value]) => (
                                             <div key={key} className="text-sm">
                                               <span className="font-semibold text-gray-700">{key}:</span>{' '}
                                               <span className="text-gray-900">{String(value)}</span>

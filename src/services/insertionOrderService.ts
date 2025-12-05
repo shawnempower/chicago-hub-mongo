@@ -475,7 +475,7 @@ export class InsertionOrderService {
         // Match creative assets to this publication's inventory items
         pub.inventoryItems?.forEach((item: any) => {
           const itemChannel = item.channel || 'general';
-          const itemDimensions = item.specifications?.dimensions || item.dimensions;
+          const itemDimensions = item.format?.dimensions;
           
           // Find matching assets by matching the channel and dimensions
           const matchingAssets = campaignAssets.filter((asset: any) => {

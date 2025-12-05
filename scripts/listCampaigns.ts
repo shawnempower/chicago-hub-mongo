@@ -24,23 +24,44 @@ async function listCampaigns() {
 
   try {
     await client.connect();
-    const db = client.db('chicago-hub');
-    const campaigns = await db.collection('campaigns').find({}).toArray();
+    const dbName = process.env.MONGODB_DB_NAME || 'chicago-hub';
+    console.log(`📂 Using database: ${dbName}\n`);
+    const db = client.db(dbName);
+    const campaigns = await db.collection('campaigns').find({}).sort({ createdAt: -1 }).toArray();
 
-    console.log(`\n📋 Found ${campaigns.length} campaigns:\n`);
+    console.log(`📋 Found ${campaigns.length} campaigns:\n`);
 
     campaigns.forEach((c: any, i: number) => {
       console.log(`${i + 1}. ID: ${c._id}`);
       console.log(`   Campaign ID: ${c.campaignId || 'N/A'}`);
-      console.log(`   Name: ${c.campaignName || c.name || 'Unnamed'}`);
+      console.log(`   Name: ${c.basicInfo?.name || c.campaignName || c.name || 'Unnamed'}`);
       console.log(`   Status: ${c.status || 'N/A'}`);
-      console.log(`   Business: ${c.businessName || 'N/A'}`);
-      console.log(`   Inventory: ${c.selectedInventory?.length || 0} items`);
-      if (c.selectedInventory?.length > 0) {
-        const printCount = c.selectedInventory.filter((i: any) => i.channel === 'print').length;
-        if (printCount > 0) {
-          console.log(`   📄 Print: ${printCount} items`);
-        }
+      console.log(`   Business: ${c.basicInfo?.businessName || c.businessName || 'N/A'}`);
+      
+      // Handle inventory in both formats
+      let invItems: any[] = [];
+      if (c.selectedInventory?.publications) {
+        c.selectedInventory.publications.forEach((pub: any) => {
+          if (pub.inventoryItems) invItems.push(...pub.inventoryItems);
+        });
+      } else if (Array.isArray(c.selectedInventory)) {
+        invItems = c.selectedInventory;
+      }
+      
+      console.log(`   Inventory: ${invItems.length} items`);
+      
+      // Count by channel
+      const channelCounts = new Map<string, number>();
+      invItems.forEach((item: any) => {
+        const ch = item.channel || 'unknown';
+        channelCounts.set(ch, (channelCounts.get(ch) || 0) + 1);
+      });
+      
+      if (channelCounts.size > 0) {
+        const channelStr = Array.from(channelCounts.entries())
+          .map(([ch, cnt]) => `${ch}: ${cnt}`)
+          .join(', ');
+        console.log(`   Channels: ${channelStr}`);
       }
       console.log();
     });

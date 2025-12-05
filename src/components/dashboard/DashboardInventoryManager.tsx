@@ -757,7 +757,7 @@ export const DashboardInventoryManager = () => {
     
     // Set custom duration mode if duration is not a standard value
     if (type === 'podcast-ad' || type === 'radio-ad') {
-      const duration = type === 'podcast-ad' ? itemCopy.duration : itemCopy.specifications?.duration;
+      const duration = itemCopy.format?.duration || itemCopy.duration;
       setCustomDurationMode(!duration || ![15, 30, 60, 90, 120].includes(duration));
     }
   };
@@ -963,16 +963,16 @@ export const DashboardInventoryManager = () => {
               enrichedPodcastAd.format = { ...enrichedPodcastAd.format, dimensions };
             }
             
-            // Set specifications with duration and fileFormats
-            if (!enrichedPodcastAd.specifications?.fileFormats) {
+            // Set format with duration and fileFormats
+            if (!enrichedPodcastAd.format?.fileFormats) {
               const isTextBased = enrichedPodcastAd.adFormat === 'host_read';
-              enrichedPodcastAd.specifications = {
-                ...enrichedPodcastAd.specifications,
+              enrichedPodcastAd.format = {
+                ...enrichedPodcastAd.format,
                 duration: duration,
                 fileFormats: isTextBased ? ['TXT'] : ['MP3', 'WAV']
               };
-            } else if (duration && !enrichedPodcastAd.specifications.duration) {
-              enrichedPodcastAd.specifications.duration = duration;
+            } else if (duration && !enrichedPodcastAd.format?.duration) {
+              enrichedPodcastAd.format = { ...enrichedPodcastAd.format, duration: duration };
             }
             
             if (isAdding) {
@@ -1345,10 +1345,9 @@ export const DashboardInventoryManager = () => {
         pricingModel: 'flat' as const,
         minimumCommitment: '1 month'
       },
-      specifications: {
-        format: 'JPG, PNG, GIF',
-        animationAllowed: true,
-        thirdPartyTags: true
+      format: {
+        dimensions: '300x250',
+        fileFormats: ['JPG', 'PNG', 'GIF']
       },
       monthlyImpressions: 0,
       available: true
@@ -1477,10 +1476,10 @@ export const DashboardInventoryManager = () => {
         flatRate: 0,
         pricingModel: 'flat' as const
       },
-      specifications: {
-        format: 'PDF',
-        resolution: '300 DPI',
-        bleed: '0.125 inch'
+      format: {
+        fileFormats: ['PDF'],
+        resolution: '300dpi',
+        colorSpace: 'CMYK'
       }
     };
 
@@ -4021,7 +4020,7 @@ export const DashboardInventoryManager = () => {
                                   <div className="grid grid-cols-2 gap-x-4">
                                     <div>
                                       <p className="text-xs font-medium text-gray-500 mb-0.5">Dimensions</p>
-                                      <p className="text-xs text-gray-900">{ad.dimensions || 'N/A'}</p>
+                                      <p className="text-xs text-gray-900">{ad.format?.dimensions || 'N/A'}</p>
                                     </div>
                                     <div>
                                       <p className="text-xs font-medium text-gray-500 mb-0.5">Color</p>
@@ -4472,11 +4471,11 @@ export const DashboardInventoryManager = () => {
                                     </Badge>
                                   );
                                 }
-                                // Fallback to legacy dimensions
-                                if (ad.dimensions) {
+                                // Display dimensions from format
+                                if (ad.format?.dimensions) {
                                   return (
                                     <Badge variant="outline" className="text-xs font-normal">
-                                      {ad.dimensions}
+                                      {ad.format.dimensions}
                                     </Badge>
                                   );
                                 }
@@ -4542,8 +4541,8 @@ export const DashboardInventoryManager = () => {
                                     const dims = ad.format.dimensions;
                                     return Array.isArray(dims) ? dims.join(', ') : dims;
                                   }
-                                  // Fallback to legacy dimensions
-                                  return ad.dimensions || 'N/A';
+                                  // Display dimensions from format
+                                  return ad.format?.dimensions || 'N/A';
                                 })()}
                               </p>
                             </div>
@@ -5030,7 +5029,7 @@ export const DashboardInventoryManager = () => {
                               </div>
                               <div>
                                 <p className="text-xs font-medium text-gray-500 mb-0.5">Duration</p>
-                                <p className="text-xs text-gray-900">{ad.specifications?.duration ? `${ad.specifications.duration}s` : 'N/A'}</p>
+                                <p className="text-xs text-gray-900">{ad.format?.duration ? `${ad.format.duration}s` : 'N/A'}</p>
                               </div>
                             </div>
                             {/* Revenue & Metrics */}
@@ -5438,15 +5437,15 @@ export const DashboardInventoryManager = () => {
                     <Label className="text-base font-semibold">Specifications</Label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="format">Format</Label>
+                        <Label htmlFor="fileFormats">File Formats</Label>
                         <Input
-                          id="format"
-                          value={editingItem.specifications?.format || ''}
+                          id="fileFormats"
+                          value={editingItem.format?.fileFormats?.join(', ') || ''}
                           onChange={(e) => setEditingItem({ 
                             ...editingItem, 
-                            specifications: { 
-                              ...editingItem.specifications, 
-                              format: e.target.value 
+                            format: { 
+                              ...editingItem.format, 
+                              fileFormats: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean)
                             } 
                           })}
                           placeholder="PDF, JPEG, PNG"
@@ -5456,32 +5455,38 @@ export const DashboardInventoryManager = () => {
                         <Label htmlFor="resolution">Resolution</Label>
                         <Input
                           id="resolution"
-                          value={editingItem.specifications?.resolution || ''}
+                          value={editingItem.format?.resolution || ''}
                           onChange={(e) => setEditingItem({ 
                             ...editingItem, 
-                            specifications: { 
-                              ...editingItem.specifications, 
+                            format: { 
+                              ...editingItem.format, 
                               resolution: e.target.value 
                             } 
                           })}
-                          placeholder="300 DPI"
+                          placeholder="300dpi"
                         />
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="bleed"
-                        checked={editingItem.specifications?.bleed || false}
-                        onChange={(e) => setEditingItem({ 
+                      <Select
+                        value={editingItem.format?.colorSpace || ''}
+                        onValueChange={(value) => setEditingItem({ 
                           ...editingItem, 
-                          specifications: { 
-                            ...editingItem.specifications, 
-                            bleed: e.target.checked 
+                          format: { 
+                            ...editingItem.format, 
+                            colorSpace: value 
                           } 
                         })}
-                      />
-                      <Label htmlFor="bleed">Requires Bleed</Label>
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Color Space" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CMYK">CMYK</SelectItem>
+                          <SelectItem value="RGB">RGB</SelectItem>
+                          <SelectItem value="Grayscale">Grayscale</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </>
@@ -5632,8 +5637,8 @@ export const DashboardInventoryManager = () => {
                       value={
                         customDurationMode
                           ? 'custom'
-                          : (editingItem.specifications?.duration && [15, 30, 60, 90, 120].includes(editingItem.specifications.duration)
-                            ? String(editingItem.specifications.duration)
+                          : (editingItem.format?.duration && [15, 30, 60, 90, 120].includes(editingItem.format.duration)
+                            ? String(editingItem.format.duration)
                             : 'custom')
                       }
                       onValueChange={(value) => {
@@ -5642,8 +5647,8 @@ export const DashboardInventoryManager = () => {
                           setCustomDurationMode(true);
                           setEditingItem({ 
                             ...editingItem, 
-                            specifications: {
-                              ...editingItem.specifications,
+                            format: {
+                              ...editingItem.format,
                               duration: undefined
                             }
                           });
@@ -5654,8 +5659,8 @@ export const DashboardInventoryManager = () => {
                         const duration = parseInt(value);
                         setEditingItem({ 
                           ...editingItem, 
-                          specifications: {
-                            ...editingItem.specifications,
+                          format: {
+                            ...editingItem.format,
                             duration
                           }
                         });
@@ -5676,20 +5681,20 @@ export const DashboardInventoryManager = () => {
                   </div>
                   
                   {/* Custom duration input - shown for non-standard durations */}
-                  {(customDurationMode || (!editingItem.specifications?.duration || ![15, 30, 60, 90, 120].includes(editingItem.specifications.duration))) && (
+                  {(customDurationMode || (!editingItem.format?.duration || ![15, 30, 60, 90, 120].includes(editingItem.format.duration))) && (
                     <div>
                       <Label htmlFor="customDuration">Custom Duration (seconds)</Label>
                       <Input
                         id="customDuration"
                         type="number"
-                        value={editingItem.specifications?.duration || ''}
+                        value={editingItem.format?.duration || ''}
                         onChange={(e) => {
                           const val = e.target.value;
                           const numVal = val === '' ? undefined : parseInt(val, 10);
                           setEditingItem({ 
                             ...editingItem, 
-                            specifications: {
-                              ...editingItem.specifications,
+                            format: {
+                              ...editingItem.format,
                               duration: isNaN(numVal) ? undefined : numVal
                             }
                           });
@@ -5815,14 +5820,14 @@ export const DashboardInventoryManager = () => {
                     <Label className="text-base font-semibold">Technical Specifications</Label>
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <Label htmlFor="format">Video Format</Label>
+                        <Label htmlFor="fileFormats">Video Format</Label>
                         <Select
-                          value={editingItem.specifications?.format || ''}
+                          value={editingItem.format?.fileFormats?.[0] || ''}
                           onValueChange={(value) => setEditingItem({
                             ...editingItem,
-                            specifications: {
-                              ...editingItem.specifications,
-                              format: value
+                            format: {
+                              ...editingItem.format,
+                              fileFormats: [value]
                             }
                           })}
                         >
@@ -5830,22 +5835,21 @@ export const DashboardInventoryManager = () => {
                             <SelectValue placeholder="Select format..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="mp4">MP4</SelectItem>
-                            <SelectItem value="mov">MOV</SelectItem>
-                            <SelectItem value="avi">AVI</SelectItem>
-                            <SelectItem value="script">Script/Copy</SelectItem>
-                            <SelectItem value="image_overlay">Image Overlay</SelectItem>
+                            <SelectItem value="MP4">MP4</SelectItem>
+                            <SelectItem value="MOV">MOV</SelectItem>
+                            <SelectItem value="AVI">AVI</SelectItem>
+                            <SelectItem value="TXT">Script/Copy</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <Label htmlFor="resolution">Resolution</Label>
                         <Select
-                          value={editingItem.specifications?.resolution || ''}
+                          value={editingItem.format?.resolution || ''}
                           onValueChange={(value) => setEditingItem({
                             ...editingItem,
-                            specifications: {
-                              ...editingItem.specifications,
+                            format: {
+                              ...editingItem.format,
                               resolution: value
                             }
                           })}
@@ -5862,14 +5866,14 @@ export const DashboardInventoryManager = () => {
                         </Select>
                       </div>
                       <div>
-                        <Label htmlFor="aspectRatio">Aspect Ratio</Label>
+                        <Label htmlFor="dimensions">Aspect Ratio</Label>
                         <Select
-                          value={editingItem.specifications?.aspectRatio || ''}
+                          value={editingItem.format?.dimensions || ''}
                           onValueChange={(value) => setEditingItem({
                             ...editingItem,
-                            specifications: {
-                              ...editingItem.specifications,
-                              aspectRatio: value
+                            format: {
+                              ...editingItem.format,
+                              dimensions: value
                             }
                           })}
                         >
@@ -5970,11 +5974,11 @@ export const DashboardInventoryManager = () => {
                     <div>
                       <Label htmlFor="duration">Duration (seconds)</Label>
                       <Select
-                        value={String(editingItem.specifications?.duration || '')}
+                        value={String(editingItem.format?.duration || '')}
                         onValueChange={(value) => setEditingItem({
                           ...editingItem,
-                          specifications: {
-                            ...editingItem.specifications,
+                          format: {
+                            ...editingItem.format,
                             duration: parseInt(value)
                           }
                         })}
@@ -5997,14 +6001,14 @@ export const DashboardInventoryManager = () => {
                     <Label className="text-base font-semibold">Technical Specifications</Label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="format">Video Format</Label>
+                        <Label htmlFor="fileFormats">Video Format</Label>
                         <Select
-                          value={editingItem.specifications?.format || ''}
+                          value={editingItem.format?.fileFormats?.[0] || ''}
                           onValueChange={(value) => setEditingItem({
                             ...editingItem,
-                            specifications: {
-                              ...editingItem.specifications,
-                              format: value
+                            format: {
+                              ...editingItem.format,
+                              fileFormats: [value]
                             }
                           })}
                         >
@@ -6012,21 +6016,21 @@ export const DashboardInventoryManager = () => {
                             <SelectValue placeholder="Select format..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="mpeg2">MPEG2 (Broadcast)</SelectItem>
-                            <SelectItem value="h264">H.264 (Digital)</SelectItem>
-                            <SelectItem value="prores">ProRes (Production)</SelectItem>
-                            <SelectItem value="live_script">Live Script (Host Read)</SelectItem>
+                            <SelectItem value="MPEG2">MPEG2 (Broadcast)</SelectItem>
+                            <SelectItem value="H264">H.264 (Digital)</SelectItem>
+                            <SelectItem value="ProRes">ProRes (Production)</SelectItem>
+                            <SelectItem value="TXT">Live Script (Host Read)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <Label htmlFor="resolution">Resolution</Label>
                         <Select
-                          value={editingItem.specifications?.resolution || ''}
+                          value={editingItem.format?.resolution || ''}
                           onValueChange={(value) => setEditingItem({
                             ...editingItem,
-                            specifications: {
-                              ...editingItem.specifications,
+                            format: {
+                              ...editingItem.format,
                               resolution: value
                             }
                           })}

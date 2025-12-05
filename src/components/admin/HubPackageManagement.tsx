@@ -481,8 +481,8 @@ export const HubPackageManagement = () => {
           const totalCost = monthlyCost * duration;
           
           // Format specifications
-          const specs = item.specifications 
-            ? Object.entries(item.specifications)
+          const specs = item.format 
+            ? Object.entries(item.format)
                 .filter(([_, value]) => value)
                 .map(([key, value]) => `${key}: ${value}`)
                 .join('; ')
@@ -609,8 +609,8 @@ export const HubPackageManagement = () => {
         const monthlyCost = unitPrice * frequency;
         
         // Format specifications
-        const specs = item.specifications 
-          ? Object.entries(item.specifications)
+        const specs = item.format 
+          ? Object.entries(item.format)
               .filter(([_, value]) => value)
               .map(([key, value]) => `${key}: ${value}`)
               .join('; ')

@@ -125,6 +125,76 @@ function formatBytes(bytes: number): string {
 }
 
 /**
+ * Format audio/podcast spec for display
+ * - Radio: "30 second spot"
+ * - Podcast: "Pre-roll (60s)" or "Host-read" or "Mid-roll"
+ */
+function formatAudioSpec(spec: { 
+  channel: string; 
+  dimensions?: string | string[]; 
+  duration?: number;
+  placements?: Array<{ placementName: string }>;
+}): string {
+  const dims = Array.isArray(spec.dimensions) ? spec.dimensions[0] : spec.dimensions;
+  const dimsLower = (dims || '').toLowerCase().trim();
+  
+  // Check if dimensions contains a podcast position
+  const podcastPositions = ['pre-roll', 'mid-roll', 'post-roll', 'host-read', 'live-read'];
+  const isPosition = podcastPositions.some(pos => dimsLower.includes(pos.replace('-', '')));
+  
+  if (spec.channel === 'podcast') {
+    // Format podcast position nicely
+    if (isPosition || dimsLower.includes('pre') || dimsLower.includes('mid') || dimsLower.includes('post') || dimsLower.includes('host')) {
+      let position = '';
+      if (dimsLower.includes('pre')) position = 'Pre-roll';
+      else if (dimsLower.includes('mid')) position = 'Mid-roll';
+      else if (dimsLower.includes('post')) position = 'Post-roll';
+      else if (dimsLower.includes('host')) position = 'Host-read';
+      else if (dimsLower.includes('live')) position = 'Live-read';
+      else position = dims || '';
+      
+      // Append duration if available
+      if (spec.duration && !dimsLower.includes('host') && !dimsLower.includes('live')) {
+        return `${position} (${spec.duration}s)`;
+      }
+      return position;
+    }
+    
+    // Try to infer from placement name
+    const placementName = spec.placements?.[0]?.placementName?.toLowerCase() || '';
+    if (placementName.includes('pre-roll') || placementName.includes('preroll')) {
+      return spec.duration ? `Pre-roll (${spec.duration}s)` : 'Pre-roll';
+    }
+    if (placementName.includes('mid-roll') || placementName.includes('midroll')) {
+      return spec.duration ? `Mid-roll (${spec.duration}s)` : 'Mid-roll';
+    }
+    if (placementName.includes('post-roll') || placementName.includes('postroll')) {
+      return spec.duration ? `Post-roll (${spec.duration}s)` : 'Post-roll';
+    }
+    if (placementName.includes('host') || placementName.includes('live read')) {
+      return 'Host-read';
+    }
+    
+    // Fallback to duration if available
+    if (spec.duration) {
+      return `${spec.duration} second spot`;
+    }
+    
+    return 'Podcast ad';
+  }
+  
+  // Radio: show duration
+  if (spec.channel === 'radio') {
+    if (spec.duration) {
+      return `${spec.duration} second spot`;
+    }
+    return 'Radio spot';
+  }
+  
+  return dims || 'Audio ad';
+}
+
+/**
  * Status badge component
  */
 function StatusBadge({ status }: { status: 'uploaded' | 'pending' | 'missing' }) {
@@ -164,6 +234,7 @@ export function CreativeAssetsManager({
 }: CreativeAssetsManagerProps) {
   const { toast } = useToast();
   const [activeView, setActiveView] = useState<'checklist' | 'uploaded'>('checklist');
+  const [activeChannel, setActiveChannel] = useState<string>('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [pendingFiles, setPendingFiles] = useState<Map<string, PendingFile>>(new Map());
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
@@ -175,8 +246,139 @@ export function CreativeAssetsManager({
   const [processingZip, setProcessingZip] = useState(false);
   const [zipProgress, setZipProgress] = useState<{ percent: number; message: string } | null>(null);
 
+  // Channel configuration with icons and accepted file types
+  const channelConfig: Record<string, { 
+    label: string; 
+    icon: string; 
+    color: string;
+    acceptedTypes: string;
+    description: string;
+  }> = {
+    website: { 
+      label: 'Website', 
+      icon: '🌐', 
+      color: 'bg-blue-500',
+      acceptedTypes: 'PNG, JPG, GIF, WebP',
+      description: 'Display ads and banners'
+    },
+    newsletter: { 
+      label: 'Newsletter', 
+      icon: '📧', 
+      color: 'bg-purple-500',
+      acceptedTypes: 'PNG, JPG, GIF, HTML, TXT',
+      description: 'Email newsletter ads'
+    },
+    print: { 
+      label: 'Print', 
+      icon: '📰', 
+      color: 'bg-gray-500',
+      acceptedTypes: 'PDF, TIFF, EPS (CMYK)',
+      description: 'Print-ready advertisements'
+    },
+    radio: { 
+      label: 'Radio', 
+      icon: '📻', 
+      color: 'bg-orange-500',
+      acceptedTypes: 'WAV, MP3 (15s, 30s, 60s)',
+      description: 'Audio spots and commercials'
+    },
+    podcast: { 
+      label: 'Podcast', 
+      icon: '🎙️', 
+      color: 'bg-green-500',
+      acceptedTypes: 'WAV, MP3',
+      description: 'Podcast ad reads'
+    },
+    streaming: { 
+      label: 'Streaming', 
+      icon: '📺', 
+      color: 'bg-red-500',
+      acceptedTypes: 'MP4, MOV',
+      description: 'Video ads'
+    },
+    social: { 
+      label: 'Social', 
+      icon: '📱', 
+      color: 'bg-pink-500',
+      acceptedTypes: 'PNG, JPG, MP4',
+      description: 'Social media ads'
+    },
+    events: { 
+      label: 'Events', 
+      icon: '🎪', 
+      color: 'bg-yellow-500',
+      acceptedTypes: 'PDF, PNG, JPG',
+      description: 'Event sponsorship materials'
+    },
+  };
+
+  // Channel display order
+  const channelOrder = ['website', 'newsletter', 'print', 'radio', 'podcast', 'streaming', 'social', 'events'];
+
   // Group requirements by specifications
   const groupedSpecs = useMemo(() => groupRequirementsBySpec(requirements), [requirements]);
+
+  // Group specs by channel
+  const specsByChannel = useMemo(() => {
+    const byChannel = new Map<string, GroupedCreativeRequirement[]>();
+    groupedSpecs.forEach(spec => {
+      const channel = spec.channel || 'other';
+      if (!byChannel.has(channel)) {
+        byChannel.set(channel, []);
+      }
+      byChannel.get(channel)!.push(spec);
+    });
+    return byChannel;
+  }, [groupedSpecs]);
+
+  // Get channels that have requirements (in order)
+  const availableChannels = useMemo(() => {
+    return channelOrder.filter(channel => {
+      const specs = specsByChannel.get(channel);
+      return specs && specs.length > 0;
+    });
+  }, [specsByChannel]);
+
+  // Set initial active channel to first available
+  useEffect(() => {
+    if (activeChannel === 'all' && availableChannels.length > 0) {
+      // Keep 'all' as default, user can switch
+    }
+  }, [availableChannels]);
+
+  // Per-channel metrics
+  const channelMetrics = useMemo(() => {
+    const metrics = new Map<string, { 
+      total: number; 
+      uploaded: number; 
+      pending: number; 
+      placementCount: number;
+      progressPercent: number;
+    }>();
+    
+    specsByChannel.forEach((specs, channel) => {
+      const total = specs.length;
+      const uploaded = specs.filter(s => uploadedAssets.get(s.specGroupId)?.uploadStatus === 'uploaded').length;
+      const pending = specs.filter(s => {
+        const asset = uploadedAssets.get(s.specGroupId);
+        return asset && asset.uploadStatus !== 'uploaded';
+      }).length;
+      const placementCount = specs.reduce((sum, s) => sum + s.placementCount, 0);
+      const progressPercent = total > 0 ? Math.round((uploaded / total) * 100) : 0;
+      
+      metrics.set(channel, { total, uploaded, pending, placementCount, progressPercent });
+    });
+    
+    return metrics;
+  }, [specsByChannel, uploadedAssets]);
+
+  // Get specs for current channel (or all)
+  const currentChannelSpecs = useMemo(() => {
+    if (activeChannel === 'all') {
+      return groupedSpecs;
+    }
+    return specsByChannel.get(activeChannel) || [];
+  }, [activeChannel, groupedSpecs, specsByChannel]);
 
   // Load existing assets from campaign on mount
   useEffect(() => {
@@ -264,9 +466,9 @@ export function CreativeAssetsManager({
     };
   }, [groupedSpecs, uploadedAssets]);
 
-  // Enrich specs with status and apply sorting
+  // Enrich specs with status and apply sorting (filtered by current channel)
   const enrichedSpecs = useMemo<EnrichedSpec[]>(() => {
-    const specs = groupedSpecs.map(spec => {
+    const specs = currentChannelSpecs.map(spec => {
       const asset = uploadedAssets.get(spec.specGroupId);
       return {
         ...spec,
@@ -306,7 +508,7 @@ export function CreativeAssetsManager({
     }
 
     return specs;
-  }, [groupedSpecs, uploadedAssets, sortConfig]);
+  }, [currentChannelSpecs, uploadedAssets, sortConfig]);
 
   // Get uploaded assets list for table
   const uploadedAssetsList = useMemo(() => 
@@ -408,12 +610,13 @@ export function CreativeAssetsManager({
           previewUrl = URL.createObjectURL(processedFile.file);
         }
 
-        // Auto-match to spec groups
-        const matches = autoMatchFileToSpecs(processedFile.detectedSpecs, groupedSpecs);
+        // Auto-match to spec groups (channel-aware when a specific channel is selected)
+        const specsToMatch = activeChannel === 'all' ? groupedSpecs : currentChannelSpecs;
+        const matches = autoMatchFileToSpecs(processedFile.detectedSpecs, specsToMatch);
         const bestMatch = matches.length > 0 ? matches[0] : null;
         const matchConfidence = bestMatch ? bestMatch.matchScore : 0;
 
-        console.log(`[ZIP] Found ${matches.length} matches for ${processedFile.fileName}`);
+        console.log(`[ZIP] Found ${matches.length} matches for ${processedFile.fileName} in ${activeChannel === 'all' ? 'all channels' : activeChannel}`);
         if (bestMatch) {
           console.log(`[ZIP] Best match: ${bestMatch.specGroupId} with ${matchConfidence}% confidence`);
           console.log(`[ZIP] Match reasons:`, bestMatch.matchReasons);
@@ -482,7 +685,7 @@ export function CreativeAssetsManager({
       setProcessingZip(false);
       setZipProgress(null);
     }
-  }, [groupedSpecs, uploadedAssets, onAssetsChange, toast]);
+  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, toast]);
 
   // Handle file selection
   const handleFilesSelected = useCallback(async (files: FileList | File[]) => {
@@ -533,9 +736,10 @@ export function CreativeAssetsManager({
         const detectedSpecs = await detectFileSpecs(file);
         console.log(`[File Detection] Detected specs for ${file.name}:`, detectedSpecs);
         
-        // Match against actual campaign requirements
-        const matches = autoMatchFileToSpecs(detectedSpecs, groupedSpecs);
-        console.log(`[File Matching] Found ${matches.length} potential matches for ${file.name}`);
+        // Match against channel-specific requirements when a channel is selected
+        const specsToMatch = activeChannel === 'all' ? groupedSpecs : currentChannelSpecs;
+        const matches = autoMatchFileToSpecs(detectedSpecs, specsToMatch);
+        console.log(`[File Matching] Found ${matches.length} potential matches for ${file.name} in ${activeChannel === 'all' ? 'all channels' : activeChannel}`);
         
         if (matches.length > 0) {
           console.log(`[File Matching] Top 3 matches:`, matches.slice(0, 3).map(m => ({
@@ -623,14 +827,15 @@ export function CreativeAssetsManager({
         });
       }
     }
-  }, [groupedSpecs, uploadedAssets, onAssetsChange, handleZipFile]);
+  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile]);
 
   // Dropzone
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
     onDrop: (acceptedFiles) => handleFilesSelected(acceptedFiles),
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'],
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.tif', '.tiff'],
       'video/*': ['.mp4', '.mov', '.avi'],
+      'audio/*': ['.mp3', '.wav', '.m4a'],  // For radio/podcast ads
       'application/pdf': ['.pdf'],
       'application/zip': ['.zip'],
       'text/plain': ['.txt'],  // For text-only/native newsletter ads
@@ -826,16 +1031,75 @@ export function CreativeAssetsManager({
   const pendingUploadCount = Array.from(uploadedAssets.values())
     .filter(a => a.uploadStatus === 'pending').length;
 
+  // Get current channel config for upload zone messaging
+  const currentChannelConfig = activeChannel !== 'all' ? channelConfig[activeChannel] : null;
+
   return (
     <>
       <div className="space-y-6">
+        {/* ==================== CHANNEL TABS ==================== */}
+        <div className="border-b">
+          <div className="flex flex-wrap gap-1 pb-2">
+            {/* All Channels Tab */}
+            <button
+              onClick={() => setActiveChannel('all')}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                activeChannel === 'all'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+              }`}
+            >
+              <span>📋</span>
+              <span>All</span>
+              <Badge variant={activeChannel === 'all' ? 'secondary' : 'outline'} className="ml-1 h-5 px-1.5 text-xs">
+                {metrics.uploaded}/{metrics.totalRequired}
+              </Badge>
+            </button>
+            
+            {/* Per-Channel Tabs */}
+            {availableChannels.map(channel => {
+              const config = channelConfig[channel];
+              const channelMet = channelMetrics.get(channel);
+              const isComplete = channelMet && channelMet.uploaded === channelMet.total;
+              const hasMissing = channelMet && channelMet.uploaded < channelMet.total;
+              
+              return (
+                <button
+                  key={channel}
+                  onClick={() => setActiveChannel(channel)}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                    activeChannel === channel
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                  }`}
+                >
+                  <span>{config?.icon || '📁'}</span>
+                  <span>{config?.label || channel}</span>
+                  <Badge 
+                    variant={activeChannel === channel ? 'secondary' : 'outline'} 
+                    className={`ml-1 h-5 px-1.5 text-xs ${
+                      isComplete ? 'bg-green-100 text-green-700 border-green-200' : 
+                      hasMissing ? 'bg-orange-100 text-orange-700 border-orange-200' : ''
+                    }`}
+                  >
+                    {channelMet?.uploaded || 0}/{channelMet?.total || 0}
+                  </Badge>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* ==================== UPPER SECTION: 2 COLUMNS ==================== */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* LEFT: Progress Indicator */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium font-sans">Requirements Progress</CardTitle>
+              <CardTitle className="text-base font-medium font-sans flex items-center gap-2">
+                {currentChannelConfig && <span>{currentChannelConfig.icon}</span>}
+                {activeChannel === 'all' ? 'Overall Progress' : `${currentChannelConfig?.label || activeChannel} Progress`}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {loadingExisting ? (
@@ -845,46 +1109,76 @@ export function CreativeAssetsManager({
                 </div>
               ) : (
                 <>
-                  {/* Main progress stats */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {metrics.uploaded}/{metrics.totalRequired}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Unique assets uploaded
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">{metrics.progressPercent}%</p>
-                      <p className="text-sm text-muted-foreground">Complete</p>
-                    </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <Progress value={metrics.progressPercent} className="h-2" />
-
-                  {/* Coverage summary */}
-                  <div className="pt-2 border-t">
-                    <p className="text-sm text-muted-foreground">
-                      Covering <span className="font-medium text-foreground">{metrics.placementsCovered}</span> of {metrics.totalPlacements} placements 
-                      across <span className="font-medium text-foreground">{metrics.uniquePublications}</span> publications
-                    </p>
-                  </div>
+                  {/* Main progress stats - show channel-specific or overall */}
+                  {activeChannel === 'all' ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-2xl font-bold">
+                            {metrics.uploaded}/{metrics.totalRequired}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Unique assets uploaded
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-primary">{metrics.progressPercent}%</p>
+                          <p className="text-sm text-muted-foreground">Complete</p>
+                        </div>
+                      </div>
+                      <Progress value={metrics.progressPercent} className="h-2" />
+                      <div className="pt-2 border-t">
+                        <p className="text-sm text-muted-foreground">
+                          Covering <span className="font-medium text-foreground">{metrics.placementsCovered}</span> of {metrics.totalPlacements} placements 
+                          across <span className="font-medium text-foreground">{metrics.uniquePublications}</span> publications
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {(() => {
+                        const channelMet = channelMetrics.get(activeChannel);
+                        return (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-2xl font-bold">
+                                  {channelMet?.uploaded || 0}/{channelMet?.total || 0}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {currentChannelConfig?.label} assets uploaded
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-primary">{channelMet?.progressPercent || 0}%</p>
+                                <p className="text-sm text-muted-foreground">Complete</p>
+                              </div>
+                            </div>
+                            <Progress value={channelMet?.progressPercent || 0} className="h-2" />
+                            <div className="pt-2 border-t">
+                              <p className="text-sm text-muted-foreground">
+                                Covering <span className="font-medium text-foreground">{channelMet?.placementCount || 0}</span> placements
+                              </p>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </>
+                  )}
 
                   {/* Status breakdown */}
                   <div className="flex gap-4 text-sm">
                     <div className="flex items-center gap-1.5">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span>{metrics.uploaded} uploaded</span>
+                      <span>{activeChannel === 'all' ? metrics.uploaded : channelMetrics.get(activeChannel)?.uploaded || 0} uploaded</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Circle className="h-4 w-4 text-blue-600 fill-blue-600" />
-                      <span>{metrics.pending} pending</span>
+                      <span>{activeChannel === 'all' ? metrics.pending : channelMetrics.get(activeChannel)?.pending || 0} pending</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <AlertCircle className="h-4 w-4 text-orange-500" />
-                      <span>{metrics.missing} missing</span>
+                      <span>{activeChannel === 'all' ? metrics.missing : ((channelMetrics.get(activeChannel)?.total || 0) - (channelMetrics.get(activeChannel)?.uploaded || 0) - (channelMetrics.get(activeChannel)?.pending || 0))} missing</span>
                     </div>
                   </div>
                 </>
@@ -892,13 +1186,18 @@ export function CreativeAssetsManager({
             </CardContent>
           </Card>
 
-          {/* RIGHT: Upload Zone */}
+          {/* RIGHT: Upload Zone - Channel-aware */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-medium font-sans flex items-center gap-2">
                 <Upload className="h-4 w-4" />
-                Upload Creative Assets
+                {activeChannel === 'all' ? 'Upload Creative Assets' : `Upload ${currentChannelConfig?.label} Assets`}
               </CardTitle>
+              {currentChannelConfig && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {currentChannelConfig.description}
+                </p>
+              )}
             </CardHeader>
             <CardContent>
               <div
@@ -913,11 +1212,22 @@ export function CreativeAssetsManager({
                 <input {...getInputProps()} />
                 <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                 <p className="text-sm font-medium">
-                  {isDragActive ? 'Drop files here' : 'Drag & drop files or click to browse'}
+                  {isDragActive 
+                    ? `Drop ${activeChannel === 'all' ? 'files' : currentChannelConfig?.label.toLowerCase() + ' assets'} here`
+                    : 'Drag & drop files or click to browse'
+                  }
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Images, videos, PDFs, ZIP, text files (.txt for native ads)
+                  {activeChannel === 'all' 
+                    ? 'Images, videos, PDFs, ZIP, audio (MP3, WAV), text files'
+                    : `Accepts: ${currentChannelConfig?.acceptedTypes || 'All file types'}`
+                  }
                 </p>
+                {activeChannel !== 'all' && (
+                  <p className="text-xs text-primary mt-2">
+                    Files will be matched to {currentChannelConfig?.label.toLowerCase()} requirements
+                  </p>
+                )}
               </div>
 
               {/* ZIP Processing Indicator */}
@@ -1047,7 +1357,11 @@ export function CreativeAssetsManager({
                                     </div>
                                     {byChannel[channel].map((spec) => (
                                       <SelectItem key={spec.specGroupId} value={spec.specGroupId}>
-                                        {formatDimensions(spec.dimensions)}
+                                        {/* Show audio-specific format for radio/podcast */}
+                                        {(spec.channel === 'radio' || spec.channel === 'podcast')
+                                          ? formatAudioSpec(spec)
+                                          : formatDimensions(spec.dimensions, spec.channel, spec.fileFormats)
+                                        }
                                         {spec.fileFormats && ` - ${spec.fileFormats.slice(0, 2).join('/')}`}
                                         <span className="text-muted-foreground ml-1">
                                           ({spec.placementCount} {spec.placementCount === 1 ? 'placement' : 'placements'})
@@ -1189,7 +1503,11 @@ export function CreativeAssetsManager({
                           </TableCell>
                           <TableCell>
                             <span className="text-sm font-medium">
-                              {formatDimensions(spec.dimensions)}
+                              {/* Show audio-specific format for radio/podcast, dimensions for others */}
+                              {(spec.channel === 'radio' || spec.channel === 'podcast')
+                                ? formatAudioSpec(spec)
+                                : formatDimensions(spec.dimensions, spec.channel, spec.fileFormats)
+                              }
                             </span>
                             {spec.fileFormats && (
                               <p className="text-xs text-muted-foreground mt-0.5">

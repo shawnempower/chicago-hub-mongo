@@ -4,7 +4,10 @@
   "type": "object",
   "properties": {
     "_id": {
-      "type": ["string", "object"],
+      "type": [
+        "string",
+        "object"
+      ],
       "description": "MongoDB ObjectId or UUID"
     },
     "publicationId": {
@@ -24,17 +27,35 @@
           "description": "Primary website URL"
         },
         "founded": {
-          "type": ["string", "integer"],
+          "type": [
+            "string",
+            "integer"
+          ],
           "description": "Year founded or founding date"
         },
         "publicationType": {
           "type": "string",
-          "enum": ["daily", "weekly", "monthly", "bi-weekly", "quarterly", "other"],
+          "enum": [
+            "daily",
+            "weekly",
+            "monthly",
+            "bi-weekly",
+            "quarterly",
+            "other"
+          ],
           "description": "Publication frequency"
         },
         "contentType": {
           "type": "string",
-          "enum": ["news", "lifestyle", "business", "entertainment", "sports", "alternative", "mixed"],
+          "enum": [
+            "news",
+            "lifestyle",
+            "business",
+            "entertainment",
+            "sports",
+            "alternative",
+            "mixed"
+          ],
           "description": "Primary content focus"
         },
         "headquarters": {
@@ -43,7 +64,13 @@
         },
         "geographicCoverage": {
           "type": "string",
-          "enum": ["local", "regional", "state", "national", "international"],
+          "enum": [
+            "local",
+            "regional",
+            "state",
+            "national",
+            "international"
+          ],
           "description": "Geographic scope of coverage"
         },
         "primaryServiceArea": {
@@ -62,18 +89,29 @@
           "description": "Geographic areas served by this publication (linked to areas collection)",
           "items": {
             "type": "object",
-            "required": ["dmaName", "dmaNormalized"],
+            "required": [
+              "dmaName",
+              "dmaNormalized"
+            ],
             "properties": {
               "dmaName": {
                 "type": "string",
                 "description": "DMA display name (e.g., 'CHICAGO, IL')",
-                "examples": ["CHICAGO, IL", "NEW YORK, NY", "LOS ANGELES, CA"]
+                "examples": [
+                  "CHICAGO, IL",
+                  "NEW YORK, NY",
+                  "LOS ANGELES, CA"
+                ]
               },
               "dmaNormalized": {
                 "type": "string",
                 "description": "Normalized DMA identifier for lookups in areas collection",
                 "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
-                "examples": ["chicago-il", "new-york-ny", "los-angeles-ca"]
+                "examples": [
+                  "chicago-il",
+                  "new-york-ny",
+                  "los-angeles-ca"
+                ]
               },
               "isPrimary": {
                 "type": "boolean",
@@ -85,7 +123,10 @@
                 "description": "Specific counties served within this DMA (optional)",
                 "items": {
                   "type": "object",
-                  "required": ["name", "normalized"],
+                  "required": [
+                    "name",
+                    "normalized"
+                  ],
                   "properties": {
                     "name": {
                       "type": "string",
@@ -128,8 +169,14 @@
                 "dmaNormalized": "chicago-il",
                 "isPrimary": true,
                 "counties": [
-                  { "name": "COOK", "normalized": "cook" },
-                  { "name": "LAKE", "normalized": "lake" }
+                  {
+                    "name": "COOK",
+                    "normalized": "cook"
+                  },
+                  {
+                    "name": "LAKE",
+                    "normalized": "lake"
+                  }
                 ],
                 "coveragePercentage": 85
               },
@@ -179,7 +226,12 @@
             },
             "preferredContact": {
               "type": "string",
-              "enum": ["email", "phone", "text", "linkedin"]
+              "enum": [
+                "email",
+                "phone",
+                "text",
+                "linkedin"
+              ]
             }
           }
         },
@@ -201,7 +253,12 @@
             },
             "preferredContact": {
               "type": "string",
-              "enum": ["email", "phone", "text", "linkedin"]
+              "enum": [
+                "email",
+                "phone",
+                "text",
+                "linkedin"
+              ]
             }
           }
         },
@@ -309,26 +366,25 @@
                   },
                   "adFormat": {
                     "type": "string",
-                    "enum": ["banner", "video", "native", "takeover", "sponsored_content", "custom"],
+                    "enum": [
+                      "banner",
+                      "video",
+                      "native",
+                      "takeover",
+                      "sponsored_content",
+                      "custom"
+                    ],
                     "description": "Primary ad format type"
-                  },
-                  "sizes": {
-                    "type": "array",
-                    "description": "LEGACY: Array of supported ad sizes. Use format.dimensions instead.",
-                    "items": {
-                      "type": "string",
-                      "examples": ["300x250", "728x90", "320x50", "300x600", "970x250", "160x600", "custom"]
-                    }
                   },
                   "format": {
                     "type": "object",
-                    "description": "Structured ad format specification",
+                    "description": "Creative format specifications for ad delivery",
                     "properties": {
                       "dimensions": {
                         "oneOf": [
                           {
                             "type": "string",
-                            "description": "Single dimension value (e.g., '300x250', 'text-only', 'responsive')"
+                            "description": "Single dimension value (e.g., '300x250', '30s', 'text-only')"
                           },
                           {
                             "type": "array",
@@ -339,9 +395,40 @@
                             "minItems": 1
                           }
                         ]
+                      },
+                      "fileFormats": {
+                        "type": "array",
+                        "description": "Accepted file formats (e.g., ['JPG', 'PNG', 'GIF'] or ['MP3', 'WAV'])",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "maxFileSize": {
+                        "type": "string",
+                        "description": "Maximum file size (e.g., '150KB', '5MB', '50MB')"
+                      },
+                      "colorSpace": {
+                        "type": "string",
+                        "enum": [
+                          "RGB",
+                          "CMYK",
+                          "Grayscale"
+                        ],
+                        "description": "Required color space for print ads"
+                      },
+                      "resolution": {
+                        "type": "string",
+                        "description": "Required resolution (e.g., '300dpi', '1080p', '72dpi')"
+                      },
+                      "duration": {
+                        "type": "integer",
+                        "description": "Duration in seconds for audio/video ads (e.g., 15, 30, 60)"
+                      },
+                      "bitrate": {
+                        "type": "string",
+                        "description": "Audio/video bitrate requirement (e.g., '128kbps', '320kbps')"
                       }
-                    },
-                    "required": ["dimensions"]
+                    }
                   },
                   "location": {
                     "type": "string",
@@ -356,41 +443,20 @@
                       },
                       "pricingModel": {
                         "type": "string",
-                        "enum": ["flat_rate", "flat", "per_week", "per_day", "cpm", "cpc", "cpa", "contact"]
+                        "enum": [
+                          "flat_rate",
+                          "flat",
+                          "per_week",
+                          "per_day",
+                          "cpm",
+                          "cpc",
+                          "cpa",
+                          "contact"
+                        ]
                       },
                       "minimumCommitment": {
                         "type": "string",
                         "description": "Minimum booking commitment"
-                      }
-                    }
-                  },
-                  "specifications": {
-                    "type": "object",
-                    "properties": {
-                      "size": {
-                        "type": "string",
-                        "description": "Deprecated: Use sizes array instead. Kept for backward compatibility."
-                      },
-                      "format": {
-                        "type": "string",
-                        "enum": ["JPG", "PNG", "GIF", "HTML5", "MP4", "WebM", "VAST", "custom"],
-                        "description": "Accepted file formats"
-                      },
-                      "fileSize": {
-                        "type": "string",
-                        "description": "Maximum file size (e.g., '150KB', '5MB')"
-                      },
-                      "resolution": {
-                        "type": "string",
-                        "description": "Required resolution (e.g., '1920x1080')"
-                      },
-                      "animationAllowed": {
-                        "type": "boolean",
-                        "description": "Whether animated ads are permitted"
-                      },
-                      "thirdPartyTags": {
-                        "type": "boolean",
-                        "description": "Whether third-party ad tags are accepted"
                       }
                     }
                   },
@@ -441,14 +507,23 @@
                         },
                         "pricing": {
                           "type": "object",
-                          "properties": {                          
+                          "properties": {
                             "flatRate": {
                               "type": "number",
                               "description": "Price amount (meaning depends on pricingModel)"
                             },
                             "pricingModel": {
                               "type": "string",
-                              "enum": ["flat_rate", "flat", "per_week", "per_day", "cpm", "cpc", "cpa", "contact"]
+                              "enum": [
+                                "flat_rate",
+                                "flat",
+                                "per_week",
+                                "per_day",
+                                "cpm",
+                                "cpc",
+                                "cpa",
+                                "contact"
+                              ]
                             }
                           }
                         },
@@ -514,7 +589,18 @@
             "properties": {
               "platform": {
                 "type": "string",
-                "enum": ["facebook", "instagram", "twitter", "linkedin", "youtube", "tiktok", "pinterest", "snapchat", "threads", "other"]
+                "enum": [
+                  "facebook",
+                  "instagram",
+                  "twitter",
+                  "linkedin",
+                  "youtube",
+                  "tiktok",
+                  "pinterest",
+                  "snapchat",
+                  "threads",
+                  "other"
+                ]
               },
               "handle": {
                 "type": "string",
@@ -568,11 +654,27 @@
                     },
                     "adFormat": {
                       "type": "string",
-                      "enum": ["sponsored_post", "story_ad", "video_ad", "carousel_ad", "boosted_post", "influencer_partnership", "takeover", "custom"]
+                      "enum": [
+                        "sponsored_post",
+                        "story_ad",
+                        "video_ad",
+                        "carousel_ad",
+                        "boosted_post",
+                        "influencer_partnership",
+                        "takeover",
+                        "custom"
+                      ]
                     },
                     "postType": {
                       "type": "string",
-                      "enum": ["image", "video", "carousel", "story", "reel", "live"]
+                      "enum": [
+                        "image",
+                        "video",
+                        "carousel",
+                        "story",
+                        "reel",
+                        "live"
+                      ]
                     },
                     "pricing": {
                       "type": "object",
@@ -583,24 +685,13 @@
                         },
                         "pricingModel": {
                           "type": "string",
-                          "enum": ["per_post", "per_story", "monthly", "cpm", "contact"]
-                        }
-                      }
-                    },
-                    "specifications": {
-                      "type": "object",
-                      "properties": {
-                        "imageSize": {
-                          "type": "string"
-                        },
-                        "videoLength": {
-                          "type": "string"
-                        },
-                        "format": {
-                          "type": "string"
-                        },
-                        "aspectRatio": {
-                          "type": "string"
+                          "enum": [
+                            "per_post",
+                            "per_story",
+                            "monthly",
+                            "cpm",
+                            "contact"
+                          ]
                         }
                       }
                     },
@@ -654,7 +745,13 @@
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["per_post", "per_story", "monthly", "cpm", "contact"]
+                                "enum": [
+                                  "per_post",
+                                  "per_story",
+                                  "monthly",
+                                  "cpm",
+                                  "contact"
+                                ]
                               }
                             }
                           },
@@ -673,6 +770,60 @@
                             "type": "string",
                             "description": "Minimum booking commitment for this hub"
                           }
+                        }
+                      }
+                    },
+                    "format": {
+                      "type": "object",
+                      "description": "Creative format specifications for ad delivery",
+                      "properties": {
+                        "dimensions": {
+                          "oneOf": [
+                            {
+                              "type": "string",
+                              "description": "Single dimension value (e.g., '300x250', '30s', 'text-only')"
+                            },
+                            {
+                              "type": "array",
+                              "description": "Multiple accepted dimensions",
+                              "items": {
+                                "type": "string"
+                              },
+                              "minItems": 1
+                            }
+                          ]
+                        },
+                        "fileFormats": {
+                          "type": "array",
+                          "description": "Accepted file formats (e.g., ['JPG', 'PNG', 'GIF'] or ['MP3', 'WAV'])",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "maxFileSize": {
+                          "type": "string",
+                          "description": "Maximum file size (e.g., '150KB', '5MB', '50MB')"
+                        },
+                        "colorSpace": {
+                          "type": "string",
+                          "enum": [
+                            "RGB",
+                            "CMYK",
+                            "Grayscale"
+                          ],
+                          "description": "Required color space for print ads"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "description": "Required resolution (e.g., '300dpi', '1080p', '72dpi')"
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "description": "Duration in seconds for audio/video ads (e.g., 15, 30, 60)"
+                        },
+                        "bitrate": {
+                          "type": "string",
+                          "description": "Audio/video bitrate requirement (e.g., '128kbps', '320kbps')"
                         }
                       }
                     }
@@ -710,7 +861,10 @@
                 }
               }
             },
-            "required": ["platform", "handle"]
+            "required": [
+              "platform",
+              "handle"
+            ]
           }
         },
         "newsletters": {
@@ -727,7 +881,15 @@
               },
               "frequency": {
                 "type": "string",
-                "enum": ["daily", "weekly", "bi-weekly", "monthly", "seasonally", "irregular", "on-demand"]
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "bi-weekly",
+                  "monthly",
+                  "seasonally",
+                  "irregular",
+                  "on-demand"
+                ]
               },
               "sendDay": {
                 "type": "string",
@@ -766,21 +928,22 @@
                     },
                     "position": {
                       "type": "string",
-                      "enum": ["header", "footer", "inline", "dedicated"]
-                    },
-                    "dimensions": {
-                      "type": "string",
-                      "description": "LEGACY: Use format.dimensions instead. Kept for backward compatibility during migration."
+                      "enum": [
+                        "header",
+                        "footer",
+                        "inline",
+                        "dedicated"
+                      ]
                     },
                     "format": {
                       "type": "object",
-                      "description": "Structured ad format specification",
+                      "description": "Creative format specifications for ad delivery",
                       "properties": {
                         "dimensions": {
                           "oneOf": [
                             {
                               "type": "string",
-                              "description": "Single dimension value (e.g., '600x150', 'text-only', 'full-newsletter')"
+                              "description": "Single dimension value (e.g., '300x250', '30s', 'text-only')"
                             },
                             {
                               "type": "array",
@@ -791,9 +954,40 @@
                               "minItems": 1
                             }
                           ]
+                        },
+                        "fileFormats": {
+                          "type": "array",
+                          "description": "Accepted file formats (e.g., ['JPG', 'PNG', 'GIF'] or ['MP3', 'WAV'])",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "maxFileSize": {
+                          "type": "string",
+                          "description": "Maximum file size (e.g., '150KB', '5MB', '50MB')"
+                        },
+                        "colorSpace": {
+                          "type": "string",
+                          "enum": [
+                            "RGB",
+                            "CMYK",
+                            "Grayscale"
+                          ],
+                          "description": "Required color space for print ads"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "description": "Required resolution (e.g., '300dpi', '1080p', '72dpi')"
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "description": "Duration in seconds for audio/video ads (e.g., 15, 30, 60)"
+                        },
+                        "bitrate": {
+                          "type": "string",
+                          "description": "Audio/video bitrate requirement (e.g., '128kbps', '320kbps')"
                         }
-                      },
-                      "required": ["dimensions"]
+                      }
                     },
                     "pricing": {
                       "oneOf": [
@@ -807,7 +1001,10 @@
                             },
                             "pricingModel": {
                               "type": "string",
-                              "enum": ["per_send", "contact"],
+                              "enum": [
+                                "per_send",
+                                "contact"
+                              ],
                               "description": "Pricing model type"
                             },
                             "frequency": {
@@ -830,7 +1027,10 @@
                                   },
                                   "pricingModel": {
                                     "type": "string",
-                                    "enum": ["per_send", "contact"]
+                                    "enum": [
+                                      "per_send",
+                                      "contact"
+                                    ]
                                   },
                                   "frequency": {
                                     "type": "string"
@@ -888,7 +1088,10 @@
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["per_send", "contact"]
+                                "enum": [
+                                  "per_send",
+                                  "contact"
+                                ]
                               },
                               "frequency": {
                                 "type": "string",
@@ -962,7 +1165,13 @@
               },
               "frequency": {
                 "type": "string",
-                "enum": ["daily", "weekly", "bi-weekly", "monthly", "quarterly"]
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "bi-weekly",
+                  "monthly",
+                  "quarterly"
+                ]
               },
               "circulation": {
                 "type": "integer",
@@ -998,14 +1207,23 @@
                     },
                     "adFormat": {
                       "type": "string",
-                      "enum": ["full page", "half page", "quarter page", "eighth page", "business card", "classified", "insert"]
-                    },
-                    "dimensions": {
-                      "type": "string"
+                      "enum": [
+                        "full page",
+                        "half page",
+                        "quarter page",
+                        "eighth page",
+                        "business card",
+                        "classified",
+                        "insert"
+                      ]
                     },
                     "color": {
                       "type": "string",
-                      "enum": ["color", "black and white", "both"]
+                      "enum": [
+                        "color",
+                        "black and white",
+                        "both"
+                      ]
                     },
                     "location": {
                       "type": "string",
@@ -1023,7 +1241,11 @@
                             },
                             "pricingModel": {
                               "type": "string",
-                              "enum": ["per_ad", "per_line", "contact"],
+                              "enum": [
+                                "per_ad",
+                                "per_line",
+                                "contact"
+                              ],
                               "description": "Pricing model type"
                             },
                             "frequency": {
@@ -1046,7 +1268,10 @@
                                   },
                                   "pricingModel": {
                                     "type": "string",
-                                    "enum": ["per_ad", "contact"]
+                                    "enum": [
+                                      "per_ad",
+                                      "contact"
+                                    ]
                                   },
                                   "frequency": {
                                     "type": "string"
@@ -1057,20 +1282,6 @@
                           }
                         }
                       ]
-                    },
-                    "specifications": {
-                      "type": "object",
-                      "properties": {
-                        "format": {
-                          "type": "string"
-                        },
-                        "resolution": {
-                          "type": "string"
-                        },
-                        "bleed": {
-                          "type": "boolean"
-                        }
-                      }
                     },
                     "performanceMetrics": {
                       "type": "object",
@@ -1118,7 +1329,10 @@
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["per_ad", "contact"]
+                                "enum": [
+                                  "per_ad",
+                                  "contact"
+                                ]
                               },
                               "frequency": {
                                 "type": "string",
@@ -1141,6 +1355,60 @@
                             "type": "string",
                             "description": "Minimum booking commitment for this hub"
                           }
+                        }
+                      }
+                    },
+                    "format": {
+                      "type": "object",
+                      "description": "Creative format specifications for ad delivery",
+                      "properties": {
+                        "dimensions": {
+                          "oneOf": [
+                            {
+                              "type": "string",
+                              "description": "Single dimension value (e.g., '300x250', '30s', 'text-only')"
+                            },
+                            {
+                              "type": "array",
+                              "description": "Multiple accepted dimensions",
+                              "items": {
+                                "type": "string"
+                              },
+                              "minItems": 1
+                            }
+                          ]
+                        },
+                        "fileFormats": {
+                          "type": "array",
+                          "description": "Accepted file formats (e.g., ['JPG', 'PNG', 'GIF'] or ['MP3', 'WAV'])",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "maxFileSize": {
+                          "type": "string",
+                          "description": "Maximum file size (e.g., '150KB', '5MB', '50MB')"
+                        },
+                        "colorSpace": {
+                          "type": "string",
+                          "enum": [
+                            "RGB",
+                            "CMYK",
+                            "Grayscale"
+                          ],
+                          "description": "Required color space for print ads"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "description": "Required resolution (e.g., '300dpi', '1080p', '72dpi')"
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "description": "Duration in seconds for audio/video ads (e.g., 15, 30, 60)"
+                        },
+                        "bitrate": {
+                          "type": "string",
+                          "description": "Audio/video bitrate requirement (e.g., '128kbps', '320kbps')"
                         }
                       }
                     }
@@ -1202,7 +1470,13 @@
               },
               "frequency": {
                 "type": "string",
-                "enum": ["annual", "bi-annually", "quarterly", "monthly", "weekly"],
+                "enum": [
+                  "annual",
+                  "bi-annually",
+                  "quarterly",
+                  "monthly",
+                  "weekly"
+                ],
                 "description": "How often the event occurs (standardized for revenue forecasting)"
               },
               "averageAttendance": {
@@ -1234,7 +1508,13 @@
                     },
                     "level": {
                       "type": "string",
-                      "enum": ["title", "presenting", "supporting", "vendor", "booth"],
+                      "enum": [
+                        "title",
+                        "presenting",
+                        "supporting",
+                        "vendor",
+                        "booth"
+                      ],
                       "description": "Sponsorship level"
                     },
                     "benefits": {
@@ -1256,7 +1536,10 @@
                             },
                             "pricingModel": {
                               "type": "string",
-                              "enum": ["flat", "contact"],
+                              "enum": [
+                                "flat",
+                                "contact"
+                              ],
                               "description": "Pricing model (flat for one-time fee, contact for custom quotes)"
                             },
                             "frequency": {
@@ -1264,7 +1547,10 @@
                               "description": "Optional: for multi-year commitments (e.g., '3x' for 3 years)"
                             }
                           },
-                          "required": ["flatRate", "pricingModel"]
+                          "required": [
+                            "flatRate",
+                            "pricingModel"
+                          ]
                         },
                         {
                           "type": "array",
@@ -1277,13 +1563,19 @@
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["flat", "contact"]
+                                "enum": [
+                                  "flat",
+                                  "contact"
+                                ]
                               },
                               "frequency": {
                                 "type": "string"
                               }
                             },
-                            "required": ["flatRate", "pricingModel"]
+                            "required": [
+                              "flatRate",
+                              "pricingModel"
+                            ]
                           }
                         }
                       ]
@@ -1334,7 +1626,10 @@
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["flat", "contact"]
+                                "enum": [
+                                  "flat",
+                                  "contact"
+                                ]
                               }
                             }
                           },
@@ -1356,54 +1651,70 @@
                         }
                       }
                     },
-                    "specifications": {
-                      "type": "object",
-                      "description": "Structured sponsorship specifications",
-                      "properties": {
-                        "logoPlacement": {
-                          "type": "array",
-                          "description": "Where sponsor logos will appear",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "speakingOpportunity": {
-                          "type": "boolean",
-                          "description": "Whether sponsor gets speaking time"
-                        },
-                        "tableSeating": {
-                          "type": "integer",
-                          "description": "Number of seats/tables provided"
-                        },
-                        "vipAccess": {
-                          "type": "boolean",
-                          "description": "VIP access included"
-                        },
-                        "socialMediaMentions": {
-                          "type": "integer",
-                          "description": "Number of social media mentions"
-                        },
-                        "pressRelease": {
-                          "type": "boolean",
-                          "description": "Press release inclusion"
-                        },
-                        "mediaKit": {
-                          "type": "boolean",
-                          "description": "Media kit inclusion"
-                        },
-                        "booths": {
-                          "type": "integer",
-                          "description": "Number of booth spaces"
-                        }
-                      }
-                    },
                     "available": {
                       "type": "boolean",
                       "default": true,
                       "description": "Whether this sponsorship is still available (not sold out)"
+                    },
+                    "format": {
+                      "type": "object",
+                      "description": "Creative format specifications for ad delivery",
+                      "properties": {
+                        "dimensions": {
+                          "oneOf": [
+                            {
+                              "type": "string",
+                              "description": "Single dimension value (e.g., '300x250', '30s', 'text-only')"
+                            },
+                            {
+                              "type": "array",
+                              "description": "Multiple accepted dimensions",
+                              "items": {
+                                "type": "string"
+                              },
+                              "minItems": 1
+                            }
+                          ]
+                        },
+                        "fileFormats": {
+                          "type": "array",
+                          "description": "Accepted file formats (e.g., ['JPG', 'PNG', 'GIF'] or ['MP3', 'WAV'])",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "maxFileSize": {
+                          "type": "string",
+                          "description": "Maximum file size (e.g., '150KB', '5MB', '50MB')"
+                        },
+                        "colorSpace": {
+                          "type": "string",
+                          "enum": [
+                            "RGB",
+                            "CMYK",
+                            "Grayscale"
+                          ],
+                          "description": "Required color space for print ads"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "description": "Required resolution (e.g., '300dpi', '1080p', '72dpi')"
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "description": "Duration in seconds for audio/video ads (e.g., 15, 30, 60)"
+                        },
+                        "bitrate": {
+                          "type": "string",
+                          "description": "Audio/video bitrate requirement (e.g., '128kbps', '320kbps')"
+                        }
+                      }
                     }
                   },
-                  "required": ["level", "pricing"]
+                  "required": [
+                    "level",
+                    "pricing"
+                  ]
                 }
               },
               "generalTerms": {
@@ -1452,7 +1763,14 @@
               },
               "frequency": {
                 "type": "string",
-                "enum": ["daily", "weekly", "bi-weekly", "monthly", "irregular", "on-demand"]
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "bi-weekly",
+                  "monthly",
+                  "irregular",
+                  "on-demand"
+                ]
               },
               "averageDownloads": {
                 "type": "integer"
@@ -1467,7 +1785,16 @@
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "enum": ["apple_podcasts", "spotify", "youtube_music", "amazon_music", "stitcher", "overcast", "castbox", "other"]
+                  "enum": [
+                    "apple_podcasts",
+                    "spotify",
+                    "youtube_music",
+                    "amazon_music",
+                    "stitcher",
+                    "overcast",
+                    "castbox",
+                    "other"
+                  ]
                 }
               },
               "advertisingOpportunities": {
@@ -1480,7 +1807,14 @@
                     },
                     "adFormat": {
                       "type": "string",
-                      "enum": ["pre-roll", "mid-roll", "post-roll", "host-read", "programmatic", "sponsored_content"]
+                      "enum": [
+                        "pre-roll",
+                        "mid-roll",
+                        "post-roll",
+                        "host-read",
+                        "programmatic",
+                        "sponsored_content"
+                      ]
                     },
                     "duration": {
                       "type": "integer",
@@ -1498,7 +1832,14 @@
                             },
                             "pricingModel": {
                               "type": "string",
-                              "enum": ["per_ad", "per_episode", "cpd", "cpm", "flat", "contact"],
+                              "enum": [
+                                "per_ad",
+                                "per_episode",
+                                "cpd",
+                                "cpm",
+                                "flat",
+                                "contact"
+                              ],
                               "description": "Pricing model type"
                             },
                             "frequency": {
@@ -1521,7 +1862,15 @@
                                   },
                                   "pricingModel": {
                                     "type": "string",
-                                    "enum": ["per_ad", "per_line", "per_episode", "cpd", "cpm", "flat", "contact"]
+                                    "enum": [
+                                      "per_ad",
+                                      "per_line",
+                                      "per_episode",
+                                      "cpd",
+                                      "cpm",
+                                      "flat",
+                                      "contact"
+                                    ]
                                   },
                                   "frequency": {
                                     "type": "string"
@@ -1532,18 +1881,6 @@
                           }
                         }
                       ]
-                    },
-                    "specifications": {
-                      "type": "object",
-                      "properties": {
-                        "format": {
-                          "type": "string",
-                          "enum": ["mp3", "wav", "script"]
-                        },
-                        "bitrate": {
-                          "type": "string"
-                        }
-                      }
                     },
                     "available": {
                       "type": "boolean",
@@ -1586,23 +1923,30 @@
                             "type": "string",
                             "description": "Display name for the marketing hub"
                           },
-                            "pricing": {
-                              "type": "object",
-                              "properties": {
-                                "flatRate": {
-                                  "type": "number",
-                                  "description": "Price per ad instance or per 1000 downloads"
-                                },
-                                "pricingModel": {
-                                  "type": "string",
-                                  "enum": ["per_ad", "per_episode", "cpd", "cpm", "flat", "contact"]
-                                },
-                                "frequency": {
-                                  "type": "string",
-                                  "description": "Ad frequency"
-                                }
+                          "pricing": {
+                            "type": "object",
+                            "properties": {
+                              "flatRate": {
+                                "type": "number",
+                                "description": "Price per ad instance or per 1000 downloads"
+                              },
+                              "pricingModel": {
+                                "type": "string",
+                                "enum": [
+                                  "per_ad",
+                                  "per_episode",
+                                  "cpd",
+                                  "cpm",
+                                  "flat",
+                                  "contact"
+                                ]
+                              },
+                              "frequency": {
+                                "type": "string",
+                                "description": "Ad frequency"
                               }
-                            },
+                            }
+                          },
                           "discount": {
                             "type": "number",
                             "minimum": 0,
@@ -1618,6 +1962,60 @@
                             "type": "string",
                             "description": "Minimum booking commitment for this hub"
                           }
+                        }
+                      }
+                    },
+                    "format": {
+                      "type": "object",
+                      "description": "Creative format specifications for ad delivery",
+                      "properties": {
+                        "dimensions": {
+                          "oneOf": [
+                            {
+                              "type": "string",
+                              "description": "Single dimension value (e.g., '300x250', '30s', 'text-only')"
+                            },
+                            {
+                              "type": "array",
+                              "description": "Multiple accepted dimensions",
+                              "items": {
+                                "type": "string"
+                              },
+                              "minItems": 1
+                            }
+                          ]
+                        },
+                        "fileFormats": {
+                          "type": "array",
+                          "description": "Accepted file formats (e.g., ['JPG', 'PNG', 'GIF'] or ['MP3', 'WAV'])",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "maxFileSize": {
+                          "type": "string",
+                          "description": "Maximum file size (e.g., '150KB', '5MB', '50MB')"
+                        },
+                        "colorSpace": {
+                          "type": "string",
+                          "enum": [
+                            "RGB",
+                            "CMYK",
+                            "Grayscale"
+                          ],
+                          "description": "Required color space for print ads"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "description": "Required resolution (e.g., '300dpi', '1080p', '72dpi')"
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "description": "Duration in seconds for audio/video ads (e.g., 15, 30, 60)"
+                        },
+                        "bitrate": {
+                          "type": "string",
+                          "description": "Audio/video bitrate requirement (e.g., '128kbps', '320kbps')"
                         }
                       }
                     }
@@ -1674,7 +2072,18 @@
               },
               "format": {
                 "type": "string",
-                "enum": ["news_talk", "classic_rock", "country", "pop", "hip_hop", "jazz", "classical", "alternative", "sports", "other"]
+                "enum": [
+                  "news_talk",
+                  "classic_rock",
+                  "country",
+                  "pop",
+                  "hip_hop",
+                  "jazz",
+                  "classical",
+                  "alternative",
+                  "sports",
+                  "other"
+                ]
               },
               "coverageArea": {
                 "type": "string"
@@ -1699,7 +2108,18 @@
                     },
                     "frequency": {
                       "type": "string",
-                      "enum": ["daily", "weekdays", "weekly", "bi-weekly", "weekend-only", "saturdays", "sundays", "weekdays-plus-saturday", "weekdays-plus-sunday", "custom"],
+                      "enum": [
+                        "daily",
+                        "weekdays",
+                        "weekly",
+                        "bi-weekly",
+                        "weekend-only",
+                        "saturdays",
+                        "sundays",
+                        "weekdays-plus-saturday",
+                        "weekdays-plus-sunday",
+                        "custom"
+                      ],
                       "description": "How often the show airs (like newsletter frequency)"
                     },
                     "daysPerWeek": {
@@ -1726,7 +2146,14 @@
                           },
                           "adFormat": {
                             "type": "string",
-                            "enum": ["30_second_spot", "60_second_spot", "15_second_spot", "live_read", "sponsorship", "traffic_weather_sponsor"]
+                            "enum": [
+                              "30_second_spot",
+                              "60_second_spot",
+                              "15_second_spot",
+                              "live_read",
+                              "sponsorship",
+                              "traffic_weather_sponsor"
+                            ]
                           },
                           "spotsPerShow": {
                             "type": "number",
@@ -1745,7 +2172,10 @@
                                   },
                                   "pricingModel": {
                                     "type": "string",
-                                    "enum": ["per_spot", "contact"],
+                                    "enum": [
+                                      "per_spot",
+                                      "contact"
+                                    ],
                                     "description": "Pricing model type"
                                   },
                                   "frequency": {
@@ -1768,7 +2198,10 @@
                                         },
                                         "pricingModel": {
                                           "type": "string",
-                                          "enum": ["per_spot", "contact"]
+                                          "enum": [
+                                            "per_spot",
+                                            "contact"
+                                          ]
                                         },
                                         "frequency": {
                                           "type": "string"
@@ -1779,22 +2212,6 @@
                                 }
                               }
                             ]
-                          },
-                          "specifications": {
-                            "type": "object",
-                            "properties": {
-                              "format": {
-                                "type": "string",
-                                "enum": ["mp3", "wav", "live_script"]
-                              },
-                              "bitrate": {
-                                "type": "string"
-                              },
-                              "duration": {
-                                "type": "integer",
-                                "description": "Ad duration in seconds"
-                              }
-                            }
                           },
                           "available": {
                             "type": "boolean",
@@ -1843,7 +2260,10 @@
                                     },
                                     "pricingModel": {
                                       "type": "string",
-                                      "enum": ["per_spot", "contact"]
+                                      "enum": [
+                                        "per_spot",
+                                        "contact"
+                                      ]
                                     },
                                     "frequency": {
                                       "type": "string"
@@ -1864,12 +2284,70 @@
                                 }
                               }
                             }
+                          },
+                          "format": {
+                            "type": "object",
+                            "description": "Creative format specifications for ad delivery",
+                            "properties": {
+                              "dimensions": {
+                                "oneOf": [
+                                  {
+                                    "type": "string",
+                                    "description": "Single dimension value (e.g., '300x250', '30s', 'text-only')"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "description": "Multiple accepted dimensions",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "minItems": 1
+                                  }
+                                ]
+                              },
+                              "fileFormats": {
+                                "type": "array",
+                                "description": "Accepted file formats (e.g., ['JPG', 'PNG', 'GIF'] or ['MP3', 'WAV'])",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "maxFileSize": {
+                                "type": "string",
+                                "description": "Maximum file size (e.g., '150KB', '5MB', '50MB')"
+                              },
+                              "colorSpace": {
+                                "type": "string",
+                                "enum": [
+                                  "RGB",
+                                  "CMYK",
+                                  "Grayscale"
+                                ],
+                                "description": "Required color space for print ads"
+                              },
+                              "resolution": {
+                                "type": "string",
+                                "description": "Required resolution (e.g., '300dpi', '1080p', '72dpi')"
+                              },
+                              "duration": {
+                                "type": "integer",
+                                "description": "Duration in seconds for audio/video ads (e.g., 15, 30, 60)"
+                              },
+                              "bitrate": {
+                                "type": "string",
+                                "description": "Audio/video bitrate requirement (e.g., '128kbps', '320kbps')"
+                              }
+                            }
                           }
                         }
                       }
                     }
                   },
-                  "required": ["name", "frequency", "advertisingOpportunities"]
+                  "required": [
+                    "name",
+                    "frequency",
+                    "advertisingOpportunities"
+                  ]
                 }
               },
               "advertisingOpportunities": {
@@ -1882,11 +2360,23 @@
                     },
                     "adFormat": {
                       "type": "string",
-                      "enum": ["30_second_spot", "60_second_spot", "live_read", "sponsorship", "traffic_weather_sponsor"]
+                      "enum": [
+                        "30_second_spot",
+                        "60_second_spot",
+                        "live_read",
+                        "sponsorship",
+                        "traffic_weather_sponsor"
+                      ]
                     },
                     "timeSlot": {
                       "type": "string",
-                      "enum": ["drive_time_morning", "drive_time_evening", "midday", "weekend", "overnight"]
+                      "enum": [
+                        "drive_time_morning",
+                        "drive_time_evening",
+                        "midday",
+                        "weekend",
+                        "overnight"
+                      ]
                     },
                     "pricing": {
                       "oneOf": [
@@ -1900,7 +2390,10 @@
                             },
                             "pricingModel": {
                               "type": "string",
-                              "enum": ["per_spot", "contact"],
+                              "enum": [
+                                "per_spot",
+                                "contact"
+                              ],
                               "description": "Pricing model type"
                             },
                             "frequency": {
@@ -1923,7 +2416,10 @@
                                   },
                                   "pricingModel": {
                                     "type": "string",
-                                    "enum": ["per_spot", "contact"]
+                                    "enum": [
+                                      "per_spot",
+                                      "contact"
+                                    ]
                                   },
                                   "frequency": {
                                     "type": "string"
@@ -1934,22 +2430,6 @@
                           }
                         }
                       ]
-                    },
-                    "specifications": {
-                      "type": "object",
-                      "properties": {
-                        "format": {
-                          "type": "string",
-                          "enum": ["mp3", "wav", "live_script"]
-                        },
-                        "bitrate": {
-                          "type": "string"
-                        },
-                        "duration": {
-                          "type": "integer",
-                          "description": "Ad duration in seconds. Standard values: 15, 30, 60. Custom durations are supported for special formats."
-                        }
-                      }
                     },
                     "available": {
                       "type": "boolean",
@@ -2001,7 +2481,10 @@
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["per_spot", "contact"]
+                                "enum": [
+                                  "per_spot",
+                                  "contact"
+                                ]
                               },
                               "frequency": {
                                 "type": "string",
@@ -2024,6 +2507,60 @@
                             "type": "string",
                             "description": "Minimum booking commitment for this hub"
                           }
+                        }
+                      }
+                    },
+                    "format": {
+                      "type": "object",
+                      "description": "Creative format specifications for ad delivery",
+                      "properties": {
+                        "dimensions": {
+                          "oneOf": [
+                            {
+                              "type": "string",
+                              "description": "Single dimension value (e.g., '300x250', '30s', 'text-only')"
+                            },
+                            {
+                              "type": "array",
+                              "description": "Multiple accepted dimensions",
+                              "items": {
+                                "type": "string"
+                              },
+                              "minItems": 1
+                            }
+                          ]
+                        },
+                        "fileFormats": {
+                          "type": "array",
+                          "description": "Accepted file formats (e.g., ['JPG', 'PNG', 'GIF'] or ['MP3', 'WAV'])",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "maxFileSize": {
+                          "type": "string",
+                          "description": "Maximum file size (e.g., '150KB', '5MB', '50MB')"
+                        },
+                        "colorSpace": {
+                          "type": "string",
+                          "enum": [
+                            "RGB",
+                            "CMYK",
+                            "Grayscale"
+                          ],
+                          "description": "Required color space for print ads"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "description": "Required resolution (e.g., '300dpi', '1080p', '72dpi')"
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "description": "Duration in seconds for audio/video ads (e.g., 15, 30, 60)"
+                        },
+                        "bitrate": {
+                          "type": "string",
+                          "description": "Audio/video bitrate requirement (e.g., '128kbps', '320kbps')"
                         }
                       }
                     }
@@ -2080,7 +2617,15 @@
                 "description": "Platforms where content is streamed (multi-platform support)",
                 "items": {
                   "type": "string",
-                  "enum": ["youtube", "twitch", "facebook_live", "instagram_live", "linkedin_live", "custom_streaming", "other"]
+                  "enum": [
+                    "youtube",
+                    "twitch",
+                    "facebook_live",
+                    "instagram_live",
+                    "linkedin_live",
+                    "custom_streaming",
+                    "other"
+                  ]
                 }
               },
               "subscribers": {
@@ -2096,12 +2641,24 @@
               },
               "contentType": {
                 "type": "string",
-                "enum": ["live_news", "recorded_shows", "interviews", "events", "mixed"]
+                "enum": [
+                  "live_news",
+                  "recorded_shows",
+                  "interviews",
+                  "events",
+                  "mixed"
+                ]
               },
               "frequency": {
                 "type": "string",
                 "description": "How often content is published (for revenue calculations)",
-                "enum": ["daily", "weekly", "bi-weekly", "monthly", "irregular"]
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "bi-weekly",
+                  "monthly",
+                  "irregular"
+                ]
               },
               "advertisingOpportunities": {
                 "type": "array",
@@ -2113,7 +2670,15 @@
                     },
                     "adFormat": {
                       "type": "string",
-                      "enum": ["pre-roll", "mid-roll", "post-roll", "overlay", "sponsored_content", "product_placement", "live_mention"]
+                      "enum": [
+                        "pre-roll",
+                        "mid-roll",
+                        "post-roll",
+                        "overlay",
+                        "sponsored_content",
+                        "product_placement",
+                        "live_mention"
+                      ]
                     },
                     "duration": {
                       "type": "integer",
@@ -2121,7 +2686,11 @@
                     },
                     "position": {
                       "type": "string",
-                      "enum": ["pre-roll", "mid-roll", "post-roll"],
+                      "enum": [
+                        "pre-roll",
+                        "mid-roll",
+                        "post-roll"
+                      ],
                       "description": "Standardized position field"
                     },
                     "pricing": {
@@ -2133,29 +2702,19 @@
                         },
                         "pricingModel": {
                           "type": "string",
-                          "enum": ["cpm", "cpv", "flat", "per_spot", "monthly", "contact"],
+                          "enum": [
+                            "cpm",
+                            "cpv",
+                            "flat",
+                            "per_spot",
+                            "monthly",
+                            "contact"
+                          ],
                           "description": "How the flatRate is calculated"
                         },
                         "frequency": {
                           "type": "string",
                           "description": "Optional: for commitment tiers (e.g., 1x, 4x, 12x)"
-                        }
-                      }
-                    },
-                    "specifications": {
-                      "type": "object",
-                      "properties": {
-                        "format": {
-                          "type": "string",
-                          "enum": ["mp4", "mov", "avi", "script", "image_overlay"]
-                        },
-                        "resolution": {
-                          "type": "string",
-                          "enum": ["1080p", "720p", "480p", "4k"]
-                        },
-                        "aspectRatio": {
-                          "type": "string",
-                          "enum": ["16:9", "9:16", "1:1", "4:3"]
                         }
                       }
                     },
@@ -2209,7 +2768,14 @@
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["cpm", "cpv", "flat", "per_spot", "monthly", "contact"]
+                                "enum": [
+                                  "cpm",
+                                  "cpv",
+                                  "flat",
+                                  "per_spot",
+                                  "monthly",
+                                  "contact"
+                                ]
                               },
                               "frequency": {
                                 "type": "string",
@@ -2232,6 +2798,60 @@
                             "type": "string",
                             "description": "Minimum booking commitment for this hub"
                           }
+                        }
+                      }
+                    },
+                    "format": {
+                      "type": "object",
+                      "description": "Creative format specifications for ad delivery",
+                      "properties": {
+                        "dimensions": {
+                          "oneOf": [
+                            {
+                              "type": "string",
+                              "description": "Single dimension value (e.g., '300x250', '30s', 'text-only')"
+                            },
+                            {
+                              "type": "array",
+                              "description": "Multiple accepted dimensions",
+                              "items": {
+                                "type": "string"
+                              },
+                              "minItems": 1
+                            }
+                          ]
+                        },
+                        "fileFormats": {
+                          "type": "array",
+                          "description": "Accepted file formats (e.g., ['JPG', 'PNG', 'GIF'] or ['MP3', 'WAV'])",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "maxFileSize": {
+                          "type": "string",
+                          "description": "Maximum file size (e.g., '150KB', '5MB', '50MB')"
+                        },
+                        "colorSpace": {
+                          "type": "string",
+                          "enum": [
+                            "RGB",
+                            "CMYK",
+                            "Grayscale"
+                          ],
+                          "description": "Required color space for print ads"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "description": "Required resolution (e.g., '300dpi', '1080p', '72dpi')"
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "description": "Duration in seconds for audio/video ads (e.g., 15, 30, 60)"
+                        },
+                        "bitrate": {
+                          "type": "string",
+                          "description": "Audio/video bitrate requirement (e.g., '128kbps', '320kbps')"
                         }
                       }
                     }
@@ -2290,7 +2910,17 @@
               },
               "network": {
                 "type": "string",
-                "enum": ["abc", "nbc", "cbs", "fox", "pbs", "cw", "independent", "cable", "other"]
+                "enum": [
+                  "abc",
+                  "nbc",
+                  "cbs",
+                  "fox",
+                  "pbs",
+                  "cw",
+                  "independent",
+                  "cable",
+                  "other"
+                ]
               },
               "coverageArea": {
                 "type": "string",
@@ -2310,11 +2940,25 @@
                     },
                     "adFormat": {
                       "type": "string",
-                      "enum": ["30_second_spot", "60_second_spot", "15_second_spot", "sponsored_segment", "product_placement", "billboard"]
+                      "enum": [
+                        "30_second_spot",
+                        "60_second_spot",
+                        "15_second_spot",
+                        "sponsored_segment",
+                        "product_placement",
+                        "billboard"
+                      ]
                     },
                     "daypart": {
                       "type": "string",
-                      "enum": ["prime_time", "daytime", "early_morning", "late_night", "weekend", "sports"]
+                      "enum": [
+                        "prime_time",
+                        "daytime",
+                        "early_morning",
+                        "late_night",
+                        "weekend",
+                        "sports"
+                      ]
                     },
                     "pricing": {
                       "type": "object",
@@ -2325,24 +2969,12 @@
                         },
                         "pricingModel": {
                           "type": "string",
-                          "enum": ["per_spot", "weekly", "monthly", "contact"]
-                        }
-                      }
-                    },
-                    "specifications": {
-                      "type": "object",
-                      "properties": {
-                        "format": {
-                          "type": "string",
-                          "enum": ["mpeg2", "h264", "prores", "live_script"]
-                        },
-                        "resolution": {
-                          "type": "string",
-                          "enum": ["1080p", "720p", "4k"]
-                        },
-                        "duration": {
-                          "type": "integer",
-                          "description": "Ad duration in seconds"
+                          "enum": [
+                            "per_spot",
+                            "weekly",
+                            "monthly",
+                            "contact"
+                          ]
                         }
                       }
                     },
@@ -2394,7 +3026,12 @@
                               },
                               "pricingModel": {
                                 "type": "string",
-                                "enum": ["per_spot", "weekly", "monthly", "contact"]
+                                "enum": [
+                                  "per_spot",
+                                  "weekly",
+                                  "monthly",
+                                  "contact"
+                                ]
                               }
                             }
                           },
@@ -2410,6 +3047,60 @@
                           "minimumCommitment": {
                             "type": "string"
                           }
+                        }
+                      }
+                    },
+                    "format": {
+                      "type": "object",
+                      "description": "Creative format specifications for ad delivery",
+                      "properties": {
+                        "dimensions": {
+                          "oneOf": [
+                            {
+                              "type": "string",
+                              "description": "Single dimension value (e.g., '300x250', '30s', 'text-only')"
+                            },
+                            {
+                              "type": "array",
+                              "description": "Multiple accepted dimensions",
+                              "items": {
+                                "type": "string"
+                              },
+                              "minItems": 1
+                            }
+                          ]
+                        },
+                        "fileFormats": {
+                          "type": "array",
+                          "description": "Accepted file formats (e.g., ['JPG', 'PNG', 'GIF'] or ['MP3', 'WAV'])",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "maxFileSize": {
+                          "type": "string",
+                          "description": "Maximum file size (e.g., '150KB', '5MB', '50MB')"
+                        },
+                        "colorSpace": {
+                          "type": "string",
+                          "enum": [
+                            "RGB",
+                            "CMYK",
+                            "Grayscale"
+                          ],
+                          "description": "Required color space for print ads"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "description": "Required resolution (e.g., '300dpi', '1080p', '72dpi')"
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "description": "Duration in seconds for audio/video ads (e.g., 15, 30, 60)"
+                        },
+                        "bitrate": {
+                          "type": "string",
+                          "description": "Audio/video bitrate requirement (e.g., '128kbps', '320kbps')"
                         }
                       }
                     }
@@ -2665,7 +3356,14 @@
         },
         "ownershipType": {
           "type": "string",
-          "enum": ["independent", "chain", "nonprofit", "public", "private", "family-owned"]
+          "enum": [
+            "independent",
+            "chain",
+            "nonprofit",
+            "public",
+            "private",
+            "family-owned"
+          ]
         },
         "parentCompany": {
           "type": "string"
@@ -2752,7 +3450,17 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["website", "print", "newsletter", "social", "events", "email", "podcasts", "radio", "streaming"]
+              "enum": [
+                "website",
+                "print",
+                "newsletter",
+                "social",
+                "events",
+                "email",
+                "podcasts",
+                "radio",
+                "streaming"
+              ]
             }
           },
           "pricing": {
@@ -2796,7 +3504,14 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["credit cards", "ach", "check", "paypal", "stripe", "square"]
+            "enum": [
+              "credit cards",
+              "ach",
+              "check",
+              "paypal",
+              "stripe",
+              "square"
+            ]
           }
         }
       }
@@ -2884,7 +3599,14 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["website", "web_search", "manual_entry", "api", "media_kit", "sales_contact"]
+            "enum": [
+              "website",
+              "web_search",
+              "manual_entry",
+              "api",
+              "media_kit",
+              "sales_contact"
+            ]
           }
         },
         "confidence": {
@@ -2922,7 +3644,12 @@
         },
         "verificationStatus": {
           "type": "string",
-          "enum": ["verified", "needs_verification", "outdated", "incomplete"]
+          "enum": [
+            "verified",
+            "needs_verification",
+            "outdated",
+            "incomplete"
+          ]
         }
       }
     },
@@ -2962,7 +3689,10 @@
       }
     }
   },
-  "required": ["publicationId", "basicInfo"],
+  "required": [
+    "publicationId",
+    "basicInfo"
+  ],
   "additionalProperties": false,
   "indexes": [
     {

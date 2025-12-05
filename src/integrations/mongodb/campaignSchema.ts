@@ -110,12 +110,14 @@ export interface AdSpecification {
   placementId: string; // Reference to inventory item
   placementName: string;
   channel: string;
-  specifications: {
+  format: {
     dimensions?: string; // e.g., "300x250" or "Full page"
     fileFormats?: string[]; // e.g., ["JPG", "PNG", "PDF"]
     maxFileSize?: string; // e.g., "10MB"
     colorSpace?: string; // e.g., "CMYK", "RGB"
     resolution?: string; // e.g., "300dpi"
+    duration?: number; // Duration in seconds for audio/video
+    bitrate?: string; // e.g., "128kbps"
     additionalRequirements?: string;
   };
   deadline?: Date;

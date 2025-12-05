@@ -26,12 +26,14 @@ interface RequirementItem {
   publicationId: number;
   channel: string;
   placementName: string;
-  specifications: {
+  format: {
     dimensions?: string;
     fileFormats?: string[];
     maxFileSize?: string;
     colorSpace?: string;
     resolution?: string;
+    duration?: number;
+    bitrate?: string;
     additionalRequirements?: string;
   };
   deadline?: string;
@@ -46,38 +48,7 @@ export function CreativeRequirementsChecklist({
   uploadedAssets
 }: CreativeRequirementsChecklistProps) {
   
-  // Extract requirements from either campaign or analysis result
-  const getRequirements = (): RequirementItem[] => {
-    const requirements: RequirementItem[] = [];
-    
-    const inventory = campaign?.selectedInventory || analysisResult?.selectedInventory;
-    if (!inventory?.publications) return requirements;
-
-    inventory.publications.forEach((pub: any) => {
-      pub.inventoryItems?.forEach((item: any) => {
-        if (item.isExcluded) return; // Skip excluded items
-        
-        requirements.push({
-          publicationName: pub.publicationName,
-          publicationId: pub.publicationId,
-          channel: item.channel || 'general',
-          placementName: item.itemName || item.sourceName || 'Ad Placement',
-          specifications: item.specifications || {},
-          deadline: campaign?.timeline ? 
-            `${Math.ceil((new Date(campaign.timeline.startDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days before start` 
-            : '7 days before start date',
-          status: 'pending' // TODO: Track actual status from creative assets
-        });
-      });
-    });
-
-    return requirements;
-  };
-
-  const requirements = getRequirements();
-  const totalPlacements = requirements.length;
-  
-  // Group requirements by unique specs (one asset per spec group)
+  // Build inventory items array for extraction
   const allInventoryItems: any[] = [];
   const inventory = campaign?.selectedInventory || analysisResult?.selectedInventory;
   if (inventory?.publications) {
@@ -97,8 +68,33 @@ export function CreativeRequirementsChecklist({
     });
   }
   
+  // Use the extractor which has all the fallback logic for duration, dimensions, etc.
   const extractedRequirements = extractRequirementsForSelectedInventory(allInventoryItems);
   const groupedSpecs = groupRequirementsBySpec(extractedRequirements);
+  
+  // Convert extracted requirements to RequirementItem format for display
+  const requirements: RequirementItem[] = extractedRequirements.map(req => ({
+    publicationName: req.publicationName,
+    publicationId: req.publicationId,
+    channel: req.channel,
+    placementName: req.placementName,
+    format: {
+      dimensions: Array.isArray(req.dimensions) ? req.dimensions.join(', ') : req.dimensions,
+      fileFormats: req.fileFormats,
+      maxFileSize: req.maxFileSize,
+      colorSpace: req.colorSpace,
+      resolution: req.resolution,
+      duration: req.duration,
+      bitrate: req.bitrate,
+      additionalRequirements: req.additionalRequirements
+    },
+    deadline: campaign?.timeline ? 
+      `${Math.ceil((new Date(campaign.timeline.startDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days before start` 
+      : '7 days before start date',
+    status: 'pending' // TODO: Track actual status from creative assets
+  }));
+
+  const totalPlacements = requirements.length;
   
   const totalRequirements = groupedSpecs.length; // Total unique spec groups
   
@@ -243,40 +239,46 @@ export function CreativeRequirementsChecklist({
                       )}
                     </div>
 
-                    {/* Specifications */}
-                    {Object.keys(req.specifications).length > 0 && (
+                    {/* Format Specifications */}
+                    {Object.keys(req.format).length > 0 && (
                       <div className="space-y-1 text-xs">
-                        {req.specifications.dimensions && (
+                        {req.format.dimensions && (
                           <div className="flex gap-2">
                             <span className="text-muted-foreground">Size:</span>
-                            <span className="font-medium">{req.specifications.dimensions}</span>
+                            <span className="font-medium">{req.format.dimensions}</span>
                           </div>
                         )}
-                        {req.specifications.fileFormats && req.specifications.fileFormats.length > 0 && (
+                        {req.format.fileFormats && req.format.fileFormats.length > 0 && (
                           <div className="flex gap-2">
                             <span className="text-muted-foreground">Formats:</span>
-                            <span className="font-medium">{req.specifications.fileFormats.join(', ')}</span>
+                            <span className="font-medium">{req.format.fileFormats.join(', ')}</span>
                           </div>
                         )}
-                        {req.specifications.maxFileSize && (
+                        {req.format.maxFileSize && (
                           <div className="flex gap-2">
                             <span className="text-muted-foreground">Max Size:</span>
-                            <span className="font-medium">{req.specifications.maxFileSize}</span>
+                            <span className="font-medium">{req.format.maxFileSize}</span>
                           </div>
                         )}
-                        {req.specifications.colorSpace && (
+                        {req.format.colorSpace && (
                           <div className="flex gap-2">
                             <span className="text-muted-foreground">Color:</span>
-                            <span className="font-medium">{req.specifications.colorSpace}</span>
+                            <span className="font-medium">{req.format.colorSpace}</span>
                           </div>
                         )}
-                        {req.specifications.additionalRequirements && (
+                        {req.format.duration && (
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground">Duration:</span>
+                            <span className="font-medium">{req.format.duration}s</span>
+                          </div>
+                        )}
+                        {req.format.additionalRequirements && (
                           <div className="flex gap-2">
                             <span className="text-muted-foreground">Notes:</span>
-                            <span className="font-medium">{req.specifications.additionalRequirements}</span>
+                            <span className="font-medium">{req.format.additionalRequirements}</span>
                           </div>
                         )}
-                        {Object.keys(req.specifications).length === 0 && (
+                        {Object.keys(req.format).length === 0 && (
                           <p className="text-muted-foreground italic">
                             Specifications will be confirmed by publication
                           </p>

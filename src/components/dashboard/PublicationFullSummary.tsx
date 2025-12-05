@@ -575,22 +575,19 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       <p className="font-medium mb-3">Website Advertising Opportunities</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {publication.distributionChannels.website.advertisingOpportunities.map((ad: any, index: number) => {
-                          // Get dimensions from new format or fallback to legacy
+                          // Get dimensions from format object
                           const getDimensions = () => {
                             if (ad.format?.dimensions) {
                               const dims = ad.format.dimensions;
                               return Array.isArray(dims) ? dims.join(', ') : dims;
                             }
-                            if (ad.sizes && ad.sizes.length > 0) {
-                              return ad.sizes.filter((s: string) => s).join(', ');
-                            }
-                            return ad.specifications?.size || undefined;
+                            return undefined;
                           };
                           
                           const dimensions = getDimensions();
                           const dimsArray = ad.format?.dimensions 
                             ? (Array.isArray(ad.format.dimensions) ? ad.format.dimensions : [ad.format.dimensions])
-                            : ad.sizes || [];
+                            : [];
                           
                           return (
                             <AdOpportunityCard
@@ -642,13 +639,13 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                           <p className="font-medium mb-3">Newsletter Advertising Opportunities</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {newsletter.advertisingOpportunities.map((ad: any, adIndex: number) => {
-                              // Get dimensions from new format or fallback to legacy
+                              // Get dimensions from format object
                               const getDimensions = () => {
                                 if (ad.format?.dimensions) {
                                   const dims = ad.format.dimensions;
                                   return Array.isArray(dims) ? dims.join(', ') : dims;
                                 }
-                                return ad.dimensions || undefined;
+                                return undefined;
                               };
                               
                               return (
@@ -699,7 +696,7 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                               // Build fields array dynamically
                               const fields: Array<{ label: string; value: string | undefined }> = [
                                 { label: 'Format', value: ad.adFormat },
-                                { label: 'Dimensions', value: ad.dimensions },
+                                { label: 'Dimensions', value: ad.format?.dimensions },
                                 { label: 'Color', value: ad.color },
                                 { label: 'Location', value: ad.location },
                               ];
@@ -734,8 +731,8 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                               }
                               
                               // Add file format at the end
-                              if (ad.specifications?.format) {
-                                fields.push({ label: 'File Format', value: ad.specifications.format });
+                              if (ad.format?.fileFormats) {
+                                fields.push({ label: 'File Format', value: ad.format.fileFormats.join(', ') });
                               }
                               
                               return (
@@ -882,9 +879,9 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                 hubPricingCount={ad.hubPricing?.length || 0}
                                 fields={[
                                   { label: 'Format', value: ad.adFormat },
-                                  { label: 'Duration', value: ad.duration ? `${ad.duration}s` : undefined },
-                                  { label: 'File Format', value: ad.specifications?.format },
-                                  { label: 'Bitrate', value: ad.specifications?.bitrate },
+                                  { label: 'Duration', value: ad.format?.duration ? `${ad.format.duration}s` : (ad.duration ? `${ad.duration}s` : undefined) },
+                                  { label: 'File Format', value: ad.format?.fileFormats?.join(', ') },
+                                  { label: 'Bitrate', value: ad.format?.bitrate },
                                   { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
                                   { label: 'Model', value: ad.pricing?.pricingModel },
                                   { label: 'Available', value: ad.available ? 'Yes' : 'No' },
@@ -930,8 +927,8 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                 fields={[
                                   { label: 'Format', value: ad.adFormat },
                                   { label: 'Time Slot', value: ad.timeSlot ? ad.timeSlot.replace(/_/g, ' ') : undefined },
-                                  { label: 'Duration', value: ad.specifications?.duration ? `${ad.specifications.duration}s` : undefined },
-                                  { label: 'File Format', value: ad.specifications?.format },
+                                  { label: 'Duration', value: ad.format?.duration ? `${ad.format.duration}s` : undefined },
+                                  { label: 'File Format', value: ad.format?.fileFormats?.join(', ') },
                                   { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
                                   { label: 'Model', value: ad.pricing?.pricingModel },
                                   { label: 'Available', value: ad.available ? 'Yes' : 'No' },
@@ -976,9 +973,9 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                                 hubPricingCount={ad.hubPricing?.length || 0}
                                 fields={[
                                   { label: 'Format', value: ad.adFormat },
-                                  { label: 'Duration', value: ad.duration ? `${ad.duration}s` : undefined },
-                                  { label: 'File Format', value: ad.specifications?.format },
-                                  { label: 'Resolution', value: ad.specifications?.resolution },
+                                  { label: 'Duration', value: ad.format?.duration ? `${ad.format.duration}s` : (ad.duration ? `${ad.duration}s` : undefined) },
+                                  { label: 'File Format', value: ad.format?.fileFormats?.join(', ') },
+                                  { label: 'Resolution', value: ad.format?.resolution },
                                   { label: 'Price', value: ad.pricing?.flatRate ? `$${ad.pricing.flatRate}` : undefined },
                                   { label: 'Model', value: ad.pricing?.pricingModel },
                                   { label: 'Available', value: ad.available ? 'Yes' : 'No' },

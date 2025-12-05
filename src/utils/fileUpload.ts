@@ -31,10 +31,22 @@ const DEFAULT_ALLOWED_TYPES = [
   'image/png',
   'image/gif',
   'image/webp',
+  'image/svg+xml',
+  'image/tiff', // Print ads
   'application/pdf',
+  'application/zip',
+  'application/x-zip-compressed',
   'video/mp4',
   'video/quicktime',
-  'video/x-msvideo'
+  'video/x-msvideo',
+  // Audio files (for radio/podcast ads)
+  'audio/mpeg', // MP3
+  'audio/wav',
+  'audio/x-wav',
+  'audio/mp4', // M4A
+  // Text/document files (live reads, scripts, newsletter content)
+  'text/plain', // TXT
+  'text/html' // HTML
 ];
 
 /**

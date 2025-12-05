@@ -297,7 +297,7 @@ export function CampaignCreativeAssetsStep({
                     handleFileSelect(requirement, file);
                   }
                 }}
-                accept={requirement.fileFormats?.map(f => `.${f.toLowerCase()}`).join(',') || 'image/*,.pdf,.zip'}
+                accept={requirement.fileFormats?.map(f => `.${f.toLowerCase()}`).join(',') || 'image/*,.pdf,.zip,.mp3,.wav,.m4a,.txt,.html'}
               />
               <label
                 htmlFor={`file-${requirement.placementId}`}

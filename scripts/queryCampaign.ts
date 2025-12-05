@@ -31,7 +31,9 @@ async function queryCampaign(campaignName: string) {
     await client.connect();
     console.log('✅ Connected to MongoDB\n');
 
-    const db = client.db('chicago-hub');
+    const dbName = process.env.MONGODB_DB_NAME || 'chicago-hub';
+    console.log(`📂 Using database: ${dbName}\n`);
+    const db = client.db(dbName);
     const campaignsCollection = db.collection('campaigns');
     const publicationsCollection = db.collection('publications');
 

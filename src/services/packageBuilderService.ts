@@ -161,7 +161,7 @@ export class PackageBuilderService {
       hubPrice: number,
       pricingModel: string = 'flat',
       itemFrequencyString?: string,  // Frequency from the item itself (e.g., "weekly", "daily")
-      specifications?: any,
+      format?: any,  // Standardized format object
       audienceMetrics?: any,  // Audience metrics from parent channel
       performanceMetrics?: any  // Item-specific performance metrics
     ): InventoryItemWithConstraints | null => {
@@ -233,7 +233,7 @@ export class PackageBuilderService {
           hubPrice,
           pricingModel
         },
-        specifications,
+        format, // Standardized format object
         audienceMetrics,  // Include channel-level audience metrics
         performanceMetrics,  // Include item-level performance metrics
         publicationId: publication.publicationId,
@@ -283,7 +283,7 @@ export class PackageBuilderService {
             pricing.flatRate || pricing.rate || pricing.monthly || 0,
             pricing.pricingModel || 'flat',
             undefined,  // Website ads are typically monthly (handled by pricing model)
-            ad.specifications,
+            ad.format,  // Use standardized format object
             websiteMetrics,
             ad.performanceMetrics  // Pass item-level performance metrics
           );
@@ -318,7 +318,7 @@ export class PackageBuilderService {
               pricing.flatRate || pricing.perSend || pricing.monthly || 0,
               pricing.pricingModel || 'per_send',
               newsletter.frequency,  // Use the newsletter's actual frequency
-              ad.specifications,
+              ad.format,  // Use standardized format object
               newsletterMetrics,
               ad.performanceMetrics  // Pass item-level performance metrics
             );
@@ -353,7 +353,7 @@ export class PackageBuilderService {
               pricing.flatRate || pricing.perInsertion || pricing.monthly || 0,
               pricing.pricingModel || 'per_ad',
               printPub.frequency || publication.printFrequency,  // Use print publication's frequency
-              { size: ad.dimensions || ad.size, ...ad.specifications },
+              ad.format,  // Use standardized format object
               printMetrics,
               ad.performanceMetrics  // Pass item-level performance metrics
             );
@@ -388,7 +388,7 @@ export class PackageBuilderService {
               pricing.perPost || pricing.flatRate || pricing.monthly || 0,
               pricing.pricingModel || 'per_post',
               ad.frequency,  // Use ad's frequency if specified
-              { platform: social.platform, ...ad.specifications },
+              ad.format,  // Use standardized format object
               socialMetrics,
               ad.performanceMetrics  // Pass item-level performance metrics
             );
@@ -423,7 +423,7 @@ export class PackageBuilderService {
               pricing.perEpisode || pricing.flatRate || pricing.monthly || 0,
               pricing.pricingModel || 'per_episode',
               podcast.frequency,  // Use podcast's frequency (e.g., "weekly", "daily")
-              ad.specifications,
+              ad.format,  // Use standardized format object
               podcastMetrics,
               ad.performanceMetrics  // Pass item-level performance metrics
             );
@@ -466,7 +466,7 @@ export class PackageBuilderService {
                   pricing.perSpot || pricing.flatRate || pricing.monthly || 0,
                   pricing.pricingModel || 'per_spot',
                   show.frequency,  // Use show's frequency (e.g., "daily", "weekdays", "weekly")
-                  ad.specifications,
+                  ad.format,  // Use standardized format object
                   showMetrics,
                   ad.performanceMetrics  // Pass item-level performance metrics
                 );
@@ -493,7 +493,7 @@ export class PackageBuilderService {
               pricing.perSpot || pricing.flatRate || pricing.monthly || 0,
               pricing.pricingModel || 'per_spot',
               undefined,  // Station-level ads don't have specific frequency
-              ad.specifications,
+              ad.format,  // Use standardized format object
               radioMetrics,
               ad.performanceMetrics  // Pass item-level performance metrics
             );
@@ -532,7 +532,7 @@ export class PackageBuilderService {
               pricing.perAd || pricing.flatRate || pricing.monthly || 0,
               pricing.pricingModel || 'flat',
               stream.frequency,  // Use streaming channel's frequency
-              ad.specifications,
+              ad.format,  // Use standardized format object
               streamingMetrics,
               ad.performanceMetrics  // Pass item-level performance metrics
             );

@@ -368,7 +368,7 @@ export function CampaignCreativeAssetsStepGrouped({
                           handleFileSelect(specGroup, file);
                         }
                       }}
-                      accept={specGroup.fileFormats?.map(f => `.${f.toLowerCase()}`).join(',') || 'image/*,.pdf,.zip'}
+                      accept={specGroup.fileFormats?.map(f => `.${f.toLowerCase()}`).join(',') || 'image/*,.pdf,.zip,.mp3,.wav,.m4a,.txt,.html'}
                     />
                     <label
                       htmlFor={`file-${specGroup.specGroupId}`}

@@ -294,9 +294,9 @@ export function LineItemEditor({
             )}
           </div>
           
-          {item.specifications && Object.keys(item.specifications).length > 0 && (
+          {item.format && Object.keys(item.format).length > 0 && (
             <div className="flex items-center gap-3 flex-wrap text-xs">
-              {Object.entries(item.specifications)
+              {Object.entries(item.format)
                 .filter(([key, value]) => value)
                 .map(([key, value], idx) => (
                   <span key={idx} className="flex items-center gap-1">
@@ -410,11 +410,11 @@ export function LineItemEditor({
         {renderCostFormula()}
       </div>
 
-      {/* Specifications */}
-      {item.specifications && Object.keys(item.specifications).length > 0 && (
+      {/* Format Specifications */}
+      {item.format && Object.keys(item.format).length > 0 && (
         <div className="pt-2 border-t">
           <div className="flex items-center gap-3 flex-wrap text-xs">
-            {Object.entries(item.specifications)
+            {Object.entries(item.format)
               .filter(([key, value]) => value)
               .map(([key, value], idx) => (
                 <span key={idx} className="flex items-center gap-1">

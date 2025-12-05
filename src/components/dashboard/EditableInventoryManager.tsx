@@ -172,11 +172,10 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                 flatRate: 500,
                 minimumCommitment: '1 month'
               },
-              specifications: {
-                format: 'JPG, PNG, GIF',
-                fileSize: '150KB max',
-                animationAllowed: true,
-                thirdPartyTags: false
+              format: {
+                dimensions: '300x250',
+                fileFormats: ['JPG', 'PNG', 'GIF'],
+                maxFileSize: '150KB'
               },
               monthlyImpressions: 50000,
               available: true
@@ -403,7 +402,6 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
               {
                 name: 'New Print Ad',
                 adFormat: 'full page' as const,
-                dimensions: '8.5x11',
                 color: 'color' as const,
                 location: 'Inside Front Cover',
                 pricing: {
@@ -411,10 +409,11 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                   pricingModel: 'per_ad',
                   frequency: 'One time'
                 },
-                specifications: {
-                  format: 'PDF, AI, EPS',
-                  resolution: '300 DPI',
-                  bleed: true
+                format: {
+                  dimensions: '8.5x11',
+                  fileFormats: ['PDF', 'AI', 'EPS'],
+                  resolution: '300dpi',
+                  colorSpace: 'CMYK'
                 }
               }
             ]
@@ -472,7 +471,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
             advertisingOpportunities: printPub.advertisingOpportunities?.map((ad, aIndex) =>
               aIndex === adIndex ? { 
                 ...ad, 
-                specifications: { ...ad.specifications, [field]: value }
+                format: { ...ad.format, [field]: value }
               } : ad
             )
           } : printPub
@@ -758,8 +757,9 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                 name: 'New Radio Ad',
                 adFormat: '30_second_spot',
                 timeSlot: 'drive_time_morning',
-                specifications: {
-                  format: 'mp3',
+                format: {
+                  dimensions: '30s',
+                  fileFormats: ['MP3', 'WAV'],
                   duration: 30
                 },
                 pricing: { flatRate: 150, pricingModel: 'per_spot' }
@@ -1709,7 +1709,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         <div>
                           <Label>Dimensions</Label>
                           <Input
-                            value={ad.dimensions || ''}
+                            value={ad.format?.dimensions || ad.dimensions || ''}
                             onChange={(e) => updatePrintAd(printIndex, adIndex, 'dimensions', e.target.value)}
                             placeholder="8.5x11"
                           />

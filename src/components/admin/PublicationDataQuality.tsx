@@ -246,7 +246,7 @@ function analyzeInventoryItem(
 
   // Issue 9: Print dimension validation (CRITICAL for creative asset matching)
   if (channel.toLowerCase() === 'print') {
-    const dimensions = item.dimensions;
+    const dimensions = item.format?.dimensions;
     
     if (!dimensions) {
       issues.push({
@@ -283,8 +283,8 @@ function analyzeInventoryItem(
 
   // Issue 10: Newsletter dimension validation (for creative asset matching)
   if (channel.toLowerCase() === 'newsletter') {
-    // Prefer format.dimensions (canonical) over legacy dimensions field
-    const dimensions = item.format?.dimensions || item.dimensions;
+    // Get dimensions from format object
+    const dimensions = item.format?.dimensions;
     
     if (!dimensions) {
       issues.push({
@@ -328,9 +328,9 @@ function analyzeInventoryItem(
   if (channel.toLowerCase() === 'radio') {
     // Check for format.dimensions (e.g., "15s", "30s", "60s", "long-form")
     const dimensions = item.format?.dimensions;
-    const duration = item.specifications?.duration;
+    const duration = item.format?.duration;
     const adFormat = item.adFormat;
-    const fileFormats = item.specifications?.fileFormats;
+    const fileFormats = item.format?.fileFormats;
     
     if (!dimensions && !duration) {
       issues.push({
@@ -386,9 +386,9 @@ function analyzeInventoryItem(
   if (channel.toLowerCase() === 'podcast') {
     // Check for format.dimensions (e.g., "30s", "60s", "pre-roll", "host-read")
     const dimensions = item.format?.dimensions;
-    const duration = item.specifications?.duration;
+    const duration = item.format?.duration;
     const adFormat = item.adFormat;
-    const fileFormats = item.specifications?.fileFormats;
+    const fileFormats = item.format?.fileFormats;
     
     if (!dimensions && !adFormat) {
       issues.push({

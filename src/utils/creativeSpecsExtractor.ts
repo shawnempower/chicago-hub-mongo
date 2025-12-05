@@ -389,7 +389,8 @@ export function extractCreativeRequirements(
     });
   }
 
-  return requirements;
+  // Expand any requirements with multiple pixel dimensions into separate requirements
+  return expandMultiDimensionRequirements(requirements);
 }
 
 /**
@@ -430,7 +431,57 @@ export function extractRequirementsForSelectedInventory(
   });
 
   console.log(`extractRequirementsForSelectedInventory: Extracted ${requirements.length} requirements from ${inventoryItems.length} items`);
-  return requirements;
+  
+  // Expand any requirements with multiple pixel dimensions into separate requirements
+  const expanded = expandMultiDimensionRequirements(requirements);
+  console.log(`extractRequirementsForSelectedInventory: Expanded to ${expanded.length} requirements (from ${requirements.length})`);
+  return expanded;
+}
+
+/**
+ * Check if a dimension string looks like a pixel size (e.g., "300x250", "728x90")
+ */
+function isPixelDimension(dim: string): boolean {
+  return /^\d+\s*x\s*\d+$/i.test(dim.trim());
+}
+
+/**
+ * Expand requirements that have multiple pixel dimensions into separate requirements.
+ * This ensures each ad size gets its own creative asset row.
+ * 
+ * For example, a requirement with dimensions: ["300x250", "300x600", "450x900"]
+ * becomes three separate requirements, one for each size.
+ * 
+ * Non-pixel dimensions (like "pre-roll", "host-read", "text-only") are NOT split.
+ */
+function expandMultiDimensionRequirements(requirements: CreativeRequirement[]): CreativeRequirement[] {
+  const expanded: CreativeRequirement[] = [];
+  
+  requirements.forEach(req => {
+    // Check if dimensions is an array of pixel sizes
+    if (Array.isArray(req.dimensions) && req.dimensions.length > 1) {
+      // Check if ALL items are pixel dimensions (to avoid splitting podcast positions, etc.)
+      const allPixelDimensions = req.dimensions.every(d => isPixelDimension(d));
+      
+      if (allPixelDimensions) {
+        // Split into separate requirements for each dimension
+        req.dimensions.forEach((dim, dimIndex) => {
+          expanded.push({
+            ...req,
+            placementId: `${req.placementId}_dim${dimIndex}`,
+            placementName: `${req.placementName} (${dim})`,
+            dimensions: dim, // Single dimension string now
+          });
+        });
+        return; // Skip adding original
+      }
+    }
+    
+    // For single dimensions or non-pixel arrays, keep as-is
+    expanded.push(req);
+  });
+  
+  return expanded;
 }
 
 /**
@@ -551,4 +602,3 @@ export function groupRequirementsByChannel(
 
   return grouped;
 }
-

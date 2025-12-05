@@ -1,7 +1,8 @@
 /**
  * Refresh Package Dimensions
  * 
- * Updates existing packages to include print dimensions from source publications
+ * Updates existing packages to include dimensions and specs from source publications
+ * for ALL channels (print, newsletter, website, radio, podcast, etc.)
  */
 
 import { MongoClient, ObjectId } from 'mongodb';
@@ -79,59 +80,108 @@ async function refreshPackageDimensions(packageIdOrName: string) {
 
       console.log(`\n📰 ${pub.publicationName} (${pub.publicationId})`);
 
-      // Process each inventory item
+      // Process each inventory item (all channels)
       for (const item of pub.inventoryItems || []) {
         itemsProcessed++;
         
-        // Only process print items without dimensions
-        if (item.channel !== 'print') continue;
-        if (item.specifications?.dimensions) {
-          console.log(`   ✓ ${item.itemName} - already has dimensions`);
+        // Skip if already has all specs
+        if (item.specifications?.dimensions && item.specifications?.fileFormats) {
+          console.log(`   ✓ ${item.itemName} (${item.channel}) - already has specs`);
           continue;
         }
 
         // Parse the item path to find the source opportunity
-        // Format: "distributionChannels.print[0].advertisingOpportunities[1]"
-        const pathMatch = item.itemPath.match(/distributionChannels\.(\w+)\[(\d+)\]\.advertisingOpportunities\[(\d+)\]/);
+        // Formats: 
+        //   "distributionChannels.print[0].advertisingOpportunities[1]"
+        //   "distributionChannels.website.advertisingOpportunities[0]"
+        //   "distributionChannels.newsletters[0].advertisingOpportunities[0]"
+        //   "distributionChannels.podcasts[0].advertisingOpportunities[0]"
+        //   "distributionChannels.radioStations[0].shows[0].advertisingOpportunities[0]"
+        let opportunity: any = null;
         
-        if (!pathMatch) {
-          console.log(`   ⚠️  ${item.itemName} - couldn't parse path: ${item.itemPath}`);
+        // Try different path patterns
+        const arrayPathMatch = item.itemPath?.match(/distributionChannels\.(\w+)\[(\d+)\]\.advertisingOpportunities\[(\d+)\]/);
+        const simplePathMatch = item.itemPath?.match(/distributionChannels\.(\w+)\.advertisingOpportunities\[(\d+)\]/);
+        const radioPathMatch = item.itemPath?.match(/distributionChannels\.radioStations\[(\d+)\]\.shows\[(\d+)\]\.advertisingOpportunities\[(\d+)\]/);
+        
+        if (radioPathMatch) {
+          const [, stationIdx, showIdx, oppIdx] = radioPathMatch;
+          const station = publication.distributionChannels?.radioStations?.[parseInt(stationIdx)];
+          const show = station?.shows?.[parseInt(showIdx)];
+          opportunity = show?.advertisingOpportunities?.[parseInt(oppIdx)];
+        } else if (arrayPathMatch) {
+          const [, channelKey, channelIdx, oppIdx] = arrayPathMatch;
+          const channel = publication.distributionChannels?.[channelKey];
+          const channelArray = Array.isArray(channel) ? channel : [channel];
+          const channelItem = channelArray[parseInt(channelIdx)];
+          opportunity = channelItem?.advertisingOpportunities?.[parseInt(oppIdx)];
+        } else if (simplePathMatch) {
+          const [, channelKey, oppIdx] = simplePathMatch;
+          const channel = publication.distributionChannels?.[channelKey];
+          opportunity = channel?.advertisingOpportunities?.[parseInt(oppIdx)];
+        }
+        
+        if (!opportunity) {
+          console.log(`   ⚠️  ${item.itemName} (${item.channel}) - couldn't find source: ${item.itemPath}`);
           continue;
         }
 
-        const [, channelKey, channelIdx, oppIdx] = pathMatch;
+        // Initialize specifications if not exists
+        if (!item.specifications) {
+          item.specifications = {};
+        }
         
-        // Get the source opportunity from publication
-        const channel = publication.distributionChannels?.[channelKey];
-        if (!channel) continue;
-        
-        const channelArray = Array.isArray(channel) ? channel : [channel];
-        const channelItem = channelArray[parseInt(channelIdx)];
-        if (!channelItem) continue;
-        
-        const opportunity = channelItem.advertisingOpportunities?.[parseInt(oppIdx)];
-        if (!opportunity) continue;
+        let wasUpdated = false;
 
-        // Check if source has dimensions
-        if (opportunity.dimensions) {
-          // Add dimensions to item specifications
-          if (!item.specifications) {
-            item.specifications = {};
-          }
+        // Copy dimensions if missing
+        if (!item.specifications.dimensions && opportunity.dimensions) {
           item.specifications.dimensions = opportunity.dimensions;
-          
-          // Also add other print-specific fields if missing
-          if (opportunity.adFormat && !item.specifications.adFormat) {
-            item.specifications.adFormat = opportunity.adFormat;
-          }
-          if (opportunity.color && !item.specifications.color) {
-            item.specifications.color = opportunity.color;
-          }
-          
+          wasUpdated = true;
+          console.log(`   ✅ ${item.itemName} (${item.channel}) - added dimensions: ${opportunity.dimensions}`);
+        }
+        
+        // Copy file formats if missing
+        if (!item.specifications.fileFormats && opportunity.specifications?.fileFormats) {
+          item.specifications.fileFormats = opportunity.specifications.fileFormats;
+          wasUpdated = true;
+          console.log(`   ✅ ${item.itemName} (${item.channel}) - added fileFormats: ${opportunity.specifications.fileFormats.join(', ')}`);
+        }
+        
+        // Copy format string if missing
+        if (!item.specifications.format && opportunity.specifications?.format) {
+          item.specifications.format = opportunity.specifications.format;
+          wasUpdated = true;
+        }
+        
+        // Copy duration for audio items
+        if (!item.specifications.duration && opportunity.specifications?.duration) {
+          item.specifications.duration = opportunity.specifications.duration;
+          wasUpdated = true;
+          console.log(`   ✅ ${item.itemName} (${item.channel}) - added duration: ${opportunity.specifications.duration}`);
+        }
+        
+        // Copy adFormat if missing (for print)
+        if (!item.specifications.adFormat && opportunity.adFormat) {
+          item.specifications.adFormat = opportunity.adFormat;
+          wasUpdated = true;
+        }
+        
+        // Copy color if missing (for print)
+        if (!item.specifications.color && opportunity.color) {
+          item.specifications.color = opportunity.color;
+          wasUpdated = true;
+        }
+        
+        // Copy standardId if available
+        if (!item.specifications.standardId && opportunity.standardId) {
+          item.specifications.standardId = opportunity.standardId;
+          wasUpdated = true;
+        }
+
+        if (wasUpdated) {
           updatedCount++;
-          console.log(`   ✅ ${item.itemName} - added dimensions: ${opportunity.dimensions}`);
-        } else {
-          console.log(`   ⚠️  ${item.itemName} - no dimensions in source publication`);
+        } else if (!item.specifications.dimensions) {
+          console.log(`   ⚠️  ${item.itemName} (${item.channel}) - no dimensions in source`);
         }
       }
     }
@@ -185,7 +235,8 @@ Examples:
   npm exec -- tsx scripts/refreshPackageDimensions.ts "All-Inclusive Package"
   npm exec -- tsx scripts/refreshPackageDimensions.ts 507f1f77bcf86cd799439011
 
-This will update the package to include print dimensions from source publications.
+This will update the package to include dimensions and specifications from source 
+publications for ALL channels (print, newsletter, website, radio, podcast, etc.).
 `);
   process.exit(1);
 }

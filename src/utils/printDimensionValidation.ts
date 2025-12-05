@@ -125,8 +125,8 @@ export function isValidDimension(dim: string): boolean {
  * Returns validation result with standardized format and suggestions
  */
 export function validatePrintDimensions(item: any): DimensionValidationResult {
-  // Check if this is a print item
-  const dimensions = item.dimensions;
+  // Check if this is a print item - get dimensions from format object
+  const dimensions = item.format?.dimensions;
   
   // Missing dimensions
   if (!dimensions) {

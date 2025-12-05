@@ -184,8 +184,9 @@ export function CampaignCreativeAssetsUploader({
       handleFilesSelected(fileList);
     },
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'],
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.tif', '.tiff'],
       'video/*': ['.mp4', '.mov', '.avi'],
+      'audio/*': ['.mp3', '.wav', '.m4a'],  // For radio/podcast ads
       'application/pdf': ['.pdf'],
       'application/zip': ['.zip'],
       'application/illustrator': ['.ai'],
@@ -1427,7 +1428,7 @@ export function CampaignCreativeAssetsUploader({
                   Drag & drop files here or click to upload
                 </span>
                 <span className="text-sm text-gray-500">
-                  Supports images, videos, PDFs, design files, ZIP, and text files (.txt/.html for native ads).
+                  Supports images, videos, PDFs, design files, ZIP, audio (MP3, WAV), and text files.
                 </span>
               </>
             )}

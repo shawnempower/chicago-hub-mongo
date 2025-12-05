@@ -248,8 +248,8 @@ export function generateInsertionOrder(packageData: HubPackage): string {
       rows.push(`    Unit Price: $${unitPrice.toFixed(2)}`);
       rows.push(`    Monthly Cost: $${monthlyCost.toFixed(2)}`);
       
-      if (item.specifications) {
-        const specs = Object.entries(item.specifications)
+      if (item.format) {
+        const specs = Object.entries(item.format)
           .filter(([key, value]) => value)
           .map(([key, value]) => `${key}: ${value}`)
           .join(', ');

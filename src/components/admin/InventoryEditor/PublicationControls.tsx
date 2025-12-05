@@ -112,8 +112,8 @@ export function PublicationControls({
           // actualCost = (impressions / 1000) × CPM, so impressions = (actualCost / CPM) × 1000
           const actualImpressions = (actualMonthlyCost / price) * 1000;
           
-          // Show specifications impressions if available, otherwise show calculated
-          const displayImpressions = item.specifications?.impressions || actualImpressions;
+          // Show monthly impressions if available, otherwise show calculated
+          const displayImpressions = item.monthlyImpressions || actualImpressions;
           
           formula = `(${Math.round(displayImpressions).toLocaleString()} impressions ÷ 1,000) × $${price} CPM = $${actualMonthlyCost.toFixed(2)}`;
           break;
@@ -396,8 +396,8 @@ export function PublicationControls({
                 // Get baseline for comparison
                 const baselineItem = baseline.inventoryItems?.[idx];
                 const baselineFreq = baselineItem?.currentFrequency || baselineItem?.quantity || 1;
-                const baselineImpressions = baselineItem?.specifications?.impressions;
-                const currentImpressions = item.specifications?.impressions;
+                const baselineImpressions = baselineItem?.monthlyImpressions;
+                const currentImpressions = item.monthlyImpressions;
                 
                 let formula = '';
                 let showChange = scaleValue !== 100;
@@ -406,7 +406,7 @@ export function PublicationControls({
                   case 'cpm':
                     // Use actual monthly cost to calculate impressions
                     const actualImpressions = (itemCost / price) * 1000;
-                    const displayImpressions = item.specifications?.impressions || actualImpressions;
+                    const displayImpressions = item.monthlyImpressions || actualImpressions;
                     formula = `(${Math.round(displayImpressions).toLocaleString()} / 1,000) × $${price}`;
                     
                     if (showChange && baselineImpressions) {

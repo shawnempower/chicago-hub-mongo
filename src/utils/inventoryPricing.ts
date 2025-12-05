@@ -194,11 +194,8 @@ export function applyFrequencyChange(
   };
 
   // Scale impressions for CPM models
-  if (item.itemPricing?.pricingModel === 'cpm' && item.specifications?.impressions) {
-    updatedItem.specifications = {
-      ...item.specifications,
-      impressions: Math.round(item.specifications.impressions * scaleFactor)
-    };
+  if (item.itemPricing?.pricingModel === 'cpm' && item.monthlyImpressions) {
+    updatedItem.monthlyImpressions = Math.round(item.monthlyImpressions * scaleFactor);
   }
 
   // Calculate new monthly cost

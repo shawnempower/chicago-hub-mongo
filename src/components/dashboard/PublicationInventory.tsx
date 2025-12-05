@@ -60,7 +60,7 @@ export const PublicationInventory: React.FC = () => {
           type: ad.name || 'Website Ad',
           channel: 'website',
           position: ad.location || 'Website',
-          size: ad.specifications?.size || ad.adFormat || 'Standard',
+          size: ad.format?.dimensions || ad.adFormat || 'Standard',
           price: ad.pricing?.flatRate ? `$${ad.pricing.flatRate} ${ad.pricing.pricingModel === 'cpm' ? 'CPM' : ''}` : 'Contact for pricing',
           availability: ad.available ? 'Available' : 'Booked',
           impressions: ad.monthlyImpressions ? `${ad.monthlyImpressions.toLocaleString()}/month` : '-'
@@ -122,7 +122,7 @@ export const PublicationInventory: React.FC = () => {
             type: ad.name || 'Print Ad',
             channel: 'print',
             position: `${printPub.name || `Print Publication ${printIndex + 1}`} • ${ad.location || 'Print'} • ${ad.adFormat || 'Standard'}${ad.color ? ` (${ad.color})` : ''}`,
-            size: ad.dimensions || 'Standard',
+            size: ad.format?.dimensions || 'Standard',
             price: priceDisplay,
             availability: 'Available', // Default since print ads don't have availability flag
             impressions: printPub.circulation ? 
@@ -450,7 +450,7 @@ export const PublicationInventory: React.FC = () => {
                             <div className="flex-1">
                               <span className="font-medium">{ad.name}</span>
                               <span className="text-muted-foreground ml-2">
-                                {ad.position} • {ad.dimensions} • {formatPrice(ad.pricing)}
+                                {ad.position} • {ad.format?.dimensions} • {formatPrice(ad.pricing)}
                               </span>
                             </div>
                             <Badge className={getAvailabilityColor('Available')}>
@@ -533,7 +533,7 @@ export const PublicationInventory: React.FC = () => {
                             <div className="flex-1">
                               <span className="font-medium">{ad.name}</span>
                               <span className="text-muted-foreground ml-2">
-                                {ad.dimensions} • {ad.adFormat} • {formatPrice(ad.pricing)}
+                                {ad.format?.dimensions} • {ad.adFormat} • {formatPrice(ad.pricing)}
                               </span>
                             </div>
                             <Badge className={getAvailabilityColor('Available')}>

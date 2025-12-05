@@ -342,16 +342,39 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
                 ? `${baseItemName} (${getPricingModelLabel(pricingModel)})`
                 : baseItemName;
               
-              // Merge dimensions into specifications (fix for print/other channels)
-              const specifications = { ...opp.specifications };
-              if (opp.dimensions && !specifications.dimensions) {
-                specifications.dimensions = opp.dimensions;
-              }
-              if (opp.adFormat && !specifications.adFormat) {
-                specifications.adFormat = opp.adFormat;
-              }
-              if (opp.color && !specifications.color) {
-                specifications.color = opp.color;
+              // Copy the standardized format object directly
+              const format = opp.format ? { ...opp.format } : {};
+              
+              // For radio/podcast: ensure duration and position are populated
+              if (channelName === 'radio' || channelName === 'podcast') {
+                // Store adFormat as dimensions for podcasts (pre-roll, mid-roll, host-read, etc.)
+                if (!format.dimensions && opp.adFormat) {
+                  format.dimensions = opp.adFormat;
+                }
+                
+                // Try to extract duration from adFormat or name (e.g., "30 Second Spot")
+                if (!format.duration) {
+                  const adFormatMatch = (opp.adFormat || opp.name || '').match(/(\d+)\s*(?:second|sec|s)\b/i);
+                  if (adFormatMatch) {
+                    format.duration = parseInt(adFormatMatch[1], 10);
+                  }
+                  // Try from opp.duration if it exists
+                  if (!format.duration && opp.duration) {
+                    format.duration = typeof opp.duration === 'number' ? opp.duration : parseInt(opp.duration, 10);
+                  }
+                  // Set default durations for known podcast positions (if not host-read)
+                  if (!format.duration && channelName === 'podcast') {
+                    const adFormatLower = (opp.adFormat || '').toLowerCase();
+                    if (adFormatLower.includes('pre-roll') || adFormatLower.includes('preroll')) {
+                      format.duration = 30; // Default pre-roll duration
+                    } else if (adFormatLower.includes('mid-roll') || adFormatLower.includes('midroll')) {
+                      format.duration = 60; // Default mid-roll duration
+                    } else if (adFormatLower.includes('post-roll') || adFormatLower.includes('postroll')) {
+                      format.duration = 30; // Default post-roll duration
+                    }
+                    // host-read and live-read don't get default duration
+                  }
+                }
               }
               
               const item: any = {
@@ -368,7 +391,7 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
                   hubPrice,
                   pricingModel: pricing.pricingModel || 'flat'
                 },
-                specifications,
+                format, // Use standardized format object
                 audienceMetrics: Object.keys(channelMetrics).length > 0 ? channelMetrics : undefined,  // Add channel-level metrics (only if not empty)
                 performanceMetrics: opp.performanceMetrics || undefined  // Add item-level metrics
               };
@@ -1272,17 +1295,39 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
               ? `${baseItemName} (${getPricingModelLabel(pricingModel)})`
               : baseItemName;
 
-            // Merge dimensions into specifications (fix for print/other channels)
-            const specifications = { ...opp.specifications };
-            if (opp.dimensions && !specifications.dimensions) {
-              specifications.dimensions = opp.dimensions;
-              console.log(`[Package Refresh] ✅ Added dimensions to ${opp.title || opp.name}: ${opp.dimensions}`);
-            }
-            if (opp.adFormat && !specifications.adFormat) {
-              specifications.adFormat = opp.adFormat;
-            }
-            if (opp.color && !specifications.color) {
-              specifications.color = opp.color;
+            // Copy the standardized format object directly
+            const format = opp.format ? { ...opp.format } : {};
+            
+            // For radio/podcast: ensure duration and position are populated
+            if (channelName === 'radio' || channelName === 'podcast') {
+              // Store adFormat as dimensions for podcasts (pre-roll, mid-roll, host-read, etc.)
+              if (!format.dimensions && opp.adFormat) {
+                format.dimensions = opp.adFormat;
+              }
+              
+              // Try to extract duration from adFormat or name (e.g., "30 Second Spot")
+              if (!format.duration) {
+                const adFormatMatch = (opp.adFormat || opp.name || '').match(/(\d+)\s*(?:second|sec|s)\b/i);
+                if (adFormatMatch) {
+                  format.duration = parseInt(adFormatMatch[1], 10);
+                }
+                // Try from opp.duration if it exists
+                if (!format.duration && opp.duration) {
+                  format.duration = typeof opp.duration === 'number' ? opp.duration : parseInt(opp.duration, 10);
+                }
+                // Set default durations for known podcast positions (if not host-read)
+                if (!format.duration && channelName === 'podcast') {
+                  const adFormatLower = (opp.adFormat || '').toLowerCase();
+                  if (adFormatLower.includes('pre-roll') || adFormatLower.includes('preroll')) {
+                    format.duration = 30; // Default pre-roll duration
+                  } else if (adFormatLower.includes('mid-roll') || adFormatLower.includes('midroll')) {
+                    format.duration = 60; // Default mid-roll duration
+                  } else if (adFormatLower.includes('post-roll') || adFormatLower.includes('postroll')) {
+                    format.duration = 30; // Default post-roll duration
+                  }
+                  // host-read and live-read don't get default duration
+                }
+              }
             }
 
             const freshItem: any = {
@@ -1294,7 +1339,7 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
                 hubPrice,
                 pricingModel: pricingModel
               },
-              specifications,
+              format, // Use standardized format object
               frequency: itemFrequencyString || freshPub.printFrequency,
               publicationFrequencyType: pubType,
               audienceMetrics: Object.keys(channelMetrics).length > 0 ? channelMetrics : undefined,

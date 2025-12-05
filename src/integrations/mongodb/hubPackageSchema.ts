@@ -42,12 +42,14 @@ export interface HubPackageInventoryItem {
   monthlyCost?: number; // Cost per month
   campaignCost?: number; // Total cost for entire campaign
   
-  specifications?: {
-    size?: string;
-    format?: string;
-    placement?: string;
-    adFormat?: string;
-    [key: string]: any;
+  format?: {
+    dimensions?: string | string[];
+    fileFormats?: string[];
+    maxFileSize?: string;
+    colorSpace?: string;
+    resolution?: string;
+    duration?: number;
+    bitrate?: string;
   };
   // Individual item pricing (for transparency)
   itemPricing?: {
@@ -423,7 +425,15 @@ export interface InventoryAnalysis {
         model: string;
       };
       impressions?: number;
-      specifications?: any;
+      format?: {
+        dimensions?: string | string[];
+        fileFormats?: string[];
+        maxFileSize?: string;
+        colorSpace?: string;
+        resolution?: string;
+        duration?: number;
+        bitrate?: string;
+      };
     }[];
   }[];
   totalMonthlyReach?: number;

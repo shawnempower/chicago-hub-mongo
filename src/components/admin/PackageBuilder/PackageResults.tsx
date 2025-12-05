@@ -32,7 +32,6 @@ import {
 } from 'lucide-react';
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
 import { BuilderResult } from '@/services/packageBuilderService';
-import { LineItemsDetail } from './LineItemsDetail';
 import { LineItemsTable } from './LineItemsTable';
 import { calculateItemCost, calculatePublicationTotal } from '@/utils/inventoryPricing';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
@@ -885,10 +884,9 @@ export function PackageResults({
 
       {/* Tabs */}
       <Tabs defaultValue="channel" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="channel">Package By Channel</TabsTrigger>
           <TabsTrigger value="outlet">Packages by Outlet</TabsTrigger>
-          <TabsTrigger value="lineitems">Line Items</TabsTrigger>
         </TabsList>
 
             {/* By Channel View */}
@@ -1142,15 +1140,6 @@ export function PackageResults({
                     );
                   })}
                   </div>
-            </TabsContent>
-
-            {/* Line Items View with Frequency Controls */}
-            <TabsContent value="lineitems">
-              <LineItemsDetail
-                publications={publications}
-                originalPublications={originalPublications}
-                onUpdate={onUpdatePublications}
-              />
             </TabsContent>
       </Tabs>
 

@@ -11,12 +11,14 @@ interface AdSpecification {
   placementId: string;
   placementName: string;
   channel: string;
-  specifications: {
+  format: {
     dimensions?: string;
     fileFormats?: string[];
     maxFileSize?: string;
     colorSpace?: string;
     resolution?: string;
+    duration?: number;
+    bitrate?: string;
     additionalRequirements?: string;
   };
   deadline?: Date;
@@ -42,8 +44,8 @@ export function AdSpecsForm({
   onCancel,
   readOnly = false
 }: AdSpecsFormProps) {
-  const [specs, setSpecs] = useState<AdSpecification['specifications']>(
-    existingSpecs?.specifications || {
+  const [specs, setSpecs] = useState<AdSpecification['format']>(
+    existingSpecs?.format || {
       dimensions: '',
       fileFormats: [],
       maxFileSize: '',
@@ -54,7 +56,7 @@ export function AdSpecsForm({
   );
 
   const [fileFormatsInput, setFileFormatsInput] = useState(
-    existingSpecs?.specifications.fileFormats?.join(', ') || ''
+    existingSpecs?.format?.fileFormats?.join(', ') || ''
   );
 
   const [deadlineDate, setDeadlineDate] = useState(
@@ -66,7 +68,7 @@ export function AdSpecsForm({
       placementId,
       placementName,
       channel,
-      specifications: {
+      format: {
         ...specs,
         fileFormats: fileFormatsInput
           .split(',')

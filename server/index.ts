@@ -133,6 +133,7 @@ const upload = multer({
       'text/csv',
       'text/markdown',
       'text/x-markdown',
+      'text/html',
       'application/json',
       // Images
       'image/jpeg',
@@ -141,6 +142,7 @@ const upload = multer({
       'image/svg+xml',
       'image/gif',
       'image/webp',
+      'image/tiff', // Print ads
       // Archives
       'application/zip',
       'application/x-zip-compressed',
@@ -152,13 +154,14 @@ const upload = multer({
       // Audio
       'audio/mpeg',
       'audio/wav',
+      'audio/x-wav', // Alternate WAV MIME type
       'audio/mp4'
     ];
     
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      const supportedExts = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'csv', 'md', 'json', 'jpg', 'jpeg', 'png', 'svg', 'gif', 'webp', 'zip', 'gz', 'mp4', 'mpeg', 'mov', 'mp3', 'wav'];
+      const supportedExts = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'csv', 'md', 'json', 'html', 'htm', 'jpg', 'jpeg', 'png', 'svg', 'gif', 'webp', 'tif', 'tiff', 'zip', 'gz', 'mp4', 'mpeg', 'mov', 'mp3', 'wav', 'm4a'];
       cb(new Error(`File type "${file.mimetype}" not supported. Supported formats: ${supportedExts.join(', ')}`) as any, false);
     }
   }

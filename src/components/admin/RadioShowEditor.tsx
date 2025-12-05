@@ -105,7 +105,7 @@ const inferAdFormat = (ad: RadioAd): string => {
   if (ad.adFormat) return ad.adFormat;
   
   // Try to infer from duration
-  const duration = ad.specifications?.duration;
+  const duration = ad.format?.duration;
   if (duration === 15) return '15_second_spot';
   if (duration === 30) return '30_second_spot';
   if (duration === 60) return '60_second_spot';
@@ -196,11 +196,9 @@ export const RadioShowEditor = forwardRef<{ openShowDialog: (show: RadioShow) =>
         pricingModel: 'per_spot',
       },
       format: {
-        dimensions: '30s', // For creative asset matching
-      },
-      specifications: {
+        dimensions: '30s',
         duration: 30,
-        fileFormats: ['MP3', 'WAV'], // Standard audio formats
+        fileFormats: ['MP3', 'WAV'],
       },
       available: true,
     };
@@ -231,17 +229,12 @@ export const RadioShowEditor = forwardRef<{ openShowDialog: (show: RadioShow) =>
       
       const mapping = formatMapping[updates.adFormat];
       if (mapping) {
-        // Update specifications.duration and specifications.fileFormats
-        updatedAds[adIndex].specifications = {
-          ...updatedAds[adIndex].specifications,
-          ...(mapping.duration && { duration: mapping.duration }),
-          fileFormats: mapping.fileFormats,
-        };
-        
-        // Update format.dimensions for creative asset matching
+        // Update format object with all specifications
         updatedAds[adIndex].format = {
           ...updatedAds[adIndex].format,
           dimensions: mapping.dimensions,
+          fileFormats: mapping.fileFormats,
+          ...(mapping.duration && { duration: mapping.duration }),
         };
       }
     }

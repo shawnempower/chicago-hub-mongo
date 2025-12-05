@@ -20,6 +20,10 @@ export interface GroupedCreativeRequirement {
   resolution?: string;
   additionalRequirements?: string;
   
+  // Audio/video specific
+  duration?: number; // in seconds (e.g., 15, 30, 60 for radio spots)
+  bitrate?: string;
+  
   // All placements that need this spec
   placements: Array<{
     placementId: string;
@@ -45,17 +49,34 @@ export interface GroupedCreativeRequirement {
  * Generate a unique key for a specification
  * This groups placements with identical specs together
  * 
- * For website inventory: dimensions are the PRIMARY grouping factor
- * For print/other: include all specs for strict matching
+ * Grouping strategy by channel:
+ * - Website: dimensions + channel (flexible on format)
+ * - Radio/Podcast: duration + channel (different lengths = different creatives)
+ * - Print: dimensions + color space + resolution (strict matching)
+ * - Other: all specs for strict matching
  */
 function generateSpecKey(req: CreativeRequirement): string {
-  const isWebsite = (req.channel || '').toLowerCase() === 'website';
+  const channelLower = (req.channel || 'general').toLowerCase();
+  const isWebsite = channelLower === 'website';
+  const isAudio = channelLower === 'radio' || channelLower === 'podcast';
   
   const parts: string[] = [
     req.channel || 'general',
   ];
   
-  // Dimensions (ALWAYS include - most important)
+  // Audio channels: group by duration (15s, 30s, 60s are different creatives)
+  if (isAudio) {
+    if (req.duration) {
+      parts.push(`dur:${req.duration}s`);
+    }
+    // Also include file formats for audio (WAV vs MP3)
+    if (req.fileFormats && req.fileFormats.length > 0) {
+      parts.push(`fmt:${req.fileFormats.sort().join('|')}`);
+    }
+    return parts.join('::');
+  }
+  
+  // Dimensions (important for visual media)
   if (req.dimensions) {
     const dims = Array.isArray(req.dimensions) 
       ? req.dimensions.sort().join('|') 
@@ -116,6 +137,9 @@ export function groupRequirementsBySpec(
         colorSpace: req.colorSpace,
         resolution: req.resolution,
         additionalRequirements: req.additionalRequirements,
+        // Audio/video specific
+        duration: req.duration,
+        bitrate: req.bitrate,
         placements: [],
         placementCount: 0,
         publicationCount: 0,
@@ -147,8 +171,22 @@ export function groupRequirementsBySpec(
  */
 export function getSpecDisplayName(group: GroupedCreativeRequirement): string {
   const parts: string[] = [];
+  const channelLower = (group.channel || '').toLowerCase();
+  const isAudio = channelLower === 'radio' || channelLower === 'podcast';
   
-  // Dimensions
+  // For audio channels, show duration prominently
+  if (isAudio) {
+    if (group.duration) {
+      parts.push(`${group.duration} second spot`);
+    }
+    parts.push(capitalizeFirst(group.channel));
+    if (group.fileFormats && group.fileFormats.length > 0) {
+      parts.push(group.fileFormats.join('/'));
+    }
+    return parts.join(' • ');
+  }
+  
+  // Dimensions (for visual media)
   if (group.dimensions) {
     const dims = Array.isArray(group.dimensions) 
       ? group.dimensions.join(' or ') 
@@ -183,13 +221,102 @@ export function getPublicationsSummary(group: GroupedCreativeRequirement): strin
 
 /**
  * Format dimensions for display
+ * Handles special dimension values from the standardized format:
+ * - Pixel dimensions: "300x250", "728x90"
+ * - Audio durations: "30s", "60s", "15s"
+ * - Special types: "text-only", "native-inline", "sponsorship"
+ * - Podcast positions: "pre-roll", "mid-roll", "post-roll"
+ * - Live reads: "live-read", "host-read"
+ * 
+ * @param dimensions - The dimensions string or array
+ * @param channel - Optional channel type for context
+ * @param fileFormats - Optional file formats for fallback display
  */
-export function formatDimensions(dimensions?: string | string[]): string {
-  if (!dimensions) return 'Not specified';
-  if (Array.isArray(dimensions)) {
-    return dimensions.join(', ');
+export function formatDimensions(
+  dimensions?: string | string[],
+  channel?: string,
+  fileFormats?: string[]
+): string {
+  // If we have dimensions, format them appropriately
+  if (dimensions) {
+    // Handle array of dimensions
+    if (Array.isArray(dimensions)) {
+      return dimensions.map(d => formatSingleDimension(d)).join(', ');
+    }
+    return formatSingleDimension(dimensions);
   }
-  return dimensions;
+  
+  // No dimensions - provide helpful fallback based on channel
+  if (channel) {
+    const channelLower = channel.toLowerCase();
+    
+    // Audio channels without dimensions
+    if (channelLower === 'radio' || channelLower === 'podcast') {
+      return 'Audio spot';
+    }
+    
+    // If we have file formats, show them
+    if (fileFormats && fileFormats.length > 0) {
+      return fileFormats.join(', ');
+    }
+    
+    // Channel-specific fallbacks
+    if (channelLower === 'website') {
+      return 'Flexible size';
+    }
+    if (channelLower === 'newsletter') {
+      return 'Custom size';
+    }
+    if (channelLower === 'print') {
+      return 'Custom size';
+    }
+  }
+  
+  return 'Not specified';
+}
+
+/**
+ * Format a single dimension value for display
+ */
+function formatSingleDimension(dim: string): string {
+  if (!dim) return 'Not specified';
+  
+  const dimLower = dim.toLowerCase().trim();
+  
+  // Audio durations (e.g., "30s", "60s", "15s")
+  const durationMatch = dimLower.match(/^(\d+)s$/);
+  if (durationMatch) {
+    return `${durationMatch[1]} second spot`;
+  }
+  
+  // Special types
+  switch (dimLower) {
+    case 'text-only':
+      return 'Text only';
+    case 'native-inline':
+      return 'Native content';
+    case 'sponsorship':
+      return 'Sponsorship';
+    case 'pre-roll':
+      return 'Pre-roll';
+    case 'mid-roll':
+      return 'Mid-roll';
+    case 'post-roll':
+      return 'Post-roll';
+    case 'live-read':
+      return 'Live read';
+    case 'host-read':
+      return 'Host read';
+    case 'full-newsletter':
+      return 'Full newsletter';
+    case 'custom':
+      return 'Custom';
+    case 'long-form':
+      return 'Long form';
+    default:
+      // Return as-is for standard dimensions like "300x250", "10\" x 13\""
+      return dim;
+  }
 }
 
 /**

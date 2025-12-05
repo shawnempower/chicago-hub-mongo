@@ -146,7 +146,7 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                             itemName: item.itemName || 'Unnamed Item',
                             itemPath: item.itemPath || '',
                             hubPrice: item.itemPricing?.hubPrice || 0, // Hub pricing only
-                            specifications: item.specifications || {},
+                            format: item.format || {},
                             frequency: item.currentFrequency || 1,
                             isExcluded: item.isExcluded || false
                           }));
@@ -616,9 +616,9 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                                                             Excluded
                                                           </Badge>
                                                         )}
-                                                      {item.specifications && Object.keys(item.specifications).length > 0 && (
+                                                      {item.format && Object.keys(item.format).length > 0 && (
                                                         <>
-                                                          {Object.entries(item.specifications)
+                                                          {Object.entries(item.format)
                                                             .filter(([_, value]) => value)
                                                             .slice(0, 3)
                                                             .map(([key, value], specIdx) => (

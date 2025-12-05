@@ -34,7 +34,7 @@ export function AdFormatBadge({
   if (!category) {
     return (
       <span className={`${badgeClass} bg-gray-100 text-gray-800`}>
-        {ad.dimensions || 'Not specified'}
+        {ad.format?.dimensions || 'Not specified'}
       </span>
     );
   }

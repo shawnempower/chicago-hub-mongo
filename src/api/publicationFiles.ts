@@ -294,6 +294,7 @@ export const SUPPORTED_MIME_TYPES = [
   'text/csv',
   'text/markdown',
   'text/x-markdown',
+  'text/html',
   'application/json',
   // Images
   'image/jpeg',
@@ -302,6 +303,7 @@ export const SUPPORTED_MIME_TYPES = [
   'image/svg+xml',
   'image/gif',
   'image/webp',
+  'image/tiff', // Print ads
   // Archives
   'application/zip',
   'application/x-zip-compressed',
@@ -313,6 +315,7 @@ export const SUPPORTED_MIME_TYPES = [
   // Audio
   'audio/mpeg',
   'audio/wav',
+  'audio/x-wav', // Alternate WAV MIME type
   'audio/mp4'
 ];
 
@@ -320,11 +323,11 @@ export const SUPPORTED_MIME_TYPES = [
 export const getSupportedFileExtensions = (): string[] => {
   return [
     'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 
-    'txt', 'csv', 'md', 'json',
-    'jpg', 'jpeg', 'png', 'svg', 'gif', 'webp',
+    'txt', 'csv', 'md', 'json', 'html', 'htm',
+    'jpg', 'jpeg', 'png', 'svg', 'gif', 'webp', 'tif', 'tiff',
     'zip', 'gz',
     'mp4', 'mpeg', 'mov',
-    'mp3', 'wav'
+    'mp3', 'wav', 'm4a'
   ];
 };
 

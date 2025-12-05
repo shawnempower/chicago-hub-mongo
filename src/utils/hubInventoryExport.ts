@@ -96,15 +96,15 @@ function getHubPricingDisplayValues(hubPricing: HubPricing | undefined): {
 /**
  * Format specifications as a string
  */
-function formatSpecifications(specs: any): string {
-  if (!specs) return '';
+function formatFormat(format: any): string {
+  if (!format) return '';
   const parts: string[] = [];
-  if (specs.size) parts.push(`Size: ${specs.size}`);
-  if (specs.format) parts.push(`Format: ${specs.format}`);
-  if (specs.fileSize) parts.push(`File Size: ${specs.fileSize}`);
-  if (specs.resolution) parts.push(`Resolution: ${specs.resolution}`);
-  if (specs.duration) parts.push(`Duration: ${specs.duration}s`);
-  if (specs.aspectRatio) parts.push(`Aspect Ratio: ${specs.aspectRatio}`);
+  if (format.dimensions) parts.push(`Size: ${format.dimensions}`);
+  if (format.fileFormats) parts.push(`Format: ${Array.isArray(format.fileFormats) ? format.fileFormats.join(', ') : format.fileFormats}`);
+  if (format.maxFileSize) parts.push(`File Size: ${format.maxFileSize}`);
+  if (format.resolution) parts.push(`Resolution: ${format.resolution}`);
+  if (format.duration) parts.push(`Duration: ${format.duration}s`);
+  if (format.colorSpace) parts.push(`Color: ${format.colorSpace}`);
   return parts.join(' | ');
 }
 
@@ -379,7 +379,7 @@ export function exportHubInventoryToCSV(
           inventoryName: ad.name || ad.title || 'Unnamed Ad',
           adFormat: ad.adFormat,
           location: ad.location,
-          specifications: formatSpecifications(ad.specifications),
+          specifications: formatFormat(ad.format),
           monthlyImpressions,
           monthlyVisitors,
           estimatedMonthlyReach: reach,
@@ -418,7 +418,7 @@ export function exportHubInventoryToCSV(
             inventoryId: ad.adId || `newsletter-${nlIdx}-${adIdx}`,
             inventoryName: `${newsletter.name} - ${ad.name || ad.position || 'Ad'}`,
             position: ad.position,
-            specifications: ad.format?.dimensions || ad.specifications?.dimensions || ad.dimensions,
+            specifications: ad.format?.dimensions,
             subscribers: newsletter.subscribers,
             estimatedMonthlyReach: reach,
             frequency: newsletter.frequency,
@@ -465,7 +465,7 @@ export function exportHubInventoryToCSV(
             inventoryId: ad.adId || `print-${pIdx}-${adIdx}`,
             inventoryName: `${printPub.name || 'Print'} - ${ad.name || ad.adFormat || 'Ad'}`,
             adFormat: ad.adFormat,
-            specifications: `${ad.dimensions || ''} ${ad.color || ''}`.trim(),
+            specifications: `${ad.format?.dimensions || ''} ${ad.color || ''}`.trim(),
             circulation: printPub.circulation,
             estimatedMonthlyReach: reach,
             frequency: printPub.frequency,
@@ -547,7 +547,7 @@ export function exportHubInventoryToCSV(
             adFormat: ad.adFormat,
             followers: social.followers,
             estimatedMonthlyReach: reach,
-            specifications: formatSpecifications(ad.specifications),
+            specifications: formatFormat(ad.format),
             hubAvailable: hubPricing?.available ?? ad.available ?? true,
             hubPricingModel: hubPricingDisplay.pricingModel,
             hubFlatRate: hubPricingDisplay.flatRate,
@@ -586,7 +586,7 @@ export function exportHubInventoryToCSV(
             inventoryId: ad.adId || `podcast-${pIdx}-${adIdx}`,
             inventoryName: `${podcast.name} - ${ad.name || ad.adFormat || 'Ad'}`,
             adFormat: ad.adFormat,
-            specifications: formatSpecifications(ad.specifications),
+            specifications: formatFormat(ad.format),
             frequency: podcast.frequency,
             subscribers: podcastAudience,
             estimatedMonthlyReach: reach,
@@ -630,7 +630,7 @@ export function exportHubInventoryToCSV(
             inventoryName: `${stream.name} - ${ad.name || ad.adFormat || 'Ad'}`,
             adFormat: ad.adFormat,
             position: ad.position,
-            specifications: formatSpecifications(ad.specifications),
+            specifications: formatFormat(ad.format),
             subscribers: stream.subscribers,
             averageViews,
             estimatedMonthlyReach: reach,
@@ -674,7 +674,7 @@ export function exportHubInventoryToCSV(
               inventoryId: ad.adId || `radio-${rIdx}-${showIdx}-${adIdx}`,
               inventoryName: `${station.callSign || station.name} - ${show.name} - ${ad.name || ad.adFormat || 'Ad'}`,
               adFormat: ad.adFormat,
-              specifications: ad.format?.dimensions || formatSpecifications(ad.specifications),
+              specifications: ad.format?.dimensions,
               frequency: show.frequency,
               subscribers: listeners,
               estimatedMonthlyReach: reach,

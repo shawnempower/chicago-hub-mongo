@@ -20,7 +20,7 @@ const upload = multer({
     fileSize: 100 * 1024 * 1024 // 100MB max (supports large ZIP files)
   },
   fileFilter: (req, file, cb) => {
-    // Accept images, PDFs, ZIP files, and common design files
+    // Accept images, PDFs, ZIP files, audio files, text files, and common design files
     const allowedMimes = [
       'image/jpeg',
       'image/jpg',
@@ -28,11 +28,20 @@ const upload = multer({
       'image/gif',
       'image/webp',
       'image/svg+xml',
+      'image/tiff', // Print ads
       'application/pdf',
       'application/zip',
       'application/x-zip-compressed',
       'application/postscript', // AI files
       'image/vnd.adobe.photoshop', // PSD files
+      // Audio files (for radio/podcast ads)
+      'audio/mpeg', // MP3
+      'audio/wav',
+      'audio/x-wav',
+      'audio/mp4', // M4A
+      // Text/document files (live reads, scripts, newsletter content)
+      'text/plain', // TXT
+      'text/html', // HTML
       'application/octet-stream' // Generic binary (for various design files)
     ];
     

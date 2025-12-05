@@ -62,7 +62,18 @@ interface InventoryItem {
   standardPrice?: number;
   pricingModel: string;
   frequency?: string;
-  specifications?: any;
+  format?: {
+    dimensions?: string | string[];
+    fileFormats?: string[];
+    maxFileSize?: string;
+    colorSpace?: string;
+    resolution?: string;
+    duration?: number;
+    bitrate?: string;
+    bleed?: string;
+    trim?: string;
+    additionalRequirements?: string;
+  };
   audienceMetric?: {
     type: string;
     value: number;
@@ -180,18 +191,39 @@ export class CampaignLLMService {
                     : [hubPricingForHub.pricing];
 
                   pricings.forEach((pricing: any, pricingIdx: number) => {
-                    // Merge dimensions into specifications for print/other channels
-                    const specifications = { ...opp.specifications };
-                    if (opp.dimensions && !specifications.dimensions) {
-                      specifications.dimensions = opp.dimensions;
-                      console.log(`[Dimensions Fix] ✅ Added dimensions to ${opp.name}: ${opp.dimensions}`);
-                    }
-                    // Also include other print-specific fields
-                    if (opp.adFormat && !specifications.adFormat) {
-                      specifications.adFormat = opp.adFormat;
-                    }
-                    if (opp.color && !specifications.color) {
-                      specifications.color = opp.color;
+                    // Copy the standardized format object directly
+                    const format = opp.format ? { ...opp.format } : {};
+                    
+                    // For radio/podcast: ensure duration and position are populated
+                    if (mapping.name === 'radio' || mapping.name === 'podcast') {
+                      // Store adFormat as dimensions for podcasts (pre-roll, mid-roll, host-read, etc.)
+                      if (!format.dimensions && opp.adFormat) {
+                        format.dimensions = opp.adFormat;
+                      }
+                      
+                      // Try to extract duration from adFormat or name (e.g., "30 Second Spot")
+                      if (!format.duration) {
+                        const adFormatMatch = (opp.adFormat || opp.name || '').match(/(\d+)\s*(?:second|sec|s)\b/i);
+                        if (adFormatMatch) {
+                          format.duration = parseInt(adFormatMatch[1], 10);
+                        }
+                        // Try from opp.duration if it exists
+                        if (!format.duration && opp.duration) {
+                          format.duration = typeof opp.duration === 'number' ? opp.duration : parseInt(opp.duration, 10);
+                        }
+                        // Set default durations for known podcast positions (if not host-read)
+                        if (!format.duration && mapping.name === 'podcast') {
+                          const adFormatLower = (opp.adFormat || '').toLowerCase();
+                          if (adFormatLower.includes('pre-roll') || adFormatLower.includes('preroll')) {
+                            format.duration = 30; // Default pre-roll duration
+                          } else if (adFormatLower.includes('mid-roll') || adFormatLower.includes('midroll')) {
+                            format.duration = 60; // Default mid-roll duration
+                          } else if (adFormatLower.includes('post-roll') || adFormatLower.includes('postroll')) {
+                            format.duration = 30; // Default post-roll duration
+                          }
+                          // host-read and live-read don't get default duration
+                        }
+                      }
                     }
                     
                     const item: InventoryItem = {
@@ -201,7 +233,7 @@ export class CampaignLLMService {
                       standardPrice: opp.pricing?.flatRate || opp.pricing?.rate,
                       pricingModel: pricing.pricingModel || 'flat',
                       frequency: pricing.frequency,
-                      specifications,
+                      format,
                       audienceMetric: this.extractAudienceMetric(channelItem, mapping.name)
                     };
                     if (item.hubPrice > 0) {
@@ -224,11 +256,8 @@ export class CampaignLLMService {
                   : [hubPricingForHub.pricing];
 
                 pricings.forEach((pricing: any) => {
-                  // Merge dimensions into specifications if present
-                  const specifications = { ...opp.specifications };
-                  if (opp.dimensions && !specifications.dimensions) {
-                    specifications.dimensions = opp.dimensions;
-                  }
+                  // Copy the standardized format object directly
+                  const format = opp.format ? { ...opp.format } : {};
                   
                   const item: InventoryItem = {
                     name: opp.name || 'Website Ad',
@@ -237,7 +266,7 @@ export class CampaignLLMService {
                     standardPrice: opp.pricing?.flatRate || opp.pricing?.cpm,
                     pricingModel: pricing.pricingModel || opp.pricing?.pricingModel || 'flat',
                     frequency: pricing.frequency,
-                    specifications,
+                    format,
                     audienceMetric: {
                       type: 'monthlyVisitors',
                       value: channelData.metrics?.monthlyVisitors || 0
@@ -784,19 +813,17 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
         publicationId: pub.publicationId,
         publicationName: pub.publicationName,
         inventoryItems: pub.inventoryItems.map((item: any) => {
-          let specifications = item.specifications || {};
+          // Get format object from item or from source publication
+          let format = item.format ? { ...item.format } : {};
           
-          // Fallback: If print item is missing dimensions, try to get from source
-          if (item.channel === 'print' && !specifications.dimensions && sourcePub) {
+          // If format is empty, try to get from source publication
+          if (!format.dimensions && sourcePub) {
             const channel = sourcePub.channels[item.channel];
             if (channel) {
               const sourceItem = channel.find((invItem: any) => invItem.path === item.itemPath);
-              if (sourceItem?.specifications?.dimensions) {
-                specifications = {
-                  ...specifications,
-                  dimensions: sourceItem.specifications.dimensions
-                };
-                console.log(`[Campaign Transform] Added missing dimensions for ${item.itemName}: ${sourceItem.specifications.dimensions}`);
+              if (sourceItem?.format) {
+                format = { ...sourceItem.format };
+                console.log(`[Campaign Transform] Copied format from source for ${item.itemName}`);
               }
             }
           }
@@ -809,7 +836,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
             currentFrequency: item.quantity, // Add currentFrequency to match package structure
             duration: item.duration,
             frequency: item.frequency,
-            specifications,
+            format, // Use standardized format object
             // Store monthly impressions and costs from LLM calculation
             monthlyImpressions: item.pricing?.monthlyImpressions,
             monthlyCost: item.pricing?.monthlyCost,

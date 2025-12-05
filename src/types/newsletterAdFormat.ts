@@ -94,14 +94,6 @@ export function getAdDimensions(ad: NewsletterAdOpportunity): {
     };
   }
   
-  // Fallback to legacy dimensions
-  if (ad.dimensions) {
-    return {
-      category: getCategory(ad.dimensions),
-      dimensions: ad.dimensions
-    };
-  }
-  
   return {};
 }
 

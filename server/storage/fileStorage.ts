@@ -20,6 +20,7 @@ const ALLOWED_FILE_TYPES = {
   'image/gif': ['.gif'],
   'image/webp': ['.webp'],
   'image/svg+xml': ['.svg'],
+  'image/tiff': ['.tif', '.tiff'], // Print ads
   'application/pdf': ['.pdf'],
   'application/zip': ['.zip'],
   'application/x-zip-compressed': ['.zip'],
@@ -28,6 +29,14 @@ const ALLOWED_FILE_TYPES = {
   'video/mp4': ['.mp4'],
   'video/quicktime': ['.mov'],
   'video/x-msvideo': ['.avi'],
+  // Audio files (radio/podcast ads)
+  'audio/mpeg': ['.mp3'],
+  'audio/wav': ['.wav'],
+  'audio/x-wav': ['.wav'],
+  'audio/mp4': ['.m4a'],
+  // Text/document files (live reads, scripts, newsletter content)
+  'text/plain': ['.txt'],
+  'text/html': ['.html', '.htm'],
   'application/octet-stream': ['.indd', '.ai', '.psd', '.eps'] // Design files
 };
 
