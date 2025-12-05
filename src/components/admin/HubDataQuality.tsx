@@ -252,7 +252,7 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
             
             if (!isParseable(dimensions)) {
               issues.push({
-                severity: 'high',
+                severity: 'critical',
                 type: 'Invalid Print Dimensions',
                 count: 1,
                 description: `Cannot parse "${dimensions.substring(0, 30)}${dimensions.length > 30 ? '...' : ''}"`,
@@ -268,6 +268,216 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
                 items: [itemName]
               });
             }
+          }
+        }
+
+        // Issue 9: Newsletter dimension validation (for creative asset matching)
+        if (channel.toLowerCase() === 'newsletter') {
+          // Prefer format.dimensions (canonical) over legacy dimensions field
+          const dimensions = item.format?.dimensions || item.dimensions;
+          
+          if (!dimensions) {
+            issues.push({
+              severity: 'warning',
+              type: 'Missing Newsletter Dimensions',
+              count: 1,
+              description: 'Add dimensions for asset matching (e.g., 600x150, 728x90)',
+              items: [itemName]
+            });
+          } else {
+            const dimString = Array.isArray(dimensions) ? dimensions.join(', ') : String(dimensions);
+            
+            // Check for vague/useless dimension values
+            const isVagueDim = (dim: string): boolean => {
+              const cleaned = dim.toLowerCase().trim();
+              const vagueTerms = [
+                'multiple', 'various', 'varies', 'variable',
+                'contact', 'contact for', 'tbd', 'tba',
+                'custom', 'customized', 'flexible',
+                'n/a', 'na', 'none', 'not specified',
+                'see specs', 'upon request', 'standard', 'default'
+              ];
+              return vagueTerms.some(term => cleaned === term || cleaned.startsWith(term + ' ') || cleaned.includes('contact'));
+            };
+            
+            // Check if it's a standard newsletter dimension
+            const isStandardNewsletterDim = (dim: string | string[] | any): boolean => {
+              if (Array.isArray(dim)) {
+                return dim.some(d => typeof d === 'string' && isStandardNewsletterDim(d));
+              }
+              if (typeof dim !== 'string') return false;
+              
+              const cleaned = dim.toLowerCase().trim();
+              const emailStandards = ['600x150', '600x100', '600x200', '600x300'];
+              const iabStandards = ['728x90', '300x250', '336x280', '300x600', '160x600', '320x50', '970x250', '120x600'];
+              const specialFormats = [
+                'full-newsletter', 'full newsletter', 'full email', 'full-email',
+                'dedicated send', 'dedicated-send', 'takeover',
+                'text-only', 'text only', 'sponsored-content', 'sponsored content',
+                'responsive', 'logo-text', 'logo text', 'content-integration'
+              ];
+              
+              const pixelMatch = cleaned.match(/^(\d+)\s*[x×]\s*(\d+)$/);
+              if (pixelMatch) {
+                const normalized = `${pixelMatch[1]}x${pixelMatch[2]}`;
+                if (emailStandards.includes(normalized) || iabStandards.includes(normalized)) {
+                  return true;
+                }
+              }
+              
+              if (specialFormats.some(fmt => cleaned.includes(fmt))) {
+                return true;
+              }
+              
+              return false;
+            };
+            
+            if (isVagueDim(dimString)) {
+              issues.push({
+                severity: 'critical',
+                type: 'Invalid Newsletter Dimensions',
+                count: 1,
+                description: `"${dimString.substring(0, 20)}${dimString.length > 20 ? '...' : ''}" is not usable for asset matching`,
+                items: [itemName]
+              });
+            } else if (!isStandardNewsletterDim(dimensions)) {
+              issues.push({
+                severity: 'warning',
+                type: 'Non-Standard Newsletter Dimension',
+                count: 1,
+                description: `"${dimString.substring(0, 25)}${dimString.length > 25 ? '...' : ''}" is non-standard`,
+                items: [itemName]
+              });
+            }
+          }
+        }
+
+        // Issue 10: Radio dimension/format validation (for creative asset matching)
+        if (channel.toLowerCase() === 'radio') {
+          const dimensions = item.format?.dimensions;
+          const duration = item.specifications?.duration;
+          const adFormat = item.adFormat;
+          const fileFormats = item.specifications?.fileFormats;
+          
+          // Check if radio dimension is valid
+          const isValidRadioDim = (dim: string): boolean => {
+            if (!dim || typeof dim !== 'string') return false;
+            const cleaned = dim.toLowerCase().trim();
+            const standardFormats = ['15s', '30s', '60s', 'long-form', 'custom'];
+            const durationPattern = /^\d+s$/;
+            return standardFormats.includes(cleaned) || durationPattern.test(cleaned);
+          };
+          
+          if (!dimensions && !duration) {
+            issues.push({
+              severity: 'critical',
+              type: 'Missing Radio Duration',
+              count: 1,
+              description: 'Add duration for asset matching (e.g., 15s, 30s, 60s)',
+              items: [itemName]
+            });
+          } else if (!dimensions && duration) {
+            issues.push({
+              severity: 'warning',
+              type: 'Missing Radio Format Dimensions',
+              count: 1,
+              description: `Has duration (${duration}s) but missing format.dimensions`,
+              items: [itemName]
+            });
+          } else if (dimensions && !isValidRadioDim(dimensions)) {
+            issues.push({
+              severity: 'warning',
+              type: 'Non-Standard Radio Dimension',
+              count: 1,
+              description: `"${dimensions}" is non-standard. Use: 15s, 30s, 60s, or long-form`,
+              items: [itemName]
+            });
+          }
+          
+          if (!adFormat) {
+            issues.push({
+              severity: 'warning',
+              type: 'Missing Radio Ad Format',
+              count: 1,
+              description: 'Add ad format (e.g., 15_second_spot, 30_second_spot)',
+              items: [itemName]
+            });
+          }
+          
+          if (!fileFormats || fileFormats.length === 0) {
+            issues.push({
+              severity: 'warning',
+              type: 'Missing Radio File Formats',
+              count: 1,
+              description: 'Add accepted file formats (e.g., MP3, WAV)',
+              items: [itemName]
+            });
+          }
+        }
+
+        // Issue 11: Podcast dimension/format validation (for creative asset matching)
+        if (channel.toLowerCase() === 'podcast') {
+          const dimensions = item.format?.dimensions;
+          const duration = item.specifications?.duration;
+          const adFormat = item.adFormat;
+          const fileFormats = item.specifications?.fileFormats;
+          
+          // Check if podcast dimension is valid
+          const isValidPodcastDim = (dim: string): boolean => {
+            if (!dim || typeof dim !== 'string') return false;
+            const cleaned = dim.toLowerCase().trim();
+            const standardFormats = [
+              'pre-roll', 'preroll', 'mid-roll', 'midroll', 'post-roll', 'postroll',
+              '15s', '30s', '60s', 'host-read', 'host read', 'sponsorship', 'custom'
+            ];
+            const durationPattern = /^\d+s$/;
+            return standardFormats.includes(cleaned) || durationPattern.test(cleaned);
+          };
+          
+          if (!dimensions && !adFormat) {
+            issues.push({
+              severity: 'critical',
+              type: 'Missing Podcast Format',
+              count: 1,
+              description: 'Add format for asset matching (e.g., pre-roll, 30s, 60s, host-read)',
+              items: [itemName]
+            });
+          } else if (!dimensions && (duration || adFormat)) {
+            issues.push({
+              severity: 'warning',
+              type: 'Missing Podcast Format Dimensions',
+              count: 1,
+              description: 'Missing format.dimensions for asset matching',
+              items: [itemName]
+            });
+          } else if (dimensions && !isValidPodcastDim(dimensions)) {
+            issues.push({
+              severity: 'warning',
+              type: 'Non-Standard Podcast Dimension',
+              count: 1,
+              description: `"${dimensions}" is non-standard. Use: pre-roll, 30s, 60s, host-read, sponsorship`,
+              items: [itemName]
+            });
+          }
+          
+          if (!adFormat) {
+            issues.push({
+              severity: 'warning',
+              type: 'Missing Podcast Ad Format',
+              count: 1,
+              description: 'Add ad format (e.g., pre_roll, mid_roll_30, host_read)',
+              items: [itemName]
+            });
+          }
+          
+          if (!fileFormats || fileFormats.length === 0) {
+            issues.push({
+              severity: 'warning',
+              type: 'Missing Podcast File Formats',
+              count: 1,
+              description: 'Add accepted file formats (e.g., MP3, WAV, TXT)',
+              items: [itemName]
+            });
           }
         }
 

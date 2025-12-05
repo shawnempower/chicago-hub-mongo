@@ -170,36 +170,40 @@ export function getDisplayDimensions(ad: NewsletterAdOpportunity): string {
 
 /**
  * Get human-readable label for dimension value
+ * Aligned with NEWSLETTER_STANDARDS in config/inventoryStandards.ts
  */
 export function getDimensionLabel(dimensions: string): string {
   const labels: Record<string, string> = {
-    // Email Standard
+    // Email Standard (600px width for email clients)
     '600x150': '600×150 - Email Header Banner',
     '600x100': '600×100 - Email Leaderboard',
     '600x200': '600×200 - Email Large Banner',
     '600x300': '600×300 - Email Display Ad',
     
-    // IAB Standard
-    '300x250': '300×250 - Medium Rectangle',
+    // Web Standard (IAB sizes also used in newsletters)
     '728x90': '728×90 - Leaderboard',
+    '300x250': '300×250 - Medium Rectangle',
+    '336x280': '336×280 - Large Rectangle',
     '300x600': '300×600 - Half Page',
     '160x600': '160×600 - Wide Skyscraper',
     '320x50': '320×50 - Mobile Banner',
     '970x250': '970×250 - Billboard',
-    '336x280': '336×280 - Large Rectangle',
     '120x600': '120×600 - Skyscraper',
     
-    // Native
-    'text-only': 'Text Only',
+    // Special Formats
+    'full-newsletter': 'Full Newsletter Takeover / Dedicated Send',
+    'full-email': 'Full Newsletter Takeover',
+    'dedicated-send': 'Dedicated Send',
+    'text-only': 'Text Only / Sponsored Message',
+    'responsive': 'Responsive / Flexible Size',
+    
+    // Native / Content Integration
     'sponsored-content': 'Sponsored Content',
     'logo-text': 'Logo + Text',
     'content-integration': 'Content Integration',
     
-    // Takeover
-    'full-newsletter': 'Full Newsletter Takeover',
-    
-    // Responsive
-    'responsive': 'Responsive'
+    // Custom
+    'custom': 'Custom Size'
   };
   
   return labels[dimensions] || dimensions;
@@ -214,44 +218,50 @@ export function requiresPixelDimensions(category: AdFormatCategory): boolean {
 
 /**
  * Options for dimension selector grouped by category
+ * These align with NEWSLETTER_STANDARDS in config/inventoryStandards.ts
  */
 export const DIMENSION_OPTIONS = [
   {
-    label: 'Email Standard',
+    label: 'Email Standard (600px width)',
     options: [
-      { value: '600x150', label: '600×150 - Email Header Banner' },
-      { value: '600x100', label: '600×100 - Email Leaderboard' },
-      { value: '600x200', label: '600×200 - Email Large Banner' },
-      { value: '600x300', label: '600×300 - Email Display Ad' }
+      { value: '600x150', label: '600×150 - Email Header Banner', standardId: 'newsletter_email_header_600x150' },
+      { value: '600x100', label: '600×100 - Email Leaderboard', standardId: 'newsletter_email_leaderboard_600x100' },
+      { value: '600x200', label: '600×200 - Email Large Banner', standardId: 'newsletter_email_large_600x200' },
+      { value: '600x300', label: '600×300 - Email Display Ad', standardId: 'newsletter_email_display_600x300' }
     ]
   },
   {
-    label: 'IAB Standard',
+    label: 'Web Standard (IAB)',
     options: [
-      { value: '300x250', label: '300×250 - Medium Rectangle' },
-      { value: '728x90', label: '728×90 - Leaderboard' },
-      { value: '300x600', label: '300×600 - Half Page' },
-      { value: '160x600', label: '160×600 - Wide Skyscraper' },
-      { value: '320x50', label: '320×50 - Mobile Banner' },
-      { value: '970x250', label: '970×250 - Billboard' },
-      { value: '336x280', label: '336×280 - Large Rectangle' },
-      { value: '120x600', label: '120×600 - Skyscraper' }
+      { value: '728x90', label: '728×90 - Leaderboard', standardId: 'newsletter_leaderboard_728x90' },
+      { value: '300x250', label: '300×250 - Medium Rectangle', standardId: 'newsletter_medium_rectangle_300x250' },
+      { value: '336x280', label: '336×280 - Large Rectangle', standardId: 'newsletter_large_rectangle_336x280' },
+      { value: '300x600', label: '300×600 - Half Page', standardId: 'website_banner_300x600' },
+      { value: '160x600', label: '160×600 - Wide Skyscraper', standardId: 'website_banner_160x600' },
+      { value: '320x50', label: '320×50 - Mobile Banner', standardId: 'website_banner_320x50' },
+      { value: '970x250', label: '970×250 - Billboard', standardId: 'website_banner_970x250' },
+      { value: '120x600', label: '120×600 - Skyscraper', standardId: 'website_banner_120x600' }
     ]
   },
   {
-    label: 'Native',
+    label: 'Special Formats',
     options: [
-      { value: 'text-only', label: 'Text Only' },
-      { value: 'sponsored-content', label: 'Sponsored Content' },
-      { value: 'logo-text', label: 'Logo + Text' },
-      { value: 'content-integration', label: 'Content Integration' }
+      { value: 'full-newsletter', label: 'Full Newsletter Takeover / Dedicated Send', standardId: 'newsletter_takeover' },
+      { value: 'responsive', label: 'Responsive / Flexible Size', standardId: 'newsletter_responsive' }
     ]
   },
   {
-    label: 'Other',
+    label: 'Text / Native (Upload .txt or .html file)',
     options: [
-      { value: 'full-newsletter', label: 'Full Newsletter Takeover' },
-      { value: 'responsive', label: 'Responsive' },
+      { value: 'text-only', label: 'Text Only - Sponsored Message', standardId: 'newsletter_text_only' },
+      { value: 'sponsored-content', label: 'Sponsored Content / Native Ad', standardId: 'newsletter_native' },
+      { value: 'logo-text', label: 'Logo + Text', standardId: 'newsletter_native' },
+      { value: 'content-integration', label: 'Content Integration', standardId: 'newsletter_native' }
+    ]
+  },
+  {
+    label: 'Custom',
+    options: [
       { value: 'custom', label: 'Custom Size...' }
     ]
   }

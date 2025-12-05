@@ -250,7 +250,7 @@ function analyzeInventoryItem(
     
     if (!dimensions) {
       issues.push({
-        severity: 'high',
+        severity: 'warning',
         type: 'Missing Print Dimensions',
         count: 1,
         description: 'Dimensions required for PDF asset matching. Add format like "8.5" x 11"',
@@ -262,7 +262,7 @@ function analyzeInventoryItem(
       
       if (!isParseable) {
         issues.push({
-          severity: 'high',
+          severity: 'critical',
           type: 'Invalid Print Dimensions',
           count: 1,
           description: `Cannot parse "${dimensions}". Use format: Width x Height (e.g., "10" x 12.625")`,
@@ -281,7 +281,286 @@ function analyzeInventoryItem(
     }
   }
 
+  // Issue 10: Newsletter dimension validation (for creative asset matching)
+  if (channel.toLowerCase() === 'newsletter') {
+    // Prefer format.dimensions (canonical) over legacy dimensions field
+    const dimensions = item.format?.dimensions || item.dimensions;
+    
+    if (!dimensions) {
+      issues.push({
+        severity: 'warning',
+        type: 'Missing Newsletter Dimensions',
+        count: 1,
+        description: 'Add dimensions for asset matching (e.g., 600x150, 728x90)',
+        items: [itemName]
+      });
+    } else {
+      // Check for vague/useless dimension values that are essentially missing
+      const dimString = Array.isArray(dimensions) ? dimensions.join(', ') : String(dimensions);
+      const isVagueDimension = isVagueNewsletterDimension(dimString);
+      
+      if (isVagueDimension) {
+        issues.push({
+          severity: 'critical',
+          type: 'Invalid Newsletter Dimensions',
+          count: 1,
+          description: `"${dimString}" is not usable for asset matching. Specify actual dimensions (e.g., 600x150, 728x90)`,
+          items: [itemName]
+        });
+      } else {
+        // Check if it's a standard newsletter dimension
+        const isStandardNewsletterDimension = isStandardNewsletterFormat(dimensions);
+        
+        if (!isStandardNewsletterDimension) {
+          issues.push({
+            severity: 'warning',
+            type: 'Non-Standard Newsletter Dimension',
+            count: 1,
+            description: `"${dimString}" is non-standard. Consider using: 600x150, 600x100, 728x90, 300x250, or "full-newsletter"`,
+            items: [itemName]
+          });
+        }
+      }
+    }
+  }
+
+  // Issue 11: Radio dimension/format validation (for creative asset matching)
+  if (channel.toLowerCase() === 'radio') {
+    // Check for format.dimensions (e.g., "15s", "30s", "60s", "long-form")
+    const dimensions = item.format?.dimensions;
+    const duration = item.specifications?.duration;
+    const adFormat = item.adFormat;
+    const fileFormats = item.specifications?.fileFormats;
+    
+    if (!dimensions && !duration) {
+      issues.push({
+        severity: 'critical',
+        type: 'Missing Radio Duration',
+        count: 1,
+        description: 'Add duration for asset matching (e.g., 15s, 30s, 60s)',
+        items: [itemName]
+      });
+    } else if (!dimensions && duration) {
+      // Has duration but missing format.dimensions - flag for migration
+      issues.push({
+        severity: 'warning',
+        type: 'Missing Radio Format Dimensions',
+        count: 1,
+        description: `Has duration (${duration}s) but missing format.dimensions for asset matching`,
+        items: [itemName]
+      });
+    } else if (dimensions && !isValidRadioDimension(dimensions)) {
+      issues.push({
+        severity: 'warning',
+        type: 'Non-Standard Radio Dimension',
+        count: 1,
+        description: `"${dimensions}" is non-standard. Consider using: 15s, 30s, 60s, or long-form`,
+        items: [itemName]
+      });
+    }
+    
+    // Check for adFormat
+    if (!adFormat) {
+      issues.push({
+        severity: 'warning',
+        type: 'Missing Radio Ad Format',
+        count: 1,
+        description: 'Add ad format (e.g., 15_second_spot, 30_second_spot, live_read)',
+        items: [itemName]
+      });
+    }
+    
+    // Check for file formats
+    if (!fileFormats || fileFormats.length === 0) {
+      issues.push({
+        severity: 'info',
+        type: 'Missing Radio File Formats',
+        count: 1,
+        description: 'Add accepted file formats (e.g., MP3, WAV, TXT)',
+        items: [itemName]
+      });
+    }
+  }
+
+  // Issue 12: Podcast dimension/format validation (for creative asset matching)
+  if (channel.toLowerCase() === 'podcast') {
+    // Check for format.dimensions (e.g., "30s", "60s", "pre-roll", "host-read")
+    const dimensions = item.format?.dimensions;
+    const duration = item.specifications?.duration;
+    const adFormat = item.adFormat;
+    const fileFormats = item.specifications?.fileFormats;
+    
+    if (!dimensions && !adFormat) {
+      issues.push({
+        severity: 'critical',
+        type: 'Missing Podcast Format',
+        count: 1,
+        description: 'Add format for asset matching (e.g., pre-roll, mid-roll, 30s, 60s, host-read)',
+        items: [itemName]
+      });
+    } else if (!dimensions && (duration || adFormat)) {
+      // Has some data but missing format.dimensions - flag for migration
+      issues.push({
+        severity: 'warning',
+        type: 'Missing Podcast Format Dimensions',
+        count: 1,
+        description: 'Missing format.dimensions for asset matching',
+        items: [itemName]
+      });
+    } else if (dimensions && !isValidPodcastDimension(dimensions)) {
+      issues.push({
+        severity: 'warning',
+        type: 'Non-Standard Podcast Dimension',
+        count: 1,
+        description: `"${dimensions}" is non-standard. Consider: pre-roll, 30s, 60s, post-roll, host-read, sponsorship`,
+        items: [itemName]
+      });
+    }
+    
+    // Check for adFormat
+    if (!adFormat) {
+      issues.push({
+        severity: 'warning',
+        type: 'Missing Podcast Ad Format',
+        count: 1,
+        description: 'Add ad format (e.g., pre_roll, mid_roll_30, mid_roll_60, host_read)',
+        items: [itemName]
+      });
+    }
+    
+    // Check for file formats
+    if (!fileFormats || fileFormats.length === 0) {
+      issues.push({
+        severity: 'info',
+        type: 'Missing Podcast File Formats',
+        count: 1,
+        description: 'Add accepted file formats (e.g., MP3, WAV, TXT)',
+        items: [itemName]
+      });
+    }
+  }
+
   return issues;
+}
+
+/**
+ * Helper: Check if radio dimension is valid
+ */
+function isValidRadioDimension(dim: string): boolean {
+  if (!dim || typeof dim !== 'string') return false;
+  
+  const cleaned = dim.toLowerCase().trim();
+  
+  // Standard radio duration formats
+  const standardFormats = ['15s', '30s', '60s', 'long-form', 'custom'];
+  
+  // Also accept direct second values like "20s", "45s"
+  const durationPattern = /^\d+s$/;
+  
+  return standardFormats.includes(cleaned) || durationPattern.test(cleaned);
+}
+
+/**
+ * Helper: Check if podcast dimension is valid
+ */
+function isValidPodcastDimension(dim: string): boolean {
+  if (!dim || typeof dim !== 'string') return false;
+  
+  const cleaned = dim.toLowerCase().trim();
+  
+  // Standard podcast formats (position-based and duration-based)
+  const standardFormats = [
+    'pre-roll', 'preroll', 
+    'mid-roll', 'midroll', 
+    'post-roll', 'postroll',
+    '15s', '30s', '60s',
+    'host-read', 'host read',
+    'sponsorship', 'custom'
+  ];
+  
+  // Also accept direct second values like "20s", "45s"
+  const durationPattern = /^\d+s$/;
+  
+  return standardFormats.includes(cleaned) || durationPattern.test(cleaned);
+}
+
+/**
+ * Helper: Check if newsletter dimension is vague/useless for asset matching
+ * These are essentially the same as missing dimensions
+ */
+function isVagueNewsletterDimension(dim: string): boolean {
+  if (!dim || typeof dim !== 'string') return false;
+  
+  const cleaned = dim.toLowerCase().trim();
+  
+  // Vague terms that don't specify actual dimensions
+  const vagueTerms = [
+    'multiple', 'various', 'varies', 'variable',
+    'contact', 'contact for', 'contact us', 'tbd', 'tba',
+    'custom', 'customized', 'flexible',
+    'n/a', 'na', 'none', 'not specified', 'not available',
+    'see specs', 'see details', 'upon request',
+    'standard', 'default'
+  ];
+  
+  // Check if the dimension is just a vague term
+  if (vagueTerms.some(term => cleaned === term || cleaned.startsWith(term + ' ') || cleaned.includes('contact'))) {
+    return true;
+  }
+  
+  // Check if it's too short to be a real dimension (unless it's a known format)
+  if (cleaned.length < 4 && !/^\d+x\d+$/i.test(cleaned)) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Helper: Check if newsletter dimension is standard
+ */
+function isStandardNewsletterFormat(dim: string | string[] | any): boolean {
+  if (!dim) return false;
+  
+  // Handle array of dimensions - check if any are standard
+  if (Array.isArray(dim)) {
+    return dim.some(d => typeof d === 'string' && isStandardNewsletterFormat(d));
+  }
+  
+  // Handle non-string values
+  if (typeof dim !== 'string') return false;
+  
+  const cleaned = dim.toLowerCase().trim();
+  
+  // Standard email dimensions (600px width)
+  const emailStandards = ['600x150', '600x100', '600x200', '600x300'];
+  
+  // IAB standards commonly used in newsletters
+  const iabStandards = ['728x90', '300x250', '336x280', '300x600', '160x600', '320x50', '970x250', '120x600'];
+  
+  // Special formats
+  const specialFormats = [
+    'full-newsletter', 'full newsletter', 'full email', 'full-email',
+    'dedicated send', 'dedicated-send', 'takeover',
+    'text-only', 'text only', 'sponsored-content', 'sponsored content',
+    'responsive', 'logo-text', 'logo text', 'content-integration'
+  ];
+  
+  // Check pixel dimensions (normalize format)
+  const pixelMatch = cleaned.match(/^(\d+)\s*[x×]\s*(\d+)$/);
+  if (pixelMatch) {
+    const normalized = `${pixelMatch[1]}x${pixelMatch[2]}`;
+    if (emailStandards.includes(normalized) || iabStandards.includes(normalized)) {
+      return true;
+    }
+  }
+  
+  // Check special formats
+  if (specialFormats.some(fmt => cleaned.includes(fmt))) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
@@ -529,6 +808,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
     if (score >= 50) return { variant: 'secondary' as const, label: 'Fair', color: 'bg-orange-100 text-orange-800' };
     return { variant: 'destructive' as const, label: 'Needs Attention', color: 'bg-red-100 text-red-800' };
   };
+
 
   const badge = getScoreBadge(quality.score);
 

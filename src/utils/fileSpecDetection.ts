@@ -39,6 +39,18 @@ export interface DetectedFileSpecs {
   // Quality indicators
   estimatedDPI?: number;
   
+  // For text files (text-only/native ads)
+  isTextAsset?: boolean;
+  characterCount?: number;
+  wordCount?: number;
+  textContent?: string; // First 500 chars for preview
+  
+  // For audio files (radio ads)
+  isAudioAsset?: boolean;
+  audioDuration?: number; // Duration in seconds
+  audioDurationFormatted?: string; // "0:30" format
+  audioFormat?: string; // MP3, WAV, etc.
+  
   // Metadata
   detectedAt: Date;
 }
@@ -93,7 +105,131 @@ export async function detectFileSpecs(file: File): Promise<DetectedFileSpecs> {
     }
   }
 
+  // Detect text file info (for text-only/native newsletter ads)
+  const ext = file.name.toLowerCase();
+  if (file.type === 'text/plain' || file.type === 'text/html' || 
+      ext.endsWith('.txt') || ext.endsWith('.html') || ext.endsWith('.htm')) {
+    console.log('[Text Detection] Detecting text specs for:', file.name);
+    const textInfo = await detectTextSpecs(file);
+    if (textInfo) {
+      specs.isTextAsset = true;
+      specs.characterCount = textInfo.characterCount;
+      specs.wordCount = textInfo.wordCount;
+      specs.textContent = textInfo.preview;
+      // For text assets, set a special "dimension" marker
+      specs.dimensions = {
+        width: 0,
+        height: 0,
+        formatted: 'text-only'
+      };
+    }
+  }
+
+  // Detect audio file info (for radio ads)
+  if (file.type.startsWith('audio/') || 
+      ext.endsWith('.mp3') || ext.endsWith('.wav') || 
+      ext.endsWith('.m4a') || ext.endsWith('.aac')) {
+    console.log('[Audio Detection] Detecting audio specs for:', file.name);
+    const audioInfo = await detectAudioSpecs(file);
+    if (audioInfo) {
+      specs.isAudioAsset = true;
+      specs.audioDuration = audioInfo.duration;
+      specs.audioDurationFormatted = formatAudioDuration(audioInfo.duration);
+      specs.audioFormat = audioInfo.format;
+      // Set dimension to duration for matching (e.g., "30s")
+      specs.dimensions = {
+        width: 0,
+        height: 0,
+        formatted: `${Math.round(audioInfo.duration)}s`
+      };
+    }
+  }
+
   return specs;
+}
+
+/**
+ * Detect text file specifications
+ */
+async function detectTextSpecs(file: File): Promise<{
+  characterCount: number;
+  wordCount: number;
+  preview: string;
+} | null> {
+  try {
+    const text = await file.text();
+    const characterCount = text.length;
+    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    const preview = text.substring(0, 500) + (text.length > 500 ? '...' : '');
+    
+    return { characterCount, wordCount, preview };
+  } catch (error) {
+    console.error('[Text Detection] Error reading text file:', error);
+    return null;
+  }
+}
+
+/**
+ * Detect audio file specifications
+ */
+async function detectAudioSpecs(file: File): Promise<{
+  duration: number;
+  format: string;
+} | null> {
+  try {
+    // Create an audio element to get duration
+    const url = URL.createObjectURL(file);
+    const audio = new Audio();
+    
+    return new Promise((resolve) => {
+      audio.onloadedmetadata = () => {
+        const duration = audio.duration;
+        URL.revokeObjectURL(url);
+        
+        // Determine format from extension
+        const ext = file.name.toLowerCase().split('.').pop() || '';
+        const formatMap: Record<string, string> = {
+          'mp3': 'MP3',
+          'wav': 'WAV',
+          'm4a': 'M4A',
+          'aac': 'AAC',
+          'ogg': 'OGG',
+          'flac': 'FLAC'
+        };
+        
+        resolve({
+          duration: Math.round(duration),
+          format: formatMap[ext] || ext.toUpperCase()
+        });
+      };
+      
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        console.error('[Audio Detection] Error loading audio file');
+        resolve(null);
+      };
+      
+      // Set a timeout in case the file doesn't load
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      }, 5000);
+      
+      audio.src = url;
+    });
+  } catch (error) {
+    console.error('[Audio Detection] Error detecting audio specs:', error);
+    return null;
+  }
+}
+
+/**
+ * Format audio duration as MM:SS
+ */
+function formatAudioDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 /**
@@ -321,6 +457,10 @@ function parseFileSizeToBytes(sizeStr: string): number | null {
 /**
  * Auto-match uploaded file to spec groups
  * Returns sorted array of matches (best match first)
+ * 
+ * Philosophy: Be helpful but not too smart. If unsure, don't auto-assign.
+ * - Only auto-assign when confidence is high (score >= 50)
+ * - For ambiguous cases, let the user decide
  */
 export function autoMatchFileToSpecs(
   detectedSpecs: DetectedFileSpecs,
@@ -336,12 +476,235 @@ export function autoMatchFileToSpecs(
 ): FileMatchScore[] {
   const matches: FileMatchScore[] = [];
   
+  // Helper to check if placement accepts text files
+  const isTextAcceptingPlacement = (dims: string | string[] | undefined): boolean => {
+    if (!dims) return false;
+    const dimsArray = Array.isArray(dims) ? dims : [dims];
+    return dimsArray.some(dim => {
+      const d = dim.toLowerCase();
+      return d.includes('text-only') || d.includes('text only') || 
+             d.includes('sponsored-content') || d.includes('sponsored content') ||
+             d.includes('native') || d.includes('logo-text') ||
+             d.includes('content-integration');
+    });
+  };
+  
+  // Helper to check if placement is strictly text-only (no images)
+  const isStrictlyTextOnly = (dims: string | string[] | undefined): boolean => {
+    if (!dims) return false;
+    const dimsArray = Array.isArray(dims) ? dims : [dims];
+    return dimsArray.some(dim => {
+      const d = dim.toLowerCase();
+      return d === 'text-only' || d === 'text only';
+    });
+  };
+  
   specGroups.forEach(spec => {
     let score = 0;
     const reasons: string[] = [];
     const mismatches: string[] = [];
     
     const isWebsite = spec.channel.toLowerCase() === 'website';
+    const isNewsletter = spec.channel.toLowerCase() === 'newsletter';
+    const placementAcceptsText = isTextAcceptingPlacement(spec.dimensions);
+    const placementIsStrictlyTextOnly = isStrictlyTextOnly(spec.dimensions);
+    
+    // Get file extension for format checking
+    const fileExt = detectedSpecs.fileExtension?.toUpperCase() || '';
+    const isTxtFile = fileExt === 'TXT';
+    const isHtmlFile = fileExt === 'HTML' || fileExt === 'HTM';
+    
+    // ===========================================
+    // CASE 1: Text/HTML file uploaded
+    // ===========================================
+    if (detectedSpecs.isTextAsset) {
+      const requiredDims = Array.isArray(spec.dimensions) ? spec.dimensions : [spec.dimensions || ''];
+      
+      if (placementAcceptsText && isNewsletter) {
+        // Check specific format matching
+        if (placementIsStrictlyTextOnly) {
+          // text-only placements: prefer .txt files
+          if (isTxtFile) {
+            score += 70; // High confidence - .txt to text-only
+            reasons.push('Text file (.txt) matches text-only placement');
+          } else if (isHtmlFile) {
+            score += 30; // Lower confidence - let user decide if .html is okay
+            reasons.push('HTML file uploaded to text-only placement (may work, please verify)');
+          }
+        } else {
+          // native/sponsored-content placements: accept both .txt and .html
+          if (isTxtFile || isHtmlFile) {
+            score += 60; // Good match for native content
+            reasons.push(`${fileExt} file matches native/sponsored content placement`);
+          }
+        }
+        
+        // Add word/character count info for user context
+        if (detectedSpecs.wordCount) {
+          reasons.push(`${detectedSpecs.wordCount} words, ${detectedSpecs.characterCount} characters`);
+        }
+      } else if (placementAcceptsText && (isRadio || isPodcast)) {
+        // Radio/Podcast text placements (host-read, live-read scripts)
+        const dims = (requiredDims[0] || '').toLowerCase();
+        const isHostRead = dims.includes('host-read') || dims.includes('live-read') || dims.includes('script');
+        
+        if (isTxtFile) {
+          if (isHostRead) {
+            score += 80; // High confidence - script for host-read
+            reasons.push('Text script (.txt) matches host-read/live-read placement');
+          } else {
+            score += 50; // Medium confidence - text for audio channel
+            reasons.push(`Text file for ${spec.channel} placement (e.g., script or talking points)`);
+          }
+          
+          // Add word count context for script length estimation
+          if (detectedSpecs.wordCount) {
+            const estimatedSeconds = Math.round(detectedSpecs.wordCount / 2.5); // ~150 words/minute
+            reasons.push(`${detectedSpecs.wordCount} words (~${estimatedSeconds}s read time)`);
+          }
+        } else {
+          score += 30;
+          reasons.push(`${fileExt} file may work for ${spec.channel} text placement`);
+        }
+      } else if (placementAcceptsText && !isNewsletter) {
+        // Other non-newsletter channels with text placement - lower confidence
+        score += 20;
+        reasons.push(`Text file may work for ${spec.channel} text placement (verify manually)`);
+      } else {
+        // Placement needs image - this is a clear mismatch
+        mismatches.push('This placement requires an image, not a text file');
+      }
+      
+      // Always add to matches list (even with score 0) so user can see options
+      matches.push({
+        file: null as any,
+        detectedSpecs,
+        specGroupId: spec.specGroupId,
+        specGroupName: `${spec.channel} - ${requiredDims.join(' or ')}`,
+        matchScore: score,
+        matchReasons: reasons,
+        mismatches
+      });
+      return; // Skip dimension matching for text files
+    }
+    
+    // ===========================================
+    // CASE 1b: Audio file uploaded (for radio ads)
+    // ===========================================
+    const isRadio = spec.channel.toLowerCase() === 'radio';
+    const isPodcast = spec.channel.toLowerCase() === 'podcast';
+    
+    if (detectedSpecs.isAudioAsset) {
+      // Audio file - check if this is a radio/podcast placement
+      if (isRadio || isPodcast) {
+        const audioDuration = detectedSpecs.audioDuration || 0;
+        const requiredDims = Array.isArray(spec.dimensions) ? spec.dimensions : [spec.dimensions || ''];
+        
+        // Check if duration matches placement requirements
+        const durationMatches = requiredDims.some(dim => {
+          if (!dim) return false;
+          const d = dim.toLowerCase();
+          
+          // Exact duration match (e.g., "30s" matches 30 second file)
+          if (d === `${audioDuration}s`) {
+            return true;
+          }
+          
+          // Check for standard spot durations with some tolerance (±2 seconds)
+          if (d === '15s' && audioDuration >= 13 && audioDuration <= 17) return true;
+          if (d === '30s' && audioDuration >= 28 && audioDuration <= 32) return true;
+          if (d === '60s' && audioDuration >= 58 && audioDuration <= 62) return true;
+          
+          // Long-form is flexible
+          if (d === 'long-form' && audioDuration > 60) return true;
+          
+          // Podcast position-based formats (pre-roll, post-roll typically 15-30s)
+          if ((d === 'pre-roll' || d === 'preroll') && audioDuration >= 10 && audioDuration <= 35) return true;
+          if ((d === 'post-roll' || d === 'postroll') && audioDuration >= 10 && audioDuration <= 35) return true;
+          
+          // Mid-roll can be 30-60s typically
+          if ((d === 'mid-roll' || d === 'midroll') && audioDuration >= 25 && audioDuration <= 70) return true;
+          
+          // Sponsorship is flexible
+          if (d === 'sponsorship') return true;
+          
+          return false;
+        });
+        
+        if (durationMatches) {
+          score += 70; // High confidence
+          reasons.push(`Audio duration (${detectedSpecs.audioDurationFormatted}) matches ${requiredDims.join(' or ')} placement`);
+        } else {
+          // Duration doesn't match - provide context
+          score += 20; // Low confidence
+          mismatches.push(`Audio duration (${audioDuration}s) may not match ${requiredDims.join(' or ')} placement`);
+        }
+        
+        // Check audio format
+        if (spec.fileFormats && spec.fileFormats.length > 0) {
+          const audioFormat = detectedSpecs.audioFormat?.toUpperCase() || '';
+          if (spec.fileFormats.some(fmt => fmt.toUpperCase() === audioFormat)) {
+            score += 15;
+            reasons.push(`Audio format (${audioFormat}) is accepted`);
+          } else {
+            mismatches.push(`Audio format ${audioFormat} may need conversion to ${spec.fileFormats.join('/')}`);
+          }
+        }
+        
+        matches.push({
+          file: null as any,
+          detectedSpecs,
+          specGroupId: spec.specGroupId,
+          specGroupName: `${spec.channel} - ${requiredDims.join(' or ')}`,
+          matchScore: score,
+          matchReasons: reasons,
+          mismatches
+        });
+        return; // Skip dimension matching for audio files
+      } else {
+        // Audio file uploaded to non-audio placement
+        mismatches.push(`This placement requires ${spec.channel} assets, not audio files`);
+        matches.push({
+          file: null as any,
+          detectedSpecs,
+          specGroupId: spec.specGroupId,
+          specGroupName: `${spec.channel} - ${spec.dimensions}`,
+          matchScore: 0,
+          matchReasons: [],
+          mismatches
+        });
+        return;
+      }
+    }
+    
+    // ===========================================
+    // CASE 2: Image/PDF file uploaded to text-accepting placement
+    // ===========================================
+    if (!detectedSpecs.isTextAsset && placementAcceptsText) {
+      // Check if placement also accepts images (like native with logo support)
+      const placementFormats = spec.fileFormats?.map(f => f.toUpperCase()) || [];
+      const imageFormats = ['JPG', 'JPEG', 'PNG', 'GIF', 'WEBP', 'SVG'];
+      const placementAcceptsImages = placementFormats.some(f => imageFormats.includes(f));
+      
+      if (placementAcceptsImages && !placementIsStrictlyTextOnly) {
+        // Native placement that accepts both - check if it could work
+        score += 30; // Low-medium confidence - let user verify
+        reasons.push('Image may work for native/sponsored content (e.g., logo)');
+      } else {
+        // Strictly text-only - image won't work
+        mismatches.push('This placement requires text content (.txt file), not an image');
+        matches.push({
+          file: null as any,
+          detectedSpecs,
+          specGroupId: spec.specGroupId,
+          specGroupName: `${spec.channel} - ${spec.dimensions}`,
+          matchScore: 0,
+          matchReasons: [],
+          mismatches
+        });
+        return; // Skip further matching
+      }
+    }
     
     // Check dimensions (MOST IMPORTANT - especially for website)
     if (detectedSpecs.dimensions && spec.dimensions) {

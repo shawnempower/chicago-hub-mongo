@@ -191,7 +191,9 @@ export function CampaignCreativeAssetsUploader({
       'application/illustrator': ['.ai'],
       'application/postscript': ['.eps'],
       'application/vnd.adobe.photoshop': ['.psd'],
-      'application/x-indesign': ['.indd']
+      'application/x-indesign': ['.indd'],
+      'text/plain': ['.txt'],  // For text-only/native newsletter ads
+      'text/html': ['.html', '.htm']  // For HTML newsletter content
     },
     multiple: true
   });
@@ -1425,7 +1427,7 @@ export function CampaignCreativeAssetsUploader({
                   Drag & drop files here or click to upload
                 </span>
                 <span className="text-sm text-gray-500">
-                  Supports images, videos, PDFs, design files (AI, PSD, INDD, EPS), and ZIP archives.
+                  Supports images, videos, PDFs, design files, ZIP, and text files (.txt/.html for native ads).
                 </span>
               </>
             )}
@@ -1439,8 +1441,21 @@ export function CampaignCreativeAssetsUploader({
                 <Card key={fileId} className="border-blue-200">
                   <CardContent className="pt-4">
                     <div className="flex gap-4">
-                      {/* Preview */}
-                      {previewUrl && (
+                      {/* Preview - handle text files differently */}
+                      {detectedSpecs?.isTextAsset ? (
+                        // Text file preview
+                        <div className="relative w-32 h-24 bg-amber-50 rounded-lg border-2 border-amber-200 flex flex-col items-center justify-center p-2">
+                          <FileText className="h-8 w-8 text-amber-600 mb-1" />
+                          <span className="text-xs text-amber-700 font-medium">
+                            {detectedSpecs.fileExtension}
+                          </span>
+                          {detectedSpecs.wordCount && (
+                            <span className="text-[10px] text-amber-600">
+                              {detectedSpecs.wordCount} words
+                            </span>
+                          )}
+                        </div>
+                      ) : previewUrl ? (
                         <div className="relative w-32 h-24 bg-white rounded-lg border-2 border-gray-200 flex items-center justify-center overflow-hidden">
                           <img 
                             src={previewUrl} 
@@ -1453,7 +1468,7 @@ export function CampaignCreativeAssetsUploader({
                             }}
                           />
                         </div>
-                      )}
+                      ) : null}
 
                       {/* File Info */}
                       <div className="flex-1 min-w-0">
@@ -1462,7 +1477,9 @@ export function CampaignCreativeAssetsUploader({
                             <h4 className="font-medium font-sans text-sm truncate">{file.name}</h4>
                             <div className="flex items-center gap-3 mt-1">
                               <span className="text-sm font-semibold text-gray-900">{formatBytes(file.size)}</span>
-                              <span className="text-sm text-gray-500">📄 {file.type.split('/')[1]?.toUpperCase() || 'FILE'}</span>
+                              <span className="text-sm text-gray-500">
+                                {detectedSpecs?.isTextAsset ? '📝' : '📄'} {file.type.split('/')[1]?.toUpperCase() || detectedSpecs?.fileExtension || 'FILE'}
+                              </span>
                             </div>
                           </div>
                           <Button
@@ -1475,24 +1492,46 @@ export function CampaignCreativeAssetsUploader({
                           </Button>
                         </div>
 
-                        {/* Detected Specs */}
+                        {/* Detected Specs - different display for text vs images */}
                         {detectedSpecs && (
                           <div className="flex flex-wrap gap-1.5 mt-2">
-                            {detectedSpecs.dimensions && (
-                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                                📐 {detectedSpecs.dimensions.formatted}
-                              </Badge>
+                            {detectedSpecs.isTextAsset ? (
+                              // Text file info
+                              <>
+                                <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
+                                  📝 {detectedSpecs.wordCount || 0} words
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
+                                  {detectedSpecs.characterCount || 0} chars
+                                </Badge>
+                              </>
+                            ) : (
+                              // Image file info
+                              <>
+                                {detectedSpecs.dimensions && (
+                                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                                    📐 {detectedSpecs.dimensions.formatted}
+                                  </Badge>
+                                )}
+                                {detectedSpecs.colorSpace && (
+                                  <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                                    🎨 {detectedSpecs.colorSpace}
+                                  </Badge>
+                                )}
+                                {detectedSpecs.estimatedDPI && detectedSpecs.estimatedDPI >= 300 && (
+                                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                    ✨ {detectedSpecs.estimatedDPI}dpi
+                                  </Badge>
+                                )}
+                              </>
                             )}
-                            {detectedSpecs.colorSpace && (
-                              <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
-                                🎨 {detectedSpecs.colorSpace}
-                              </Badge>
-                            )}
-                            {detectedSpecs.resolution && (
-                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                                ✨ {detectedSpecs.resolution}
-                              </Badge>
-                            )}
+                          </div>
+                        )}
+                        
+                        {/* Text content preview */}
+                        {detectedSpecs?.isTextAsset && detectedSpecs.textContent && (
+                          <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900 italic line-clamp-2">
+                            "{detectedSpecs.textContent.substring(0, 120)}..."
                           </div>
                         )}
 

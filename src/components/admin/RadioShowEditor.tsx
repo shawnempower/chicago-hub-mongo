@@ -35,9 +35,13 @@ interface RadioAd {
       frequency?: string;
     };
   }>;
+  format?: {
+    dimensions?: string; // e.g., "15s", "30s", "60s", "long-form" - for creative asset matching
+  };
   specifications?: {
     duration?: number;
     format?: string;
+    fileFormats?: string[]; // e.g., ["MP3", "WAV"] or ["TXT"] for live reads
   };
   available: boolean;
   hubPricing?: HubPrice[];
@@ -191,8 +195,12 @@ export const RadioShowEditor = forwardRef<{ openShowDialog: (show: RadioShow) =>
         flatRate: 0,
         pricingModel: 'per_spot',
       },
+      format: {
+        dimensions: '30s', // For creative asset matching
+      },
       specifications: {
         duration: 30,
+        fileFormats: ['MP3', 'WAV'], // Standard audio formats
       },
       available: true,
     };
@@ -209,15 +217,31 @@ export const RadioShowEditor = forwardRef<{ openShowDialog: (show: RadioShow) =>
     const updatedAds = [...editingShow.advertisingOpportunities];
     updatedAds[adIndex] = { ...updatedAds[adIndex], ...updates };
     
-    // Sync format with duration for backward compatibility
-    if (updates.adFormat && !updates.specifications) {
-      const duration = updates.adFormat === '15_second_spot' ? 15 :
-                      updates.adFormat === '30_second_spot' ? 30 :
-                      updates.adFormat === '60_second_spot' ? 60 : undefined;
-      if (duration) {
+    // Sync format fields when adFormat changes
+    if (updates.adFormat) {
+      // Map adFormat to duration and dimensions
+      const formatMapping: Record<string, { duration?: number; dimensions: string; fileFormats: string[] }> = {
+        '15_second_spot': { duration: 15, dimensions: '15s', fileFormats: ['MP3', 'WAV'] },
+        '30_second_spot': { duration: 30, dimensions: '30s', fileFormats: ['MP3', 'WAV'] },
+        '60_second_spot': { duration: 60, dimensions: '60s', fileFormats: ['MP3', 'WAV'] },
+        'live_read': { dimensions: 'live-read', fileFormats: ['TXT'] },
+        'sponsorship': { dimensions: 'long-form', fileFormats: ['MP3', 'WAV', 'TXT'] },
+        'traffic_weather_sponsor': { duration: 15, dimensions: '15s', fileFormats: ['MP3', 'WAV', 'TXT'] },
+      };
+      
+      const mapping = formatMapping[updates.adFormat];
+      if (mapping) {
+        // Update specifications.duration and specifications.fileFormats
         updatedAds[adIndex].specifications = {
           ...updatedAds[adIndex].specifications,
-          duration
+          ...(mapping.duration && { duration: mapping.duration }),
+          fileFormats: mapping.fileFormats,
+        };
+        
+        // Update format.dimensions for creative asset matching
+        updatedAds[adIndex].format = {
+          ...updatedAds[adIndex].format,
+          dimensions: mapping.dimensions,
         };
       }
     }

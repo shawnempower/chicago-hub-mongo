@@ -186,8 +186,11 @@ function extractFromInventoryItem(
   if (item.specifications) {
     const specs = item.specifications;
     
-    // File formats
-    if (specs.formats) {
+    // File formats - check multiple field names
+    if (specs.fileFormats && Array.isArray(specs.fileFormats)) {
+      // Primary field used by radio/podcast migration
+      requirement.fileFormats = specs.fileFormats;
+    } else if (specs.formats) {
       requirement.fileFormats = Array.isArray(specs.formats) ? specs.formats : [specs.formats];
     } else if (specs.format) {
       // Handle both array and string (comma-separated)
@@ -311,17 +314,22 @@ export function extractCreativeRequirements(
     });
   }
 
-  // Radio
-  if (channels.radio?.advertisingOpportunities) {
-    channels.radio.advertisingOpportunities.forEach((item, index) => {
-      const requirement = extractFromInventoryItem(
-        item,
-        'radio',
-        publicationId,
-        publicationName,
-        `distributionChannels.radio.advertisingOpportunities[${index}]`
-      );
-      if (requirement) requirements.push(requirement);
+  // Radio - iterate through stations → shows → ads
+  if (channels.radioStations) {
+    channels.radioStations.forEach((station: any, stationIndex: number) => {
+      const shows = station.shows || [];
+      shows.forEach((show: any, showIndex: number) => {
+        (show.advertisingOpportunities || []).forEach((item: any, adIndex: number) => {
+          const requirement = extractFromInventoryItem(
+            item,
+            'radio',
+            publicationId,
+            publicationName,
+            `distributionChannels.radioStations[${stationIndex}].shows[${showIndex}].advertisingOpportunities[${adIndex}]`
+          );
+          if (requirement) requirements.push(requirement);
+        });
+      });
     });
   }
 

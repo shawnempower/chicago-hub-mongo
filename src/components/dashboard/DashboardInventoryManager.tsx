@@ -920,16 +920,71 @@ export const DashboardInventoryManager = () => {
 
         case 'podcast-ad':
           if (updatedPublication.distributionChannels?.podcasts) {
+            // Derive standard fields from position and duration for asset matching
+            const enrichedPodcastAd = { ...editingItem };
+            const position = (editingItem.position || '').toLowerCase();
+            const duration = editingItem.duration;
+            
+            // Determine adFormat from position/duration
+            if (!enrichedPodcastAd.adFormat) {
+              if (position.includes('pre-roll') || position.includes('preroll') || position.includes('pre roll')) {
+                enrichedPodcastAd.adFormat = 'pre_roll';
+              } else if (position.includes('post-roll') || position.includes('postroll') || position.includes('post roll')) {
+                enrichedPodcastAd.adFormat = 'post_roll';
+              } else if (position.includes('host read') || position.includes('host-read')) {
+                enrichedPodcastAd.adFormat = 'host_read';
+              } else if (position.includes('sponsor') || position.includes('takeover')) {
+                enrichedPodcastAd.adFormat = 'sponsorship';
+              } else if (duration === 30) {
+                enrichedPodcastAd.adFormat = 'mid_roll_30';
+              } else if (duration === 60) {
+                enrichedPodcastAd.adFormat = 'mid_roll_60';
+              } else {
+                enrichedPodcastAd.adFormat = 'mid_roll_30'; // Default
+              }
+            }
+            
+            // Set format.dimensions for creative asset matching
+            if (!enrichedPodcastAd.format?.dimensions) {
+              let dimensions: string;
+              if (position.includes('pre-roll') || position.includes('preroll')) {
+                dimensions = 'pre-roll';
+              } else if (position.includes('post-roll') || position.includes('postroll')) {
+                dimensions = 'post-roll';
+              } else if (position.includes('host read') || position.includes('host-read')) {
+                dimensions = 'host-read';
+              } else if (position.includes('sponsor') || position.includes('takeover')) {
+                dimensions = 'sponsorship';
+              } else if (duration) {
+                dimensions = `${duration}s`;
+              } else {
+                dimensions = '30s'; // Default
+              }
+              enrichedPodcastAd.format = { ...enrichedPodcastAd.format, dimensions };
+            }
+            
+            // Set specifications with duration and fileFormats
+            if (!enrichedPodcastAd.specifications?.fileFormats) {
+              const isTextBased = enrichedPodcastAd.adFormat === 'host_read';
+              enrichedPodcastAd.specifications = {
+                ...enrichedPodcastAd.specifications,
+                duration: duration,
+                fileFormats: isTextBased ? ['TXT'] : ['MP3', 'WAV']
+              };
+            } else if (duration && !enrichedPodcastAd.specifications.duration) {
+              enrichedPodcastAd.specifications.duration = duration;
+            }
+            
             if (isAdding) {
               // Adding new podcast ad
               if (!updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities) {
                 updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities = [];
               }
-              updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities.push(editingItem);
+              updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities.push(enrichedPodcastAd);
             } else {
               // Editing existing podcast ad
               if (editingSubIndex >= 0 && updatedPublication.distributionChannels.podcasts[editingIndex]?.advertisingOpportunities) {
-                updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities[editingSubIndex] = editingItem;
+                updatedPublication.distributionChannels.podcasts[editingIndex].advertisingOpportunities[editingSubIndex] = enrichedPodcastAd;
               }
             }
           }
@@ -1307,10 +1362,11 @@ export const DashboardInventoryManager = () => {
     if (!currentPublication?.distributionChannels?.newsletters?.[newsletterIndex]) return;
     
     // Create template for new opportunity
+    // Note: dimensions are set via format.dimensions (canonical), not legacy dimensions field
     const newOpportunity = {
       name: '',
       position: 'inline' as const,
-      dimensions: '',
+      format: null,  // Will be set by AdFormatSelector → format.dimensions
       pricing: {
         perSend: 0,
         monthly: 0
@@ -5116,7 +5172,6 @@ export const DashboardInventoryManager = () => {
                     value={editingItem.format || null}
                     onChange={(format) => setEditingItem({ ...editingItem, format })}
                     allowMultiple={true}
-                    legacyDimensions={editingItem.sizes ? editingItem.sizes.join(', ') : undefined}
                   />
 
                   <HubPricingEditor
@@ -5183,7 +5238,6 @@ export const DashboardInventoryManager = () => {
                     value={editingItem.format || null}
                     onChange={(format) => setEditingItem({ ...editingItem, format })}
                     allowMultiple={true}
-                    legacyDimensions={editingItem.dimensions}
                   />
 
                   <HubPricingEditor

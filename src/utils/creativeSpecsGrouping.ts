@@ -185,7 +185,7 @@ export function getPublicationsSummary(group: GroupedCreativeRequirement): strin
  * Format dimensions for display
  */
 export function formatDimensions(dimensions?: string | string[]): string {
-  if (!dimensions) return 'Any size';
+  if (!dimensions) return 'Not specified';
   if (Array.isArray(dimensions)) {
     return dimensions.join(', ');
   }
@@ -228,6 +228,11 @@ export interface UploadedAssetWithSpecs {
     fileExtension?: string;
     fileSize?: number;
     formatted?: string;
+    // Text file support
+    isTextAsset?: boolean;
+    textContent?: string; // First 500 chars for preview
+    wordCount?: number;
+    characterCount?: number;
   };
   
   // Which placements this asset applies to

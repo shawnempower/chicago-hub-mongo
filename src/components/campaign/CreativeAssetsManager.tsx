@@ -47,6 +47,7 @@ import {
   X,
   ChevronRight,
   FileImage,
+  FileText,
   FolderOpen,
   MoreHorizontal,
   ArrowUp,
@@ -77,6 +78,12 @@ import {
   findStandardByDimensions,
   InventoryTypeStandard,
 } from '@/config/inventoryStandards';
+import {
+  processZipFile,
+  ProcessedZipFile,
+  ZipProcessingResult,
+  generateZipSummary
+} from '@/utils/zipProcessor';
 import { API_BASE_URL } from '@/config/api';
 
 interface CreativeAssetsManagerProps {
@@ -165,6 +172,8 @@ export function CreativeAssetsManager({
   const [assetToDelete, setAssetToDelete] = useState<{ assetId: string; specGroupId: string; fileName: string } | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
   const [previewAsset, setPreviewAsset] = useState<{ url: string; fileName: string } | null>(null);
+  const [processingZip, setProcessingZip] = useState(false);
+  const [zipProgress, setZipProgress] = useState<{ percent: number; message: string } | null>(null);
 
   // Group requirements by specifications
   const groupedSpecs = useMemo(() => groupRequirementsBySpec(requirements), [requirements]);
@@ -360,11 +369,143 @@ export function CreativeAssetsManager({
       : <ArrowDown className="h-4 w-4 ml-1" />;
   };
 
+  // Handle ZIP file processing
+  const handleZipFile = useCallback(async (zipFile: File) => {
+    setProcessingZip(true);
+    setZipProgress({ percent: 0, message: 'Processing ZIP file...' });
+
+    try {
+      const result = await processZipFile(zipFile, (percent, message) => {
+        setZipProgress({ percent, message });
+      });
+
+      toast({
+        title: 'ZIP Processed',
+        description: generateZipSummary(result),
+      });
+
+      // Collect all assignments before updating state
+      const updatedAssets = new Map(uploadedAssets);
+      const newPendingFiles = new Map<string, PendingFile>();
+      
+      console.log(`[ZIP] Processing ${result.processedFiles.length} files from ZIP`);
+      console.log(`[ZIP] Available spec groups:`, groupedSpecs.map(g => ({
+        id: g.specGroupId,
+        channel: g.channel,
+        dimensions: g.dimensions
+      })));
+
+      // Process each extracted file
+      for (const processedFile of result.processedFiles) {
+        const fileId = `${processedFile.fileName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        console.log(`\n[ZIP] Processing file: ${processedFile.fileName}`);
+        console.log(`[ZIP] Detected specs:`, processedFile.detectedSpecs);
+        
+        // Use preview URL from ZIP processor, or create new one if missing
+        let previewUrl = processedFile.previewUrl;
+        if (!previewUrl && processedFile.file.type.startsWith('image/')) {
+          previewUrl = URL.createObjectURL(processedFile.file);
+        }
+
+        // Auto-match to spec groups
+        const matches = autoMatchFileToSpecs(processedFile.detectedSpecs, groupedSpecs);
+        const bestMatch = matches.length > 0 ? matches[0] : null;
+        const matchConfidence = bestMatch ? bestMatch.matchScore : 0;
+
+        console.log(`[ZIP] Found ${matches.length} matches for ${processedFile.fileName}`);
+        if (bestMatch) {
+          console.log(`[ZIP] Best match: ${bestMatch.specGroupId} with ${matchConfidence}% confidence`);
+          console.log(`[ZIP] Match reasons:`, bestMatch.matchReasons);
+          if (bestMatch.mismatches.length > 0) {
+            console.log(`[ZIP] Mismatches:`, bestMatch.mismatches);
+          }
+        }
+
+        // Auto-assign if good match (score >= 50)
+        if (bestMatch && matchConfidence >= 50) {
+          console.log(`✅ [ZIP] Auto-assigning ${processedFile.fileName} → ${bestMatch.specGroupId} (${matchConfidence}%)`);
+          
+          const matchingGroup = groupedSpecs.find(g => g.specGroupId === bestMatch.specGroupId);
+          if (matchingGroup) {
+            updatedAssets.set(matchingGroup.specGroupId, {
+              specGroupId: matchingGroup.specGroupId,
+              file: processedFile.file,
+              previewUrl,
+              uploadStatus: 'pending',
+              detectedSpecs: processedFile.detectedSpecs,
+              appliesTo: matchingGroup.placements.map(p => ({
+                placementId: p.placementId,
+                publicationId: p.publicationId,
+                publicationName: p.publicationName
+              }))
+            });
+            console.log(`✅ [ZIP] Successfully assigned to spec group`);
+            continue; // Skip adding to pending
+          } else {
+            console.warn(`⚠️ [ZIP] Could not find matching group for ${bestMatch.specGroupId}`);
+          }
+        }
+
+        // If not auto-assigned, add to pending files
+        console.log(`⚠️ [ZIP] Low match confidence for ${processedFile.fileName} (${matchConfidence}%), adding to pending`);
+        newPendingFiles.set(fileId, {
+          file: processedFile.file,
+          previewUrl,
+          detectedSpecs: processedFile.detectedSpecs,
+          suggestedStandard: processedFile.suggestedStandard,
+          matchConfidence: processedFile.matchConfidence,
+          isAnalyzing: false,
+        });
+      }
+
+      // Update state once with all assignments
+      console.log(`[ZIP] Final: ${updatedAssets.size - uploadedAssets.size} files auto-assigned, ${newPendingFiles.size} pending`);
+      if (updatedAssets.size > uploadedAssets.size) {
+        onAssetsChange(updatedAssets);
+      }
+      if (newPendingFiles.size > 0) {
+        setPendingFiles(prev => {
+          const next = new Map(prev);
+          newPendingFiles.forEach((value, key) => next.set(key, value));
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error('Error processing ZIP:', error);
+      toast({
+        title: 'ZIP Processing Failed',
+        description: error instanceof Error ? error.message : 'Failed to process ZIP file',
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessingZip(false);
+      setZipProgress(null);
+    }
+  }, [groupedSpecs, uploadedAssets, onAssetsChange, toast]);
+
   // Handle file selection
   const handleFilesSelected = useCallback(async (files: FileList | File[]) => {
-    const fileArray = Array.from(files);
+    let fileArray = Array.from(files);
     
     console.log(`[Upload] Processing ${fileArray.length} file(s)`);
+    
+    // Check if any ZIP files
+    const zipFiles = fileArray.filter(f => 
+      f.name.endsWith('.zip') || f.type === 'application/zip' || f.type === 'application/x-zip-compressed'
+    );
+
+    if (zipFiles.length > 0) {
+      console.log(`[Upload] Found ${zipFiles.length} ZIP file(s), processing...`);
+      // Process ZIP files
+      for (const zipFile of zipFiles) {
+        await handleZipFile(zipFile);
+      }
+
+      // Remove ZIP files from the list
+      fileArray = fileArray.filter(f => !zipFiles.includes(f));
+    }
+    
     console.log(`[Upload] Available spec groups:`, groupedSpecs.length);
     
     for (const file of fileArray) {
@@ -461,7 +602,6 @@ export function CreativeAssetsManager({
             next.set(fileId, {
               ...existing,
               detectedSpecs,
-              matches,
               matchConfidence,
               isAnalyzing: false,
             });
@@ -483,7 +623,7 @@ export function CreativeAssetsManager({
         });
       }
     }
-  }, [groupedSpecs, uploadedAssets, onAssetsChange]);
+  }, [groupedSpecs, uploadedAssets, onAssetsChange, handleZipFile]);
 
   // Dropzone
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
@@ -493,6 +633,8 @@ export function CreativeAssetsManager({
       'video/*': ['.mp4', '.mov', '.avi'],
       'application/pdf': ['.pdf'],
       'application/zip': ['.zip'],
+      'text/plain': ['.txt'],  // For text-only/native newsletter ads
+      'text/html': ['.html', '.htm'],  // For HTML newsletter content
     },
     multiple: true,
     noClick: false,
@@ -774,9 +916,23 @@ export function CreativeAssetsManager({
                   {isDragActive ? 'Drop files here' : 'Drag & drop files or click to browse'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Images, videos, PDFs, ZIP archives
+                  Images, videos, PDFs, ZIP, text files (.txt for native ads)
                 </p>
               </div>
+
+              {/* ZIP Processing Indicator */}
+              {processingZip && zipProgress && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">Processing ZIP file...</span>
+                  </div>
+                  <Progress value={zipProgress.percent} className="h-2 mb-2" />
+                  {zipProgress.message && (
+                    <p className="text-xs text-blue-700 mt-2">{zipProgress.message} ({zipProgress.percent}%)</p>
+                  )}
+                </div>
+              )}
 
               {/* Pending files queue */}
               {pendingFiles.size > 0 && (
@@ -789,7 +945,11 @@ export function CreativeAssetsManager({
                       {/* File name and actions row */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <FileImage className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          {fileData.detectedSpecs?.isTextAsset ? (
+                            <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                          ) : (
+                            <FileImage className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          )}
                           <span className="truncate font-medium">{fileData.file.name}</span>
                           {fileData.isAnalyzing && (
                             <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
@@ -805,25 +965,49 @@ export function CreativeAssetsManager({
                         </Button>
                       </div>
                       
-                      {/* Detected specs row */}
+                      {/* Detected specs row - different for text vs images */}
                       {fileData.detectedSpecs && !fileData.isAnalyzing && (
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground pl-6">
-                          {fileData.detectedSpecs.dimensions && (
-                            <span className="font-mono">
-                              📏 {fileData.detectedSpecs.dimensions.formatted}
-                            </span>
-                          )}
-                          <span>{fileData.detectedSpecs.fileExtension}</span>
-                          <span>{fileData.detectedSpecs.fileSizeFormatted}</span>
-                          {fileData.detectedSpecs.colorSpace && (
-                            <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
-                              {fileData.detectedSpecs.colorSpace}
-                            </span>
-                          )}
-                          {fileData.matchConfidence !== undefined && fileData.matchConfidence > 0 && (
-                            <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
-                              {fileData.matchConfidence}% match
-                            </span>
+                        <div className="flex flex-col gap-1 text-xs text-muted-foreground pl-6">
+                          <div className="flex items-center gap-3">
+                            {fileData.detectedSpecs.isTextAsset ? (
+                              // Text file info
+                              <>
+                                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">
+                                  📝 {fileData.detectedSpecs.fileExtension}
+                                </span>
+                                {fileData.detectedSpecs.wordCount && (
+                                  <span>{fileData.detectedSpecs.wordCount} words</span>
+                                )}
+                                <span>{fileData.detectedSpecs.fileSizeFormatted}</span>
+                              </>
+                            ) : (
+                              // Image file info
+                              <>
+                                {fileData.detectedSpecs.dimensions && (
+                                  <span className="font-mono">
+                                    📏 {fileData.detectedSpecs.dimensions.formatted}
+                                  </span>
+                                )}
+                                <span>{fileData.detectedSpecs.fileExtension}</span>
+                                <span>{fileData.detectedSpecs.fileSizeFormatted}</span>
+                                {fileData.detectedSpecs.colorSpace && (
+                                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
+                                    {fileData.detectedSpecs.colorSpace}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                            {fileData.matchConfidence !== undefined && fileData.matchConfidence > 0 && (
+                              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                {fileData.matchConfidence}% match
+                              </span>
+                            )}
+                          </div>
+                          {/* Text preview */}
+                          {fileData.detectedSpecs.isTextAsset && fileData.detectedSpecs.textContent && (
+                            <p className="text-xs text-muted-foreground italic line-clamp-2 bg-white/50 p-1.5 rounded border">
+                              "{fileData.detectedSpecs.textContent.substring(0, 100)}..."
+                            </p>
                           )}
                         </div>
                       )}
@@ -1064,8 +1248,16 @@ export function CreativeAssetsManager({
                                     </h4>
                                     {asset && (asset.uploadStatus === 'uploaded' || asset.uploadStatus === 'pending') ? (
                                       <div className="flex gap-3">
-                                        {/* Preview */}
-                                        {asset.previewUrl ? (
+                                        {/* Preview - handle both images and text files */}
+                                        {asset.detectedSpecs?.isTextAsset ? (
+                                          // Text file preview
+                                          <div className="w-20 h-20 rounded border bg-amber-50 flex flex-col items-center justify-center p-1">
+                                            <FileText className="h-6 w-6 text-amber-600 mb-1" />
+                                            <span className="text-[9px] text-amber-700 font-medium">
+                                              {asset.detectedSpecs.fileExtension}
+                                            </span>
+                                          </div>
+                                        ) : asset.previewUrl ? (
                                           <img 
                                             src={asset.previewUrl} 
                                             alt={asset.fileName || 'Preview'}
@@ -1081,19 +1273,37 @@ export function CreativeAssetsManager({
                                           <p className="text-sm font-medium truncate">
                                             {asset.file?.name || asset.fileName}
                                           </p>
-                                          {asset.detectedSpecs?.dimensions && (
-                                            <p className="text-xs text-muted-foreground">
-                                              {asset.detectedSpecs.dimensions.formatted}
-                                            </p>
+                                          {/* Show text file info OR image dimensions */}
+                                          {asset.detectedSpecs?.isTextAsset ? (
+                                            <>
+                                              {asset.detectedSpecs.wordCount && (
+                                                <p className="text-xs text-muted-foreground">
+                                                  {asset.detectedSpecs.wordCount} words, {asset.detectedSpecs.characterCount} chars
+                                                </p>
+                                              )}
+                                              {asset.detectedSpecs.textContent && (
+                                                <p className="text-xs text-muted-foreground italic line-clamp-2">
+                                                  "{asset.detectedSpecs.textContent.substring(0, 80)}..."
+                                                </p>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <>
+                                              {asset.detectedSpecs?.dimensions && (
+                                                <p className="text-xs text-muted-foreground">
+                                                  {asset.detectedSpecs.dimensions.formatted}
+                                                </p>
+                                              )}
+                                              {asset.detectedSpecs?.colorSpace && (
+                                                <p className="text-xs text-muted-foreground">
+                                                  {asset.detectedSpecs.colorSpace}
+                                                </p>
+                                              )}
+                                            </>
                                           )}
                                           {asset.detectedSpecs?.fileSize && (
                                             <p className="text-xs text-muted-foreground">
                                               {formatBytes(asset.detectedSpecs.fileSize)}
-                                            </p>
-                                          )}
-                                          {asset.detectedSpecs?.colorSpace && (
-                                            <p className="text-xs text-muted-foreground">
-                                              {asset.detectedSpecs.colorSpace}
                                             </p>
                                           )}
                                           {/* Actions */}
@@ -1242,7 +1452,15 @@ export function CreativeAssetsManager({
                   uploadedAssetsList.map(({ specGroupId, asset, spec }) => (
                     <TableRow key={specGroupId}>
                       <TableCell>
-                        {asset.previewUrl ? (
+                        {asset.detectedSpecs?.isTextAsset ? (
+                          // Text file - show icon with file type
+                          <div className="w-12 h-12 rounded border bg-amber-50 flex flex-col items-center justify-center">
+                            <FileText className="h-5 w-5 text-amber-600" />
+                            <span className="text-[8px] text-amber-700 font-medium mt-0.5">
+                              {asset.detectedSpecs.fileExtension}
+                            </span>
+                          </div>
+                        ) : asset.previewUrl ? (
                           <button
                             type="button"
                             onClick={() => setPreviewAsset({ 
@@ -1269,7 +1487,14 @@ export function CreativeAssetsManager({
                         </span>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {asset.detectedSpecs?.dimensions?.formatted || '—'}
+                        {asset.detectedSpecs?.isTextAsset ? (
+                          // Show word count for text files
+                          <span className="text-amber-700">
+                            {asset.detectedSpecs.wordCount || '—'} words
+                          </span>
+                        ) : (
+                          asset.detectedSpecs?.dimensions?.formatted || '—'
+                        )}
                       </TableCell>
                       <TableCell className="text-sm">
                         {spec ? (

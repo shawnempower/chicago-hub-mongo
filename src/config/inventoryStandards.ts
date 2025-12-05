@@ -426,6 +426,226 @@ export const WEBSITE_STANDARDS: Record<string, InventoryTypeStandard> = {
 };
 
 // =====================================================
+// NEWSLETTER / EMAIL STANDARDS
+// =====================================================
+
+/**
+ * Newsletter and Email advertising standards
+ * Common email newsletter ad formats, plus support for web-standard sizes
+ */
+export const NEWSLETTER_STANDARDS: Record<string, InventoryTypeStandard> = {
+  // Email Standard Sizes (600px width for email clients)
+  EMAIL_HEADER_BANNER: {
+    id: 'newsletter_email_header_600x150',
+    channel: 'newsletter',
+    name: '600x150 Email Header Banner',
+    description: 'Standard email header/banner ad. Most common newsletter size.',
+    defaultSpecs: {
+      dimensions: '600x150',
+      fileFormats: ['JPG', 'PNG', 'GIF'],
+      maxFileSize: '200KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi',
+      additionalRequirements: 'Must work on mobile. Avoid small text. Keep key info in safe area.'
+    },
+    validation: {
+      required: ['dimensions', 'fileFormats'],
+      optional: ['maxFileSize']
+    },
+    examples: ['Newsletter header', 'Email banner']
+  },
+
+  EMAIL_LEADERBOARD: {
+    id: 'newsletter_email_leaderboard_600x100',
+    channel: 'newsletter',
+    name: '600x100 Email Leaderboard',
+    description: 'Compact email leaderboard ad.',
+    defaultSpecs: {
+      dimensions: '600x100',
+      fileFormats: ['JPG', 'PNG', 'GIF'],
+      maxFileSize: '150KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi',
+      additionalRequirements: 'Keep text large and readable on mobile.'
+    },
+    validation: {
+      required: ['dimensions', 'fileFormats'],
+      optional: ['maxFileSize']
+    }
+  },
+
+  EMAIL_LARGE_BANNER: {
+    id: 'newsletter_email_large_600x200',
+    channel: 'newsletter',
+    name: '600x200 Email Large Banner',
+    description: 'Larger email banner for more visual impact.',
+    defaultSpecs: {
+      dimensions: '600x200',
+      fileFormats: ['JPG', 'PNG', 'GIF'],
+      maxFileSize: '250KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi'
+    },
+    validation: {
+      required: ['dimensions', 'fileFormats'],
+      optional: ['maxFileSize']
+    }
+  },
+
+  EMAIL_DISPLAY: {
+    id: 'newsletter_email_display_600x300',
+    channel: 'newsletter',
+    name: '600x300 Email Display Ad',
+    description: 'Large email display ad.',
+    defaultSpecs: {
+      dimensions: '600x300',
+      fileFormats: ['JPG', 'PNG', 'GIF'],
+      maxFileSize: '300KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi'
+    },
+    validation: {
+      required: ['dimensions', 'fileFormats'],
+      optional: ['maxFileSize']
+    }
+  },
+
+  // Web Standard Sizes (also common in newsletters)
+  NEWSLETTER_LEADERBOARD: {
+    id: 'newsletter_leaderboard_728x90',
+    channel: 'newsletter',
+    name: '728x90 Leaderboard',
+    description: 'IAB standard leaderboard, common in email newsletters.',
+    defaultSpecs: {
+      dimensions: '728x90',
+      fileFormats: ['JPG', 'PNG', 'GIF'],
+      maxFileSize: '150KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi'
+    },
+    validation: {
+      required: ['dimensions', 'fileFormats'],
+      optional: ['maxFileSize']
+    }
+  },
+
+  NEWSLETTER_MEDIUM_RECTANGLE: {
+    id: 'newsletter_medium_rectangle_300x250',
+    channel: 'newsletter',
+    name: '300x250 Medium Rectangle',
+    description: 'IAB standard size, used in newsletter content.',
+    defaultSpecs: {
+      dimensions: '300x250',
+      fileFormats: ['JPG', 'PNG', 'GIF'],
+      maxFileSize: '150KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi'
+    },
+    validation: {
+      required: ['dimensions', 'fileFormats'],
+      optional: ['maxFileSize']
+    }
+  },
+
+  NEWSLETTER_LARGE_RECTANGLE: {
+    id: 'newsletter_large_rectangle_336x280',
+    channel: 'newsletter',
+    name: '336x280 Large Rectangle',
+    description: 'IAB standard large rectangle.',
+    defaultSpecs: {
+      dimensions: '336x280',
+      fileFormats: ['JPG', 'PNG', 'GIF'],
+      maxFileSize: '150KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi'
+    },
+    validation: {
+      required: ['dimensions', 'fileFormats'],
+      optional: ['maxFileSize']
+    }
+  },
+
+  // Special newsletter formats
+  NEWSLETTER_TAKEOVER: {
+    id: 'newsletter_takeover',
+    channel: 'newsletter',
+    name: 'Full Newsletter Takeover',
+    description: 'Exclusive newsletter sponsorship. Custom creative based on publication template.',
+    defaultSpecs: {
+      fileFormats: ['HTML', 'JPG', 'PNG'],
+      maxFileSize: '500KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi',
+      additionalRequirements: 'Work with publication on custom creative. Provide assets in multiple sizes.'
+    },
+    validation: {
+      required: ['fileFormats'],
+      optional: ['dimensions']
+    },
+    examples: ['Dedicated send', 'Full email', 'Newsletter sponsorship']
+  },
+
+  NEWSLETTER_TEXT_ONLY: {
+    id: 'newsletter_text_only',
+    channel: 'newsletter',
+    name: 'Text-Only Sponsorship',
+    description: 'Text-based sponsorship message. No image required. Plain text preferred.',
+    defaultSpecs: {
+      dimensions: 'text-only', // Special marker for text assets
+      fileFormats: ['TXT'], // Prefer plain text for text-only placements
+      maxFileSize: '10KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi',
+      additionalRequirements: 'Provide text copy (usually 150-250 characters). May include URL. Upload a .txt file with your message.'
+    },
+    validation: {
+      required: [],
+      optional: ['dimensions']
+    },
+    examples: ['Sponsored message', 'Text sponsorship', 'Classified', 'Native ad copy']
+  },
+
+  NEWSLETTER_NATIVE: {
+    id: 'newsletter_native',
+    channel: 'newsletter',
+    name: 'Native / Sponsored Content',
+    description: 'Content-integrated advertising that matches newsletter style.',
+    defaultSpecs: {
+      dimensions: 'sponsored-content', // Special marker for native content
+      fileFormats: ['TXT', 'HTML', 'JPG', 'PNG'],
+      maxFileSize: '200KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi',
+      additionalRequirements: 'Provide copy and optional logo. Content should match publication tone and style.'
+    },
+    validation: {
+      required: [],
+      optional: ['dimensions']
+    },
+    examples: ['Sponsored content', 'Content integration', 'Advertorial', 'Logo + text']
+  },
+
+  NEWSLETTER_RESPONSIVE: {
+    id: 'newsletter_responsive',
+    channel: 'newsletter',
+    name: 'Responsive Newsletter Ad',
+    description: 'Flexible ad that adapts to email client and device.',
+    defaultSpecs: {
+      fileFormats: ['JPG', 'PNG', 'GIF'],
+      maxFileSize: '300KB',
+      colorSpace: 'RGB',
+      resolution: '72ppi',
+      additionalRequirements: 'Provide assets at multiple sizes. Key content should be legible at any size.'
+    },
+    validation: {
+      required: ['fileFormats'],
+      optional: ['dimensions']
+    },
+    examples: ['Responsive banner', '600px wide responsive']
+  }
+};
+
+// =====================================================
 // PRINT STANDARDS
 // =====================================================
 
@@ -620,6 +840,331 @@ export const PRINT_STANDARDS: Record<string, InventoryTypeStandard> = {
 };
 
 // =====================================================
+// RADIO / AUDIO STANDARDS
+// =====================================================
+
+/**
+ * Radio advertising standards
+ * Duration-based formats (radio's equivalent of "dimensions")
+ */
+export const RADIO_STANDARDS: Record<string, InventoryTypeStandard> = {
+  // Standard Spot Lengths
+  SPOT_15: {
+    id: 'radio_spot_15s',
+    channel: 'radio',
+    name: '15-Second Spot',
+    description: 'Short radio spot, typically for quick mentions or reminders.',
+    defaultSpecs: {
+      dimensions: '15s',
+      duration: 15,
+      fileFormats: ['MP3', 'WAV'],
+      maxFileSize: '10MB',
+      colorSpace: 'RGB', // Not applicable but required by interface
+      resolution: '44.1kHz',
+      bitrate: '192kbps',
+      additionalRequirements: 'Audio must be broadcast quality. Include 0.5s of silence at start and end.'
+    },
+    validation: {
+      required: ['duration', 'fileFormats'],
+      optional: ['bitrate']
+    },
+    examples: ['Quick mention', 'Teaser spot', 'Reminder ad']
+  },
+
+  SPOT_30: {
+    id: 'radio_spot_30s',
+    channel: 'radio',
+    name: '30-Second Spot',
+    description: 'Standard radio spot length. Most common format for radio advertising.',
+    defaultSpecs: {
+      dimensions: '30s',
+      duration: 30,
+      fileFormats: ['MP3', 'WAV'],
+      maxFileSize: '15MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      bitrate: '192kbps',
+      additionalRequirements: 'Audio must be broadcast quality. Include 0.5s of silence at start and end.'
+    },
+    validation: {
+      required: ['duration', 'fileFormats'],
+      optional: ['bitrate']
+    },
+    examples: ['Standard commercial', 'Product ad', 'Service promotion']
+  },
+
+  SPOT_60: {
+    id: 'radio_spot_60s',
+    channel: 'radio',
+    name: '60-Second Spot',
+    description: 'Full-length radio spot for detailed messaging.',
+    defaultSpecs: {
+      dimensions: '60s',
+      duration: 60,
+      fileFormats: ['MP3', 'WAV'],
+      maxFileSize: '25MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      bitrate: '192kbps',
+      additionalRequirements: 'Audio must be broadcast quality. Include 0.5s of silence at start and end.'
+    },
+    validation: {
+      required: ['duration', 'fileFormats'],
+      optional: ['bitrate']
+    },
+    examples: ['Full commercial', 'Detailed product pitch', 'Story-based ad']
+  },
+
+  // Live Read / Script-based
+  LIVE_READ: {
+    id: 'radio_live_read',
+    channel: 'radio',
+    name: 'Live Read',
+    description: 'Host-read advertisement. Provide script for on-air talent to read.',
+    defaultSpecs: {
+      dimensions: 'live-read',
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script copy (typically 50-150 words for 30s read). Include pronunciation guides for brand names if needed.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration']
+    },
+    examples: ['Host endorsement', 'Personal read', 'Organic mention']
+  },
+
+  // Sponsorship
+  SPONSORSHIP: {
+    id: 'radio_sponsorship',
+    channel: 'radio',
+    name: 'Sponsorship',
+    description: 'Show or segment sponsorship. "Brought to you by..." format.',
+    defaultSpecs: {
+      dimensions: 'sponsorship',
+      fileFormats: ['TXT', 'MP3', 'WAV'],
+      maxFileSize: '10MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      additionalRequirements: 'Provide sponsor tag copy or pre-recorded audio. Typically 5-15 seconds.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration', 'fileFormats']
+    },
+    examples: ['Weather sponsor', 'Traffic sponsor', 'News sponsor', 'Show presented by...']
+  },
+
+  // Long-form / Takeover
+  LONG_FORM: {
+    id: 'radio_long_form',
+    channel: 'radio',
+    name: 'Long-Form / Interview',
+    description: 'Extended format for interviews, takeovers, or special features.',
+    defaultSpecs: {
+      dimensions: 'long-form',
+      fileFormats: ['MP3', 'WAV', 'TXT'],
+      maxFileSize: '100MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      bitrate: '192kbps',
+      additionalRequirements: 'Duration varies (typically 5-30 minutes). Coordinate format and timing with station.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration', 'fileFormats', 'bitrate']
+    },
+    examples: ['10-minute interview', '22-minute takeover', 'Sponsored segment']
+  },
+
+  // Custom
+  CUSTOM: {
+    id: 'radio_custom',
+    channel: 'radio',
+    name: 'Custom Radio Ad',
+    description: 'Custom duration or format. Coordinate specifics with station.',
+    defaultSpecs: {
+      dimensions: 'custom',
+      fileFormats: ['MP3', 'WAV', 'TXT'],
+      maxFileSize: '50MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      additionalRequirements: 'Confirm duration and format requirements with station before production.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration', 'fileFormats', 'bitrate']
+    }
+  }
+};
+
+// =====================================================
+// PODCAST STANDARDS
+// =====================================================
+
+/**
+ * Podcast advertising standards
+ * Position-based (pre/mid/post-roll) and duration-based formats
+ */
+export const PODCAST_STANDARDS: Record<string, InventoryTypeStandard> = {
+  // Pre-Roll (beginning of episode)
+  PRE_ROLL: {
+    id: 'podcast_pre_roll',
+    channel: 'podcast',
+    name: 'Pre-Roll Ad',
+    description: 'Ad played at the beginning of the podcast episode, before main content.',
+    defaultSpecs: {
+      dimensions: 'pre-roll',
+      duration: 15,
+      fileFormats: ['MP3', 'WAV'],
+      maxFileSize: '10MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      bitrate: '192kbps',
+      additionalRequirements: 'Typically 15-30 seconds. Audio must be podcast quality (44.1kHz, stereo).'
+    },
+    validation: {
+      required: ['fileFormats'],
+      optional: ['duration', 'bitrate']
+    },
+    examples: ['Opening sponsor', 'Episode intro ad', 'Presented by...']
+  },
+
+  // Mid-Roll 30 seconds
+  MID_ROLL_30: {
+    id: 'podcast_mid_roll_30s',
+    channel: 'podcast',
+    name: '30-Second Mid-Roll',
+    description: 'Standard 30-second ad played during the middle of the episode.',
+    defaultSpecs: {
+      dimensions: '30s',
+      duration: 30,
+      fileFormats: ['MP3', 'WAV'],
+      maxFileSize: '15MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      bitrate: '192kbps',
+      additionalRequirements: 'Audio must be podcast quality. Mid-rolls have highest completion rates.'
+    },
+    validation: {
+      required: ['duration', 'fileFormats'],
+      optional: ['bitrate']
+    },
+    examples: ['Standard podcast ad', 'Product commercial', 'Service promotion']
+  },
+
+  // Mid-Roll 60 seconds
+  MID_ROLL_60: {
+    id: 'podcast_mid_roll_60s',
+    channel: 'podcast',
+    name: '60-Second Mid-Roll',
+    description: 'Full-length 60-second ad played during the middle of the episode.',
+    defaultSpecs: {
+      dimensions: '60s',
+      duration: 60,
+      fileFormats: ['MP3', 'WAV'],
+      maxFileSize: '25MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      bitrate: '192kbps',
+      additionalRequirements: 'Audio must be podcast quality. Allows for detailed messaging.'
+    },
+    validation: {
+      required: ['duration', 'fileFormats'],
+      optional: ['bitrate']
+    },
+    examples: ['Extended product pitch', 'Story-based ad', 'Detailed promotion']
+  },
+
+  // Post-Roll (end of episode)
+  POST_ROLL: {
+    id: 'podcast_post_roll',
+    channel: 'podcast',
+    name: 'Post-Roll Ad',
+    description: 'Ad played at the end of the podcast episode, after main content.',
+    defaultSpecs: {
+      dimensions: 'post-roll',
+      duration: 15,
+      fileFormats: ['MP3', 'WAV'],
+      maxFileSize: '10MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      bitrate: '192kbps',
+      additionalRequirements: 'Typically 15-30 seconds. Lower completion rate but often more affordable.'
+    },
+    validation: {
+      required: ['fileFormats'],
+      optional: ['duration', 'bitrate']
+    },
+    examples: ['Closing sponsor', 'Call-to-action', 'Next episode promo']
+  },
+
+  // Host Read
+  HOST_READ: {
+    id: 'podcast_host_read',
+    channel: 'podcast',
+    name: 'Host-Read Ad',
+    description: 'Host reads sponsor copy in their own voice. Most authentic and engaging format.',
+    defaultSpecs: {
+      dimensions: 'host-read',
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script/talking points (50-200 words). Host may personalize delivery. Include pronunciation guides if needed.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration']
+    },
+    examples: ['Personal endorsement', 'Organic mention', 'Conversational ad']
+  },
+
+  // Sponsorship / Takeover
+  SPONSORSHIP: {
+    id: 'podcast_sponsorship',
+    channel: 'podcast',
+    name: 'Episode Sponsorship',
+    description: 'Full episode sponsorship with multiple mentions and "presented by" branding.',
+    defaultSpecs: {
+      dimensions: 'sponsorship',
+      fileFormats: ['TXT', 'MP3', 'WAV'],
+      maxFileSize: '25MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      additionalRequirements: 'Includes pre-roll, mid-roll, and post-roll mentions. Provide sponsor copy and/or pre-recorded audio.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration', 'fileFormats']
+    },
+    examples: ['Episode presented by...', 'Title sponsorship', 'Full episode takeover']
+  },
+
+  // Custom
+  CUSTOM: {
+    id: 'podcast_custom',
+    channel: 'podcast',
+    name: 'Custom Podcast Ad',
+    description: 'Custom format or duration. Coordinate specifics with podcast host.',
+    defaultSpecs: {
+      dimensions: 'custom',
+      fileFormats: ['MP3', 'WAV', 'TXT'],
+      maxFileSize: '50MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      additionalRequirements: 'Confirm format, duration, and placement requirements with podcast.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration', 'fileFormats', 'bitrate']
+    }
+  }
+};
+
+// =====================================================
 // HELPER FUNCTIONS
 // =====================================================
 
@@ -627,7 +1172,7 @@ export const PRINT_STANDARDS: Record<string, InventoryTypeStandard> = {
  * Get standard specs by ID
  */
 export function getInventoryStandard(standardId: string): InventoryTypeStandard | null {
-  return WEBSITE_STANDARDS[standardId] || PRINT_STANDARDS[standardId] || null;
+  return WEBSITE_STANDARDS[standardId] || NEWSLETTER_STANDARDS[standardId] || PRINT_STANDARDS[standardId] || RADIO_STANDARDS[standardId] || PODCAST_STANDARDS[standardId] || null;
 }
 
 /**
@@ -651,8 +1196,14 @@ export function getStandardsByChannel(channel: InventoryChannel): InventoryTypeS
   switch (channel) {
     case 'website':
       return Object.values(WEBSITE_STANDARDS);
+    case 'newsletter':
+      return Object.values(NEWSLETTER_STANDARDS);
     case 'print':
       return Object.values(PRINT_STANDARDS);
+    case 'radio':
+      return Object.values(RADIO_STANDARDS);
+    case 'podcast':
+      return Object.values(PODCAST_STANDARDS);
     // Add other channels as they're developed
     default:
       return [];
@@ -665,7 +1216,10 @@ export function getStandardsByChannel(channel: InventoryChannel): InventoryTypeS
 export function getAllStandards(): InventoryTypeStandard[] {
   return [
     ...Object.values(WEBSITE_STANDARDS),
-    ...Object.values(PRINT_STANDARDS)
+    ...Object.values(NEWSLETTER_STANDARDS),
+    ...Object.values(PRINT_STANDARDS),
+    ...Object.values(RADIO_STANDARDS),
+    ...Object.values(PODCAST_STANDARDS)
   ];
 }
 
@@ -685,6 +1239,314 @@ export function findStandardByDimensions(dimensions: string, channel: InventoryC
   return standards.find(
     s => s.defaultSpecs.dimensions === dimensions
   ) || null;
+}
+
+/**
+ * Get newsletter standards for selection
+ */
+export function getNewsletterStandards(): InventoryTypeStandard[] {
+  return Object.values(NEWSLETTER_STANDARDS);
+}
+
+/**
+ * Find newsletter standard by dimension or type
+ */
+export function findNewsletterStandard(searchTerm: string): InventoryTypeStandard | null {
+  const term = searchTerm.toLowerCase().trim();
+  
+  // Try exact dimension match first
+  const byDimension = Object.values(NEWSLETTER_STANDARDS).find(s => {
+    const dims = s.defaultSpecs.dimensions;
+    if (!dims) return false;
+    if (Array.isArray(dims)) {
+      return dims.some(d => d.toLowerCase() === term);
+    }
+    return dims.toLowerCase() === term;
+  });
+  if (byDimension) return byDimension;
+  
+  // Try fuzzy match on common terms
+  const fuzzyMap: Record<string, string> = {
+    'full email': 'NEWSLETTER_TAKEOVER',
+    'full newsletter': 'NEWSLETTER_TAKEOVER',
+    'dedicated send': 'NEWSLETTER_TAKEOVER',
+    'takeover': 'NEWSLETTER_TAKEOVER',
+    'text only': 'NEWSLETTER_TEXT_ONLY',
+    'text-only': 'NEWSLETTER_TEXT_ONLY',
+    'text': 'NEWSLETTER_TEXT_ONLY',
+    'sponsored message': 'NEWSLETTER_TEXT_ONLY',
+    'sponsored content': 'NEWSLETTER_NATIVE',
+    'sponsored-content': 'NEWSLETTER_NATIVE',
+    'native': 'NEWSLETTER_NATIVE',
+    'content integration': 'NEWSLETTER_NATIVE',
+    'content-integration': 'NEWSLETTER_NATIVE',
+    'logo-text': 'NEWSLETTER_NATIVE',
+    'logo text': 'NEWSLETTER_NATIVE',
+    'advertorial': 'NEWSLETTER_NATIVE',
+    'responsive': 'NEWSLETTER_RESPONSIVE',
+    'custom': 'NEWSLETTER_RESPONSIVE',
+    'multiple': 'NEWSLETTER_RESPONSIVE'
+  };
+  
+  const standardKey = fuzzyMap[term];
+  return standardKey ? NEWSLETTER_STANDARDS[standardKey] : null;
+}
+
+/**
+ * Get radio standards for selection
+ */
+export function getRadioStandards(): InventoryTypeStandard[] {
+  return Object.values(RADIO_STANDARDS);
+}
+
+/**
+ * Find radio standard by duration or type
+ */
+export function findRadioStandard(searchTerm: string | number): InventoryTypeStandard | null {
+  // Handle numeric duration (in seconds)
+  if (typeof searchTerm === 'number') {
+    const byDuration = Object.values(RADIO_STANDARDS).find(s => 
+      s.defaultSpecs.duration === searchTerm
+    );
+    if (byDuration) return byDuration;
+  }
+  
+  const term = String(searchTerm).toLowerCase().trim();
+  
+  // Try exact dimension match first (e.g., "15s", "30s")
+  const byDimension = Object.values(RADIO_STANDARDS).find(s => {
+    const dims = s.defaultSpecs.dimensions;
+    if (!dims) return false;
+    if (Array.isArray(dims)) {
+      return dims.some(d => d.toLowerCase() === term);
+    }
+    return dims.toLowerCase() === term;
+  });
+  if (byDimension) return byDimension;
+  
+  // Try duration match (e.g., "15", "30", "60")
+  const numericDuration = parseInt(term);
+  if (!isNaN(numericDuration)) {
+    const byNumericDuration = Object.values(RADIO_STANDARDS).find(s => 
+      s.defaultSpecs.duration === numericDuration
+    );
+    if (byNumericDuration) return byNumericDuration;
+  }
+  
+  // Try fuzzy match on common terms
+  const fuzzyMap: Record<string, string> = {
+    '15': 'SPOT_15',
+    '15s': 'SPOT_15',
+    '15 second': 'SPOT_15',
+    '15-second': 'SPOT_15',
+    '15_second_spot': 'SPOT_15',
+    '30': 'SPOT_30',
+    '30s': 'SPOT_30',
+    '30 second': 'SPOT_30',
+    '30-second': 'SPOT_30',
+    '30_second_spot': 'SPOT_30',
+    '60': 'SPOT_60',
+    '60s': 'SPOT_60',
+    '60 second': 'SPOT_60',
+    '60-second': 'SPOT_60',
+    '60_second_spot': 'SPOT_60',
+    'live read': 'LIVE_READ',
+    'live-read': 'LIVE_READ',
+    'live_read': 'LIVE_READ',
+    'host read': 'LIVE_READ',
+    'sponsorship': 'SPONSORSHIP',
+    'sponsor': 'SPONSORSHIP',
+    'traffic_weather_sponsor': 'SPONSORSHIP',
+    'long form': 'LONG_FORM',
+    'long-form': 'LONG_FORM',
+    'interview': 'LONG_FORM',
+    'takeover': 'LONG_FORM',
+    'custom': 'CUSTOM'
+  };
+  
+  const standardKey = fuzzyMap[term];
+  return standardKey ? RADIO_STANDARDS[standardKey] : null;
+}
+
+/**
+ * Infer radio format from duration in seconds
+ */
+export function inferRadioFormatFromDuration(durationSeconds: number): InventoryTypeStandard | null {
+  if (durationSeconds <= 15) return RADIO_STANDARDS.SPOT_15;
+  if (durationSeconds <= 30) return RADIO_STANDARDS.SPOT_30;
+  if (durationSeconds <= 60) return RADIO_STANDARDS.SPOT_60;
+  if (durationSeconds > 120) return RADIO_STANDARDS.LONG_FORM;
+  return RADIO_STANDARDS.CUSTOM;
+}
+
+/**
+ * Get podcast standards for selection
+ */
+export function getPodcastStandards(): InventoryTypeStandard[] {
+  return Object.values(PODCAST_STANDARDS);
+}
+
+/**
+ * Find podcast standard by position, duration, or type
+ */
+export function findPodcastStandard(searchTerm: string | number): InventoryTypeStandard | null {
+  // Handle numeric duration (in seconds)
+  if (typeof searchTerm === 'number') {
+    const byDuration = Object.values(PODCAST_STANDARDS).find(s => 
+      s.defaultSpecs.duration === searchTerm
+    );
+    if (byDuration) return byDuration;
+  }
+  
+  const term = String(searchTerm).toLowerCase().trim();
+  
+  // Try exact dimension match first (e.g., "30s", "pre-roll")
+  const byDimension = Object.values(PODCAST_STANDARDS).find(s => {
+    const dims = s.defaultSpecs.dimensions;
+    if (!dims) return false;
+    if (Array.isArray(dims)) {
+      return dims.some(d => d.toLowerCase() === term);
+    }
+    return dims.toLowerCase() === term;
+  });
+  if (byDimension) return byDimension;
+  
+  // Try duration match (e.g., "30", "60")
+  const numericDuration = parseInt(term);
+  if (!isNaN(numericDuration)) {
+    const byNumericDuration = Object.values(PODCAST_STANDARDS).find(s => 
+      s.defaultSpecs.duration === numericDuration
+    );
+    if (byNumericDuration) return byNumericDuration;
+  }
+  
+  // Try fuzzy match on common terms
+  const fuzzyMap: Record<string, string> = {
+    // Pre-roll variants
+    'pre-roll': 'PRE_ROLL',
+    'pre roll': 'PRE_ROLL',
+    'preroll': 'PRE_ROLL',
+    'pre_roll': 'PRE_ROLL',
+    'opening': 'PRE_ROLL',
+    
+    // Mid-roll 30s variants
+    '30': 'MID_ROLL_30',
+    '30s': 'MID_ROLL_30',
+    '30 second': 'MID_ROLL_30',
+    '30-second': 'MID_ROLL_30',
+    'mid-roll': 'MID_ROLL_30',
+    'mid roll': 'MID_ROLL_30',
+    'midroll': 'MID_ROLL_30',
+    'mid_roll': 'MID_ROLL_30',
+    
+    // Mid-roll 60s variants
+    '60': 'MID_ROLL_60',
+    '60s': 'MID_ROLL_60',
+    '60 second': 'MID_ROLL_60',
+    '60-second': 'MID_ROLL_60',
+    
+    // Post-roll variants
+    'post-roll': 'POST_ROLL',
+    'post roll': 'POST_ROLL',
+    'postroll': 'POST_ROLL',
+    'post_roll': 'POST_ROLL',
+    'closing': 'POST_ROLL',
+    
+    // Host read variants
+    'host read': 'HOST_READ',
+    'host-read': 'HOST_READ',
+    'host_read': 'HOST_READ',
+    'live read': 'HOST_READ',
+    'live-read': 'HOST_READ',
+    
+    // Sponsorship variants
+    'sponsorship': 'SPONSORSHIP',
+    'sponsor': 'SPONSORSHIP',
+    'sponsored_content': 'SPONSORSHIP',
+    'takeover': 'SPONSORSHIP',
+    'title sponsorship': 'SPONSORSHIP',
+    
+    // Custom
+    'custom': 'CUSTOM'
+  };
+  
+  const standardKey = fuzzyMap[term];
+  return standardKey ? PODCAST_STANDARDS[standardKey] : null;
+}
+
+/**
+ * Infer podcast format from ad name and duration
+ */
+export function inferPodcastFormatFromName(adName: string, durationSeconds?: number): InventoryTypeStandard | null {
+  const name = adName.toLowerCase();
+  
+  // Check for position-based formats first
+  if (name.includes('pre-roll') || name.includes('preroll') || name.includes('pre roll') || name.includes('opening')) {
+    return PODCAST_STANDARDS.PRE_ROLL;
+  }
+  if (name.includes('post-roll') || name.includes('postroll') || name.includes('post roll') || name.includes('closing')) {
+    return PODCAST_STANDARDS.POST_ROLL;
+  }
+  if (name.includes('host read') || name.includes('host-read')) {
+    return PODCAST_STANDARDS.HOST_READ;
+  }
+  if (name.includes('takeover') || name.includes('sponsorship') || name.includes('sponsor') || name.includes('title')) {
+    return PODCAST_STANDARDS.SPONSORSHIP;
+  }
+  
+  // Check for duration in name
+  if (name.includes('60') || name.includes(':60')) {
+    return PODCAST_STANDARDS.MID_ROLL_60;
+  }
+  if (name.includes('30') || name.includes(':30')) {
+    return PODCAST_STANDARDS.MID_ROLL_30;
+  }
+  if (name.includes('15') || name.includes(':15')) {
+    return PODCAST_STANDARDS.PRE_ROLL; // 15s often pre/post roll
+  }
+  
+  // Use duration if provided
+  if (durationSeconds) {
+    if (durationSeconds <= 20) return PODCAST_STANDARDS.PRE_ROLL;
+    if (durationSeconds <= 40) return PODCAST_STANDARDS.MID_ROLL_30;
+    if (durationSeconds <= 70) return PODCAST_STANDARDS.MID_ROLL_60;
+    return PODCAST_STANDARDS.SPONSORSHIP;
+  }
+  
+  // Default to mid-roll 30s if nothing else matches
+  return PODCAST_STANDARDS.MID_ROLL_30;
+}
+
+/**
+ * Infer podcast format from duration in seconds
+ */
+export function inferPodcastFormatFromDuration(durationSeconds: number): InventoryTypeStandard | null {
+  if (durationSeconds <= 20) return PODCAST_STANDARDS.PRE_ROLL;
+  if (durationSeconds <= 40) return PODCAST_STANDARDS.MID_ROLL_30;
+  if (durationSeconds <= 70) return PODCAST_STANDARDS.MID_ROLL_60;
+  if (durationSeconds > 120) return PODCAST_STANDARDS.SPONSORSHIP;
+  return PODCAST_STANDARDS.CUSTOM;
+}
+
+/**
+ * Check if a dimension string indicates a text-only/native placement
+ */
+export function isTextOnlyPlacement(dimensions?: string | string[]): boolean {
+  if (!dimensions) return false;
+  
+  const dims = Array.isArray(dimensions) ? dimensions : [dimensions];
+  const textOnlyMarkers = [
+    'text-only', 'text only', 'text',
+    'sponsored-content', 'sponsored content',
+    'native', 'advertorial',
+    'logo-text', 'logo text',
+    'content-integration', 'content integration'
+  ];
+  
+  return dims.some(dim => {
+    const d = dim.toLowerCase();
+    return textOnlyMarkers.some(marker => d.includes(marker));
+  });
 }
 
 /**
@@ -738,8 +1600,12 @@ export function validateAgainstStandard(
   const warnings: string[] = [];
   const specs = standard.defaultSpecs;
   
-  // Check dimensions (if not responsive/custom)
-  if (specs.dimensions && specs.dimensions !== 'responsive' && detectedSpecs.dimensions) {
+  // Check dimensions (if not responsive/custom/text-only)
+  const skipDimensionCheck = ['responsive', 'text-only', 'sponsored-content', 'native'].some(
+    skip => specs.dimensions?.toString().toLowerCase().includes(skip)
+  );
+  
+  if (specs.dimensions && !skipDimensionCheck && detectedSpecs.dimensions) {
     const requiredDims = Array.isArray(specs.dimensions) 
       ? specs.dimensions 
       : [specs.dimensions];
