@@ -36,7 +36,21 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Upload,
   CheckCircle2,
@@ -52,7 +66,9 @@ import {
   MoreHorizontal,
   ArrowUp,
   ArrowDown,
-  ArrowUpDown
+  ArrowUpDown,
+  Merge,
+  GitBranch,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -66,7 +82,8 @@ import {
   GroupedCreativeRequirement,
   getSpecDisplayName,
   formatDimensions,
-  UploadedAssetWithSpecs
+  UploadedAssetWithSpecs,
+  dimensionsMatch,
 } from '@/utils/creativeSpecsGrouping';
 import {
   detectFileSpecs,
@@ -85,6 +102,7 @@ import {
   generateZipSummary
 } from '@/utils/zipProcessor';
 import { API_BASE_URL } from '@/config/api';
+import { cn } from '@/lib/utils';
 
 interface CreativeAssetsManagerProps {
   requirements: CreativeRequirement[];
@@ -245,6 +263,27 @@ export function CreativeAssetsManager({
   const [previewAsset, setPreviewAsset] = useState<{ url: string; fileName: string } | null>(null);
   const [processingZip, setProcessingZip] = useState(false);
   const [zipProgress, setZipProgress] = useState<{ percent: number; message: string } | null>(null);
+  
+  // Split/Duplicate & Exclude state
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  const [splitTarget, setSplitTarget] = useState<{
+    specGroupId: string;
+    publicationId: number;
+    publicationName: string;
+  } | null>(null);
+  
+  // Merge state
+  const [mergeSelectionOpen, setMergeSelectionOpen] = useState(false);
+  const [mergeAssetSelectionOpen, setMergeAssetSelectionOpen] = useState(false);
+  const [mergeSource, setMergeSource] = useState<string | null>(null);
+  const [mergeTarget, setMergeTarget] = useState<string | null>(null);
+  const [selectedAssetToKeep, setSelectedAssetToKeep] = useState<'source' | 'target' | null>(null);
+  
+  // Store split/custom spec groups separately
+  const [customSpecGroups, setCustomSpecGroups] = useState<Map<string, GroupedCreativeRequirement>>(new Map());
+  
+  // Track the most recently split spec for auto-assignment
+  const [recentlySplitSpecId, setRecentlySplitSpecId] = useState<string | null>(null);
 
   // Channel configuration with icons and accepted file types
   const channelConfig: Record<string, { 
@@ -316,7 +355,39 @@ export function CreativeAssetsManager({
   const channelOrder = ['website', 'newsletter', 'print', 'radio', 'podcast', 'streaming', 'social', 'events'];
 
   // Group requirements by specifications
-  const groupedSpecs = useMemo(() => groupRequirementsBySpec(requirements), [requirements]);
+  const groupedSpecs = useMemo(() => {
+    const baseGroups = groupRequirementsBySpec(requirements);
+    
+    // Merge in custom spec groups (splits)
+    const allGroups = [...baseGroups];
+    
+    // Add custom groups and update parent groups
+    customSpecGroups.forEach((customGroup) => {
+      // Add the custom group
+      allGroups.push(customGroup);
+      
+      // If it's a split, update the parent group to exclude its placements
+      if (customGroup.isPublicationSpecific && customGroup.originalGroupId) {
+        const parentIndex = allGroups.findIndex(g => g.specGroupId === customGroup.originalGroupId);
+        if (parentIndex !== -1) {
+          const parent = allGroups[parentIndex];
+          const updatedPlacements = parent.placements.filter(
+            p => !customGroup.placements.some(cp => cp.placementId === p.placementId)
+          );
+          
+          allGroups[parentIndex] = {
+            ...parent,
+            placements: updatedPlacements,
+            placementCount: updatedPlacements.length,
+            publicationCount: new Set(updatedPlacements.map(p => p.publicationId)).size,
+          };
+        }
+      }
+    });
+    
+    // Filter out any groups with 0 placements
+    return allGroups.filter(g => g.placementCount > 0);
+  }, [requirements, customSpecGroups]);
 
   // Group specs by channel
   const specsByChannel = useMemo(() => {
@@ -520,6 +591,30 @@ export function CreativeAssetsManager({
       }),
     [uploadedAssets, groupedSpecs]
   );
+  
+  // Find merge candidates for publication-specific specs
+  const mergeCandidates = useMemo(() => {
+    const candidates = new Map<string, GroupedCreativeRequirement[]>();
+    
+    groupedSpecs.forEach(spec => {
+      if (spec.isPublicationSpecific) {
+        // Find compatible specs to merge with
+        const compatible = groupedSpecs.filter(otherSpec => {
+          if (otherSpec.specGroupId === spec.specGroupId) return false;
+          if (otherSpec.channel !== spec.channel) return false;
+          
+          // Check if dimensions match
+          return dimensionsMatch(spec.originalDimensions || spec.dimensions, otherSpec.dimensions);
+        });
+        
+        if (compatible.length > 0) {
+          candidates.set(spec.specGroupId, compatible);
+        }
+      }
+    });
+    
+    return candidates;
+  }, [groupedSpecs]);
 
   // Group placements by publication
   const groupPlacementsByPublication = (placements: GroupedCreativeRequirement['placements']) => {
@@ -753,6 +848,44 @@ export function CreativeAssetsManager({
         let bestMatch = matches.length > 0 ? matches[0] : null;
         let matchConfidence = bestMatch ? bestMatch.matchScore : 0;
         
+        // Check if we have a recently split spec - prioritize auto-assigning to it
+        if (recentlySplitSpecId) {
+          const splitSpec = groupedSpecs.find(g => g.specGroupId === recentlySplitSpecId);
+          if (splitSpec) {
+            console.log(`✅ Auto-assigning ${file.name} to recently split spec → ${recentlySplitSpecId}`);
+            
+            // Add to uploadedAssets
+            const updatedAssets = new Map(uploadedAssets);
+            updatedAssets.set(splitSpec.specGroupId, {
+              specGroupId: splitSpec.specGroupId,
+              file,
+              previewUrl,
+              uploadStatus: 'pending',
+              appliesTo: splitSpec.placements.map(p => ({
+                placementId: p.placementId,
+                publicationId: p.publicationId,
+                publicationName: p.publicationName
+              }))
+            });
+            onAssetsChange(updatedAssets);
+            
+            // Clear the recently split spec ID
+            setRecentlySplitSpecId(null);
+            
+            // Remove from pending files since it's auto-assigned
+            setPendingFiles(prev => {
+              const next = new Map(prev);
+              next.delete(fileId);
+              return next;
+            });
+            
+            console.log(`   ✅ Successfully auto-assigned to split requirement!`);
+            
+            // Don't add to pending files
+            continue;
+          }
+        }
+        
         // Auto-assign if good match (score >= 50)
         if (bestMatch && matchConfidence >= 50) {
           console.log(`✅ Auto-assigning ${file.name} → ${bestMatch.specGroupId} (${matchConfidence}%)`);
@@ -827,7 +960,7 @@ export function CreativeAssetsManager({
         });
       }
     }
-  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile]);
+  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile, recentlySplitSpecId]);
 
   // Dropzone
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
@@ -1030,6 +1163,212 @@ export function CreativeAssetsManager({
   // Count pending uploads
   const pendingUploadCount = Array.from(uploadedAssets.values())
     .filter(a => a.uploadStatus === 'pending').length;
+  
+  // Handle split click
+  const handleSplitClick = (specGroupId: string, publicationId: number, publicationName: string) => {
+    setSplitTarget({ specGroupId, publicationId, publicationName });
+    setSplitDialogOpen(true);
+  };
+  
+  // Handle split publication
+  const handleSplitPublication = () => {
+    if (!splitTarget) return;
+    
+    const { specGroupId, publicationId, publicationName } = splitTarget;
+    
+    // Find the spec group
+    const specGroup = groupedSpecs.find(g => g.specGroupId === specGroupId);
+    if (!specGroup) {
+      toast({
+        title: 'Error',
+        description: 'Could not find requirement to split',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Filter placements for this publication
+    const publicationPlacements = specGroup.placements.filter(
+      p => p.publicationId === publicationId
+    );
+    
+    if (publicationPlacements.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'No placements found for this publication',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Create new publication-specific spec group ID
+    const newSpecGroupId = `${specGroupId}::pub:${publicationId}`;
+    
+    // Create new grouped requirement for this publication only
+    const newSpecGroup: GroupedCreativeRequirement = {
+      ...specGroup,
+      specGroupId: newSpecGroupId,
+      placements: publicationPlacements,
+      placementCount: publicationPlacements.length,
+      publicationCount: 1,
+      isPublicationSpecific: true,
+      originalGroupId: specGroupId,
+      originalDimensions: specGroup.dimensions,
+    };
+    
+    // Update the original group to remove this publication's placements
+    const updatedOriginalGroup: GroupedCreativeRequirement = {
+      ...specGroup,
+      placements: specGroup.placements.filter(p => p.publicationId !== publicationId),
+      placementCount: specGroup.placementCount - publicationPlacements.length,
+      publicationCount: specGroup.publicationCount - 1,
+    };
+    
+    // Add the new spec to custom groups
+    setCustomSpecGroups(prev => {
+      const next = new Map(prev);
+      next.set(newSpecGroupId, newSpecGroup);
+      return next;
+    });
+    
+    // Store the newly split spec ID for auto-assignment
+    setRecentlySplitSpecId(newSpecGroupId);
+    
+    setSplitDialogOpen(false);
+    setSplitTarget(null);
+    
+    toast({
+      title: 'Requirement Split',
+      description: `Created separate requirement for ${publicationName}. You can now upload a different creative.`,
+    });
+    
+    // Open file dialog after a short delay
+    setTimeout(() => {
+      openFileDialog();
+    }, 500);
+  };
+  
+  // Handle merge request
+  const handleMergeClick = (sourceSpecId: string) => {
+    setMergeSource(sourceSpecId);
+    setMergeSelectionOpen(true);
+  };
+  
+  // Handle merge target selection
+  const handleMergeTargetSelected = (targetSpecId: string) => {
+    setMergeTarget(targetSpecId);
+    setMergeSelectionOpen(false);
+    
+    // Check if both have assets
+    const sourceAsset = uploadedAssets.get(mergeSource!);
+    const targetAsset = uploadedAssets.get(targetSpecId);
+    
+    if (sourceAsset?.uploadStatus === 'uploaded' && targetAsset?.uploadStatus === 'uploaded') {
+      // Both have assets, need to choose which to keep
+      setMergeAssetSelectionOpen(true);
+    } else {
+      // One or both don't have assets, just merge
+      handleMergeRequirements(mergeSource!, targetSpecId, sourceAsset ? 'source' : 'target');
+    }
+  };
+  
+  // Handle merge requirements
+  const handleMergeRequirements = async (sourceSpecId: string, targetSpecId: string, keepAssetFrom: 'source' | 'target') => {
+    const sourceSpec = groupedSpecs.find(g => g.specGroupId === sourceSpecId);
+    const targetSpec = groupedSpecs.find(g => g.specGroupId === targetSpecId);
+    
+    if (!sourceSpec || !targetSpec) {
+      toast({
+        title: 'Error',
+        description: 'Could not find requirements to merge',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Combine placements
+    const combinedPlacements = [...targetSpec.placements, ...sourceSpec.placements];
+    const uniquePublications = new Set(combinedPlacements.map(p => p.publicationId));
+    
+    // Handle assets
+    const sourceAsset = uploadedAssets.get(sourceSpecId);
+    const targetAsset = uploadedAssets.get(targetSpecId);
+    
+    // Delete the asset we're not keeping (if uploaded to server)
+    if (keepAssetFrom === 'source' && targetAsset?.assetId) {
+      try {
+        const token = localStorage.getItem('auth_token');
+        await fetch(`${API_BASE_URL}/creative-assets/${targetAsset.assetId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+      } catch (error) {
+        console.error('Error deleting target asset:', error);
+      }
+    } else if (keepAssetFrom === 'target' && sourceAsset?.assetId) {
+      try {
+        const token = localStorage.getItem('auth_token');
+        await fetch(`${API_BASE_URL}/creative-assets/${sourceAsset.assetId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+      } catch (error) {
+        console.error('Error deleting source asset:', error);
+      }
+    }
+    
+    // Update assets map
+    const newAssetsMap = new Map(uploadedAssets);
+    
+    if (keepAssetFrom === 'source' && sourceAsset) {
+      // Move source asset to target spec ID
+      newAssetsMap.set(targetSpecId, {
+        ...sourceAsset,
+        specGroupId: targetSpecId,
+        appliesTo: combinedPlacements.map(p => ({
+          placementId: p.placementId,
+          publicationId: p.publicationId,
+          publicationName: p.publicationName,
+        })),
+      });
+      newAssetsMap.delete(sourceSpecId);
+    } else if (keepAssetFrom === 'target' && targetAsset) {
+      // Update target asset with combined placements
+      newAssetsMap.set(targetSpecId, {
+        ...targetAsset,
+        appliesTo: combinedPlacements.map(p => ({
+          placementId: p.placementId,
+          publicationId: p.publicationId,
+          publicationName: p.publicationName,
+        })),
+      });
+      if (sourceAsset) {
+        newAssetsMap.delete(sourceSpecId);
+      }
+    }
+    
+    onAssetsChange(newAssetsMap);
+    
+    // Remove source from custom groups if it was a split
+    if (sourceSpec.isPublicationSpecific) {
+      setCustomSpecGroups(prev => {
+        const next = new Map(prev);
+        next.delete(sourceSpecId);
+        return next;
+      });
+    }
+    
+    // Close dialogs and reset state
+    setMergeAssetSelectionOpen(false);
+    setMergeSource(null);
+    setMergeTarget(null);
+    setSelectedAssetToKeep(null);
+    
+    toast({
+      title: 'Requirements Merged',
+      description: `Successfully merged ${sourceSpec.placementCount} placements into main requirement`,
+    });
+  };
 
   // Get current channel config for upload zone messaging
   const currentChannelConfig = activeChannel !== 'all' ? channelConfig[activeChannel] : null;
@@ -1037,57 +1376,41 @@ export function CreativeAssetsManager({
   return (
     <>
       <div className="space-y-6">
-        {/* ==================== CHANNEL TABS ==================== */}
-        <div className="border-b">
-          <div className="flex flex-wrap gap-1 pb-2">
-            {/* All Channels Tab */}
-            <button
-              onClick={() => setActiveChannel('all')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                activeChannel === 'all'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80 text-muted-foreground'
-              }`}
-            >
-              <span>📋</span>
-              <span>All</span>
-              <Badge variant={activeChannel === 'all' ? 'secondary' : 'outline'} className="ml-1 h-5 px-1.5 text-xs">
-                {metrics.uploaded}/{metrics.totalRequired}
-              </Badge>
-            </button>
+        {/* ==================== CHANNEL TABS (PILL STYLE) ==================== */}
+        <div className="flex gap-2">
+          {/* All Channels Tab */}
+          <button 
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeChannel === 'all' 
+                ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                : 'border border-transparent'
+            }`}
+            style={activeChannel !== 'all' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
+            onClick={() => setActiveChannel('all')}
+          >
+            All ({metrics.uploaded}/{metrics.totalRequired})
+          </button>
+          
+          {/* Per-Channel Tabs */}
+          {availableChannels.map(channel => {
+            const config = channelConfig[channel];
+            const channelMet = channelMetrics.get(channel);
             
-            {/* Per-Channel Tabs */}
-            {availableChannels.map(channel => {
-              const config = channelConfig[channel];
-              const channelMet = channelMetrics.get(channel);
-              const isComplete = channelMet && channelMet.uploaded === channelMet.total;
-              const hasMissing = channelMet && channelMet.uploaded < channelMet.total;
-              
-              return (
-                <button
-                  key={channel}
-                  onClick={() => setActiveChannel(channel)}
-                  className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                    activeChannel === channel
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted hover:bg-muted/80 text-muted-foreground'
-                  }`}
-                >
-                  <span>{config?.icon || '📁'}</span>
-                  <span>{config?.label || channel}</span>
-                  <Badge 
-                    variant={activeChannel === channel ? 'secondary' : 'outline'} 
-                    className={`ml-1 h-5 px-1.5 text-xs ${
-                      isComplete ? 'bg-green-100 text-green-700 border-green-200' : 
-                      hasMissing ? 'bg-orange-100 text-orange-700 border-orange-200' : ''
-                    }`}
-                  >
-                    {channelMet?.uploaded || 0}/{channelMet?.total || 0}
-                  </Badge>
-                </button>
-              );
-            })}
-          </div>
+            return (
+              <button 
+                key={channel}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeChannel === channel 
+                    ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                    : 'border border-transparent'
+                }`}
+                style={activeChannel !== channel ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
+                onClick={() => setActiveChannel(channel)}
+              >
+                {config?.label || channel} ({channelMet?.uploaded || 0}/{channelMet?.total || 0})
+              </button>
+            );
+          })}
         </div>
 
         {/* ==================== UPPER SECTION: 2 COLUMNS ==================== */}
@@ -1203,10 +1526,10 @@ export function CreativeAssetsManager({
               <div
                 {...getRootProps()}
                 data-upload-zone
-                className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors bg-white ${
                   isDragActive 
                     ? 'border-primary bg-primary/5' 
-                    : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
+                    : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-white'
                 }`}
               >
                 <input {...getInputProps()} />
@@ -1431,7 +1754,7 @@ export function CreativeAssetsManager({
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[40px]"></TableHead>
-                    <TableHead className="w-[22%]">
+                    <TableHead className={activeChannel === 'all' ? "w-[30%]" : "w-[40%]"}>
                       <button
                         type="button"
                         onClick={() => handleSort('requirement')}
@@ -1441,17 +1764,19 @@ export function CreativeAssetsManager({
                         {renderSortIcon('requirement')}
                       </button>
                     </TableHead>
-                    <TableHead className="w-[12%]">
-                      <button
-                        type="button"
-                        onClick={() => handleSort('channel')}
-                        className="flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
-                      >
-                        Channel
-                        {renderSortIcon('channel')}
-                      </button>
-                    </TableHead>
-                    <TableHead className="w-[28%]">
+                    {activeChannel === 'all' && (
+                      <TableHead className="w-[15%]">
+                        <button
+                          type="button"
+                          onClick={() => handleSort('channel')}
+                          className="flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                        >
+                          Channel
+                          {renderSortIcon('channel')}
+                        </button>
+                      </TableHead>
+                    )}
+                    <TableHead className={activeChannel === 'all' ? "w-[40%]" : "w-[45%]"}>
                       <button
                         type="button"
                         onClick={() => handleSort('coverage')}
@@ -1461,8 +1786,7 @@ export function CreativeAssetsManager({
                         {renderSortIcon('coverage')}
                       </button>
                     </TableHead>
-                    <TableHead className="w-[20%]">File</TableHead>
-                    <TableHead className="w-[13%] text-right">
+                    <TableHead className="w-[15%] text-right">
                       <button
                         type="button"
                         onClick={() => handleSort('status')}
@@ -1477,7 +1801,7 @@ export function CreativeAssetsManager({
               <TableBody>
                 {enrichedSpecs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={activeChannel === 'all' ? 5 : 4} className="text-center py-8 text-muted-foreground">
                       No requirements found
                     </TableCell>
                   </TableRow>
@@ -1502,49 +1826,49 @@ export function CreativeAssetsManager({
                             </Button>
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm font-medium">
-                              {/* Show audio-specific format for radio/podcast, dimensions for others */}
-                              {(spec.channel === 'radio' || spec.channel === 'podcast')
-                                ? formatAudioSpec(spec)
-                                : formatDimensions(spec.dimensions, spec.channel, spec.fileFormats)
-                              }
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">
+                                {/* Show audio-specific format for radio/podcast, dimensions for others */}
+                                {(spec.channel === 'radio' || spec.channel === 'podcast')
+                                  ? formatAudioSpec(spec)
+                                  : formatDimensions(spec.dimensions, spec.channel, spec.fileFormats)
+                                }
+                              </span>
+                              {spec.isPublicationSpecific && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Badge variant="outline" className="h-5 px-1.5 bg-gray-50 text-gray-600 border-gray-300">
+                                        <GitBranch className="h-3 w-3" />
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs">
+                                        Separate creative for {spec.placements[0]?.publicationName}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
                             {spec.fileFormats && (
                               <p className="text-xs text-muted-foreground mt-0.5">
                                 {spec.fileFormats.join(', ').toUpperCase()}
                               </p>
                             )}
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize font-normal">
-                              {spec.channel}
-                            </Badge>
-                          </TableCell>
+                          {activeChannel === 'all' && (
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize font-normal">
+                                {spec.channel}
+                              </Badge>
+                            </TableCell>
+                          )}
                           <TableCell className="text-sm">
                             <span className="font-medium">{spec.placementCount}</span>
                             <span className="text-muted-foreground"> placements across </span>
                             <span className="font-medium">{spec.publicationCount}</span>
                             <span className="text-muted-foreground"> publication{spec.publicationCount !== 1 ? 's' : ''}</span>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {spec.fileName ? (
-                              <span className="truncate block max-w-[150px]" title={spec.fileName}>
-                                {spec.fileName}
-                              </span>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs text-primary hover:text-primary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openFileDialog();
-                                }}
-                              >
-                                <Upload className="h-3 w-3 mr-1" />
-                                Add file
-                              </Button>
-                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <StatusBadge status={spec.status} />
@@ -1553,8 +1877,8 @@ export function CreativeAssetsManager({
 
                         {/* Expanded Content Row */}
                         {isExpanded && (
-                          <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={6} className="p-0">
+                          <TableRow className="bg-gray-50 hover:bg-gray-50">
+                            <TableCell colSpan={activeChannel === 'all' ? 5 : 4} className="p-0">
                               <div className="px-6 py-4 space-y-4">
                                 {/* Two Column Layout: File Details | Placements */}
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1657,43 +1981,100 @@ export function CreativeAssetsManager({
                                         </div>
                                       </div>
                                     ) : (
-                                      <div className="flex items-center gap-3 p-4 border border-dashed rounded-lg">
-                                        <AlertCircle className="h-5 w-5 text-orange-500" />
-                                        <p className="text-sm text-muted-foreground">
-                                          No file attached yet
-                                        </p>
+                                      <div className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed rounded-lg">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-orange-100">
+                                          <Upload className="h-6 w-6 text-orange-600" />
+                                        </div>
+                                        <div className="text-center">
+                                          <p className="text-sm font-medium mb-1">No file attached</p>
+                                          <p className="text-xs text-muted-foreground">Upload a creative asset for this requirement</p>
+                                        </div>
+                                        <Button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openFileDialog();
+                                          }}
+                                          className="mt-2"
+                                        >
+                                          <Upload className="h-4 w-4 mr-2" />
+                                          Attach File
+                                        </Button>
                                       </div>
                                     )}
                                   </div>
 
                                   {/* RIGHT: Placements by Publication */}
                                   <div className="lg:col-span-2">
-                                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                                      Placements ({spec.placementCount})
-                                    </h4>
-                                    <div className="space-y-3 max-h-48 overflow-y-auto">
-                                      {placementsByPub.map(([pubId, pubData]) => (
-                                        <div key={pubId} className="space-y-1.5">
-                                          {/* Publication Header */}
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-sm font-medium">{pubData.name}</span>
-                                            <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                                              {pubData.placements.length}
-                                            </Badge>
-                                          </div>
-                                          {/* Placement List */}
-                                          <div className="ml-4 flex flex-wrap gap-1.5">
-                                            {pubData.placements.map((placementName, idx) => (
-                                              <span 
-                                                key={idx}
-                                                className="text-xs bg-muted px-2 py-1 rounded"
-                                              >
-                                                {placementName}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ))}
+                                    <div className="flex items-center justify-between mb-3">
+                                      <h4 className="text-xs font-medium font-sans text-muted-foreground uppercase tracking-wide">
+                                        Placements ({spec.placementCount})
+                                      </h4>
+                                      {spec.isPublicationSpecific && mergeCandidates.has(spec.specGroupId) && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 text-xs hover:bg-transparent"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMergeClick(spec.specGroupId);
+                                          }}
+                                        >
+                                          <Merge className="h-3 w-3 mr-1.5" />
+                                          Re-merge Requirement
+                                        </Button>
+                                      )}
+                                    </div>
+                                    <div className="border rounded-lg overflow-hidden bg-white">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow className="bg-muted/50">
+                                            <TableHead className="w-[35%]">Publication</TableHead>
+                                            <TableHead className="w-[50%]">Placements</TableHead>
+                                            <TableHead className="w-[15%] text-right">Actions</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {placementsByPub.map(([pubId, pubData]) => (
+                                            <TableRow key={pubId} className="group hover:bg-muted/30">
+                                              <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-sm font-medium">{pubData.name}</span>
+                                                  <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                                                    {pubData.placements.length}
+                                                  </Badge>
+                                                </div>
+                                              </TableCell>
+                                              <TableCell>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                  {pubData.placements.map((placementName, idx) => (
+                                                    <span 
+                                                      key={idx}
+                                                      className="text-xs bg-muted px-2 py-1 rounded"
+                                                    >
+                                                      {placementName}
+                                                    </span>
+                                                  ))}
+                                                </div>
+                                              </TableCell>
+                                              <TableCell className="text-right">
+                                                {spec.publicationCount > 1 && (
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleSplitClick(spec.specGroupId, pubId, pubData.name);
+                                                    }}
+                                                  >
+                                                    Duplicate & Exclude
+                                                  </Button>
+                                                )}
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
                                     </div>
                                   </div>
                                 </div>
@@ -1875,6 +2256,188 @@ export function CreativeAssetsManager({
               className="bg-destructive hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Split Confirmation Modal */}
+      <AlertDialog open={splitDialogOpen} onOpenChange={setSplitDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create Publication-Specific Requirement?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {splitTarget && (
+                <>
+                  <p className="mb-2">
+                    This will create a separate requirement for <strong>{splitTarget.publicationName}</strong> with the same specifications.
+                  </p>
+                  <p className="mb-2">
+                    You'll be able to upload a different creative (e.g., Spanish version) specifically for this publication, 
+                    while other publications continue to use the main creative.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    You can re-merge these requirements later if needed.
+                  </p>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSplitPublication}>
+              Create Separate Requirement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Merge Selection Modal */}
+      <Dialog open={mergeSelectionOpen} onOpenChange={setMergeSelectionOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Select Requirement to Merge With</DialogTitle>
+            <DialogDescription>
+              Choose which requirement to merge this publication-specific creative back into.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {mergeSource && mergeCandidates.get(mergeSource)?.map((candidate) => {
+              const asset = uploadedAssets.get(candidate.specGroupId);
+              return (
+                <button
+                  key={candidate.specGroupId}
+                  onClick={() => handleMergeTargetSelected(candidate.specGroupId)}
+                  className="w-full p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">
+                          {formatDimensions(candidate.dimensions, candidate.channel, candidate.fileFormats)}
+                        </span>
+                        <Badge variant="outline" className="capitalize text-xs">
+                          {candidate.channel}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {candidate.placementCount} placements across {candidate.publicationCount} publications
+                      </p>
+                      {asset && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <CheckCircle2 className="h-3 w-3 text-green-600" />
+                          <span className="text-green-600">Has uploaded asset: {asset.file?.name || asset.fileName}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge Asset Selection Modal */}
+      <AlertDialog open={mergeAssetSelectionOpen} onOpenChange={setMergeAssetSelectionOpen}>
+        <AlertDialogContent className="max-w-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Choose Which Asset to Keep</AlertDialogTitle>
+            <AlertDialogDescription>
+              Both requirements have uploaded assets. Select which creative to keep after merging.
+              The other asset will be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {mergeSource && mergeTarget && (
+            <RadioGroup value={selectedAssetToKeep || ''} onValueChange={(val) => setSelectedAssetToKeep(val as 'source' | 'target')}>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Source Asset */}
+                <div className={`relative border-2 rounded-lg p-4 ${selectedAssetToKeep === 'source' ? 'border-primary bg-primary/5' : 'border-muted'}`}>
+                  <div className="flex items-start gap-2 mb-3">
+                    <RadioGroupItem value="source" id="source-asset" />
+                    <Label htmlFor="source-asset" className="text-sm font-medium cursor-pointer">
+                      Publication-Specific Creative
+                    </Label>
+                  </div>
+                  {(() => {
+                    const asset = uploadedAssets.get(mergeSource);
+                    const spec = groupedSpecs.find(s => s.specGroupId === mergeSource);
+                    return asset && spec ? (
+                      <div className="ml-6">
+                        {asset.previewUrl && !asset.detectedSpecs?.isTextAsset ? (
+                          <img 
+                            src={asset.previewUrl} 
+                            alt="Source asset"
+                            className="w-full h-32 object-contain rounded border bg-muted mb-2"
+                          />
+                        ) : asset.detectedSpecs?.isTextAsset ? (
+                          <div className="w-full h-32 rounded border bg-amber-50 flex items-center justify-center mb-2">
+                            <FileText className="h-12 w-12 text-amber-600" />
+                          </div>
+                        ) : null}
+                        <p className="text-sm font-medium truncate">{asset.file?.name || asset.fileName}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          For {spec.placements[0]?.publicationName} only
+                        </p>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+
+                {/* Target Asset */}
+                <div className={`relative border-2 rounded-lg p-4 ${selectedAssetToKeep === 'target' ? 'border-primary bg-primary/5' : 'border-muted'}`}>
+                  <div className="flex items-start gap-2 mb-3">
+                    <RadioGroupItem value="target" id="target-asset" />
+                    <Label htmlFor="target-asset" className="text-sm font-medium cursor-pointer">
+                      Main Creative
+                    </Label>
+                  </div>
+                  {(() => {
+                    const asset = uploadedAssets.get(mergeTarget);
+                    const spec = groupedSpecs.find(s => s.specGroupId === mergeTarget);
+                    return asset && spec ? (
+                      <div className="ml-6">
+                        {asset.previewUrl && !asset.detectedSpecs?.isTextAsset ? (
+                          <img 
+                            src={asset.previewUrl} 
+                            alt="Target asset"
+                            className="w-full h-32 object-contain rounded border bg-muted mb-2"
+                          />
+                        ) : asset.detectedSpecs?.isTextAsset ? (
+                          <div className="w-full h-32 rounded border bg-amber-50 flex items-center justify-center mb-2">
+                            <FileText className="h-12 w-12 text-amber-600" />
+                          </div>
+                        ) : null}
+                        <p className="text-sm font-medium truncate">{asset.file?.name || asset.fileName}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          For {spec.publicationCount} publications
+                        </p>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+            </RadioGroup>
+          )}
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setSelectedAssetToKeep(null);
+              setMergeSource(null);
+              setMergeTarget(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!selectedAssetToKeep}
+              onClick={() => {
+                if (mergeSource && mergeTarget && selectedAssetToKeep) {
+                  handleMergeRequirements(mergeSource, mergeTarget, selectedAssetToKeep);
+                }
+              }}
+            >
+              Merge and Keep Selected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

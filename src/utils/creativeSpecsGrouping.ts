@@ -36,6 +36,11 @@ export interface GroupedCreativeRequirement {
   placementCount: number;
   publicationCount: number;
   
+  // Split/merge metadata
+  isPublicationSpecific?: boolean; // True if this was split for a specific publication
+  originalGroupId?: string; // Reference to parent group if this is a split
+  originalDimensions?: string | string[]; // Original dimensions before split
+  
   // Uploaded asset (once uploaded, applies to all placements)
   uploadedAsset?: {
     assetId: string;

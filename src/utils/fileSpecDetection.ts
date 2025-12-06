@@ -5,14 +5,14 @@
  * from uploaded files to enable auto-matching with requirements.
  */
 
-// Use legacy build for better browser compatibility
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+// Use standard build for Vite compatibility
+import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure worker using locally served file (copied to public folder)
 if (typeof window !== 'undefined') {
   // Use local worker file served from public folder
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-  console.log('[PDF Detection] PDF.js legacy build configured with local worker');
+  console.log('[PDF Detection] PDF.js configured with local worker');
 }
 
 export interface DetectedFileSpecs {
