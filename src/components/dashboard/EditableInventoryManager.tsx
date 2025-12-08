@@ -62,25 +62,14 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
 
     setSaving(true);
     try {
-      // Ensure we send the complete publication data with all changes
-      // Remove system-managed fields that shouldn't be updated
-      const { metadata, _id, createdAt, updatedAt, ...cleanFormData } = formData;
-      const { _id: selectedId, createdAt: selectedCreatedAt, updatedAt: selectedUpdatedAt, ...selectedData } = selectedPublication;
-      
-      const fullUpdateData = {
-        ...selectedData,
-        ...cleanFormData,
-        // Merge metadata properly if it exists
-        ...(metadata && {
-          metadata: {
-            ...selectedPublication.metadata,
-            ...metadata
-          }
-        })
+      // Only send distributionChannels - partial update is safer and more efficient
+      // The backend uses MongoDB $set which only updates the fields we send
+      const partialUpdateData = {
+        distributionChannels: formData.distributionChannels
       };
 
       console.log('💾 Saving inventory changes for publication:', selectedPublication._id);
-      const updatedPublication = await updatePublication(selectedPublication._id, fullUpdateData);
+      const updatedPublication = await updatePublication(selectedPublication._id, partialUpdateData);
       
       if (updatedPublication) {
         onSave(updatedPublication);
@@ -109,27 +98,18 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
     if (!selectedPublication?._id) return;
 
     try {
-      // Merge the updated data with the current form data to ensure we don't lose any changes
-      // Remove system-managed fields that shouldn't be updated
-      const { metadata: updatedMetadata, _id: updatedId, createdAt: updatedCreatedAt, updatedAt: updatedUpdatedAt, ...cleanUpdatedData } = updatedData;
-      const { metadata: formMetadata, _id: formId, createdAt: formCreatedAt, updatedAt: formUpdatedAt, ...cleanFormData } = formData;
-      const { _id: selectedId, createdAt: selectedCreatedAt, updatedAt: selectedUpdatedAt, ...selectedData } = selectedPublication;
+      // Only send distributionChannels - partial update is safer and more efficient
+      // Merge the updated distributionChannels with current form data
+      const mergedDistributionChannels = {
+        ...formData.distributionChannels,
+        ...updatedData.distributionChannels
+      };
       
-      const fullUpdateData = {
-        ...selectedData,
-        ...cleanFormData,
-        ...cleanUpdatedData,
-        // Merge all metadata properly
-        ...((updatedMetadata || formMetadata) && {
-          metadata: {
-            ...selectedPublication.metadata,
-            ...formMetadata,
-            ...updatedMetadata
-          }
-        })
+      const partialUpdateData = {
+        distributionChannels: mergedDistributionChannels
       };
 
-      const updatedPublication = await updatePublication(selectedPublication._id, fullUpdateData);
+      const updatedPublication = await updatePublication(selectedPublication._id, partialUpdateData);
       if (updatedPublication) {
         setFormData(updatedPublication);
         onSave(updatedPublication);

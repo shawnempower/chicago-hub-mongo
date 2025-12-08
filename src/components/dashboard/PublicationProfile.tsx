@@ -150,7 +150,17 @@ export const PublicationProfile: React.FC = () => {
       const finalData = deepClone(formData);
       setNestedValue(finalData, 'competitiveInfo.keyDifferentiators', differentiators.filter(Boolean));
       
-      const updatedPublication = await updatePublication(selectedPublication._id, finalData);
+      // Only send profile-related sections - partial update is safer and more efficient
+      // This prevents overwriting inventory changes made by other users
+      const partialUpdateData: Partial<typeof finalData> = {};
+      if (finalData.basicInfo) partialUpdateData.basicInfo = finalData.basicInfo;
+      if (finalData.contactInfo) partialUpdateData.contactInfo = finalData.contactInfo;
+      if (finalData.socialMediaLinks) partialUpdateData.socialMediaLinks = finalData.socialMediaLinks;
+      if (finalData.competitiveInfo) partialUpdateData.competitiveInfo = finalData.competitiveInfo;
+      if (finalData.audienceDemographics) partialUpdateData.audienceDemographics = finalData.audienceDemographics;
+      if (finalData.businessInfo) partialUpdateData.businessInfo = finalData.businessInfo;
+      
+      const updatedPublication = await updatePublication(selectedPublication._id, partialUpdateData);
       if (updatedPublication) {
         setSelectedPublication(updatedPublication);
         setIsEditing(false);

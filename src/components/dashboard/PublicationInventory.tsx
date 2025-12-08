@@ -291,8 +291,9 @@ export const PublicationInventory: React.FC = () => {
     ];
 
     try {
-      const updatedPublication = {
-        ...selectedPublication,
+      // Only send distributionChannels - partial update is safer and more efficient
+      // The backend uses MongoDB $set which only updates the fields we send
+      const partialUpdateData = {
         distributionChannels: {
           ...selectedPublication.distributionChannels,
           [channelKey]: updatedChannels
@@ -300,7 +301,7 @@ export const PublicationInventory: React.FC = () => {
       };
 
       // Save to database
-      const savedPublication = await updatePublication(selectedPublication._id, updatedPublication);
+      const savedPublication = await updatePublication(selectedPublication._id, partialUpdateData);
       
       if (savedPublication) {
         setSelectedPublication(savedPublication);

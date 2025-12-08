@@ -561,24 +561,17 @@ export const DashboardInventoryManager = () => {
 
     setLoading(true);
     try {
-      // Ensure we're sending the full publication data, not just a partial update
-      // Remove system-managed fields that shouldn't be updated
-      const { metadata, _id, createdAt, updatedAt, ...cleanUpdatedData } = updatedData;
-      const { _id: currentId, createdAt: currentCreatedAt, updatedAt: currentUpdatedAt, ...currentData } = currentPublication;
-      
-      const fullUpdateData = {
-        ...currentData,
-        ...cleanUpdatedData,
-        // Merge metadata properly if it exists
-        ...(metadata && {
-          metadata: {
-            ...currentPublication.metadata,
-            ...metadata
-          }
-        })
+      // Only send distributionChannels - partial update is safer and more efficient
+      // The backend uses MongoDB $set which only updates the fields we send
+      // This prevents race conditions if two users edit different sections simultaneously
+      const partialUpdateData = {
+        distributionChannels: {
+          ...currentPublication.distributionChannels,
+          ...updatedData.distributionChannels
+        }
       };
 
-      const updated = await updatePublication(currentPublication._id, fullUpdateData);
+      const updated = await updatePublication(currentPublication._id, partialUpdateData);
       if (updated) {
         // Update both local state and context to keep them in sync
         setCurrentPublication(updated);
