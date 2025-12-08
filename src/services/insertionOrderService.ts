@@ -16,6 +16,7 @@ import {
   OrderStatusHistoryEntry,
   OrderAdSpecification,
   OrderAssetReference,
+  OrderMessage,
   isValidStatusTransition,
   VALID_STATUS_TRANSITIONS
 } from '../integrations/mongodb/insertionOrderSchema';
@@ -275,19 +276,27 @@ export class InsertionOrderService {
       const campaignMap = new Map<string, Campaign>();
       campaigns.forEach(c => campaignMap.set(c.campaignId, c));
 
-      // Enrich orders with campaign data
+      // Enrich orders with campaign data and message counts
       return orders.map(order => {
         const campaign = campaignMap.get(order.campaignId);
         const pub = campaign?.selectedInventory?.publications?.find(
           (p: any) => p.publicationId === order.publicationId
         );
         
+        // Count messages and check for unread (messages from publication)
+        const messageCount = order.messages?.length || 0;
+        const hasUnreadMessages = order.messages?.some(
+          (m: any) => m.sender === 'publication'
+        ) || false;
+        
         return {
           ...order,
           uploadedAssetCount: assetCountMap.get(order.campaignId) || 0,
           placementCount: pub?.inventoryItems?.length || 0,
           campaignStartDate: campaign?.timeline?.startDate,
-          campaignEndDate: campaign?.timeline?.endDate
+          campaignEndDate: campaign?.timeline?.endDate,
+          messageCount,
+          hasUnreadMessages
         } as PublicationInsertionOrderWithCampaign;
       });
     } catch (error) {
@@ -347,6 +356,94 @@ export class InsertionOrderService {
       return { success: true };
     } catch (error) {
       console.error('Error adding notes:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Add a message to the order conversation thread
+   * Messages are appended to support bi-directional communication
+   */
+  async addMessage(
+    campaignId: string,
+    publicationId: number,
+    message: {
+      content: string;
+      sender: 'hub' | 'publication';
+      senderName: string;
+      senderId: string;
+      attachments?: Array<{
+        fileName: string;
+        fileUrl: string;
+        fileType: string;
+        fileSize?: number;
+      }>;
+    }
+  ): Promise<{ success: boolean; message?: OrderMessage; error?: string }> {
+    try {
+      // Generate unique message ID
+      const messageId = new ObjectId().toString();
+      
+      const newMessage: OrderMessage = {
+        id: messageId,
+        content: message.content,
+        sender: message.sender,
+        senderName: message.senderName,
+        senderId: message.senderId,
+        timestamp: new Date(),
+        attachments: message.attachments
+      };
+
+      const result = await this.ordersCollection.updateOne(
+        {
+          campaignId,
+          publicationId,
+          deletedAt: { $exists: false }
+        },
+        {
+          $push: { messages: newMessage },
+          $set: { updatedAt: new Date() }
+        }
+      );
+
+      if (result.matchedCount === 0) {
+        return { success: false, error: 'Order not found' };
+      }
+
+      return { success: true, message: newMessage };
+    } catch (error) {
+      console.error('Error adding message:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Get messages for an order
+   */
+  async getMessages(
+    campaignId: string,
+    publicationId: number
+  ): Promise<{ success: boolean; messages?: OrderMessage[]; error?: string }> {
+    try {
+      const order = await this.ordersCollection.findOne({
+        campaignId,
+        publicationId,
+        deletedAt: { $exists: false }
+      });
+
+      if (!order) {
+        return { success: false, error: 'Order not found' };
+      }
+
+      return { success: true, messages: order.messages || [] };
+    } catch (error) {
+      console.error('Error getting messages:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

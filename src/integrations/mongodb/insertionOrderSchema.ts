@@ -69,6 +69,30 @@ export interface ProofOfPerformance {
 }
 
 /**
+ * Message in the order conversation thread
+ * Supports bi-directional communication between hub and publication
+ */
+export interface OrderMessage {
+  id: string;                     // Unique ID for the message
+  content: string;                // Message text
+  sender: 'hub' | 'publication';  // Who sent it
+  senderName: string;             // Display name of sender
+  senderId: string;               // User ID of sender
+  timestamp: Date;
+  attachments?: Array<{
+    fileName: string;
+    fileUrl: string;
+    fileType: string;
+    fileSize?: number;
+  }>;
+  // Optional: mark as read
+  readBy?: Array<{
+    userId: string;
+    readAt: Date;
+  }>;
+}
+
+/**
  * PublicationInsertionOrderDocument
  * 
  * The main document stored in the publication_insertion_orders collection.
@@ -97,10 +121,12 @@ export interface PublicationInsertionOrderDocument {
   status: InsertionOrderStatus;
   confirmationDate?: Date;
   
-  // Notes
-  notes?: string;               // Deprecated, use publicationNotes
-  publicationNotes?: string;
-  hubNotes?: string;
+  // Notes (pinned summary notes)
+  publicationNotes?: string;    // Pinned note from publication
+  hubNotes?: string;            // Pinned note from hub
+  
+  // Message thread - conversation between hub and publication
+  messages?: OrderMessage[];
   
   // Asset references - used to dynamically load current assets
   // Each placement needs an asset; this tracks which specGroupId maps to which placement
@@ -146,6 +172,8 @@ export interface PublicationInsertionOrderWithCampaign extends PublicationInsert
   campaignEndDate?: Date;
   uploadedAssetCount?: number;
   placementCount?: number;
+  messageCount?: number;
+  hasUnreadMessages?: boolean;
 }
 
 // Valid status transitions

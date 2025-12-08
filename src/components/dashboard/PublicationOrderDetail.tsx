@@ -219,12 +219,12 @@ export function PublicationOrderDetail() {
     }
   };
 
-  const handleSendMessage = async (message: string, type: 'hub' | 'publication') => {
+  const handleSendMessage = async (content: string, attachments?: Array<{ fileName: string; fileUrl: string; fileType: string; fileSize?: number }>) => {
     try {
       const token = localStorage.getItem('auth_token');
 
       const response = await fetch(
-        `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/notes`,
+        `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/messages`,
         {
           method: 'POST',
           headers: {
@@ -232,20 +232,28 @@ export function PublicationOrderDetail() {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            notes: message,
-            noteType: type
+            content,
+            attachments
           })
         }
       );
 
       if (!response.ok) throw new Error('Failed to send message');
 
-      toast({
-        title: 'Success',
-        description: 'Message sent successfully'
-      });
+      const data = await response.json();
 
-      fetchOrderDetail();
+      // Optimistically add the new message to local state (no full refresh)
+      if (data.message && order) {
+        setOrder({
+          ...order,
+          messages: [...(order.messages || []), data.message]
+        });
+      }
+
+      toast({
+        title: 'Message sent',
+        description: 'Your message has been delivered'
+      });
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -253,7 +261,7 @@ export function PublicationOrderDetail() {
         description: 'Failed to send message',
         variant: 'destructive'
       });
-      throw error; // Re-throw so component can handle the error state
+      throw error;
     }
   };
 
@@ -918,6 +926,10 @@ export function PublicationOrderDetail() {
           <OrderMessaging
             publicationNotes={order.publicationNotes}
             hubNotes={order.hubNotes}
+            messages={order.messages?.map(m => ({
+              ...m,
+              timestamp: new Date(m.timestamp)
+            }))}
             userType="publication"
             readOnly={order.status === 'delivered'}
             onSendMessage={handleSendMessage}

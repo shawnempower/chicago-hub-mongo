@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { OrderStatusBadge, OrderStatus } from '../orders/OrderStatusBadge';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X, Image, AlertCircle, CheckCircle2, Calendar } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X, Image, AlertCircle, CheckCircle2, Calendar, MessageCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +29,8 @@ interface InsertionOrder {
   placementCount?: number;
   campaignStartDate?: Date;
   campaignEndDate?: Date;
+  messageCount?: number;
+  hasUnreadMessages?: boolean;
 }
 
 interface PlacementStats {
@@ -528,7 +530,12 @@ export function HubOrdersManagement() {
                       Assets
                     </span>
                   </TableHead>
-                  <TableHead className="w-[10%]">
+                  <TableHead className="w-[6%]">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Messages
+                    </span>
+                  </TableHead>
+                  <TableHead className="w-[8%]">
                     <button
                       type="button"
                       onClick={() => handleSort('issues')}
@@ -538,7 +545,7 @@ export function HubOrdersManagement() {
                       {renderSortIcon('issues')}
                     </button>
                   </TableHead>
-                  <TableHead className="w-[10%] text-right">Actions</TableHead>
+                  <TableHead className="w-[8%] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -550,7 +557,7 @@ export function HubOrdersManagement() {
                     <TableRow
                       key={`${order.campaignId}-${order.publicationId}`}
                       className="cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => navigate(`/campaigns/${order.campaignId}`)}
+                      onClick={() => navigate(`/hubcentral?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`)}
                     >
                       <TableCell>
                         <p className="text-sm font-medium">{order.campaignName}</p>
@@ -619,6 +626,18 @@ export function HubOrdersManagement() {
                         )}
                       </TableCell>
                       <TableCell>
+                        {order.messageCount && order.messageCount > 0 ? (
+                          <div className="flex items-center gap-1 text-xs">
+                            <MessageCircle className={`h-3.5 w-3.5 ${order.hasUnreadMessages ? 'text-blue-600 fill-blue-100' : 'text-gray-500'}`} />
+                            <span className={order.hasUnreadMessages ? 'text-blue-700 font-medium' : 'text-gray-600'}>
+                              {order.messageCount}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         {issues.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {issues.includes('rejected') && (
@@ -642,7 +661,7 @@ export function HubOrdersManagement() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/campaigns/${order.campaignId}`);
+                            navigate(`/hubcentral?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`);
                           }}
                         >
                           <Eye className="h-4 w-4 mr-1" />

@@ -5,6 +5,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { ObjectId } from 'mongodb';
 import { authenticateToken } from '../middleware/authenticate';
 // import { insertionOrderService } from '../../src/services/insertionOrderService'; // Temporarily disabled
 import { permissionsService } from '../../src/integrations/mongodb/permissionsService';
@@ -611,6 +612,141 @@ router.post('/:campaignId/:publicationId/notes', async (req: any, res: Response)
   } catch (error) {
     console.error('Error adding notes:', error);
     res.status(500).json({ error: 'Failed to add notes' });
+  }
+});
+
+/**
+ * POST /api/publication-orders/:campaignId/:publicationId/messages
+ * Add a message to the order conversation thread
+ */
+router.post('/:campaignId/:publicationId/messages', async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { campaignId, publicationId } = req.params;
+    const { content, attachments } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Message content is required' });
+    }
+
+    // Get user profile and auth user to determine sender type and name
+    const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
+    const { getDatabase } = await import('../../src/integrations/mongodb/client');
+    const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+    
+    const profile = await userProfilesService.getByUserId(userId);
+    
+    // Also get the auth user record for email
+    const usersCollection = getDatabase().collection(COLLECTIONS.USERS);
+    const authUser = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+    // Determine if hub or publication user
+    const isHubUser = profile?.isAdmin === true;
+    let hasAccess = false;
+
+    if (isHubUser) {
+      hasAccess = true;
+    } else {
+      try {
+        hasAccess = await permissionsService.canAccessPublication(userId, publicationId);
+      } catch (err) {
+        if (profile?.publicationId && profile.publicationId.toString() === publicationId) {
+          hasAccess = true;
+        }
+      }
+    }
+
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Build sender name - try multiple sources
+    let senderName = 'Unknown User';
+    if (profile?.firstName && profile?.lastName) {
+      senderName = `${profile.firstName} ${profile.lastName}`;
+    } else if (profile?.firstName) {
+      senderName = profile.firstName;
+    } else if (authUser?.firstName && authUser?.lastName) {
+      senderName = `${authUser.firstName} ${authUser.lastName}`;
+    } else if (authUser?.email) {
+      // Use email prefix as name
+      senderName = authUser.email.split('@')[0];
+    } else if (profile?.companyName) {
+      senderName = profile.companyName;
+    }
+    
+    const senderType: 'hub' | 'publication' = isHubUser ? 'hub' : 'publication';
+
+    // Add message
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+    const result = await insertionOrderService.addMessage(
+      campaignId,
+      parseInt(publicationId),
+      {
+        content: content.trim(),
+        sender: senderType,
+        senderName,
+        senderId: userId,
+        attachments
+      }
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true, message: result.message });
+  } catch (error) {
+    console.error('Error adding message:', error);
+    res.status(500).json({ error: 'Failed to add message' });
+  }
+});
+
+/**
+ * GET /api/publication-orders/:campaignId/:publicationId/messages
+ * Get all messages for an order
+ */
+router.get('/:campaignId/:publicationId/messages', async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { campaignId, publicationId } = req.params;
+
+    // Verify access
+    const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
+    const profile = await userProfilesService.getByUserId(userId);
+    
+    let hasAccess = false;
+    if (profile?.isAdmin) {
+      hasAccess = true;
+    } else {
+      try {
+        hasAccess = await permissionsService.canAccessPublication(userId, publicationId);
+      } catch (err) {
+        if (profile?.publicationId && profile.publicationId.toString() === publicationId) {
+          hasAccess = true;
+        }
+      }
+    }
+
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get messages
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+    const result = await insertionOrderService.getMessages(
+      campaignId,
+      parseInt(publicationId)
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true, messages: result.messages });
+  } catch (error) {
+    console.error('Error getting messages:', error);
+    res.status(500).json({ error: 'Failed to get messages' });
   }
 });
 
