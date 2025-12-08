@@ -299,9 +299,8 @@ router.post('/:id/insertion-order', authenticateToken, async (req: any, res: Res
 router.post('/:id/publication-insertion-orders', authenticateToken, async (req: any, res: Response) => {
   try {
     const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
-    const { insertionOrderGenerator } = await import('../insertionOrderGenerator');
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     const { id } = req.params;
-    const { publicationIds } = req.body;
     
     // Check if user has access
     const campaign = await campaignsService.getById(id);
@@ -314,37 +313,26 @@ router.post('/:id/publication-insertion-orders', authenticateToken, async (req: 
       return res.status(403).json({ error: 'Access denied' });
     }
     
-    // Generate insertion orders for all or specific publications
-    const publicationsToGenerate = publicationIds 
-      ? (Array.isArray(campaign.selectedInventory) ? campaign.selectedInventory : []).filter((p: any) => publicationIds.includes(p.publicationId))
-      : (Array.isArray(campaign.selectedInventory) ? campaign.selectedInventory : []);
+    // Use the campaignId string for generating orders
+    const campaignIdToUse = campaign.campaignId || id;
     
-    const generatedOrders = [];
+    // Generate insertion orders using the service (inserts into new collection)
+    const result = await insertionOrderService.generateOrdersForCampaign(
+      campaignIdToUse,
+      req.user.id
+    );
     
-    for (const pub of publicationsToGenerate) {
-      const content = await insertionOrderGenerator.generatePublicationHTMLInsertionOrder(campaign, pub.publicationId);
-      if (content) {
-        generatedOrders.push({
-          publicationId: pub.publicationId,
-          publicationName: pub.publicationName,
-          generatedAt: new Date(),
-          format: 'html' as const,
-          content,
-          status: 'draft' as const
-        });
-      }
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
     }
     
-    // Save publication insertion orders to campaign
-    const updatedCampaign = await campaignsService.update(id, {
-      publicationInsertionOrders: generatedOrders
-    }, req.user.id);
+    // Fetch the generated orders
+    const generatedOrders = await insertionOrderService.getOrdersForCampaign(campaignIdToUse);
     
     res.json({ 
       success: true, 
-      campaign: updatedCampaign,
       publicationInsertionOrders: generatedOrders,
-      count: generatedOrders.length
+      count: result.ordersGenerated
     });
   } catch (error) {
     console.error('Error generating publication insertion orders:', error);
@@ -356,6 +344,7 @@ router.post('/:id/publication-insertion-orders', authenticateToken, async (req: 
 router.get('/:id/publication-insertion-orders/:publicationId', authenticateToken, async (req: any, res: Response) => {
   try {
     const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     const { id, publicationId } = req.params;
     
     // Check if user has access
@@ -369,9 +358,13 @@ router.get('/:id/publication-insertion-orders/:publicationId', authenticateToken
       return res.status(403).json({ error: 'Access denied' });
     }
     
-    // Find the publication insertion order
-    const pubIO = campaign.publicationInsertionOrders?.find(
-      (io: any) => io.publicationId === parseInt(publicationId)
+    // Use the campaignId string for lookup
+    const campaignIdToUse = campaign.campaignId || id;
+    
+    // Find the publication insertion order from the collection
+    const pubIO = await insertionOrderService.getOrderByCampaignAndPublication(
+      campaignIdToUse,
+      parseInt(publicationId)
     );
     
     if (!pubIO) {

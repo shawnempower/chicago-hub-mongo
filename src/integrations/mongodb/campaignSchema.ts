@@ -132,6 +132,10 @@ export interface StatusHistoryEntry {
   notes?: string;
 }
 
+/**
+ * @deprecated Use PublicationInsertionOrderDocument from insertionOrderSchema.ts instead.
+ * Publication insertion orders are now stored in their own collection.
+ */
 export interface PublicationInsertionOrder {
   _id?: string | ObjectId; // MongoDB ID for the order itself
   publicationId: number;
@@ -212,8 +216,8 @@ export interface Campaign {
   // Master insertion order (all publications)
   insertionOrder?: InsertionOrder;
   
-  // Per-publication insertion orders
-  publicationInsertionOrders?: PublicationInsertionOrder[];
+  // NOTE: Per-publication insertion orders are now stored in the 
+  // publication_insertion_orders collection. See insertionOrderSchema.ts
   
   // Algorithm used to generate this campaign
   algorithm?: {

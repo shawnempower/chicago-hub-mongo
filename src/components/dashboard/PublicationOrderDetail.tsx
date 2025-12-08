@@ -12,12 +12,11 @@ import { ArrowLeft, Check, X, AlertCircle, FileText, AlertTriangle, Loader2, Che
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { PublicationInsertionOrder, AdSpecification } from '@/integrations/mongodb/campaignSchema';
+import { PublicationInsertionOrderDocument, OrderAdSpecification } from '@/integrations/mongodb/insertionOrderSchema';
 import { API_BASE_URL } from '@/config/api';
 
-interface OrderDetailData extends PublicationInsertionOrder {
-  campaignId: string;
-  campaignName: string;
+interface OrderDetailData extends PublicationInsertionOrderDocument {
+  // campaignId and campaignName are already in PublicationInsertionOrderDocument
 }
 
 export function PublicationOrderDetail() {
@@ -33,10 +32,35 @@ export function PublicationOrderDetail() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectingPlacementId, setRejectingPlacementId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  
+  // Fresh assets loaded dynamically (not stored on order)
+  const [freshAssets, setFreshAssets] = useState<Array<{
+    specGroupId: string;
+    placementId: string;
+    placementName: string;
+    channel: string;
+    dimensions?: string;
+    hasAsset: boolean;
+    asset?: {
+      assetId: string;
+      fileName: string;
+      fileUrl: string;
+      fileType: string;
+      fileSize: number;
+      uploadedAt: Date;
+      thumbnailUrl?: string;
+    };
+  }>>([]);
+  const [assetStatus, setAssetStatus] = useState<{
+    totalPlacements: number;
+    placementsWithAssets: number;
+    allAssetsReady: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (campaignId && publicationId) {
       fetchOrderDetail();
+      fetchFreshAssets();
     }
   }, [campaignId, publicationId]);
 
@@ -96,6 +120,31 @@ export function PublicationOrderDetail() {
     }
   };
 
+  // Fetch fresh assets dynamically (not stored on order)
+  const fetchFreshAssets = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(
+        `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/fresh-assets`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      if (!response.ok) {
+        console.warn('Failed to fetch fresh assets');
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setFreshAssets(data.assets || []);
+        setAssetStatus(data.assetStatus);
+      }
+    } catch (error) {
+      console.error('Error fetching fresh assets:', error);
+    }
+  };
 
   const handleUpdateStatus = async (newStatus: OrderStatus, notes?: string) => {
     if (!order) return;
@@ -439,23 +488,20 @@ export function PublicationOrderDetail() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle>Insertion Order Details</CardTitle>
-              {order.content && (
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => {
-                      const blob = new Blob([order.content], { type: 'text/html' });
-                      const url = URL.createObjectURL(blob);
-                      window.open(url, '_blank');
-                      setTimeout(() => URL.revokeObjectURL(url), 100);
-                    }}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    View Printable
-                  </Button>
-                </div>
-              )}
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    // Open print-friendly HTML in new tab (generated on-demand)
+                    const printUrl = `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/print`;
+                    window.open(printUrl, '_blank');
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  View Printable
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {(() => {
@@ -571,11 +617,15 @@ export function PublicationOrderDetail() {
                         return (
                           <div className="space-y-4">
                             {inventoryItems.map((item: any, index: number) => {
-                              // Find creative assets for this specific placement
+                              // Find creative assets for this specific placement from fresh assets
                               const itemPath = item.itemPath || item.sourcePath;
-                              const placementAssets = order.creativeAssets?.filter((asset: any) => 
-                                asset.placementId === itemPath
-                              ) || [];
+                              const placementAssetData = freshAssets.filter(fa => 
+                                fa.placementId === itemPath
+                              );
+                              // Convert to the format expected by CreativeAssetCard
+                              const placementAssets = placementAssetData
+                                .filter(fa => fa.hasAsset && fa.asset)
+                                .map(fa => fa.asset!);
 
                               // Format with action-oriented language for publishers
                               const pricingModel = item.itemPricing?.pricingModel;

@@ -692,8 +692,58 @@ export function CreativeAssetsManager({
         dimensions: g.dimensions
       })));
 
+      // Generate content-based fingerprint for duplicate detection
+      const getFileFingerprint = async (file: File): Promise<string> => {
+        try {
+          const chunkSize = 65536; // 64KB
+          const chunk = file.slice(0, Math.min(chunkSize, file.size));
+          const buffer = await chunk.arrayBuffer();
+          const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const hashHex = hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
+          return `${file.size}-${hashHex}`;
+        } catch (error) {
+          return `${file.size}-${file.name}`;
+        }
+      };
+
+      // Build set of existing fingerprints
+      const existingFingerprints = new Map<string, string>();
+      
+      // Add fingerprints from pending files
+      for (const [_, pending] of pendingFiles) {
+        try {
+          const fp = await getFileFingerprint(pending.file);
+          existingFingerprints.set(fp, 'pending queue');
+        } catch (e) { /* skip */ }
+      }
+      
+      // Add fingerprints from matched/uploaded assets
+      for (const [_, asset] of uploadedAssets) {
+        if (asset.file) {
+          try {
+            const fp = await getFileFingerprint(asset.file);
+            existingFingerprints.set(fp, asset.uploadStatus === 'uploaded' ? 'saved assets' : 'matched assets');
+          } catch (e) { /* skip */ }
+        }
+      }
+      
+      // Track duplicates from ZIP
+      const duplicateFiles: string[] = [];
+
       // Process each extracted file
       for (const processedFile of result.processedFiles) {
+        // Check for duplicate content
+        const fingerprint = await getFileFingerprint(processedFile.file);
+        const existingLocation = existingFingerprints.get(fingerprint);
+        if (existingLocation) {
+          console.log(`[ZIP] Skipping duplicate: ${processedFile.fileName} (same content in ${existingLocation})`);
+          duplicateFiles.push(processedFile.fileName);
+          continue;
+        }
+        // Add to fingerprints to catch duplicates within the ZIP
+        existingFingerprints.set(fingerprint, 'this ZIP');
+        
         const fileId = `${processedFile.fileName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
         console.log(`\n[ZIP] Processing file: ${processedFile.fileName}`);
@@ -758,7 +808,7 @@ export function CreativeAssetsManager({
       }
 
       // Update state once with all assignments
-      console.log(`[ZIP] Final: ${updatedAssets.size - uploadedAssets.size} files auto-assigned, ${newPendingFiles.size} pending`);
+      console.log(`[ZIP] Final: ${updatedAssets.size - uploadedAssets.size} files auto-assigned, ${newPendingFiles.size} pending, ${duplicateFiles.length} duplicates skipped`);
       if (updatedAssets.size > uploadedAssets.size) {
         onAssetsChange(updatedAssets);
       }
@@ -767,6 +817,17 @@ export function CreativeAssetsManager({
           const next = new Map(prev);
           newPendingFiles.forEach((value, key) => next.set(key, value));
           return next;
+        });
+      }
+      
+      // Show toast for skipped duplicates from ZIP
+      if (duplicateFiles.length > 0) {
+        toast({
+          title: 'Duplicates skipped from ZIP',
+          description: duplicateFiles.length === 1 
+            ? `"${duplicateFiles[0]}" is already uploaded`
+            : `${duplicateFiles.length} files already uploaded: ${duplicateFiles.slice(0, 3).join(', ')}${duplicateFiles.length > 3 ? '...' : ''}`,
+          variant: 'default',
         });
       }
     } catch (error) {
@@ -780,7 +841,7 @@ export function CreativeAssetsManager({
       setProcessingZip(false);
       setZipProgress(null);
     }
-  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, toast]);
+  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, toast, pendingFiles]);
 
   // Handle file selection
   const handleFilesSelected = useCallback(async (files: FileList | File[]) => {
@@ -806,7 +867,70 @@ export function CreativeAssetsManager({
     
     console.log(`[Upload] Available spec groups:`, groupedSpecs.length);
     
+    // Generate content-based fingerprint for duplicate detection
+    // Uses first 64KB of file + file size for fast, accurate detection
+    const getFileFingerprint = async (file: File): Promise<string> => {
+      try {
+        const chunkSize = 65536; // 64KB - enough for accurate fingerprinting
+        const chunk = file.slice(0, Math.min(chunkSize, file.size));
+        const buffer = await chunk.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        // Use first 16 bytes of hash + file size for compact but unique fingerprint
+        const hashHex = hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
+        return `${file.size}-${hashHex}`;
+      } catch (error) {
+        // Fallback to name + size if crypto fails
+        console.warn('[Fingerprint] Crypto API failed, falling back to name+size:', error);
+        return `${file.size}-${file.name}`;
+      }
+    };
+    
+    // Build set of existing fingerprints from pending files and uploaded assets
+    const existingFingerprints = new Map<string, string>(); // fingerprint -> location
+    
+    // Add fingerprints from pending files
+    for (const [_, pending] of pendingFiles) {
+      try {
+        const fp = await getFileFingerprint(pending.file);
+        existingFingerprints.set(fp, 'pending queue');
+      } catch (e) {
+        // Skip if we can't fingerprint
+      }
+    }
+    
+    // Add fingerprints from matched/uploaded assets (that still have file objects)
+    for (const [_, asset] of uploadedAssets) {
+      if (asset.file) {
+        try {
+          const fp = await getFileFingerprint(asset.file);
+          existingFingerprints.set(fp, asset.uploadStatus === 'uploaded' ? 'saved assets' : 'matched assets');
+        } catch (e) {
+          // Skip if we can't fingerprint
+        }
+      }
+    }
+    
+    console.log(`[Upload] Built fingerprint cache with ${existingFingerprints.size} existing files`);
+    
+    // Track duplicates to show single toast
+    const duplicateFiles: string[] = [];
+    
     for (const file of fileArray) {
+      // Generate fingerprint for this file
+      const fingerprint = await getFileFingerprint(file);
+      
+      // Check for duplicate content
+      const existingLocation = existingFingerprints.get(fingerprint);
+      if (existingLocation) {
+        console.log(`[Upload] Skipping duplicate file: ${file.name} (same content already in ${existingLocation})`);
+        duplicateFiles.push(file.name);
+        continue;
+      }
+      
+      // Add this file's fingerprint to prevent duplicates within same batch
+      existingFingerprints.set(fingerprint, 'current batch');
+      
       const fileId = `${file.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
       // Create preview URL for images
@@ -849,9 +973,11 @@ export function CreativeAssetsManager({
         let matchConfidence = bestMatch ? bestMatch.matchScore : 0;
         
         // Check if we have a recently split spec - prioritize auto-assigning to it
+        // But only if it matches the current channel filter
         if (recentlySplitSpecId) {
           const splitSpec = groupedSpecs.find(g => g.specGroupId === recentlySplitSpecId);
-          if (splitSpec) {
+          // Only auto-assign if on "all" tab OR the split spec's channel matches the active channel
+          if (splitSpec && (activeChannel === 'all' || splitSpec.channel === activeChannel)) {
             console.log(`✅ Auto-assigning ${file.name} to recently split spec → ${recentlySplitSpecId}`);
             
             // Add to uploadedAssets
@@ -960,7 +1086,18 @@ export function CreativeAssetsManager({
         });
       }
     }
-  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile, recentlySplitSpecId]);
+    
+    // Show toast for skipped duplicate files
+    if (duplicateFiles.length > 0) {
+      toast({
+        title: 'Duplicate files skipped',
+        description: duplicateFiles.length === 1 
+          ? `"${duplicateFiles[0]}" is already uploaded`
+          : `${duplicateFiles.length} files already uploaded: ${duplicateFiles.slice(0, 3).join(', ')}${duplicateFiles.length > 3 ? '...' : ''}`,
+        variant: 'default',
+      });
+    }
+  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile, recentlySplitSpecId, pendingFiles, toast]);
 
   // Dropzone
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
@@ -1042,6 +1179,11 @@ export function CreativeAssetsManager({
 
     setUploadProgress({ current: 0, total: pendingAssets.length });
 
+    // Create a working copy of the assets map to accumulate all changes
+    const workingAssetsMap = new Map(uploadedAssets);
+    let successCount = 0;
+    let errorCount = 0;
+
     for (let i = 0; i < pendingAssets.length; i++) {
       const [specGroupId, asset] = pendingAssets[i];
       
@@ -1071,7 +1213,7 @@ export function CreativeAssetsManager({
 
         const result = await response.json();
 
-        // Update asset status
+        // Update asset status in working map
         const updatedAsset: UploadedAssetWithSpecs = {
           ...asset,
           uploadStatus: 'uploaded',
@@ -1080,9 +1222,8 @@ export function CreativeAssetsManager({
           previewUrl: result.fileUrl,
         };
 
-        const newAssetsMap = new Map(uploadedAssets);
-        newAssetsMap.set(specGroupId, updatedAsset);
-        onAssetsChange(newAssetsMap);
+        workingAssetsMap.set(specGroupId, updatedAsset);
+        successCount++;
 
       } catch (error) {
         console.error('Upload error:', error);
@@ -1093,19 +1234,30 @@ export function CreativeAssetsManager({
           errorMessage: 'Upload failed',
         };
 
-        const newAssetsMap = new Map(uploadedAssets);
-        newAssetsMap.set(specGroupId, updatedAsset);
-        onAssetsChange(newAssetsMap);
+        workingAssetsMap.set(specGroupId, updatedAsset);
+        errorCount++;
       }
 
       setUploadProgress({ current: i + 1, total: pendingAssets.length });
     }
 
+    // Update state once with all changes
+    onAssetsChange(workingAssetsMap);
+
     setUploadProgress(null);
-    toast({
-      title: 'Upload complete',
-      description: `${pendingAssets.length} assets uploaded successfully`,
-    });
+    
+    if (errorCount > 0) {
+      toast({
+        title: 'Upload complete with errors',
+        description: `${successCount} uploaded successfully, ${errorCount} failed`,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Upload complete',
+        description: `${successCount} assets uploaded successfully`,
+      });
+    }
   };
 
   // Delete asset
@@ -1645,17 +1797,20 @@ export function CreativeAssetsManager({
                         </div>
                       )}
                       
-                      {/* Assignment dropdown */}
+                      {/* Assignment dropdown - filtered by active channel tab */}
                       {!fileData.isAnalyzing && (
                         <div className="pl-6">
                           <Select onValueChange={(value) => handleAssignToSpec(id, value)}>
                             <SelectTrigger className="h-8 w-full text-xs">
-                              <SelectValue placeholder="Assign to..." />
+                              <SelectValue placeholder={activeChannel === 'all' ? "Assign to..." : `Assign to ${channelConfig[activeChannel]?.label || activeChannel}...`} />
                             </SelectTrigger>
                             <SelectContent className="max-h-[300px]">
                               {(() => {
+                                // Use channel-filtered specs when a specific channel is selected
+                                const specsToShow = activeChannel === 'all' ? groupedSpecs : currentChannelSpecs;
+                                
                                 // Group specs by channel
-                                const byChannel = groupedSpecs.reduce((acc, spec) => {
+                                const byChannel = specsToShow.reduce((acc, spec) => {
                                   const channel = spec.channel || 'other';
                                   if (!acc[channel]) acc[channel] = [];
                                   acc[channel].push(spec);
@@ -1673,11 +1828,22 @@ export function CreativeAssetsManager({
                                   return aIdx - bIdx;
                                 });
                                 
+                                if (sortedChannels.length === 0) {
+                                  return (
+                                    <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                                      No {activeChannel !== 'all' ? channelConfig[activeChannel]?.label.toLowerCase() : ''} requirements available
+                                    </div>
+                                  );
+                                }
+                                
                                 return sortedChannels.map(channel => (
                                   <div key={channel}>
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase bg-muted/50 sticky top-0">
-                                      {channel} ({byChannel[channel].length})
-                                    </div>
+                                    {/* Only show channel header when viewing all channels */}
+                                    {activeChannel === 'all' && (
+                                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase bg-muted/50 sticky top-0">
+                                        {channel} ({byChannel[channel].length})
+                                      </div>
+                                    )}
                                     {byChannel[channel].map((spec) => (
                                       <SelectItem key={spec.specGroupId} value={spec.specGroupId}>
                                         {/* Show audio-specific format for radio/podcast */}
@@ -1703,28 +1869,37 @@ export function CreativeAssetsManager({
                 </div>
               )}
 
-              {/* Upload button */}
-              {pendingUploadCount > 0 && (
-                <div className="mt-4">
-                  <Button
-                    onClick={handleUploadAll}
-                    className="w-full"
-                    disabled={uploadProgress !== null}
-                  >
-                    {uploadProgress ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Uploading {uploadProgress.current}/{uploadProgress.total}...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Save All to Server ({pendingUploadCount})
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
+              {/* Upload button - always visible for clarity */}
+              <div className="mt-4">
+                <Button
+                  onClick={handleUploadAll}
+                  className="w-full"
+                  disabled={uploadProgress !== null || pendingUploadCount === 0}
+                  variant={pendingUploadCount > 0 ? "default" : "outline"}
+                >
+                  {uploadProgress ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Uploading {uploadProgress.current}/{uploadProgress.total}...
+                    </>
+                  ) : pendingUploadCount > 0 ? (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Save All to Server ({pendingUploadCount})
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      All Assets Saved
+                    </>
+                  )}
+                </Button>
+                {pendingUploadCount > 0 && (
+                  <p className="text-xs text-center text-amber-600 mt-2">
+                    {pendingUploadCount} asset{pendingUploadCount !== 1 ? 's' : ''} ready to save
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>

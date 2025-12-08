@@ -1298,6 +1298,7 @@ export const COLLECTIONS = {
   HUB_PACKAGES: 'hub_packages', // New comprehensive hub-level package system
   HUBS: 'hubs', // Hub/market definitions
   CAMPAIGNS: 'campaigns', // AI-powered campaign builder
+  PUBLICATION_INSERTION_ORDERS: 'publication_insertion_orders', // Per-publication insertion orders
   CREATIVE_ASSETS: 'creative_assets', // Creative assets for campaigns and insertion orders
   ADVERTISING_INVENTORY: 'advertising_inventory',
   LEAD_INQUIRIES: 'lead_inquiries',
@@ -1414,6 +1415,15 @@ export const INDEXES = {
     { 'timeline.endDate': 1 },
     { 'metadata.createdAt': -1 }, // Recently created
     { deletedAt: 1 } // Soft delete filter
+  ],
+  publication_insertion_orders: [
+    { campaignId: 1 },                      // Find all orders for a campaign
+    { publicationId: 1 },                   // Find all orders for a publication
+    { hubId: 1, status: 1 },                // Admin filtering by hub and status
+    { status: 1, generatedAt: -1 },         // Status filtering with time sort
+    { campaignId: 1, publicationId: 1 },    // Compound for unique order lookup
+    { generatedAt: -1 },                    // Sort by date
+    { deletedAt: 1 }                        // Soft delete filter
   ],
   lead_inquiries: [
     { userId: 1 },

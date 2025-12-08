@@ -78,11 +78,10 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
   try {
     const { campaignId, publicationId } = req.params;
 
-    const orders = await insertionOrderService.getOrdersForPublication(
+    const order = await insertionOrderService.getOrderByCampaignAndPublication(
+      campaignId,
       parseInt(publicationId)
     );
-
-    const order = orders.find(o => o.campaignId === campaignId);
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
@@ -238,35 +237,17 @@ router.post('/generate/:campaignId', async (req: any, res: Response) => {
 router.delete('/:campaignId/publication-orders', async (req: any, res: Response) => {
   try {
     const { campaignId } = req.params;
-    const { ObjectId } = await import('mongodb');
-    const { getDatabase } = await import('../../../src/integrations/mongodb/client');
-    const { COLLECTIONS } = await import('../../../src/integrations/mongodb/schemas');
-    
-    const db = getDatabase();
-    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
 
-    // Find campaign by either _id or campaignId string
-    let campaign;
-    try {
-      const objectId = new ObjectId(campaignId);
-      campaign = await campaignsCollection.findOne({ _id: objectId });
-    } catch {
-      campaign = await campaignsCollection.findOne({ campaignId });
+    const result = await insertionOrderService.deleteOrdersForCampaign(campaignId);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
     }
-
-    if (!campaign) {
-      return res.status(404).json({ error: 'Campaign not found' });
-    }
-
-    // Delete publication orders
-    await campaignsCollection.updateOne(
-      { _id: campaign._id },
-      { $set: { publicationInsertionOrders: [] } }
-    );
 
     res.json({ 
       success: true,
-      message: 'Publication orders deleted successfully'
+      deletedCount: result.deletedCount,
+      message: `Deleted ${result.deletedCount} publication orders successfully`
     });
   } catch (error) {
     console.error('Error deleting publication orders:', error);

@@ -51,6 +51,13 @@ export interface DetectedFileSpecs {
   audioDurationFormatted?: string; // "0:30" format
   audioFormat?: string; // MP3, WAV, etc.
   
+  // For video files (streaming ads)
+  isVideoAsset?: boolean;
+  videoDuration?: number; // Duration in seconds
+  videoDurationFormatted?: string; // "0:30" format
+  videoFormat?: string; // MP4, MOV, etc.
+  videoResolution?: string; // "1920x1080", "1280x720", etc.
+  
   // Metadata
   detectedAt: Date;
 }
@@ -144,6 +151,27 @@ export async function detectFileSpecs(file: File): Promise<DetectedFileSpecs> {
       };
     }
   }
+  
+  // Detect video file info (for streaming ads)
+  if (file.type.startsWith('video/') || 
+      ext.endsWith('.mp4') || ext.endsWith('.mov') || 
+      ext.endsWith('.avi') || ext.endsWith('.webm')) {
+    console.log('[Video Detection] Detecting video specs for:', file.name);
+    const videoInfo = await detectVideoSpecs(file);
+    if (videoInfo) {
+      specs.isVideoAsset = true;
+      specs.videoDuration = videoInfo.duration;
+      specs.videoDurationFormatted = formatAudioDuration(videoInfo.duration); // Reuse same format
+      specs.videoFormat = videoInfo.format;
+      specs.videoResolution = videoInfo.resolution;
+      // Set dimension to resolution for matching (e.g., "1920x1080")
+      specs.dimensions = {
+        width: videoInfo.width,
+        height: videoInfo.height,
+        formatted: videoInfo.resolution
+      };
+    }
+  }
 
   return specs;
 }
@@ -230,6 +258,77 @@ function formatAudioDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.round(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Detect video file specifications
+ */
+async function detectVideoSpecs(file: File): Promise<{
+  duration: number;
+  format: string;
+  width: number;
+  height: number;
+  resolution: string;
+} | null> {
+  try {
+    // Create a video element to get duration and dimensions
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    
+    return new Promise((resolve) => {
+      video.onloadedmetadata = () => {
+        const duration = video.duration;
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+        URL.revokeObjectURL(url);
+        
+        // Determine format from extension
+        const ext = file.name.toLowerCase().split('.').pop() || '';
+        const formatMap: Record<string, string> = {
+          'mp4': 'MP4',
+          'mov': 'MOV',
+          'avi': 'AVI',
+          'webm': 'WebM',
+          'mkv': 'MKV',
+          'm4v': 'M4V'
+        };
+        
+        // Get resolution label
+        let resolutionLabel = `${width}x${height}`;
+        if (height === 2160 || height === 2160) resolutionLabel = '4K';
+        else if (height === 1440) resolutionLabel = '2K';
+        else if (height === 1080) resolutionLabel = '1080p';
+        else if (height === 720) resolutionLabel = '720p';
+        else if (height === 480) resolutionLabel = '480p';
+        
+        resolve({
+          duration: Math.round(duration),
+          format: formatMap[ext] || ext.toUpperCase(),
+          width,
+          height,
+          resolution: resolutionLabel
+        });
+      };
+      
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        console.error('[Video Detection] Error loading video file');
+        resolve(null);
+      };
+      
+      // Set a timeout in case the file doesn't load
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      }, 10000); // Video might take longer to load metadata
+      
+      video.src = url;
+      video.load();
+    });
+  } catch (error) {
+    console.error('[Video Detection] Error detecting video specs:', error);
+    return null;
+  }
 }
 
 /**
@@ -600,44 +699,102 @@ export function autoMatchFileToSpecs(
         const audioDuration = detectedSpecs.audioDuration || 0;
         const requiredDims = Array.isArray(spec.dimensions) ? spec.dimensions : [spec.dimensions || ''];
         
+        // Get spec duration (stored as number in seconds on the spec object)
+        const specDuration = (spec as any).duration as number | undefined;
+        
         // Check if duration matches placement requirements
-        const durationMatches = requiredDims.some(dim => {
-          if (!dim) return false;
-          const d = dim.toLowerCase();
-          
-          // Exact duration match (e.g., "30s" matches 30 second file)
-          if (d === `${audioDuration}s`) {
-            return true;
+        let durationMatches = false;
+        let matchedDuration = '';
+        
+        // FIRST: Check the spec.duration field (primary source for radio spots)
+        if (specDuration && specDuration > 0) {
+          // Allow tolerance: ±3 seconds for shorter spots, ±5 seconds for longer
+          const tolerance = specDuration <= 30 ? 3 : 5;
+          if (Math.abs(audioDuration - specDuration) <= tolerance) {
+            durationMatches = true;
+            matchedDuration = `${specDuration} second spot`;
           }
-          
-          // Check for standard spot durations with some tolerance (±2 seconds)
-          if (d === '15s' && audioDuration >= 13 && audioDuration <= 17) return true;
-          if (d === '30s' && audioDuration >= 28 && audioDuration <= 32) return true;
-          if (d === '60s' && audioDuration >= 58 && audioDuration <= 62) return true;
-          
-          // Long-form is flexible
-          if (d === 'long-form' && audioDuration > 60) return true;
-          
-          // Podcast position-based formats (pre-roll, post-roll typically 15-30s)
-          if ((d === 'pre-roll' || d === 'preroll') && audioDuration >= 10 && audioDuration <= 35) return true;
-          if ((d === 'post-roll' || d === 'postroll') && audioDuration >= 10 && audioDuration <= 35) return true;
-          
-          // Mid-roll can be 30-60s typically
-          if ((d === 'mid-roll' || d === 'midroll') && audioDuration >= 25 && audioDuration <= 70) return true;
-          
-          // Sponsorship is flexible
-          if (d === 'sponsorship') return true;
-          
-          return false;
-        });
+        }
+        
+        // SECOND: Check dimensions array for string-based durations
+        if (!durationMatches) {
+          durationMatches = requiredDims.some(dim => {
+            if (!dim) return false;
+            const d = dim.toLowerCase().trim();
+            
+            // Exact duration match (e.g., "30s" matches 30 second file)
+            if (d === `${audioDuration}s` || d === `${audioDuration}`) {
+              matchedDuration = dim;
+              return true;
+            }
+            
+            // Parse numeric duration from various formats
+            const numMatch = d.match(/^(\d+)\s*(s|sec|second|seconds)?$/);
+            if (numMatch) {
+              const targetDuration = parseInt(numMatch[1], 10);
+              const tolerance = targetDuration <= 30 ? 3 : 5;
+              if (Math.abs(audioDuration - targetDuration) <= tolerance) {
+                matchedDuration = dim;
+                return true;
+              }
+            }
+            
+            // Check for standard spot durations with tolerance
+            if ((d === '15s' || d === '15 second' || d === '15 seconds') && audioDuration >= 12 && audioDuration <= 18) {
+              matchedDuration = dim;
+              return true;
+            }
+            if ((d === '30s' || d === '30 second' || d === '30 seconds') && audioDuration >= 27 && audioDuration <= 33) {
+              matchedDuration = dim;
+              return true;
+            }
+            if ((d === '60s' || d === '60 second' || d === '60 seconds') && audioDuration >= 55 && audioDuration <= 65) {
+              matchedDuration = dim;
+              return true;
+            }
+            
+            // Long-form is flexible
+            if (d === 'long-form' && audioDuration > 60) {
+              matchedDuration = 'long-form';
+              return true;
+            }
+            
+            // Podcast position-based formats (pre-roll, post-roll typically 15-30s)
+            if ((d === 'pre-roll' || d === 'preroll' || d.includes('pre-roll')) && audioDuration >= 10 && audioDuration <= 35) {
+              matchedDuration = dim;
+              return true;
+            }
+            if ((d === 'post-roll' || d === 'postroll' || d.includes('post-roll')) && audioDuration >= 10 && audioDuration <= 35) {
+              matchedDuration = dim;
+              return true;
+            }
+            
+            // Mid-roll can be 30-60s typically
+            if ((d === 'mid-roll' || d === 'midroll' || d.includes('mid-roll')) && audioDuration >= 25 && audioDuration <= 70) {
+              matchedDuration = dim;
+              return true;
+            }
+            
+            // Sponsorship is flexible
+            if (d === 'sponsorship') {
+              matchedDuration = 'sponsorship';
+              return true;
+            }
+            
+            return false;
+          });
+        }
+        
+        // Display what we're matching against
+        const displayDuration = specDuration ? `${specDuration}s spot` : requiredDims.filter(d => d).join(' or ');
         
         if (durationMatches) {
           score += 70; // High confidence
-          reasons.push(`Audio duration (${detectedSpecs.audioDurationFormatted}) matches ${requiredDims.join(' or ')} placement`);
+          reasons.push(`Audio duration (${detectedSpecs.audioDurationFormatted || audioDuration + 's'}) matches ${matchedDuration || displayDuration}`);
         } else {
-          // Duration doesn't match - provide context
-          score += 20; // Low confidence
-          mismatches.push(`Audio duration (${audioDuration}s) may not match ${requiredDims.join(' or ')} placement`);
+          // Duration doesn't match - provide context but give moderate score for same channel
+          score += 30; // Low-moderate confidence (it's the right type of file for the channel)
+          mismatches.push(`Audio duration (${audioDuration}s) may not exactly match ${displayDuration} (consider trimming)`);
         }
         
         // Check audio format
@@ -664,6 +821,117 @@ export function autoMatchFileToSpecs(
       } else {
         // Audio file uploaded to non-audio placement
         mismatches.push(`This placement requires ${spec.channel} assets, not audio files`);
+        matches.push({
+          file: null as any,
+          detectedSpecs,
+          specGroupId: spec.specGroupId,
+          specGroupName: `${spec.channel} - ${spec.dimensions}`,
+          matchScore: 0,
+          matchReasons: [],
+          mismatches
+        });
+        return;
+      }
+    }
+    
+    // ===========================================
+    // CASE 1c: Video file uploaded (for streaming ads)
+    // ===========================================
+    const isStreaming = spec.channel.toLowerCase() === 'streaming';
+    const isSocial = spec.channel.toLowerCase() === 'social';
+    
+    if (detectedSpecs.isVideoAsset) {
+      // Video file - check if this is a streaming/video placement
+      if (isStreaming || isSocial) {
+        const videoDuration = detectedSpecs.videoDuration || 0;
+        const videoResolution = detectedSpecs.videoResolution || '';
+        const requiredDims = Array.isArray(spec.dimensions) ? spec.dimensions : [spec.dimensions || ''];
+        
+        // Get spec duration (might be stored as number)
+        const specDuration = (spec as any).duration as number | undefined;
+        
+        // Check if duration matches (if specified)
+        let durationMatches = true; // Default to true if no duration requirement
+        let durationMessage = '';
+        
+        if (specDuration && specDuration > 0) {
+          // Allow tolerance: ±3 seconds for shorter spots, ±5 seconds for longer
+          const tolerance = specDuration <= 30 ? 3 : 5;
+          if (Math.abs(videoDuration - specDuration) <= tolerance) {
+            durationMatches = true;
+            durationMessage = `Video duration (${detectedSpecs.videoDurationFormatted}) matches ${specDuration}s requirement`;
+          } else {
+            durationMatches = false;
+            durationMessage = `Video duration (${videoDuration}s) doesn't match ${specDuration}s requirement`;
+          }
+        }
+        
+        // Check resolution match
+        let resolutionMatches = true;
+        let resolutionMessage = '';
+        
+        if (requiredDims.length > 0 && requiredDims[0]) {
+          const dimLower = requiredDims[0].toLowerCase();
+          const videoHeight = detectedSpecs.dimensions?.height || 0;
+          
+          // Check for resolution requirements
+          if (dimLower.includes('4k') || dimLower.includes('2160')) {
+            resolutionMatches = videoHeight >= 2160;
+            resolutionMessage = resolutionMatches ? 'Video is 4K resolution' : 'Video should be 4K (2160p)';
+          } else if (dimLower.includes('1080') || dimLower.includes('hd') || dimLower.includes('full hd')) {
+            resolutionMatches = videoHeight >= 1080;
+            resolutionMessage = resolutionMatches ? 'Video is 1080p or higher' : 'Video should be at least 1080p';
+          } else if (dimLower.includes('720')) {
+            resolutionMatches = videoHeight >= 720;
+            resolutionMessage = resolutionMatches ? 'Video is 720p or higher' : 'Video should be at least 720p';
+          } else {
+            // Assume any video works if no specific resolution required
+            resolutionMessage = `Video resolution: ${videoResolution}`;
+          }
+        }
+        
+        // Calculate score
+        if (durationMatches && resolutionMatches) {
+          score += 70;
+        } else if (durationMatches || resolutionMatches) {
+          score += 45;
+        } else {
+          score += 25; // Base score for correct channel type
+        }
+        
+        if (durationMessage) {
+          if (durationMatches) reasons.push(durationMessage);
+          else mismatches.push(durationMessage);
+        }
+        if (resolutionMessage) {
+          if (resolutionMatches) reasons.push(resolutionMessage);
+          else mismatches.push(resolutionMessage);
+        }
+        
+        // Check video format
+        if (spec.fileFormats && spec.fileFormats.length > 0) {
+          const videoFormat = detectedSpecs.videoFormat?.toUpperCase() || '';
+          if (spec.fileFormats.some(fmt => fmt.toUpperCase() === videoFormat)) {
+            score += 15;
+            reasons.push(`Video format (${videoFormat}) is accepted`);
+          } else {
+            mismatches.push(`Video format ${videoFormat} may need conversion to ${spec.fileFormats.join('/')}`);
+          }
+        }
+        
+        matches.push({
+          file: null as any,
+          detectedSpecs,
+          specGroupId: spec.specGroupId,
+          specGroupName: `${spec.channel} - ${requiredDims.join(' or ') || 'Video'}`,
+          matchScore: score,
+          matchReasons: reasons,
+          mismatches
+        });
+        return; // Skip dimension matching for video files
+      } else {
+        // Video file uploaded to non-video placement
+        mismatches.push(`This placement requires ${spec.channel} assets, not video files`);
         matches.push({
           file: null as any,
           detectedSpecs,

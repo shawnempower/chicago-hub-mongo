@@ -4,7 +4,7 @@
  * Displays full campaign details with insertion order viewer
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Header } from '@/components/Header';
@@ -24,10 +24,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useCampaign, useGenerateInsertionOrder, useUpdateCampaignStatus, useDeleteCampaign, useGeneratePublicationOrders } from '@/hooks/useCampaigns';
+import { useCampaign, useUpdateCampaignStatus, useDeleteCampaign, useGeneratePublicationOrders } from '@/hooks/useCampaigns';
 import { format } from 'date-fns';
 import { 
-  Download, 
   FileText, 
   Loader2, 
   CheckCircle2, 
@@ -81,34 +80,43 @@ export default function CampaignDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { campaign, loading, refetch } = useCampaign(id || null);
-  const { generate, generating } = useGenerateInsertionOrder();
   const { generateOrders, generating: generatingOrders } = useGeneratePublicationOrders();
   const { updateStatus, updating } = useUpdateCampaignStatus();
   const { deleteCampaign, deleting } = useDeleteCampaign();
-  const [ioFormat, setIoFormat] = useState<'html' | 'markdown'>('html');
   const [uploadedAssets, setUploadedAssets] = useState<Map<string, any>>(new Map());
+  const [publicationOrders, setPublicationOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
-  const handleGenerateIO = async () => {
-    if (!id) return;
-    
-    try {
-      const result = await generate(id, ioFormat);
-      toast({
-        title: 'Insertion Order Generated',
-        description: `IO has been generated successfully in ${ioFormat.toUpperCase()} format.`,
-      });
-      refetch(); // Refresh campaign data
-    } catch (error) {
-      toast({
-        title: 'Generation Failed',
-        description: 'Failed to generate insertion order. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
+  // Fetch publication insertion orders from the new collection
+  useEffect(() => {
+    const fetchPublicationOrders = async () => {
+      if (!campaign?.campaignId) return;
+      
+      setOrdersLoading(true);
+      try {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/admin/orders?campaignId=${campaign.campaignId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setPublicationOrders(data.orders || []);
+        }
+      } catch (error) {
+        console.error('Error fetching publication orders:', error);
+      } finally {
+        setOrdersLoading(false);
+      }
+    };
+
+    fetchPublicationOrders();
+  }, [campaign?.campaignId]);
 
   const handleGeneratePublicationOrders = async () => {
-    if (!id) return;
+    if (!id || !campaign?.campaignId) return;
     
     try {
       const result = await generateOrders(id);
@@ -116,7 +124,16 @@ export default function CampaignDetail() {
         title: 'Publication Orders Generated',
         description: `${result.ordersGenerated} publication insertion orders have been created and are now visible to publications.`,
       });
-      refetch(); // Refresh campaign data
+      
+      // Refetch orders from the new collection
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/admin/orders?campaignId=${campaign.campaignId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPublicationOrders(data.orders || []);
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate publication orders';
       toast({
@@ -163,23 +180,6 @@ export default function CampaignDetail() {
         variant: 'destructive',
       });
     }
-  };
-
-
-  const downloadInsertionOrder = () => {
-    if (!campaign?.insertionOrder) return;
-    
-    const blob = new Blob([campaign.insertionOrder.content], { 
-      type: campaign.insertionOrder.format === 'html' ? 'text/html' : 'text/markdown' 
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `insertion-order-${campaign.basicInfo.name.replace(/\s+/g, '-').toLowerCase()}.${campaign.insertionOrder.format}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -618,7 +618,7 @@ export default function CampaignDetail() {
             {/* Insertion Order Tab */}
             <TabsContent value="insertion-order" className="mt-0">
               {/* Publication Orders Alert */}
-              {!campaign.publicationInsertionOrders || campaign.publicationInsertionOrders.length === 0 ? (
+              {publicationOrders.length === 0 ? (
                 <Card className="mb-6 border-amber-200 bg-amber-50">
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-4">
@@ -660,7 +660,7 @@ export default function CampaignDetail() {
                       <div className="flex-1">
                         <h3 className="font-semibold font-sans text-green-900 mb-1">Publication Orders Generated</h3>
                         <p className="text-sm text-green-800 mb-3">
-                          {campaign.publicationInsertionOrders.length} publication orders have been created and are visible to publications.
+                          {publicationOrders.length} publication orders have been created and are visible to publications.
                         </p>
                         
                         {/* Placement Status Summary */}
@@ -672,7 +672,7 @@ export default function CampaignDetail() {
                             let deliveredCount = 0;
                             let rejectedCount = 0;
                             
-                            campaign.publicationInsertionOrders.forEach((order: any) => {
+                            publicationOrders.forEach((order: any) => {
                               const statuses = order.placementStatuses || {};
                               const pub = campaign.selectedInventory?.publications?.find((p: any) => p.publicationId === order.publicationId);
                               const placementCount = pub?.inventoryItems?.length || 0;
@@ -761,64 +761,7 @@ export default function CampaignDetail() {
               )}
               
               <div className="space-y-6">
-                {/* Insertion Order Header */}
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold font-sans">Insertion Order</h2>
-                  <div className="flex gap-2">
-                    {!campaign.insertionOrder && (
-                      <div className="flex gap-2">
-                        <select
-                          value={ioFormat}
-                          onChange={(e) => setIoFormat(e.target.value as 'html' | 'markdown')}
-                          className="border rounded px-3 py-1 text-sm"
-                        >
-                          <option value="html">HTML</option>
-                          <option value="markdown">Markdown</option>
-                        </select>
-                        <Button onClick={handleGenerateIO} disabled={generating}>
-                          {generating ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Generate IO
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                    {campaign.insertionOrder && (
-                      <>
-                        <Button onClick={handleGenerateIO} disabled={generating} variant="outline">
-                          {generating ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Regenerating...
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Regenerate
-                            </>
-                          )}
-                        </Button>
-                        <Button onClick={downloadInsertionOrder}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Insertion Order Content */}
-                <div>
-                  {campaign.insertionOrder ? (
-                    <div className="space-y-6">
-                      {/* Campaign Info & Objectives */}
+                {/* Campaign Info & Objectives */}
                       <div className="border rounded-lg p-6 bg-white space-y-4">
                         {/* Campaign Information */}
                         <div>
@@ -952,7 +895,7 @@ export default function CampaignDetail() {
                                         const audienceInfo = formatInsertionOrderAudienceWithBadge(item, performanceMetrics, channelMetrics);
                                         
                                         // Get placement status from publication order if exists
-                                        const publicationOrder = campaign.publicationInsertionOrders?.find((order: any) => order.publicationId === pub.publicationId);
+                                        const publicationOrder = publicationOrders.find((order: any) => order.publicationId === pub.publicationId);
                                         const placementId = item.itemPath || item.sourcePath || `placement-${idx}`;
                                         const placementStatus = publicationOrder?.placementStatuses?.[placementId] || 'pending';
                                         
@@ -1080,29 +1023,6 @@ export default function CampaignDetail() {
                           </CardContent>
                         </Card>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-muted-foreground mb-4">
-                        No insertion order generated yet
-                      </p>
-                      <Button onClick={handleGenerateIO} disabled={generating}>
-                        {generating ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Generate Insertion Order
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
               </div>
             </TabsContent>
               </Tabs>

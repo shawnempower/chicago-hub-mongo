@@ -1371,29 +1371,38 @@ export function CampaignCreativeAssetsUploader({
             </CardContent>
           </Card>
 
-          {/* Upload All Button */}
-          {pendingUploadCount > 0 && (
-            <div className="flex justify-end">
-              <Button
-                onClick={handleUploadAll}
-                size="lg"
-                className="bg-green-600 hover:bg-green-700"
-                disabled={uploadProgress !== null}
-              >
-                {uploadProgress ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                    Uploading {uploadProgress.current}/{uploadProgress.total}...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-5 w-5 mr-2" />
-                    Save All to Server ({pendingUploadCount})
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+          {/* Upload All Button - always visible for clarity */}
+          <div className="flex justify-end items-center gap-3">
+            {pendingUploadCount > 0 && (
+              <p className="text-sm text-amber-600">
+                {pendingUploadCount} asset{pendingUploadCount !== 1 ? 's' : ''} ready to save
+              </p>
+            )}
+            <Button
+              onClick={handleUploadAll}
+              size="lg"
+              className={pendingUploadCount > 0 ? "bg-green-600 hover:bg-green-700" : ""}
+              variant={pendingUploadCount > 0 ? "default" : "outline"}
+              disabled={uploadProgress !== null || pendingUploadCount === 0}
+            >
+              {uploadProgress ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Uploading {uploadProgress.current}/{uploadProgress.total}...
+                </>
+              ) : pendingUploadCount > 0 ? (
+                <>
+                  <Upload className="h-5 w-5 mr-2" />
+                  Save All to Server ({pendingUploadCount})
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-5 w-5 mr-2" />
+                  All Assets Saved
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* RIGHT COLUMN (2/5 width) - Upload Zone (Sticky) */}

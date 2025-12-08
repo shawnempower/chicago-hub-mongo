@@ -1,32 +1,34 @@
 /**
  * Insertion Order Service
  * 
- * Handles business logic for insertion order lifecycle management
+ * Handles business logic for insertion order lifecycle management.
+ * Orders are stored in their own collection (publication_insertion_orders).
  */
 
 import { getDatabase } from '../integrations/mongodb/client';
 import { COLLECTIONS } from '../integrations/mongodb/schemas';
-import {
-  Campaign,
-  PublicationInsertionOrder,
-  StatusHistoryEntry
-} from '../integrations/mongodb/campaignSchema';
+import { Campaign } from '../integrations/mongodb/campaignSchema';
 import { HubPackage } from '../integrations/mongodb/hubPackageSchema';
+import {
+  PublicationInsertionOrderDocument,
+  PublicationInsertionOrderInsert,
+  PublicationInsertionOrderWithCampaign,
+  OrderStatusHistoryEntry,
+  OrderAdSpecification,
+  OrderAssetReference,
+  isValidStatusTransition,
+  VALID_STATUS_TRANSITIONS
+} from '../integrations/mongodb/insertionOrderSchema';
 import { ObjectId } from 'mongodb';
 
+// Re-define the type here to avoid ESM export issues
 export type InsertionOrderStatus = 'draft' | 'sent' | 'confirmed' | 'rejected' | 'in_production' | 'delivered';
 
-// Valid status transitions
-const VALID_TRANSITIONS: Record<InsertionOrderStatus, InsertionOrderStatus[]> = {
-  draft: ['sent'],
-  sent: ['confirmed', 'rejected'],
-  confirmed: ['in_production', 'rejected'],
-  rejected: ['draft'], // Can restart from draft
-  in_production: ['delivered'],
-  delivered: [] // Terminal state
-};
-
 export class InsertionOrderService {
+  private get ordersCollection() {
+    return getDatabase().collection<PublicationInsertionOrderDocument>(COLLECTIONS.PUBLICATION_INSERTION_ORDERS);
+  }
+
   private get campaignsCollection() {
     return getDatabase().collection<Campaign>(COLLECTIONS.CAMPAIGNS);
   }
@@ -46,7 +48,7 @@ export class InsertionOrderService {
       return { valid: false, error: 'Status is already set to this value' };
     }
 
-    const allowedTransitions = VALID_TRANSITIONS[currentStatus];
+    const allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus];
     if (!allowedTransitions.includes(newStatus)) {
       return {
         valid: false,
@@ -58,7 +60,36 @@ export class InsertionOrderService {
   }
 
   /**
-   * Update insertion order status (for campaigns)
+   * Get a single order by ID
+   */
+  async getOrderById(orderId: string): Promise<PublicationInsertionOrderDocument | null> {
+    try {
+      const objectId = new ObjectId(orderId);
+      return await this.ordersCollection.findOne({ 
+        _id: objectId,
+        deletedAt: { $exists: false }
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get order by campaign and publication
+   */
+  async getOrderByCampaignAndPublication(
+    campaignId: string,
+    publicationId: number
+  ): Promise<PublicationInsertionOrderDocument | null> {
+    return await this.ordersCollection.findOne({
+      campaignId,
+      publicationId,
+      deletedAt: { $exists: false }
+    });
+  }
+
+  /**
+   * Update insertion order status
    */
   async updateCampaignOrderStatus(
     campaignId: string,
@@ -66,32 +97,18 @@ export class InsertionOrderService {
     newStatus: InsertionOrderStatus,
     userId: string,
     notes?: string
-  ): Promise<{ success: boolean; error?: string; order?: PublicationInsertionOrder }> {
+  ): Promise<{ success: boolean; error?: string; order?: PublicationInsertionOrderDocument }> {
     try {
-      // Find the campaign - try by _id first (MongoDB ObjectId), then campaignId string
-      let campaign;
-      try {
-        const objectId = new ObjectId(campaignId);
-        campaign = await this.campaignsCollection.findOne({ _id: objectId });
-      } catch {
-        // Not a valid ObjectId, try campaignId string
-        campaign = await this.campaignsCollection.findOne({ campaignId });
-      }
-      
-      if (!campaign) {
-        return { success: false, error: 'Campaign not found' };
-      }
+      // Find the order
+      const order = await this.ordersCollection.findOne({
+        campaignId,
+        publicationId,
+        deletedAt: { $exists: false }
+      });
 
-      // Find the insertion order
-      const orderIndex = campaign.publicationInsertionOrders?.findIndex(
-        o => o.publicationId === publicationId
-      );
-
-      if (orderIndex === undefined || orderIndex === -1) {
+      if (!order) {
         return { success: false, error: 'Insertion order not found' };
       }
-
-      const order = campaign.publicationInsertionOrders![orderIndex];
 
       // Validate transition
       const validation = this.validateStatusTransition(
@@ -103,36 +120,40 @@ export class InsertionOrderService {
       }
 
       // Create status history entry
-      const historyEntry: StatusHistoryEntry = {
+      const historyEntry: OrderStatusHistoryEntry = {
         status: newStatus,
         timestamp: new Date(),
         changedBy: userId,
         notes
       };
 
-      // Update the order
-      const updatedOrder: PublicationInsertionOrder = {
-        ...order,
-        status: newStatus,
-        statusHistory: [...(order.statusHistory || []), historyEntry]
+      // Build update
+      const update: any = {
+        $set: {
+          status: newStatus,
+          updatedAt: new Date()
+        },
+        $push: {
+          statusHistory: historyEntry
+        }
       };
 
       // Special handling for specific statuses
       if (newStatus === 'confirmed') {
-        updatedOrder.confirmationDate = new Date();
+        update.$set.confirmationDate = new Date();
       }
       if (newStatus === 'sent') {
-        updatedOrder.sentAt = new Date();
+        update.$set.sentAt = new Date();
       }
 
       // Update in database
-      const updatePath = `publicationInsertionOrders.${orderIndex}`;
-      await this.campaignsCollection.updateOne(
-        { _id: campaign._id },
-        { $set: { [updatePath]: updatedOrder } }
+      const result = await this.ordersCollection.findOneAndUpdate(
+        { _id: order._id },
+        update,
+        { returnDocument: 'after' }
       );
 
-      return { success: true, order: updatedOrder };
+      return { success: true, order: result || undefined };
     } catch (error) {
       console.error('Error updating insertion order status:', error);
       return {
@@ -152,43 +173,29 @@ export class InsertionOrderService {
       dateFrom?: Date;
       dateTo?: Date;
     }
-  ): Promise<Array<PublicationInsertionOrder & { campaignId: string; campaignName: string; packageId?: string }>> {
+  ): Promise<PublicationInsertionOrderWithCampaign[]> {
     try {
       const query: any = {
-        'publicationInsertionOrders.publicationId': publicationId,
+        publicationId,
         deletedAt: { $exists: false }
       };
 
-      // Get campaigns with orders for this publication
-      const campaigns = await this.campaignsCollection
-        .find(query)
-        .toArray();
-
-      const orders: Array<PublicationInsertionOrder & { campaignId: string; campaignName: string }> = [];
-
-      for (const campaign of campaigns) {
-        const publicationOrders = campaign.publicationInsertionOrders?.filter(
-          o => o.publicationId === publicationId
-        ) || [];
-
-        for (const order of publicationOrders) {
-          // Apply filters
-          if (filters?.status && order.status !== filters.status) continue;
-          if (filters?.dateFrom && new Date(order.generatedAt) < filters.dateFrom) continue;
-          if (filters?.dateTo && new Date(order.generatedAt) > filters.dateTo) continue;
-
-          orders.push({
-            ...order,
-            campaignId: campaign.campaignId,
-            campaignName: campaign.basicInfo.name
-          });
-        }
+      if (filters?.status) {
+        query.status = filters.status;
+      }
+      if (filters?.dateFrom) {
+        query.generatedAt = { ...query.generatedAt, $gte: filters.dateFrom };
+      }
+      if (filters?.dateTo) {
+        query.generatedAt = { ...query.generatedAt, $lte: filters.dateTo };
       }
 
-      // Sort by generated date (newest first)
-      orders.sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
+      const orders = await this.ordersCollection
+        .find(query)
+        .sort({ generatedAt: -1 })
+        .toArray();
 
-      return orders;
+      return orders as PublicationInsertionOrderWithCampaign[];
     } catch (error) {
       console.error('Error fetching publication orders:', error);
       throw error;
@@ -202,41 +209,47 @@ export class InsertionOrderService {
     status?: InsertionOrderStatus;
     publicationId?: number;
     campaignId?: string;
+    hubId?: string;
     dateFrom?: Date;
     dateTo?: Date;
-  }): Promise<Array<PublicationInsertionOrder & { 
-    campaignId: string; 
-    campaignName: string;
-    uploadedAssetCount?: number;
-    placementCount?: number;
-    campaignStartDate?: Date;
-    campaignEndDate?: Date;
-  }>> {
+  }): Promise<PublicationInsertionOrderWithCampaign[]> {
     try {
       const query: any = {
-        publicationInsertionOrders: { $exists: true, $ne: [] },
         deletedAt: { $exists: false }
       };
 
+      if (filters?.status) {
+        query.status = filters.status;
+      }
+      if (filters?.publicationId) {
+        query.publicationId = filters.publicationId;
+      }
       if (filters?.campaignId) {
         query.campaignId = filters.campaignId;
       }
+      if (filters?.hubId) {
+        query.hubId = filters.hubId;
+      }
+      if (filters?.dateFrom) {
+        query.generatedAt = { ...query.generatedAt, $gte: filters.dateFrom };
+      }
+      if (filters?.dateTo) {
+        query.generatedAt = { ...query.generatedAt, $lte: filters.dateTo };
+      }
 
-      const campaigns = await this.campaignsCollection
+      const orders = await this.ordersCollection
         .find(query)
+        .sort({ generatedAt: -1 })
         .toArray();
 
-      // Fetch actual uploaded asset counts for all campaigns
-      // Assets can be associated by either campaignId (string) OR _id (ObjectId)
+      // Fetch asset counts for campaigns
+      const campaignIds = [...new Set(orders.map(o => o.campaignId))];
       const creativeAssetsCollection = getDatabase().collection(COLLECTIONS.CREATIVE_ASSETS);
-      const campaignIds = campaigns.map(c => c.campaignId);
-      const campaignObjectIds = campaigns.map(c => c._id?.toString()).filter(Boolean);
-      const allCampaignIdentifiers = [...campaignIds, ...campaignObjectIds];
       
       const assetCounts = await creativeAssetsCollection.aggregate([
         {
           $match: {
-            'associations.campaignId': { $in: allCampaignIdentifiers },
+            'associations.campaignId': { $in: campaignIds },
             deletedAt: { $exists: false },
             'uploadInfo.uploadedAt': { $exists: true }
           }
@@ -249,62 +262,54 @@ export class InsertionOrderService {
         }
       ]).toArray();
 
-      // Create a map that works with both campaignId and _id
       const assetCountMap = new Map<string, number>();
-      
       assetCounts.forEach((ac: any) => {
-        // Find which campaign this count belongs to
-        const campaign = campaigns.find(c => 
-          c.campaignId === ac._id || c._id?.toString() === ac._id
-        );
-        
-        if (campaign) {
-          // Store by the campaign's campaignId for consistent lookup
-          assetCountMap.set(campaign.campaignId, ac.count);
-        }
+        assetCountMap.set(ac._id, ac.count);
       });
 
-      const orders: Array<PublicationInsertionOrder & { 
-        campaignId: string; 
-        campaignName: string;
-        uploadedAssetCount?: number;
-        placementCount?: number;
-        campaignStartDate?: Date;
-        campaignEndDate?: Date;
-      }> = [];
+      // Get campaign data for additional fields
+      const campaigns = await this.campaignsCollection
+        .find({ campaignId: { $in: campaignIds } })
+        .toArray();
 
-      for (const campaign of campaigns) {
-        const campaignAssetCount = assetCountMap.get(campaign.campaignId) || 0;
+      const campaignMap = new Map<string, Campaign>();
+      campaigns.forEach(c => campaignMap.set(c.campaignId, c));
+
+      // Enrich orders with campaign data
+      return orders.map(order => {
+        const campaign = campaignMap.get(order.campaignId);
+        const pub = campaign?.selectedInventory?.publications?.find(
+          (p: any) => p.publicationId === order.publicationId
+        );
         
-        for (const order of campaign.publicationInsertionOrders || []) {
-          // Apply filters
-          if (filters?.status && order.status !== filters.status) continue;
-          if (filters?.publicationId && order.publicationId !== filters.publicationId) continue;
-          if (filters?.dateFrom && new Date(order.generatedAt) < filters.dateFrom) continue;
-          if (filters?.dateTo && new Date(order.generatedAt) > filters.dateTo) continue;
-
-          // Count placements from selected inventory
-          const pub = campaign.selectedInventory?.publications?.find((p: any) => p.publicationId === order.publicationId);
-          const placementCount = pub?.inventoryItems?.length || 0;
-
-          orders.push({
-            ...order,
-            campaignId: campaign.campaignId,
-            campaignName: campaign.basicInfo.name,
-            uploadedAssetCount: campaignAssetCount,
-            placementCount,
-            campaignStartDate: campaign.basicInfo?.startDate,
-            campaignEndDate: campaign.basicInfo?.endDate
-          });
-        }
-      }
-
-      // Sort by generated date (newest first)
-      orders.sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
-
-      return orders;
+        return {
+          ...order,
+          uploadedAssetCount: assetCountMap.get(order.campaignId) || 0,
+          placementCount: pub?.inventoryItems?.length || 0,
+          campaignStartDate: campaign?.timeline?.startDate,
+          campaignEndDate: campaign?.timeline?.endDate
+        } as PublicationInsertionOrderWithCampaign;
+      });
     } catch (error) {
       console.error('Error fetching all orders:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get orders for a campaign
+   */
+  async getOrdersForCampaign(campaignId: string): Promise<PublicationInsertionOrderDocument[]> {
+    try {
+      return await this.ordersCollection
+        .find({
+          campaignId,
+          deletedAt: { $exists: false }
+        })
+        .sort({ publicationName: 1 })
+        .toArray();
+    } catch (error) {
+      console.error('Error fetching campaign orders:', error);
       throw error;
     }
   }
@@ -319,36 +324,25 @@ export class InsertionOrderService {
     noteType: 'publication' | 'hub'
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      // Find the campaign - try by _id first (MongoDB ObjectId), then campaignId string
-      let campaign;
-      try {
-        const objectId = new ObjectId(campaignId);
-        campaign = await this.campaignsCollection.findOne({ _id: objectId });
-      } catch {
-        // Not a valid ObjectId, try campaignId string
-        campaign = await this.campaignsCollection.findOne({ campaignId });
-      }
-      
-      if (!campaign) {
-        return { success: false, error: 'Campaign not found' };
-      }
+      const fieldName = noteType === 'publication' ? 'publicationNotes' : 'hubNotes';
 
-      const orderIndex = campaign.publicationInsertionOrders?.findIndex(
-        o => o.publicationId === publicationId
+      const result = await this.ordersCollection.updateOne(
+        {
+          campaignId,
+          publicationId,
+          deletedAt: { $exists: false }
+        },
+        {
+          $set: {
+            [fieldName]: notes,
+            updatedAt: new Date()
+          }
+        }
       );
 
-      if (orderIndex === undefined || orderIndex === -1) {
+      if (result.matchedCount === 0) {
         return { success: false, error: 'Insertion order not found' };
       }
-
-      const fieldPath = noteType === 'publication' 
-        ? `publicationInsertionOrders.${orderIndex}.publicationNotes`
-        : `publicationInsertionOrders.${orderIndex}.hubNotes`;
-
-      await this.campaignsCollection.updateOne(
-        { _id: campaign._id },
-        { $set: { [fieldPath]: notes } }
-      );
 
       return { success: true };
     } catch (error) {
@@ -366,15 +360,36 @@ export class InsertionOrderService {
   async getOrderStatistics(filters?: {
     publicationId?: number;
     campaignId?: string;
+    hubId?: string;
   }): Promise<{
     total: number;
     byStatus: Record<InsertionOrderStatus, number>;
   }> {
     try {
-      const orders = await this.getAllOrders(filters);
+      const query: any = { deletedAt: { $exists: false } };
+      
+      if (filters?.publicationId) {
+        query.publicationId = filters.publicationId;
+      }
+      if (filters?.campaignId) {
+        query.campaignId = filters.campaignId;
+      }
+      if (filters?.hubId) {
+        query.hubId = filters.hubId;
+      }
 
-      const stats = {
-        total: orders.length,
+      const stats = await this.ordersCollection.aggregate([
+        { $match: query },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 }
+          }
+        }
+      ]).toArray();
+
+      const result = {
+        total: 0,
         byStatus: {
           draft: 0,
           sent: 0,
@@ -385,11 +400,12 @@ export class InsertionOrderService {
         } as Record<InsertionOrderStatus, number>
       };
 
-      for (const order of orders) {
-        stats.byStatus[order.status as InsertionOrderStatus]++;
-      }
+      stats.forEach((s: any) => {
+        result.byStatus[s._id as InsertionOrderStatus] = s.count;
+        result.total += s.count;
+      });
 
-      return stats;
+      return result;
     } catch (error) {
       console.error('Error getting order statistics:', error);
       throw error;
@@ -397,14 +413,9 @@ export class InsertionOrderService {
   }
 
   /**
-   * PHASE 6: Generate insertion orders for a campaign
+   * Generate insertion orders for a campaign
    * 
-   * Uses campaign's pre-calculated values (no recalculation):
-   * - pricing from campaign.pricing (calculated by shared utilities)
-   * - reach from campaign.estimatedPerformance (calculated by shared utilities)
-   * - publicationTotal from campaign.selectedInventory.publications (calculated by shared utilities)
-   * 
-   * This service just structures data for publication view - does not recalculate.
+   * Creates orders in the publication_insertion_orders collection.
    */
   async generateOrdersForCampaign(
     campaignId: string,
@@ -412,107 +423,106 @@ export class InsertionOrderService {
   ): Promise<{ success: boolean; ordersGenerated: number; error?: string }> {
     try {
       // Try to find by _id first (MongoDB ObjectId), then fall back to campaignId string
-      let campaign;
+      let campaign: Campaign | null = null;
+      let campaignObjectId: string | undefined;
+      
       try {
         const objectId = new ObjectId(campaignId);
         campaign = await this.campaignsCollection.findOne({ _id: objectId });
+        if (campaign) {
+          campaignObjectId = objectId.toString();
+        }
       } catch {
         // Not a valid ObjectId, try campaignId string
         campaign = await this.campaignsCollection.findOne({ campaignId });
+        if (campaign && campaign._id) {
+          campaignObjectId = campaign._id.toString();
+        }
       }
       
       if (!campaign) {
         return { success: false, ordersGenerated: 0, error: 'Campaign not found' };
       }
 
-      // Check if orders already exist
-      if (campaign.publicationInsertionOrders && campaign.publicationInsertionOrders.length > 0) {
+      // Check if orders already exist for this campaign
+      const existingOrders = await this.ordersCollection.countDocuments({
+        campaignId: campaign.campaignId,
+        deletedAt: { $exists: false }
+      });
+
+      if (existingOrders > 0) {
         return { success: false, ordersGenerated: 0, error: 'Orders already generated for this campaign' };
       }
 
       // Generate orders for each publication
-      const publications = campaign.selectedInventory.publications || [];
-      const orders: PublicationInsertionOrder[] = [];
+      const publications = campaign.selectedInventory?.publications || [];
+      const ordersToInsert: PublicationInsertionOrderInsert[] = [];
 
-      // Import the insertion order generator (uses campaign's pre-calculated values)
+      // Import the insertion order generator
       const { insertionOrderGenerator } = await import('../../server/insertionOrderGenerator');
 
-      // Fetch all creative assets for this campaign from the database
-      // NOTE: These assets are cached in the order as a snapshot, but when publications
-      // view their order, fresh assets are loaded dynamically from the database.
-      // This means hub teams can upload/update assets AFTER orders are generated,
-      // and publications will see the latest versions automatically.
-      // See: server/routes/publication-orders.ts (GET /:campaignId/:publicationId)
+      // Fetch all creative assets for this campaign
       const creativeAssetsCollection = getDatabase().collection(COLLECTIONS.CREATIVE_ASSETS);
       const campaignAssets = await creativeAssetsCollection.find({
-        'associations.campaignId': campaignId,
+        $or: [
+          { 'associations.campaignId': campaign.campaignId },
+          { 'associations.campaignId': campaignObjectId }
+        ],
         deletedAt: { $exists: false },
-        'uploadInfo.uploadedAt': { $exists: true } // Only include actually uploaded assets
+        'uploadInfo.uploadedAt': { $exists: true }
       }).toArray();
 
-      // Log asset count for debugging order generation
       if (campaignAssets.length === 0) {
         console.warn(`⚠️  No creative assets found for campaign ${campaignId}. Orders will be generated without assets.`);
       }
 
       for (const pub of publications) {
-        // Generate the HTML content for this publication
-        let content = '';
-        try {
-          const html = await insertionOrderGenerator.generatePublicationHTMLInsertionOrder(
-            campaign,
-            pub.publicationId
-          );
-          content = html || '';
-        } catch (error) {
-          console.error(`Error generating IO content for publication ${pub.publicationId}:`, error);
-          // Continue with empty content rather than failing
-        }
+        // NOTE: HTML content is now generated on-demand when viewing/printing
+        // No need to store redundant HTML - all data is in the order fields
 
-        // Gather creative assets for this publication's inventory items
-        const creativeAssets: any[] = [];
+        // Build asset references for ALL placements (whether assets exist or not)
+        // This allows orders to be generated before assets are ready
+        // Assets are loaded dynamically via /fresh-assets endpoint
+        const assetReferences: OrderAssetReference[] = [];
+        let placementsWithAssets = 0;
         
-        // Match creative assets to this publication's inventory items
         pub.inventoryItems?.forEach((item: any) => {
           const itemChannel = item.channel || 'general';
           const itemDimensions = item.format?.dimensions;
+          const placementId = item.itemPath || item.sourcePath;
+          const placementName = item.itemName || item.sourceName;
           
-          // Find matching assets by matching the channel and dimensions
-          const matchingAssets = campaignAssets.filter((asset: any) => {
-            // Match by spec group ID if available
-            if (asset.metadata?.specGroupId && item.specGroupId) {
-              return asset.metadata.specGroupId === item.specGroupId;
+          // Generate specGroupId for this placement if not already set
+          const specGroupId = item.specGroupId || `${itemChannel}::dim:${itemDimensions || 'default'}`;
+          
+          // Check if asset exists for this placement
+          const hasAsset = campaignAssets.some((asset: any) => {
+            if (asset.metadata?.specGroupId) {
+              return asset.metadata.specGroupId === specGroupId || asset.metadata.specGroupId === item.specGroupId;
             }
-            
-            // Otherwise match by channel and dimensions
             const assetChannel = asset.specifications?.channel || 'general';
             const assetDimensions = asset.metadata?.detectedDimensions || asset.specifications?.dimensions;
-            
             return assetChannel === itemChannel && assetDimensions === itemDimensions;
           });
           
-          // Add all matching assets for this placement
-          matchingAssets.forEach((matchingAsset: any) => {
-            creativeAssets.push({
-              assetId: matchingAsset._id.toString(),
-              fileName: matchingAsset.metadata?.fileName || 'Unknown',
-              fileUrl: matchingAsset.metadata?.fileUrl || '',
-              fileType: matchingAsset.metadata?.fileType || 'unknown',
-              fileSize: matchingAsset.metadata?.fileSize || 0,
-              uploadedAt: matchingAsset.uploadInfo?.uploadedAt || new Date(),
-              uploadedBy: matchingAsset.uploadInfo?.uploadedBy || userId,
-              placementId: item.itemPath || item.sourcePath,
-              placementName: item.itemName || item.sourceName,
-              specifications: {
-                dimensions: itemDimensions,
-                channel: itemChannel
-              }
-            });
+          // Create asset reference (always, even if no asset exists yet)
+          assetReferences.push({
+            specGroupId,
+            placementId,
+            placementName,
+            channel: itemChannel,
+            dimensions: itemDimensions
           });
+          
+          if (hasAsset) {
+            placementsWithAssets++;
+          }
         });
 
+        const totalPlacements = pub.inventoryItems?.length || 0;
+        const allAssetsReady = placementsWithAssets >= totalPlacements && totalPlacements > 0;
 
-        // Initialize placement statuses (all pending by default)
+        // Initialize placement statuses
         const placementStatuses: Record<string, 'pending'> = {};
         pub.inventoryItems?.forEach((item: any) => {
           const placementId = item.itemPath || item.sourcePath;
@@ -521,38 +531,54 @@ export class InsertionOrderService {
           }
         });
 
-        const order: PublicationInsertionOrder = {
-          _id: new ObjectId().toString(),
+        const order: PublicationInsertionOrderInsert = {
+          campaignId: campaign.campaignId,
+          campaignObjectId,
+          campaignName: campaign.basicInfo.name,
+          hubId: campaign.hubId,
           publicationId: pub.publicationId,
           publicationName: pub.publicationName,
           generatedAt: new Date(),
-          format: 'html',
-          content, // Now contains actual HTML content
-          status: 'sent', // Orders are sent to publications when generated
-          sentAt: new Date(),
-          creativeAssets, // Populated from campaign assets
+          status: allAssetsReady ? 'sent' : 'draft', // Draft if assets missing
+          sentAt: allAssetsReady ? new Date() : undefined,
+          // Asset references for dynamic loading (assets loaded via /fresh-assets endpoint)
+          assetReferences,
+          assetStatus: {
+            totalPlacements,
+            placementsWithAssets,
+            allAssetsReady,
+            lastChecked: new Date()
+          },
           adSpecifications: [],
           adSpecificationsProvided: false,
-          placementStatuses, // Initialize all placements as pending
-          placementStatusHistory: [], // Initialize empty history
+          placementStatuses,
+          placementStatusHistory: [],
           statusHistory: [{
-            status: 'sent',
+            status: allAssetsReady ? 'sent' : 'draft',
             timestamp: new Date(),
             changedBy: userId,
-            notes: 'Order sent to publication'
+            notes: allAssetsReady 
+              ? 'Order sent to publication' 
+              : `Order created - awaiting ${totalPlacements - placementsWithAssets} creative asset(s)`
           }]
         };
 
-        orders.push(order);
+        ordersToInsert.push(order);
       }
 
-      // Save orders to campaign
-      await this.campaignsCollection.updateOne(
-        { _id: campaign._id },
-        { $set: { publicationInsertionOrders: orders } }
-      );
+      // Insert all orders
+      if (ordersToInsert.length > 0) {
+        const now = new Date();
+        const ordersWithTimestamps = ordersToInsert.map(o => ({
+          ...o,
+          createdAt: now,
+          updatedAt: now
+        }));
+        
+        await this.ordersCollection.insertMany(ordersWithTimestamps);
+      }
 
-      return { success: true, ordersGenerated: orders.length };
+      return { success: true, ordersGenerated: ordersToInsert.length };
     } catch (error) {
       console.error('Error generating orders for campaign:', error);
       return {
@@ -564,16 +590,50 @@ export class InsertionOrderService {
   }
 
   /**
-   * Save ad specifications for a publication order
+   * Delete orders for a campaign (to allow regeneration)
    */
-  async saveAdSpecifications(
-    campaignId: string,
-    publicationId: number,
-    specifications: AdSpecification[]
-  ): Promise<{ success: boolean; error?: string; order?: PublicationInsertionOrder }> {
+  async deleteOrdersForCampaign(campaignId: string): Promise<{ success: boolean; deletedCount: number; error?: string }> {
     try {
-      // Find campaign
-      let campaign;
+      const result = await this.ordersCollection.updateMany(
+        { campaignId, deletedAt: { $exists: false } },
+        { $set: { deletedAt: new Date() } }
+      );
+
+      return { success: true, deletedCount: result.modifiedCount };
+    } catch (error) {
+      console.error('Error deleting campaign orders:', error);
+      return {
+        success: false,
+        deletedCount: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Generate print-friendly HTML for an order on-demand
+   * 
+   * This generates the HTML when needed (for printing/viewing) instead of
+   * storing redundant HTML content in the database.
+   */
+  async generatePrintHTML(
+    campaignId: string,
+    publicationId: number
+  ): Promise<{ success: boolean; html?: string; error?: string }> {
+    try {
+      // Verify order exists
+      const order = await this.ordersCollection.findOne({
+        campaignId,
+        publicationId,
+        deletedAt: { $exists: false }
+      });
+
+      if (!order) {
+        return { success: false, error: 'Order not found' };
+      }
+
+      // Get the campaign for generating HTML
+      let campaign: Campaign | null = null;
       try {
         const objectId = new ObjectId(campaignId);
         campaign = await this.campaignsCollection.findOne({ _id: objectId });
@@ -585,28 +645,208 @@ export class InsertionOrderService {
         return { success: false, error: 'Campaign not found' };
       }
 
-      // Find the publication order
-      const orders = campaign.publicationInsertionOrders || [];
-      const orderIndex = orders.findIndex(o => o.publicationId === publicationId);
+      // Generate HTML on-demand from current campaign data
+      const { insertionOrderGenerator } = await import('../../server/insertionOrderGenerator');
+      const html = await insertionOrderGenerator.generatePublicationHTMLInsertionOrder(
+        campaign,
+        publicationId
+      );
 
-      if (orderIndex === -1) {
+      return { success: true, html: html || '' };
+    } catch (error) {
+      console.error('Error generating print HTML:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Load fresh creative assets for an order
+   * 
+   * Dynamically loads current assets from the creative_assets collection
+   * based on the order's asset references. This ensures orders always
+   * show the latest uploaded assets without needing regeneration.
+   */
+  async loadFreshAssetsForOrder(
+    campaignId: string,
+    publicationId: number
+  ): Promise<{ 
+    success: boolean; 
+    assets: Array<{
+      specGroupId: string;
+      placementId: string;
+      placementName: string;
+      channel: string;
+      hasAsset: boolean;
+      asset?: {
+        assetId: string;
+        fileName: string;
+        fileUrl: string;
+        fileType: string;
+        fileSize: number;
+        uploadedAt: Date;
+        thumbnailUrl?: string;
+        detectedSpecs?: any;
+      };
+    }>;
+    assetStatus: {
+      totalPlacements: number;
+      placementsWithAssets: number;
+      allAssetsReady: boolean;
+    };
+    error?: string;
+  }> {
+    try {
+      // Get the order
+      const order = await this.ordersCollection.findOne({
+        campaignId,
+        publicationId,
+        deletedAt: { $exists: false }
+      });
+
+      if (!order) {
+        return { 
+          success: false, 
+          assets: [], 
+          assetStatus: { totalPlacements: 0, placementsWithAssets: 0, allAssetsReady: false },
+          error: 'Order not found' 
+        };
+      }
+
+      // Get campaign's creative assets
+      const creativeAssetsCollection = getDatabase().collection(COLLECTIONS.CREATIVE_ASSETS);
+      const campaignAssets = await creativeAssetsCollection.find({
+        $or: [
+          { 'associations.campaignId': campaignId },
+          { 'associations.campaignId': order.campaignObjectId }
+        ],
+        deletedAt: { $exists: false }
+      }).toArray();
+
+      // Build fresh asset data for each reference
+      const assets: Array<{
+        specGroupId: string;
+        placementId: string;
+        placementName: string;
+        channel: string;
+        dimensions?: string;
+        hasAsset: boolean;
+        asset?: any;
+      }> = [];
+
+      let placementsWithAssets = 0;
+      const references = order.assetReferences || [];
+      
+      for (const ref of references) {
+        // Find current asset by specGroupId
+        const currentAsset = campaignAssets.find((a: any) => 
+          a.metadata?.specGroupId === ref.specGroupId
+        );
+
+        const hasAsset = !!currentAsset;
+        if (hasAsset) placementsWithAssets++;
+
+        assets.push({
+          specGroupId: ref.specGroupId,
+          placementId: ref.placementId,
+          placementName: ref.placementName,
+          channel: ref.channel,
+          dimensions: ref.dimensions,
+          hasAsset,
+          asset: currentAsset ? {
+            assetId: currentAsset._id.toString(),
+            fileName: currentAsset.metadata?.fileName || 'Unknown',
+            fileUrl: currentAsset.metadata?.fileUrl || '',
+            fileType: currentAsset.metadata?.fileType || 'unknown',
+            fileSize: currentAsset.metadata?.fileSize || 0,
+            uploadedAt: currentAsset.uploadInfo?.uploadedAt || new Date(),
+            thumbnailUrl: currentAsset.metadata?.thumbnailUrl,
+            detectedSpecs: {
+              dimensions: currentAsset.metadata?.detectedDimensions,
+              colorSpace: currentAsset.metadata?.detectedColorSpace,
+              estimatedDPI: currentAsset.metadata?.detectedDPI
+            }
+          } : undefined
+        });
+      }
+
+      const totalPlacements = assets.length;
+      const allAssetsReady = placementsWithAssets >= totalPlacements && totalPlacements > 0;
+
+      // Update order's asset status if it changed
+      const currentStatus = order.assetStatus;
+      if (!currentStatus || 
+          currentStatus.placementsWithAssets !== placementsWithAssets ||
+          currentStatus.allAssetsReady !== allAssetsReady) {
+        await this.ordersCollection.updateOne(
+          { _id: order._id },
+          { 
+            $set: { 
+              assetStatus: {
+                totalPlacements,
+                placementsWithAssets,
+                allAssetsReady,
+                lastChecked: new Date()
+              },
+              updatedAt: new Date()
+            } 
+          }
+        );
+      }
+
+      return {
+        success: true,
+        assets,
+        assetStatus: {
+          totalPlacements,
+          placementsWithAssets,
+          allAssetsReady
+        }
+      };
+    } catch (error) {
+      console.error('Error loading fresh assets for order:', error);
+      return {
+        success: false,
+        assets: [],
+        assetStatus: { totalPlacements: 0, placementsWithAssets: 0, allAssetsReady: false },
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Save ad specifications for a publication order
+   */
+  async saveAdSpecifications(
+    campaignId: string,
+    publicationId: number,
+    specifications: OrderAdSpecification[]
+  ): Promise<{ success: boolean; error?: string; order?: PublicationInsertionOrderDocument }> {
+    try {
+      const order = await this.ordersCollection.findOne({
+        campaignId,
+        publicationId,
+        deletedAt: { $exists: false }
+      });
+
+      if (!order) {
         return { success: false, error: 'Order not found for this publication' };
       }
 
       // Update or add specifications
-      const existingSpecs = orders[orderIndex].adSpecifications || [];
+      const existingSpecs = order.adSpecifications || [];
       
       for (const spec of specifications) {
         const existingIndex = existingSpecs.findIndex(s => s.placementId === spec.placementId);
         if (existingIndex >= 0) {
-          // Update existing
           existingSpecs[existingIndex] = {
             ...existingSpecs[existingIndex],
             ...spec,
             lastUpdated: new Date()
           };
         } else {
-          // Add new
           existingSpecs.push({
             ...spec,
             lastUpdated: new Date()
@@ -614,18 +854,115 @@ export class InsertionOrderService {
         }
       }
 
-      orders[orderIndex].adSpecifications = existingSpecs;
-      orders[orderIndex].adSpecificationsProvided = existingSpecs.length > 0;
-
-      // Save back to database
-      await this.campaignsCollection.updateOne(
-        { _id: campaign._id },
-        { $set: { publicationInsertionOrders: orders } }
+      const result = await this.ordersCollection.findOneAndUpdate(
+        { _id: order._id },
+        {
+          $set: {
+            adSpecifications: existingSpecs,
+            adSpecificationsProvided: existingSpecs.length > 0,
+            updatedAt: new Date()
+          }
+        },
+        { returnDocument: 'after' }
       );
 
-      return { success: true, order: orders[orderIndex] };
+      return { success: true, order: result || undefined };
     } catch (error) {
       console.error('Error saving ad specifications:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Update placement status
+   */
+  async updatePlacementStatus(
+    campaignId: string,
+    publicationId: number,
+    placementId: string,
+    status: 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered',
+    userId: string,
+    notes?: string
+  ): Promise<{ success: boolean; error?: string; orderConfirmed?: boolean }> {
+    try {
+      const order = await this.ordersCollection.findOne({
+        campaignId,
+        publicationId,
+        deletedAt: { $exists: false }
+      });
+
+      if (!order) {
+        return { success: false, error: 'Order not found' };
+      }
+
+      const updatedStatuses = {
+        ...(order.placementStatuses || {}),
+        [placementId]: status
+      };
+
+      const historyEntry = {
+        placementId,
+        status,
+        timestamp: new Date(),
+        changedBy: userId,
+        notes
+      };
+
+      await this.ordersCollection.updateOne(
+        { _id: order._id },
+        {
+          $set: {
+            placementStatuses: updatedStatuses,
+            updatedAt: new Date()
+          },
+          $push: {
+            placementStatusHistory: historyEntry
+          }
+        }
+      );
+
+      // Check if all placements are accepted for auto-confirm
+      let orderConfirmed = false;
+      if (status === 'accepted' && order.status === 'sent') {
+        // Get campaign to count total placements
+        const campaign = await this.campaignsCollection.findOne({ campaignId });
+        const pub = campaign?.selectedInventory?.publications?.find(
+          (p: any) => p.publicationId === publicationId
+        );
+        
+        if (pub) {
+          const totalPlacements = pub.inventoryItems?.length || 0;
+          const acceptedCount = Object.values(updatedStatuses).filter(s => s === 'accepted').length;
+          
+          if (acceptedCount === totalPlacements) {
+            await this.ordersCollection.updateOne(
+              { _id: order._id },
+              {
+                $set: {
+                  status: 'confirmed',
+                  confirmationDate: new Date()
+                },
+                $push: {
+                  statusHistory: {
+                    status: 'confirmed',
+                    timestamp: new Date(),
+                    changedBy: userId,
+                    notes: 'Auto-confirmed: All placements accepted'
+                  }
+                }
+              }
+            );
+            orderConfirmed = true;
+          }
+        }
+      }
+
+      return { success: true, orderConfirmed };
+    } catch (error) {
+      console.error('Error updating placement status:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -636,4 +973,3 @@ export class InsertionOrderService {
 
 // Export singleton instance
 export const insertionOrderService = new InsertionOrderService();
-

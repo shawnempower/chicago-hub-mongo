@@ -149,14 +149,12 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Get orders for this publication
+    // Get the specific order directly
     const { insertionOrderService } = await import('../../src/services/insertionOrderService');
-    const orders = await insertionOrderService.getOrdersForPublication(
+    const order = await insertionOrderService.getOrderByCampaignAndPublication(
+      campaignId,
       parseInt(publicationId)
     );
-
-    // Find the specific order
-    const order = orders.find(o => o.campaignId === campaignId);
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
@@ -342,6 +340,114 @@ router.put('/:campaignId/:publicationId/status', async (req: any, res: Response)
   } catch (error) {
     console.error('Error updating order status:', error);
     res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+/**
+ * GET /api/publication-orders/:campaignId/:publicationId/print
+ * Generate print-friendly HTML for an order on-demand
+ * 
+ * Returns HTML that can be opened in a new tab for printing/saving as PDF.
+ * HTML is generated fresh from campaign data, not stored.
+ */
+router.get('/:campaignId/:publicationId/print', async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { campaignId, publicationId } = req.params;
+
+    // Verify user has access to this order
+    const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
+    const profile = await userProfilesService.getByUserId(userId);
+    
+    let hasAccess = false;
+    if (profile?.isAdmin) {
+      hasAccess = true;
+    } else {
+      try {
+        hasAccess = await permissionsService.canAccessPublication(userId, publicationId);
+      } catch (err) {
+        if (profile?.publicationId && profile.publicationId.toString() === publicationId) {
+          hasAccess = true;
+        }
+      }
+    }
+
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Generate print HTML on-demand
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+    const result = await insertionOrderService.generatePrintHTML(
+      campaignId,
+      parseInt(publicationId)
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    // Return HTML directly (can be rendered in browser)
+    res.setHeader('Content-Type', 'text/html');
+    res.send(result.html);
+  } catch (error) {
+    console.error('Error generating print HTML:', error);
+    res.status(500).json({ error: 'Failed to generate print view' });
+  }
+});
+
+/**
+ * GET /api/publication-orders/:campaignId/:publicationId/fresh-assets
+ * Load fresh creative assets for an order (dynamically from campaign assets)
+ * 
+ * This endpoint loads the CURRENT state of assets, not a snapshot.
+ * Use this to check if assets have been uploaded after order generation.
+ */
+router.get('/:campaignId/:publicationId/fresh-assets', async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { campaignId, publicationId } = req.params;
+
+    // Verify user has access to this order
+    const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
+    const profile = await userProfilesService.getByUserId(userId);
+    
+    let hasAccess = false;
+    if (profile?.isAdmin) {
+      hasAccess = true;
+    } else {
+      try {
+        hasAccess = await permissionsService.canAccessPublication(userId, publicationId);
+      } catch (err) {
+        if (profile?.publicationId && profile.publicationId.toString() === publicationId) {
+          hasAccess = true;
+        }
+      }
+    }
+
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Load fresh assets
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+    const result = await insertionOrderService.loadFreshAssetsForOrder(
+      campaignId,
+      parseInt(publicationId)
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({
+      success: true,
+      assets: result.assets,
+      assetStatus: result.assetStatus
+    });
+  } catch (error) {
+    console.error('Error loading fresh assets:', error);
+    res.status(500).json({ error: 'Failed to load assets' });
   }
 });
 
@@ -547,110 +653,24 @@ router.put('/:campaignId/:publicationId/placement-status', async (req: any, res:
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Update placement status
-    const { getDatabase } = await import('../../src/integrations/mongodb/client');
-    const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
-    const { ObjectId } = await import('mongodb');
-    const { autoConfirmIfAllAccepted } = req.body;
-    
-    const db = getDatabase();
-    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
-
-    // Find campaign
-    let campaign;
-    try {
-      const objectId = new ObjectId(campaignId);
-      campaign = await campaignsCollection.findOne({ _id: objectId });
-    } catch {
-      campaign = await campaignsCollection.findOne({ campaignId });
-    }
-
-    if (!campaign) {
-      return res.status(404).json({ error: 'Campaign not found' });
-    }
-
-    // Find the order
-    const orderIndex = campaign.publicationInsertionOrders?.findIndex(
-      (o: any) => o.publicationId === parseInt(publicationId)
+    // Update placement status using the service
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+    const result = await insertionOrderService.updatePlacementStatus(
+      campaignId,
+      parseInt(publicationId),
+      placementId,
+      status,
+      userId,
+      notes
     );
 
-    if (orderIndex === undefined || orderIndex === -1) {
-      return res.status(404).json({ error: 'Order not found' });
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
     }
-
-    const order = campaign.publicationInsertionOrders[orderIndex];
-
-    // Initialize placementStatuses if it doesn't exist
-    const currentStatuses = order.placementStatuses || {};
-    
-    // Update the placement status in the statuses object
-    // We need to do this properly to handle placementIds with dots and brackets
-    const updatedStatuses = {
-      ...currentStatuses,
-      [placementId]: status // This creates a flat key, not nested
-    };
-
-    // Update both status and history in one operation
-    await campaignsCollection.updateOne(
-      { _id: campaign._id },
-      { 
-        $set: { 
-          [`publicationInsertionOrders.${orderIndex}.placementStatuses`]: updatedStatuses
-        },
-        $push: {
-          [`publicationInsertionOrders.${orderIndex}.placementStatusHistory`]: {
-            placementId,
-            status,
-            timestamp: new Date(),
-            changedBy: userId,
-            notes
-          }
-        }
-      }
-    );
 
     console.log('Placement status updated:', { campaignId, publicationId, placementId, status });
 
-    // Check if all placements are accepted and auto-confirm order
-    let orderConfirmed = false;
-    if (autoConfirmIfAllAccepted && status === 'accepted') {
-      // Get the publication's inventory to count total placements
-      const publication = campaign.selectedInventory?.publications?.find(
-        (p: any) => p.publicationId === parseInt(publicationId)
-      );
-      
-      if (publication) {
-        const totalPlacements = publication.inventoryItems?.length || 0;
-        const acceptedCount = Object.values(updatedStatuses).filter((s: any) => s === 'accepted').length;
-        
-        console.log('Checking auto-confirm:', { totalPlacements, acceptedCount, currentStatus: order.status });
-        
-        // If all placements are accepted, confirm the order
-        if (acceptedCount === totalPlacements && order.status === 'sent') {
-          await campaignsCollection.updateOne(
-            { _id: campaign._id },
-            {
-              $set: {
-                [`publicationInsertionOrders.${orderIndex}.status`]: 'confirmed',
-                [`publicationInsertionOrders.${orderIndex}.confirmationDate`]: new Date()
-              },
-              $push: {
-                [`publicationInsertionOrders.${orderIndex}.statusHistory`]: {
-                  status: 'confirmed',
-                  timestamp: new Date(),
-                  changedBy: userId,
-                  notes: 'Auto-confirmed: All placements accepted'
-                }
-              }
-            }
-          );
-          console.log('Order auto-confirmed!');
-          orderConfirmed = true;
-        }
-      }
-    }
-
-    res.json({ success: true, orderConfirmed });
+    res.json({ success: true, orderConfirmed: result.orderConfirmed });
   } catch (error) {
     console.error('Error updating placement status:', error);
     res.status(500).json({ error: 'Failed to update placement status' });
