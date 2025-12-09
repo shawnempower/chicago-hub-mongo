@@ -50,8 +50,7 @@ export function ActivityLogDialog({
             userId={userId}
             showFilters={true}
             hideCard={true}
-            // Note: ActivityLog component will need to accept activityTypes prop
-            // or we'll need to modify it to support initial filter
+            activityTypes={activityTypes}
           />
         </div>
       </DialogContent>

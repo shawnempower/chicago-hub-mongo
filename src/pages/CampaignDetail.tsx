@@ -1040,7 +1040,7 @@ export default function CampaignDetail() {
           onClose={() => setShowActivityLog(false)}
           sectionName="Campaign"
           activityTypes={['campaign_create', 'campaign_update', 'campaign_delete']}
-          hubId={undefined}
+          hubId={campaign?.hubId}
         />
       </div>
     </ProtectedRoute>

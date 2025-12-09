@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/config/api';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
+import { useHubContext } from '@/contexts/HubContext';
 
 interface InsertionOrder {
   _id?: string;
@@ -55,6 +56,7 @@ type SortKey = 'campaignName' | 'publicationName' | 'generatedAt' | 'issues';
 
 export function HubOrdersManagement() {
   const navigate = useNavigate();
+  const { selectedHubId } = useHubContext();
   const [orders, setOrders] = useState<InsertionOrder[]>([]);
   const [stats, setStats] = useState<OrderStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -687,7 +689,7 @@ export function HubOrdersManagement() {
         onClose={() => setShowActivityLog(false)}
         sectionName="Orders"
         activityTypes={['order_create', 'order_update', 'order_delete']}
-        hubId={undefined}
+        hubId={selectedHubId}
       />
     </div>
   );

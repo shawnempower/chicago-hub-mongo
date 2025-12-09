@@ -35,6 +35,8 @@ interface ActivityLogProps {
   showFilters?: boolean;
   /** Hide the card wrapper (for use in dialogs) */
   hideCard?: boolean;
+  /** Default activity types to filter by (pre-selects the filter) */
+  activityTypes?: string[];
 }
 
 // Cache for user and publication names to avoid repeated lookups
@@ -113,10 +115,11 @@ const ACTIVITY_TYPE_ICONS: Record<string, React.ComponentType<any>> = {
   user_logout: User,
 };
 
-export function ActivityLog({ hubId, publicationId, userId, showFilters = true, hideCard = false }: ActivityLogProps) {
+export function ActivityLog({ hubId, publicationId, userId, showFilters = true, hideCard = false, activityTypes }: ActivityLogProps) {
   const [activities, setActivities] = useState<UserInteraction[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterType, setFilterType] = useState<string>('all');
+  // Initialize filter with first activity type if provided, otherwise 'all'
+  const [filterType, setFilterType] = useState<string>(activityTypes?.[0] || 'all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [page, setPage] = useState(0);

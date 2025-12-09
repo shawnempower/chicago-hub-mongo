@@ -10,6 +10,7 @@ import { Loader2, TrendingUp, AlertCircle, Info, Star, ThumbsUp, AlertTriangle, 
 import { assessPricing, getSuggestedPrice } from '@/utils/pricingBenchmarks';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
+import { useHubContext } from '@/contexts/HubContext';
 
 interface HubPricingAnalyticsProps {
   pricingAnalytics?: PricingAnalytics;
@@ -120,11 +121,12 @@ const CHANNELS = [
   { key: 'streaming', label: 'Streaming', icon: CHANNEL_COLORS.streamingVideo.icon }
 ];
 
-export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({ 
+export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
   pricingAnalytics,
   publications = [],
-  loading 
+  loading
 }) => {
+  const { selectedHubId } = useHubContext();
   const [activeChannel, setActiveChannel] = useState('website');
   const [showActivityLog, setShowActivityLog] = useState(false);
 
@@ -1286,7 +1288,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
         onClose={() => setShowActivityLog(false)}
         sectionName="Pricing"
         activityTypes={['publication_update']}
-        hubId={undefined}
+        hubId={selectedHubId}
       />
     </div>
   );
