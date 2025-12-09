@@ -59,6 +59,8 @@ import {
   formatPhoneNumber,
   ValidationResult
 } from '@/utils/fieldValidation';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 export const PublicationProfile: React.FC = () => {
   const { selectedPublication, setSelectedPublication } = usePublication();
@@ -69,6 +71,7 @@ export const PublicationProfile: React.FC = () => {
   const [showSchemaDebug, setShowSchemaDebug] = useState(false);
   const [differentiators, setDifferentiators] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showActivityLog, setShowActivityLog] = useState(false);
 
   useEffect(() => {
     if (selectedPublication && isEditing) {
@@ -1134,13 +1137,16 @@ export const PublicationProfile: React.FC = () => {
               </span>
             </div>
           </div>
-          <Button 
-            onClick={() => setIsEditing(true)}
-            className="ml-4"
-          >
-            <Edit3 className="w-4 h-4 mr-2" />
-            Edit Profile
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={() => setIsEditing(true)}
+              className="ml-4"
+            >
+              <Edit3 className="w-4 h-4 mr-2" />
+              Edit Profile
+            </Button>
+            <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
+          </div>
         </div>
       </div>
 
@@ -1604,6 +1610,15 @@ export const PublicationProfile: React.FC = () => {
         <p>Last Updated: {new Date(selectedPublication.metadata?.lastUpdated || '').toLocaleString()}</p>
         <p>Document ID: {selectedPublication._id?.toString() || selectedPublication.publicationId}</p>
       </div>
+
+      {/* Activity Log Dialog */}
+      <ActivityLogDialog
+        isOpen={showActivityLog}
+        onClose={() => setShowActivityLog(false)}
+        sectionName="Profile"
+        activityTypes={['profile_update', 'publication_update']}
+        publicationId={selectedPublication._id?.toString()}
+      />
     </div>
   );
 };

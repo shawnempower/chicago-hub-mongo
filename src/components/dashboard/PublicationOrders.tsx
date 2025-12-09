@@ -12,6 +12,8 @@ import { usePublication } from '@/contexts/PublicationContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/config/api';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 interface InsertionOrder {
   _id?: string;
@@ -37,6 +39,7 @@ export function PublicationOrders() {
   const [statusFilterDraft, setStatusFilterDraft] = useState<string[]>([]);
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
+  const [showActivityLog, setShowActivityLog] = useState(false);
 
   const statusOptions = [
     { value: 'draft', label: 'Draft' },
@@ -274,6 +277,7 @@ export function PublicationOrders() {
               {hasActiveFilters ? ` of ${orders.length}` : ''})
             </CardTitle>
             <div className="flex items-center gap-2 overflow-x-auto">
+              <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
               <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -426,6 +430,15 @@ export function PublicationOrders() {
           )}
         </CardContent>
       </Card>
+
+      {/* Activity Log Dialog */}
+      <ActivityLogDialog
+        isOpen={showActivityLog}
+        onClose={() => setShowActivityLog(false)}
+        sectionName="Orders"
+        activityTypes={['order_create', 'order_update', 'order_delete']}
+        publicationId={selectedPublication?._id?.toString()}
+      />
     </div>
   );
 }

@@ -27,6 +27,8 @@ import {
   UserPlus,
   X
 } from 'lucide-react';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 export const PublicationSettings: React.FC = () => {
   const { selectedPublication } = usePublication();
@@ -40,6 +42,7 @@ export const PublicationSettings: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [showActivityLog, setShowActivityLog] = useState(false);
   
   // Get default settings function
   const getDefaultSettings = () => ({
@@ -181,6 +184,7 @@ export const PublicationSettings: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold font-sans text-slate-900">Publication Settings</h2>
         <div className="flex flex-wrap items-center gap-2">
+          <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
           <Button onClick={() => setInviteDialogOpen(true)} variant="outline" className="gap-2">
             <UserPlus className="h-4 w-4" />
             Invite User
@@ -475,6 +479,15 @@ export const PublicationSettings: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Activity Log Dialog */}
+      <ActivityLogDialog
+        isOpen={showActivityLog}
+        onClose={() => setShowActivityLog(false)}
+        sectionName="Settings"
+        activityTypes={['settings_update']}
+        publicationId={selectedPublication?._id?.toString()}
+      />
     </div>
   );
 };

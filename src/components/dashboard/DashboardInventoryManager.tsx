@@ -47,6 +47,8 @@ import {
   getValidationClass
 } from '@/utils/fieldValidation';
 import { calculateRevenue } from '@/utils/pricingCalculations';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 // Helper function to validate inventory item data
 const validateInventoryItem = (item: any, type: string): boolean => {
@@ -134,6 +136,7 @@ export const DashboardInventoryManager = () => {
   const [deleteAction, setDeleteAction] = useState<(() => void) | null>(null);
   const [deleteItemName, setDeleteItemName] = useState<string>('');
   const [deleteItemType, setDeleteItemType] = useState<string>('');
+  const [showActivityLog, setShowActivityLog] = useState(false);
 
   // Helper function to format pricing model labels
   const formatPricingModel = (model: string, channel?: string) => {
@@ -2574,8 +2577,10 @@ export const DashboardInventoryManager = () => {
       {/* Header with Manage Channels Button */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Inventory</h2>
-        <Dialog>
-          <DialogTrigger asChild>
+        <div className="flex items-center gap-2">
+          <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
+          <Dialog>
+            <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2">
               <Edit className="w-4 h-4" />
               Manage Channels
@@ -2709,6 +2714,7 @@ export const DashboardInventoryManager = () => {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Inventory Tabs */}
@@ -7187,6 +7193,15 @@ export const DashboardInventoryManager = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Activity Log Dialog */}
+      <ActivityLogDialog
+        isOpen={showActivityLog}
+        onClose={() => setShowActivityLog(false)}
+        sectionName="Inventory"
+        activityTypes={['inventory_update']}
+        publicationId={selectedPublication?._id?.toString()}
+      />
     </div>
   );
 };

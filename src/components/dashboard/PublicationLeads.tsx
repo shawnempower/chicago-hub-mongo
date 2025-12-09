@@ -30,6 +30,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { LeadDetail } from '@/components/admin/LeadDetail';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 interface PublicationLeadsProps {
   publicationId: string;
@@ -62,6 +64,7 @@ export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [statusFilterDraft, setStatusFilterDraft] = useState<string[]>([]);
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
+  const [showActivityLog, setShowActivityLog] = useState(false);
   const { toast } = useToast();
 
   const statusOptions = [
@@ -392,6 +395,7 @@ export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
               {hasActiveStatusFilters ? ` of ${leads.length}` : ''})
             </CardTitle>
             <div className="flex items-center gap-2 overflow-x-auto">
+              <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
               <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -620,6 +624,15 @@ export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
           )}
         </CardContent>
       </Card>
+
+      {/* Activity Log Dialog */}
+      <ActivityLogDialog
+        isOpen={showActivityLog}
+        onClose={() => setShowActivityLog(false)}
+        sectionName="Leads"
+        activityTypes={['lead_create', 'lead_update', 'lead_delete']}
+        publicationId={publicationId}
+      />
     </div>
   );
 };

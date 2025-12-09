@@ -50,6 +50,8 @@ import { getStorefrontConfiguration, createStorefrontConfiguration, updateStoref
 import { StorefrontEditor } from './StorefrontEditor';
 import { StorefrontImageManager } from './StorefrontImageManager';
 import { API_BASE_URL } from '@/config/api';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 export const PublicationStorefront: React.FC = () => {
   const { selectedPublication } = usePublication();
@@ -77,6 +79,7 @@ export const PublicationStorefront: React.FC = () => {
   const [subdomainAvailable, setSubdomainAvailable] = useState<boolean | null>(null); // Track if subdomain is available
   const checkSubdomainTimeoutRef = React.useRef<NodeJS.Timeout | null>(null); // Ref to store timeout ID
   const [originalWebsiteUrl, setOriginalWebsiteUrl] = useState<string | null>(null); // Track the original saved websiteUrl
+  const [showActivityLog, setShowActivityLog] = useState(false);
   
   // Dialog states
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -715,6 +718,7 @@ export const PublicationStorefront: React.FC = () => {
           )}
         </div>
         <div className="flex gap-2">
+          <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
           {storefrontConfig && (
             <>
               <Button 
@@ -2038,6 +2042,15 @@ export const PublicationStorefront: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Activity Log Dialog */}
+      <ActivityLogDialog
+        isOpen={showActivityLog}
+        onClose={() => setShowActivityLog(false)}
+        sectionName="Storefront"
+        activityTypes={['storefront_create', 'storefront_update', 'storefront_delete']}
+        publicationId={selectedPublication?._id?.toString()}
+      />
     </div>
   );
 };

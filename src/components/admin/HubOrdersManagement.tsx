@@ -13,6 +13,8 @@ import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/config/api';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 interface InsertionOrder {
   _id?: string;
@@ -62,6 +64,7 @@ export function HubOrdersManagement() {
   const [issueFilterDraft, setIssueFilterDraft] = useState<string[]>([]);
   const [issuePopoverOpen, setIssuePopoverOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
+  const [showActivityLog, setShowActivityLog] = useState(false);
 
   const issueOptions = [
     { value: 'rejected', label: 'Has Rejections' },
@@ -392,6 +395,7 @@ export function HubOrdersManagement() {
               {hasActiveFilters ? ` of ${orders.length}` : ''})
             </CardTitle>
             <div className="flex items-center gap-2 overflow-x-auto">
+              <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
               {/* Campaign Filter */}
               <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
                 <SelectTrigger 
@@ -676,6 +680,15 @@ export function HubOrdersManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Activity Log Dialog */}
+      <ActivityLogDialog
+        isOpen={showActivityLog}
+        onClose={() => setShowActivityLog(false)}
+        sectionName="Orders"
+        activityTypes={['order_create', 'order_update', 'order_delete']}
+        hubId={undefined}
+      />
     </div>
   );
 }

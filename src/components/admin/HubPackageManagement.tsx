@@ -35,6 +35,8 @@ import { BuilderFilters, BuilderResult, packageBuilderService } from '@/services
 import { downloadPackageCSV, downloadPackageInsertionOrder } from '@/utils/packageExport';
 import { calculateItemCost } from '@/utils/inventoryPricing';
 import { packagesApi } from '@/api/packages';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('auth_token');
@@ -66,6 +68,7 @@ export const HubPackageManagement = () => {
   // Health modal state
   const [healthModalOpen, setHealthModalOpen] = useState(false);
   const [selectedPackageForHealth, setSelectedPackageForHealth] = useState<HubPackage | null>(null);
+  const [showActivityLog, setShowActivityLog] = useState(false);
   
   // Store hubId locally to preserve it across component states and context changes
   const [localHubId, setLocalHubId] = useState<string | null>(null);
@@ -1054,6 +1057,7 @@ export const HubPackageManagement = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
           <Button 
             variant="outline" 
             onClick={handleExportAllInventory}
@@ -1361,6 +1365,15 @@ export const HubPackageManagement = () => {
           onPackageUpdated={fetchPackages}
         />
       )}
+
+      {/* Activity Log Dialog */}
+      <ActivityLogDialog
+        isOpen={showActivityLog}
+        onClose={() => setShowActivityLog(false)}
+        sectionName="Packages"
+        activityTypes={['package_create', 'package_update', 'package_delete', 'package_refresh']}
+        hubId={selectedHubId}
+      />
     </div>
   );
 };

@@ -12,7 +12,6 @@ import { InventoryChatContainer } from '../inventory-chat/InventoryChatContainer
 import { HubOrdersManagement } from './HubOrdersManagement';
 import { HubOrderDetail } from './HubOrderDetail';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { ActivityLog } from './ActivityLog';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
 import { useHubPublications } from '@/hooks/useHubs';
@@ -741,11 +740,6 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                 </Button>
               </CardContent>
             </Card>
-
-            {/* Recent Activity - Real Data */}
-            {selectedHubId && (
-              <ActivityLog hubId={selectedHubId} showFilters={false} />
-            )}
           </div>
 
           {/* Geographic & Content Distribution */}
@@ -959,16 +953,6 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
       );
     }
 
-    if (activeTab === 'activity') {
-      return (
-        <div className="space-y-6">
-          {selectedHubId && (
-            <ActivityLog hubId={selectedHubId} showFilters={true} />
-          )}
-        </div>
-      );
-    }
-    
     return null;
   };
 

@@ -8,6 +8,8 @@ import { PricingAnalytics, ChannelPricingAnalytics } from '@/hooks/useDashboardS
 import { CHANNEL_COLORS } from '@/constants/channelColors';
 import { Loader2, TrendingUp, AlertCircle, Info, Star, ThumbsUp, AlertTriangle, CheckCircle } from 'lucide-react';
 import { assessPricing, getSuggestedPrice } from '@/utils/pricingBenchmarks';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 interface HubPricingAnalyticsProps {
   pricingAnalytics?: PricingAnalytics;
@@ -124,6 +126,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
   loading 
 }) => {
   const [activeChannel, setActiveChannel] = useState('website');
+  const [showActivityLog, setShowActivityLog] = useState(false);
 
   // Extract detailed inventory items from publications
   const detailedInventory = useMemo(() => {
@@ -493,14 +496,19 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
       {/* Header */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-sans text-lg">
-            <TrendingUp className="h-5 w-5" />
-            Pricing Analytics by Channel
-          </CardTitle>
-          <CardDescription>
-            Unit economics analysis showing cost per 1000 audience reach for each pricing model.
-            Compare pricing models fairly by normalizing to audience size (CPM, per 1K subscribers, per 1K circulation, etc.).
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 font-sans text-lg">
+                <TrendingUp className="h-5 w-5" />
+                Pricing Analytics by Channel
+              </CardTitle>
+              <CardDescription>
+                Unit economics analysis showing cost per 1000 audience reach for each pricing model.
+                Compare pricing models fairly by normalizing to audience size (CPM, per 1K subscribers, per 1K circulation, etc.).
+              </CardDescription>
+            </div>
+            <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
+          </div>
         </CardHeader>
       </Card>
 
@@ -1271,6 +1279,15 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Activity Log Dialog */}
+      <ActivityLogDialog
+        isOpen={showActivityLog}
+        onClose={() => setShowActivityLog(false)}
+        sectionName="Pricing"
+        activityTypes={['publication_update']}
+        hubId={undefined}
+      />
     </div>
   );
 };

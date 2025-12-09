@@ -54,6 +54,8 @@ import { CreativeAssetsManager } from '@/components/campaign/CreativeAssetsManag
 import { extractRequirementsForSelectedInventory } from '@/utils/creativeSpecsExtractor';
 import { formatInsertionOrderQuantity, formatInsertionOrderAudienceWithBadge } from '@/utils/insertionOrderFormatting';
 import { calculateItemCost } from '@/utils/inventoryPricing';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-800 border border-gray-300 hover:bg-gray-100',
@@ -86,6 +88,7 @@ export default function CampaignDetail() {
   const [uploadedAssets, setUploadedAssets] = useState<Map<string, any>>(new Map());
   const [publicationOrders, setPublicationOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [showActivityLog, setShowActivityLog] = useState(false);
 
   // Fetch publication insertion orders from the new collection
   useEffect(() => {
@@ -294,6 +297,7 @@ export default function CampaignDetail() {
                   </div>
                   
                   <div className="flex items-center gap-3">
+                    <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
                     <Badge className={STATUS_COLORS[campaign.status as keyof typeof STATUS_COLORS]}>
                       {STATUS_LABELS[campaign.status as keyof typeof STATUS_LABELS]}
                     </Badge>
@@ -1029,6 +1033,15 @@ export default function CampaignDetail() {
             </div>
           </div>
         </main>
+
+        {/* Activity Log Dialog */}
+        <ActivityLogDialog
+          isOpen={showActivityLog}
+          onClose={() => setShowActivityLog(false)}
+          sectionName="Campaign"
+          activityTypes={['campaign_create', 'campaign_update', 'campaign_delete']}
+          hubId={undefined}
+        />
       </div>
     </ProtectedRoute>
   );

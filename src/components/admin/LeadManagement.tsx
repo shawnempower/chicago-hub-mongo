@@ -31,6 +31,8 @@ import { API_BASE_URL } from '@/config/api';
 import { getPublications } from '@/api/publications';
 import type { PublicationFrontend as Publication } from '@/types/publication';
 import { LeadDetail } from './LeadDetail';
+import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
+import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
 type SortKey = 'businessName' | 'contactName' | 'budgetRange' | 'status' | 'createdAt';
 
@@ -53,6 +55,7 @@ export const LeadManagement = () => {
   const [publicationFilter, setPublicationFilter] = useState<string[]>([]);
   const [publicationFilterDraft, setPublicationFilterDraft] = useState<string[]>([]);
   const [publicationPopoverOpen, setPublicationPopoverOpen] = useState(false);
+  const [showActivityLog, setShowActivityLog] = useState(false);
   const { toast } = useToast();
   const { selectedHubId } = useHubContext();
 
@@ -526,6 +529,7 @@ export const LeadManagement = () => {
         </div>
         
         <div className="flex items-center gap-2">
+          <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
           {/* Status Filter Dropdown */}
           <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
             <PopoverTrigger asChild>
@@ -872,6 +876,15 @@ export const LeadManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Activity Log Dialog */}
+      <ActivityLogDialog
+        isOpen={showActivityLog}
+        onClose={() => setShowActivityLog(false)}
+        sectionName="Leads"
+        activityTypes={['lead_create', 'lead_update', 'lead_delete']}
+        hubId={selectedHubId}
+      />
     </div>
   );
 };

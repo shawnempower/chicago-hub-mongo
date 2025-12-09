@@ -26,10 +26,8 @@ import {
   Store, 
   FileText,
   DollarSign,
-  Users,
-  Activity
+  Users
 } from "lucide-react";
-import { ActivityLog } from "@/components/admin/ActivityLog";
 
 // Main Dashboard Component
 export default function Dashboard() {
@@ -51,7 +49,6 @@ export default function Dashboard() {
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'orders', label: 'Orders', icon: FileText },
     { id: 'knowledgebase', label: 'Knowledge', icon: BookOpen },
-    { id: 'activity', label: 'Activity', icon: Activity },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'storefront', label: 'Storefront', icon: Store },
     { id: 'hub-pricing', label: 'Hub Pricing', icon: DollarSign },
@@ -69,14 +66,11 @@ export default function Dashboard() {
         {currentTab === 'orders' && <PublicationOrders />}
         {currentTab === 'order-detail' && <PublicationOrderDetail />}
         {currentTab === 'knowledgebase' && <PublicationKnowledgeBase />}
-        {currentTab === 'activity' && selectedPublication?._id && (
-          <ActivityLog publicationId={String(selectedPublication._id)} showFilters={true} />
-        )}
         {currentTab === 'settings' && <PublicationSettings />}
         {currentTab === 'storefront' && <PublicationStorefront />}
         {currentTab === 'summary' && <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />}
         {currentTab === 'hub-pricing' && <HubPricingReport onBack={() => handleTabChange('dashboard')} />}
-        {!['dashboard', 'profile', 'inventory', 'leads', 'orders', 'order-detail', 'knowledgebase', 'activity', 'settings', 'storefront', 'summary', 'hub-pricing'].includes(currentTab) && <DashboardOverview />}
+        {!['dashboard', 'profile', 'inventory', 'leads', 'orders', 'order-detail', 'knowledgebase', 'settings', 'storefront', 'summary', 'hub-pricing'].includes(currentTab) && <DashboardOverview />}
       </>
     );
   };

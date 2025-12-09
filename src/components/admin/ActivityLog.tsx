@@ -33,6 +33,8 @@ interface ActivityLogProps {
   userId?: string;
   /** Show filters */
   showFilters?: boolean;
+  /** Hide the card wrapper (for use in dialogs) */
+  hideCard?: boolean;
 }
 
 // Cache for user and publication names to avoid repeated lookups
@@ -111,7 +113,7 @@ const ACTIVITY_TYPE_ICONS: Record<string, React.ComponentType<any>> = {
   user_logout: User,
 };
 
-export function ActivityLog({ hubId, publicationId, userId, showFilters = true }: ActivityLogProps) {
+export function ActivityLog({ hubId, publicationId, userId, showFilters = true, hideCard = false }: ActivityLogProps) {
   const [activities, setActivities] = useState<UserInteraction[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
@@ -327,88 +329,91 @@ export function ActivityLog({ hubId, publicationId, userId, showFilters = true }
     return null;
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+  const content = (
+    <>
+      {!hideCard && (
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <CardTitle>Activity Log</CardTitle>
-            <CardDescription>
+            <h2 className="text-xl font-semibold">Activity Log</h2>
+            <p className="text-sm text-muted-foreground">
               View and filter user activities and changes
-            </CardDescription>
+            </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        {showFilters && (
-          <div className="mb-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Activity Type</label>
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All activities" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Activities</SelectItem>
-                    <SelectItem value="campaign_create">Campaign Created</SelectItem>
-                    <SelectItem value="campaign_update">Campaign Updated</SelectItem>
-                    <SelectItem value="campaign_delete">Campaign Deleted</SelectItem>
-                    <SelectItem value="order_create">Order Created</SelectItem>
-                    <SelectItem value="order_update">Order Updated</SelectItem>
-                    <SelectItem value="package_create">Package Created</SelectItem>
-                    <SelectItem value="package_update">Package Updated</SelectItem>
-                    <SelectItem value="lead_create">Lead Created</SelectItem>
-                    <SelectItem value="lead_update">Lead Updated</SelectItem>
-                    <SelectItem value="publication_update">Publication Updated</SelectItem>
-                    <SelectItem value="inventory_update">Inventory Updated</SelectItem>
-                    <SelectItem value="profile_update">Profile Updated</SelectItem>
-                    <SelectItem value="storefront_update">Storefront Updated</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium mb-2 block">Start Date</label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium mb-2 block">End Date</label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
+      )}
+
+      {showFilters && (
+        <div className="mb-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Activity Type</label>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All activities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Activities</SelectItem>
+                  <SelectItem value="campaign_create">Campaign Created</SelectItem>
+                  <SelectItem value="campaign_update">Campaign Updated</SelectItem>
+                  <SelectItem value="campaign_delete">Campaign Deleted</SelectItem>
+                  <SelectItem value="order_create">Order Created</SelectItem>
+                  <SelectItem value="order_update">Order Updated</SelectItem>
+                  <SelectItem value="package_create">Package Created</SelectItem>
+                  <SelectItem value="package_update">Package Updated</SelectItem>
+                  <SelectItem value="lead_create">Lead Created</SelectItem>
+                  <SelectItem value="lead_update">Lead Updated</SelectItem>
+                  <SelectItem value="publication_update">Publication Updated</SelectItem>
+                  <SelectItem value="inventory_update">Inventory Updated</SelectItem>
+                  <SelectItem value="profile_update">Profile Updated</SelectItem>
+                  <SelectItem value="storefront_update">Storefront Updated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Start Date</label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">End Date</label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
             </div>
           </div>
-        )}
+          
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+        </div>
+      )}
 
-        {loading && activities.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Loading activities...
-          </div>
-        ) : activities.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No activities found
-          </div>
-        ) : (
-          <TooltipProvider>
-            <div className="space-y-3">
+      {loading && activities.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          Loading activities...
+        </div>
+      ) : activities.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No activities found
+        </div>
+      ) : (
+        <TooltipProvider>
+          <div className="space-y-3">
               {activities.map((activity, index) => {
                 const ActivityIcon = getActivityIcon(activity);
                 const changeDescription = getChangeDescription(activity);
@@ -531,6 +536,17 @@ export function ActivityLog({ hubId, publicationId, userId, showFilters = true }
             )}
           </TooltipProvider>
         )}
+    </>
+  );
+
+  if (hideCard) {
+    return <div>{content}</div>;
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        {content}
       </CardContent>
     </Card>
   );
