@@ -13,7 +13,18 @@ import {
   Users,
   TrendingUp,
   HelpCircle,
-  CheckCircle2
+  CheckCircle2,
+  Upload,
+  Download,
+  Eye,
+  Trash2,
+  FileImage,
+  File,
+  FileSpreadsheet,
+  Calendar,
+  Loader2,
+  Plus,
+  X
 } from "lucide-react";
 import { calculateRevenue } from '@/utils/pricingCalculations';
 import { PublicationDataQuality, calculateDataQuality } from '@/components/admin/PublicationDataQuality';
@@ -21,14 +32,51 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { getPublicationActivities, UserInteraction } from '@/api/activities';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  getPublicationFiles, 
+  uploadPublicationFile, 
+  deletePublicationFile,
+  getFileDownloadUrl,
+  validateFileType,
+  getFileTypes
+} from '@/api/publicationFiles';
 // MongoDB services removed - using API calls instead
+
+interface PublicationFile {
+  _id: string;
+  fileName: string;
+  originalFileName: string;
+  fileType: string;
+  description?: string;
+  fileUrl?: string;
+  fileSize: number;
+  uploadedBy?: string;
+  tags?: string[];
+  isPublic?: boolean;
+  downloadCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export function DashboardOverview() {
   const { selectedPublication } = usePublication();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const inventoryQualityRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [recentActivity, setRecentActivity] = useState<UserInteraction[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
+  
+  // Knowledge base state
+  const [files, setFiles] = useState<PublicationFile[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [uploadFileType, setUploadFileType] = useState('media_kit');
+  const [uploadDescription, setUploadDescription] = useState('');
 
   // Fetch recent activities for the selected publication
   useEffect(() => {
@@ -53,6 +101,29 @@ export function DashboardOverview() {
     fetchActivities();
   }, [selectedPublication?._id]);
 
+  // Fetch files for knowledge base
+  useEffect(() => {
+    if (!selectedPublication?._id) {
+      setFiles([]);
+      return;
+    }
+    
+    const loadFiles = async () => {
+      try {
+        setLoadingFiles(true);
+        const publicationFiles = await getPublicationFiles(selectedPublication._id);
+        setFiles(publicationFiles);
+      } catch (error) {
+        console.error('Error loading publication files:', error);
+        // Fail silently for files
+      } finally {
+        setLoadingFiles(false);
+      }
+    };
+    
+    loadFiles();
+  }, [selectedPublication?._id]);
+
   if (!selectedPublication) {
     return (
       <div className="text-center py-8">
@@ -60,6 +131,120 @@ export function DashboardOverview() {
       </div>
     );
   }
+
+  // File handling functions
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedPublication?._id) return;
+
+    const validation = validateFileType(file);
+    if (!validation.isValid) {
+      toast({
+        title: "Invalid File Type",
+        description: validation.error,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setUploading(true);
+      await uploadPublicationFile(
+        selectedPublication._id,
+        file,
+        uploadFileType,
+        uploadDescription || undefined,
+        [],
+        false
+      );
+      
+      toast({
+        title: "Success",
+        description: "File uploaded successfully!",
+      });
+      
+      setUploadDescription('');
+      setShowUploadForm(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      // Reload files
+      const publicationFiles = await getPublicationFiles(selectedPublication._id);
+      setFiles(publicationFiles);
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload file. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDownload = async (file: PublicationFile) => {
+    if (!selectedPublication?._id) return;
+    
+    try {
+      const downloadUrl = await getFileDownloadUrl(selectedPublication._id, file._id);
+      window.open(downloadUrl, '_blank');
+    } catch (error: any) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: "Download Failed",
+        description: error.message || "Failed to download file. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDelete = async (file: PublicationFile) => {
+    if (!selectedPublication?._id || !confirm('Are you sure you want to delete this file?')) return;
+    
+    try {
+      await deletePublicationFile(selectedPublication._id, file._id);
+      toast({
+        title: "Success",
+        description: "File deleted successfully!",
+      });
+      
+      // Reload files
+      const publicationFiles = await getPublicationFiles(selectedPublication._id);
+      setFiles(publicationFiles);
+    } catch (error: any) {
+      console.error('Error deleting file:', error);
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete file. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleView = (file: PublicationFile) => {
+    if (file.fileUrl) {
+      window.open(file.fileUrl, '_blank');
+    } else {
+      handleDownload(file);
+    }
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith('image/')) return <FileImage className="h-4 w-4 text-blue-500" />;
+    if (fileType.includes('spreadsheet') || fileType.includes('excel')) return <FileSpreadsheet className="h-4 w-4 text-green-500" />;
+    if (fileType.includes('pdf')) return <FileText className="h-4 w-4 text-red-500" />;
+    return <File className="h-4 w-4 text-gray-500" />;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   const getActivityLabel = (activity: UserInteraction) => {
     const labels: Record<string, string> = {
@@ -84,12 +269,6 @@ export function DashboardOverview() {
       description: "Update advertising slots and pricing",
       icon: Package,
       tab: "inventory"
-    },
-    { 
-      title: "Upload Files", 
-      description: "Add media kits and resources",
-      icon: FileText,
-      tab: "knowledgebase"
     },
     { 
       title: "Edit Profile", 
@@ -479,7 +658,7 @@ export function DashboardOverview() {
         </Card>
       </div>
 
-      {/* Inventory Quality - Full Width at Bottom */}
+      {/* Inventory Quality - Full Width */}
       <div ref={inventoryQualityRef}>
         <PublicationDataQuality 
           publication={selectedPublication}
@@ -487,6 +666,179 @@ export function DashboardOverview() {
           preCalculatedQuality={inventoryQuality}
         />
       </div>
+
+      {/* Knowledge Base - Full Width */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="font-sans text-base flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Knowledge Base
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Media kits, rate cards, and resources for {selectedPublication.basicInfo.publicationName}
+              </p>
+            </div>
+            <Button 
+              size="sm"
+              onClick={() => setShowUploadForm(!showUploadForm)}
+            >
+              {showUploadForm ? (
+                <>
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Upload Files
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Upload Form */}
+          {showUploadForm && (
+            <div className="border rounded-lg p-4 space-y-4 bg-muted/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">File Type</label>
+                  <Select value={uploadFileType} onValueChange={setUploadFileType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getFileTypes().map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Description (Optional)</label>
+                  <Input
+                    value={uploadDescription}
+                    onChange={(e) => setUploadDescription(e.target.value)}
+                    placeholder="Brief description of the file..."
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Choose File</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.md,.json,.jpg,.jpeg,.png,.svg,.gif,.webp,.zip,.gz,.mp4,.mpeg,.mov,.mp3,.wav"
+                  disabled={uploading}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Supported formats: PDF, Word, Excel, PowerPoint, Images, Archives, Audio, Video
+                </p>
+              </div>
+
+              {uploading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading file...
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Files List */}
+          {loadingFiles ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading files...</p>
+            </div>
+          ) : files.length === 0 ? (
+            <div className="text-center py-8 border rounded-lg bg-muted/20">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No files yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Upload your first file to get started.
+              </p>
+              {!showUploadForm && (
+                <Button onClick={() => setShowUploadForm(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Files
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">
+                  {files.length} file{files.length !== 1 ? 's' : ''} available
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {files.slice(0, 6).map((file) => (
+                  <div key={file._id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {getFileIcon(file.fileType)}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium font-sans text-sm truncate">{file.originalFileName}</h4>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{formatFileSize(file.fileSize)}</span>
+                          {file.downloadCount && file.downloadCount > 0 && (
+                            <>
+                              <span>•</span>
+                              <span>{file.downloadCount} downloads</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 ml-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleView(file)}
+                        title="View file"
+                        className="h-8 w-8 p-0"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleDownload(file)}
+                        title="Download file"
+                        className="h-8 w-8 p-0"
+                      >
+                        <Download className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                        onClick={() => handleDelete(file)}
+                        title="Delete file"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {files.length > 6 && (
+                <p className="text-sm text-muted-foreground text-center pt-2">
+                  + {files.length - 6} more file{files.length - 6 !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
     </div>
   );

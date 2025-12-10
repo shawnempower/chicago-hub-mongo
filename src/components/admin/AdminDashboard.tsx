@@ -9,6 +9,7 @@ import { AlgorithmManagement } from './AlgorithmManagement';
 import { ActivityLog } from './ActivityLog';
 import { PerformanceEntryManagement } from './PerformanceEntryManagement';
 import { ProofVerificationQueue } from './ProofVerificationQueue';
+import { HubPricingReport } from '@/components/dashboard/HubPricingReport';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useHubContext } from '@/contexts/HubContext';
 
@@ -26,7 +27,7 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="hubs">Hubs</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
@@ -36,6 +37,7 @@ export const AdminDashboard = () => {
           <TabsTrigger value="import">Import</TabsTrigger>
           <TabsTrigger value="assistant">Assistant</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="hub-pricing">Hub Pricing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -89,6 +91,12 @@ export const AdminDashboard = () => {
                 Please select a hub to view activities
               </div>
             )}
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="hub-pricing">
+          <ErrorBoundary>
+            <HubPricingReport onBack={() => setActiveTab('hubs')} />
           </ErrorBoundary>
         </TabsContent>
       </Tabs>

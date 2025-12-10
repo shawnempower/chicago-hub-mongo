@@ -835,7 +835,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center justify-between">
+        <CardTitle className="font-sans text-base flex items-center justify-between">
           <span>Inventory Quality Score</span>
           <div className="flex items-center gap-2">
             <Button

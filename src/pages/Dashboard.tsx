@@ -5,12 +5,10 @@ import SurveyForm from "@/components/SurveyForm";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { PublicationProfile } from "@/components/dashboard/PublicationProfile";
 import { DashboardInventoryManager } from "@/components/dashboard/DashboardInventoryManager";
-import { PublicationKnowledgeBase } from "@/components/dashboard/PublicationKnowledgeBase";
 import { PublicationSettings } from "@/components/dashboard/PublicationSettings";
 import { PublicationLeads } from "@/components/dashboard/PublicationLeads";
 import { PublicationStorefront } from "@/components/dashboard/PublicationStorefront";
 import { PublicationFullSummary } from "@/components/dashboard/PublicationFullSummary";
-import { HubPricingReport } from "@/components/dashboard/HubPricingReport";
 import { PublicationOrders } from "@/components/dashboard/PublicationOrders";
 import { PublicationOrderDetail } from "@/components/dashboard/PublicationOrderDetail";
 import { useAuth } from "@/contexts/CustomAuthContext";
@@ -21,11 +19,9 @@ import {
   LayoutDashboard, 
   User, 
   Package, 
-  BookOpen, 
   Settings, 
   Store, 
   FileText,
-  DollarSign,
   Users
 } from "lucide-react";
 
@@ -48,10 +44,8 @@ export default function Dashboard() {
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'orders', label: 'Orders', icon: FileText },
-    { id: 'knowledgebase', label: 'Knowledge', icon: BookOpen },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'storefront', label: 'Storefront', icon: Store },
-    { id: 'hub-pricing', label: 'Hub Pricing', icon: DollarSign },
   ];
 
   const renderContent = () => {
@@ -65,12 +59,10 @@ export default function Dashboard() {
         {currentTab === 'leads' && selectedPublication?._id && <PublicationLeads publicationId={selectedPublication._id} />}
         {currentTab === 'orders' && <PublicationOrders />}
         {currentTab === 'order-detail' && <PublicationOrderDetail />}
-        {currentTab === 'knowledgebase' && <PublicationKnowledgeBase />}
         {currentTab === 'settings' && <PublicationSettings />}
         {currentTab === 'storefront' && <PublicationStorefront />}
         {currentTab === 'summary' && <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />}
-        {currentTab === 'hub-pricing' && <HubPricingReport onBack={() => handleTabChange('dashboard')} />}
-        {!['dashboard', 'profile', 'inventory', 'leads', 'orders', 'order-detail', 'knowledgebase', 'settings', 'storefront', 'summary', 'hub-pricing'].includes(currentTab) && <DashboardOverview />}
+        {!['dashboard', 'profile', 'inventory', 'leads', 'orders', 'order-detail', 'settings', 'storefront', 'summary'].includes(currentTab) && <DashboardOverview />}
       </>
     );
   };
