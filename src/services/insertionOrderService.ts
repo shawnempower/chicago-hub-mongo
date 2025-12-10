@@ -154,6 +154,9 @@ export class InsertionOrderService {
         { returnDocument: 'after' }
       );
 
+      // Note: Tracking scripts are generated when creative assets are uploaded,
+      // not when order status changes. Scripts depend on having assets first.
+
       return { success: true, order: result || undefined };
     } catch (error) {
       console.error('Error updating insertion order status:', error);
@@ -673,6 +676,9 @@ export class InsertionOrderService {
         }));
         
         await this.ordersCollection.insertMany(ordersWithTimestamps);
+
+        // Note: Tracking scripts are generated when creative assets are uploaded,
+        // not when orders are created. Scripts require actual asset files.
       }
 
       return { success: true, ordersGenerated: ordersToInsert.length };
@@ -1053,6 +1059,8 @@ export class InsertionOrderService {
               }
             );
             orderConfirmed = true;
+            // Scripts are already generated when order was sent - no need to regenerate here
+            // Use the "Refresh Scripts" button if new creatives were added after send
           }
         }
       }

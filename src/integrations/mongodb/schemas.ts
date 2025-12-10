@@ -1315,6 +1315,11 @@ export const COLLECTIONS = {
   MEDIA_ENTITIES: 'media_entities', // Unified media collection
   ALGORITHM_CONFIGS: 'algorithm_configs', // Editable algorithm configs (overrides)
   PRUNING_AUDITS: 'pruning_audits', // Stores pre/post pruning snapshots for campaign generation
+  PERFORMANCE_ENTRIES: 'performance_entries', // Manual and automated performance data
+  PROOF_OF_PERFORMANCE: 'proof_of_performance', // Proof files (tearsheets, affidavits, etc.)
+  TRACKING_SCRIPTS: 'tracking_scripts', // Generated tracking tags for digital channels
+  DAILY_AGGREGATES: 'daily_aggregates', // Pre-computed daily rollups for reporting
+  ESP_REFERENCE: 'esp_reference', // Email service provider compatibility data
 } as const;
 
 // MongoDB Indexes Configuration
@@ -1518,5 +1523,34 @@ export const INDEXES = {
   algorithm_configs: [
     { algorithmId: 1 }, // unique
     { updatedAt: -1 }
+  ],
+  performance_entries: [
+    { orderId: 1, itemPath: 1 },           // Get entries for specific placement
+    { campaignId: 1, dateStart: -1 },      // Campaign reporting
+    { publicationId: 1, dateStart: -1 },   // Publication reporting
+    { channel: 1, dateStart: -1 },         // Channel-specific queries
+    { enteredBy: 1, enteredAt: -1 },       // User's entries
+    { source: 1, enteredAt: -1 }           // Filter by entry source
+  ],
+  proof_of_performance: [
+    { orderId: 1 },                        // Get proofs for order
+    { campaignId: 1 },                     // Campaign-level proof lookup
+    { publicationId: 1, uploadedAt: -1 },  // Publication's proofs
+    { verificationStatus: 1, uploadedAt: -1 }  // Verification queue
+  ],
+  tracking_scripts: [
+    { campaignId: 1 },
+    { publicationCode: 1 },
+    { creativeId: 1 }
+  ],
+  daily_aggregates: [
+    { date: 1, campaignId: 1, publicationId: 1, channel: 1 },  // Compound unique key
+    { campaignId: 1, date: -1 },           // Campaign date range queries
+    { publicationId: 1, date: -1 }         // Publication date range queries
+  ],
+  esp_reference: [
+    { slug: 1 },                           // Unique lookup
+    { htmlSupport: 1 },                    // Filter by support level
+    { isActive: 1 }
   ]
 };

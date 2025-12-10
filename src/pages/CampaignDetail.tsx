@@ -43,7 +43,8 @@ import {
   LayoutDashboard,
   Users,
   UserPlus,
-  Bot
+  Bot,
+  BarChart3
 } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
@@ -56,6 +57,7 @@ import { formatInsertionOrderQuantity, formatInsertionOrderAudienceWithBadge } f
 import { calculateItemCost } from '@/utils/inventoryPricing';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
+import { CampaignPerformanceDashboard } from '@/components/admin/CampaignPerformanceDashboard';
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-800 border border-gray-300 hover:bg-gray-100',
@@ -443,10 +445,14 @@ export default function CampaignDetail() {
 
               {/* Main Content Tabs */}
               <Tabs defaultValue="overview">
-            <TabsList className="grid w-full grid-cols-3 gap-0">
+            <TabsList className="grid w-full grid-cols-4 gap-0">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="creative-requirements">Creative Requirements</TabsTrigger>
               <TabsTrigger value="insertion-order">Insertion Order</TabsTrigger>
+              <TabsTrigger value="performance" className="flex items-center gap-1">
+                <BarChart3 className="h-4 w-4" />
+                Performance
+              </TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
@@ -1028,6 +1034,16 @@ export default function CampaignDetail() {
                         </Card>
                       </div>
               </div>
+            </TabsContent>
+
+            {/* Performance Tab */}
+            <TabsContent value="performance" className="mt-0">
+              <CampaignPerformanceDashboard
+                campaignId={campaign.campaignId || id || ''}
+                campaignName={campaign.basicInfo?.name}
+                startDate={campaign.timeline?.startDate ? new Date(campaign.timeline.startDate) : undefined}
+                endDate={campaign.timeline?.endDate ? new Date(campaign.timeline.endDate) : undefined}
+              />
             </TabsContent>
               </Tabs>
             </div>

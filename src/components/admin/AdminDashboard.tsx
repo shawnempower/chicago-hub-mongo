@@ -7,6 +7,8 @@ import SurveyManagement from './SurveyManagement';
 import { HubManagement } from './HubManagement';
 import { AlgorithmManagement } from './AlgorithmManagement';
 import { ActivityLog } from './ActivityLog';
+import { PerformanceEntryManagement } from './PerformanceEntryManagement';
+import { ProofVerificationQueue } from './ProofVerificationQueue';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useHubContext } from '@/contexts/HubContext';
 
@@ -24,9 +26,11 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="hubs">Hubs</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="proofs">Proofs</TabsTrigger>
           <TabsTrigger value="surveys">Surveys</TabsTrigger>
           <TabsTrigger value="algorithms">Algorithms</TabsTrigger>
           <TabsTrigger value="import">Import</TabsTrigger>
@@ -41,6 +45,18 @@ export const AdminDashboard = () => {
         <TabsContent value="hubs">
           <ErrorBoundary>
             <HubManagement />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="performance">
+          <ErrorBoundary>
+            <PerformanceEntryManagement hubId={selectedHubId || undefined} />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="proofs">
+          <ErrorBoundary>
+            <ProofVerificationQueue hubId={selectedHubId || undefined} />
           </ErrorBoundary>
         </TabsContent>
 

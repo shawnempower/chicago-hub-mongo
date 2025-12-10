@@ -113,6 +113,16 @@ export interface CreativeAsset {
     commentedAt: Date;
   }>;
   
+  // Digital Ad Properties (for website, newsletter, streaming placements)
+  digitalAdProperties?: {
+    clickUrl?: string;         // Landing page URL for click-through
+    altText?: string;          // Alt text for accessibility
+    // For newsletter text ads
+    headline?: string;
+    body?: string;
+    ctaText?: string;          // Call-to-action button text (e.g., "Learn More")
+  };
+  
   // Soft delete
   deletedAt?: Date;
   deletedBy?: string;
@@ -148,7 +158,27 @@ export interface CreativeAssetUploadRequest {
   assetType: CreativeAssetMetadata['assetType'];
   description?: string;
   tags?: string[];
+  // Digital ad properties
+  clickUrl?: string;
+  altText?: string;
+  headline?: string;
+  body?: string;
+  ctaText?: string;
 }
+
+/**
+ * Check if a channel type requires digital ad properties (click URL, etc.)
+ */
+export function isDigitalChannel(channel: string): boolean {
+  const digitalChannels = ['website', 'newsletter', 'streaming'];
+  return digitalChannels.includes(channel?.toLowerCase());
+}
+
+/**
+ * Channels that support tracking scripts
+ */
+export const TRACKABLE_CHANNELS = ['website', 'newsletter', 'streaming'] as const;
+export type TrackableChannel = typeof TRACKABLE_CHANNELS[number];
 
 export interface CreativeAssetUploadResponse {
   success: boolean;

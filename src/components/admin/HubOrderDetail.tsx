@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { OrderStatusBadge } from '../orders/OrderStatusBadge';
 import { OrderTimeline } from '../orders/OrderTimeline';
 import { OrderMessaging } from '../orders/OrderMessaging';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, 
   FileText, 
@@ -20,11 +21,16 @@ import {
   Building2,
   Calendar,
   DollarSign,
-  Package
+  Package,
+  BarChart3,
+  ClipboardList,
+  Code
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/config/api';
 import { format } from 'date-fns';
+import { OrderPerformanceView } from '../dashboard/OrderPerformanceView';
+import { TrackingScriptGenerator } from './TrackingScriptGenerator';
 
 interface OrderDetailData {
   _id?: string;
@@ -82,10 +88,12 @@ export function HubOrderDetail() {
 
   const [order, setOrder] = useState<OrderDetailData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creatives, setCreatives] = useState<any[]>([]);
 
   useEffect(() => {
     if (campaignId && publicationId) {
       fetchOrderDetail();
+      fetchCreatives();
     }
   }, [campaignId, publicationId]);
 
@@ -114,6 +122,25 @@ export function HubOrderDetail() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCreatives = async () => {
+    if (!campaignId) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(
+        `${API_BASE_URL}/creative-assets?campaignId=${campaignId}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setCreatives(data.assets || []);
+      }
+    } catch (error) {
+      console.error('Error fetching creatives:', error);
     }
   };
 
@@ -246,6 +273,31 @@ export function HubOrderDetail() {
         </div>
       </div>
 
+      {/* Main Tabs */}
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsTrigger value="details" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Order Details
+          </TabsTrigger>
+          <TabsTrigger
+            value="trafficking"
+            className="flex items-center gap-2"
+          >
+            <Code className="h-4 w-4" />
+            Trafficking
+          </TabsTrigger>
+          <TabsTrigger
+            value="performance"
+            className="flex items-center gap-2"
+            disabled={!['confirmed', 'in_production', 'delivered'].includes(order.status)}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Performance
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="mt-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
@@ -422,6 +474,70 @@ export function HubOrderDetail() {
           />
         </div>
       </div>
+        </TabsContent>
+
+        <TabsContent value="trafficking" className="mt-6">
+          {order._id ? (
+            <TrackingScriptGenerator
+              campaignId={order.campaignId}
+              campaignName={order.campaignName}
+              advertiserName={order.campaignData?.basicInfo?.advertiserName}
+              publicationId={order.publicationId}
+              publicationCode={publication?.publicationCode || `pub${order.publicationId}`}
+              publicationName={order.publicationName}
+              creatives={creatives.map((c: any) => ({
+                _id: c._id,
+                name: c.name,
+                type: c.type,
+                format: c.format,
+                clickUrl: c.clickUrl,
+                imageUrl: c.fileUrl || c.imageUrl,
+                altText: c.altText,
+                headline: c.headline,
+                body: c.body,
+                ctaText: c.ctaText
+              }))}
+              placements={publication?.inventoryItems?.filter((item: any) => 
+                ['website', 'newsletter', 'streaming'].includes(item.channel)
+              ).map((item: any, idx: number) => ({
+                itemPath: item.itemPath || item.sourcePath || `placement-${idx}`,
+                itemName: item.itemName,
+                channel: item.channel,
+                dimensions: item.format?.dimensions,
+              })) || []}
+              espCompatibility={publication?.espCompatibility || 'full'}
+            />
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Loading order details...</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="performance" className="mt-6">
+          {order._id && ['confirmed', 'in_production', 'delivered'].includes(order.status) ? (
+            <OrderPerformanceView
+              orderId={order._id}
+              campaignId={order.campaignId}
+              publicationId={order.publicationId}
+              publicationName={order.publicationName}
+              placements={publication?.inventoryItems?.map((item: any, idx: number) => ({
+                itemPath: item.itemPath || item.sourcePath || `placement-${idx}`,
+                itemName: item.itemName,
+                channel: item.channel,
+                dimensions: item.format?.dimensions,
+              })) || []}
+              isHubView={true}
+            />
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Performance tracking is available once the order is confirmed.</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

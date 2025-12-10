@@ -98,11 +98,23 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
     let detectedSpecs;
     if (req.body.detectedSpecs) {
       try {
-        detectedSpecs = typeof req.body.detectedSpecs === 'string' 
-          ? JSON.parse(req.body.detectedSpecs) 
+        detectedSpecs = typeof req.body.detectedSpecs === 'string'
+          ? JSON.parse(req.body.detectedSpecs)
           : req.body.detectedSpecs;
       } catch (e) {
         console.warn('Failed to parse detected specs:', e);
+      }
+    }
+
+    // Parse digital ad properties if provided (for website, newsletter, streaming placements)
+    let digitalAdProperties;
+    if (req.body.digitalAdProperties) {
+      try {
+        digitalAdProperties = typeof req.body.digitalAdProperties === 'string'
+          ? JSON.parse(req.body.digitalAdProperties)
+          : req.body.digitalAdProperties;
+      } catch (e) {
+        console.warn('Failed to parse digital ad properties:', e);
       }
     }
 
@@ -155,7 +167,8 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
         packageId,
         insertionOrderId,
         publicationId: publicationId ? parseInt(publicationId) : (parsedSpecs?.publicationId ? parseInt(parsedSpecs.publicationId) : undefined),
-        placementId
+        placementId,
+        channel: parsedSpecs?.channel
       },
       // Store specifications with the asset
       specifications: parsedSpecs ? {
@@ -167,7 +180,18 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
         maxFileSize: parsedSpecs.maxFileSize,
         colorSpace: parsedSpecs.colorSpace,
         resolution: parsedSpecs.resolution,
-        additionalRequirements: parsedSpecs.additionalRequirements
+        additionalRequirements: parsedSpecs.additionalRequirements,
+        // Store parsed width/height for script generation
+        width: parsedSpecs.dimensions ? parseInt(parsedSpecs.dimensions.split('x')[0]) : undefined,
+        height: parsedSpecs.dimensions ? parseInt(parsedSpecs.dimensions.split('x')[1]) : undefined
+      } : undefined,
+      // Digital ad properties for tracking scripts (website, newsletter, streaming)
+      digitalAdProperties: digitalAdProperties ? {
+        clickUrl: digitalAdProperties.clickUrl,
+        altText: digitalAdProperties.altText,
+        headline: digitalAdProperties.headline,
+        body: digitalAdProperties.body,
+        ctaText: digitalAdProperties.ctaText
       } : undefined,
       uploadInfo: {
         uploadedAt: new Date(),
@@ -178,9 +202,31 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
       status: 'pending'
     });
 
+    // Auto-generate tracking scripts for digital assets
+    // Scripts are generated for ALL orders in the campaign when an asset is uploaded
+    if (campaignId) {
+      try {
+        const { generateScriptsForAsset } = await import('../../src/services/trackingScriptService');
+        const scriptResult = await generateScriptsForAsset({
+          ...asset,
+          fileUrl: uploadResult.fileUrl,
+          fileType: uploadResult.fileType,
+          originalFilename: uploadResult.originalFileName
+        } as any);
+        
+        if (scriptResult.scriptsGenerated > 0) {
+          console.log(`Auto-generated ${scriptResult.scriptsGenerated} tracking scripts for uploaded asset`);
+        }
+      } catch (scriptError) {
+        console.error('Error auto-generating tracking scripts:', scriptError);
+        // Don't fail the upload, just log the error
+      }
+    }
+
     res.json({
       success: true,
-      asset
+      asset,
+      scriptsGenerated: true // Indicate that scripts were processed
     });
   } catch (error) {
     console.error('Error uploading creative asset:', error);

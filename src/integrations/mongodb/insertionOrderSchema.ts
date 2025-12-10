@@ -151,8 +151,35 @@ export interface PublicationInsertionOrderDocument {
   placementStatuses?: Record<string, PlacementStatus>;
   placementStatusHistory?: PlacementStatusHistoryEntry[];
   
-  // Post-campaign
+  // Post-campaign (legacy - use proof_of_performance collection instead)
   proofOfPerformance?: ProofOfPerformance;
+  
+  // Delivery goals per placement (for pacing calculations)
+  deliveryGoals?: {
+    [itemPath: string]: {       // Key is the itemPath for the placement
+      goalType: 'impressions' | 'clicks' | 'units';
+      goalValue: number;
+      description?: string;     // e.g., "10,000 impressions" or "4 insertions"
+    };
+  };
+  
+  // Delivery summary (updated when performance entries are added)
+  deliverySummary?: {
+    totalGoalValue: number;     // Sum of all placement goals
+    totalDelivered: number;     // Sum of all delivered
+    percentComplete: number;    // 0-100
+    byChannel?: Record<string, {
+      goal: number;
+      delivered: number;
+      percent: number;
+    }>;
+    lastUpdated: Date;
+  };
+  
+  // Proof of performance tracking
+  proofOfPerformanceRequired?: boolean;
+  proofOfPerformanceComplete?: boolean;
+  proofCount?: number;          // Number of proofs uploaded to proof_of_performance collection
   
   // Metadata
   createdAt?: Date;

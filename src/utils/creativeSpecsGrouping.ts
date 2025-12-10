@@ -373,6 +373,14 @@ export interface UploadedAssetWithSpecs {
     publicationId: number;
     publicationName: string;
   }>;
+  
+  // Digital Ad Properties (for website, newsletter, streaming)
+  clickUrl?: string;           // Landing page URL for click-through
+  altText?: string;            // Alt text for accessibility
+  // For newsletter text ads
+  headline?: string;
+  body?: string;
+  ctaText?: string;            // Call-to-action button text
 }
 
 /**

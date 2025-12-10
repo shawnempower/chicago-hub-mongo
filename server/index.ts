@@ -69,6 +69,10 @@ import publicationOrdersRouter from './routes/publication-orders';
 import adminOrdersRouter from './routes/admin/orders';
 import creativeAssetsRouter from './routes/creative-assets';
 import activityTrackingRouter from './routes/activity-tracking';
+import performanceEntriesRouter from './routes/performance-entries';
+import proofOfPerformanceRouter from './routes/proof-of-performance';
+import reportingRouter from './routes/reporting';
+import trackingScriptsRouter from './routes/tracking-scripts';
 import { authenticateToken } from './middleware/authenticate';
 import { activityTrackingMiddleware } from './middleware/activityTracking';
 import { createLogger } from '../src/utils/logger';
@@ -185,6 +189,10 @@ app.use('/api/campaigns', activityTrackingMiddleware, campaignsRouter);
 app.use('/api/creative-assets', activityTrackingMiddleware, creativeAssetsRouter); // Creative assets management
 app.use('/api/inventory-chat', inventoryChatRouter);
 app.use('/api/activities', authenticateToken, activityTrackingRouter); // Activity tracking and audit logs
+app.use('/api/performance-entries', activityTrackingMiddleware, performanceEntriesRouter); // Performance data entry
+app.use('/api/proof-of-performance', activityTrackingMiddleware, proofOfPerformanceRouter); // Proof uploads and verification
+app.use('/api/reporting', reportingRouter); // Campaign and order performance reporting
+app.use('/api/tracking-scripts', activityTrackingMiddleware, trackingScriptsRouter); // Ad tracking script generation
 
 // ===== STANDALONE ROUTES =====
 // Health check

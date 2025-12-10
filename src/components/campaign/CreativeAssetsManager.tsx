@@ -45,6 +45,7 @@ import {
   RadioGroupItem,
 } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Tooltip,
   TooltipContent,
@@ -68,6 +69,8 @@ import {
   ArrowDown,
   ArrowUpDown,
   Merge,
+  Link,
+  ExternalLink,
   GitBranch,
 } from 'lucide-react';
 import {
@@ -120,6 +123,9 @@ interface PendingFile {
   isAnalyzing?: boolean;
   uploadStatus?: 'pending' | 'uploading' | 'uploaded' | 'error';
   errorMessage?: string;
+  // Digital ad properties (for website, newsletter, streaming)
+  clickUrl?: string;
+  altText?: string;
 }
 
 interface EnrichedSpec extends GroupedCreativeRequirement {
@@ -255,6 +261,7 @@ export function CreativeAssetsManager({
   const [activeChannel, setActiveChannel] = useState<string>('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [pendingFiles, setPendingFiles] = useState<Map<string, PendingFile>>(new Map());
+  const [batchClickUrl, setBatchClickUrl] = useState<string>('');
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1137,6 +1144,9 @@ export function CreativeAssetsManager({
     const specGroup = groupedSpecs.find(g => g.specGroupId === specGroupId);
     if (!specGroup) return;
 
+    // Check if this is a digital channel that needs a click URL
+    const isDigitalChannel = ['website', 'newsletter', 'streaming'].includes(specGroup.channel || '');
+    
     // Create asset entry
     const newAsset: UploadedAssetWithSpecs = {
       specGroupId,
@@ -1150,6 +1160,9 @@ export function CreativeAssetsManager({
         publicationId: p.publicationId,
         publicationName: p.publicationName,
       })),
+      // Include digital ad properties if available
+      clickUrl: fileData.clickUrl,
+      altText: fileData.altText,
     };
 
     // Update assets map
@@ -1164,10 +1177,19 @@ export function CreativeAssetsManager({
       return next;
     });
 
-    toast({
-      title: 'Asset assigned',
-      description: `${fileData.file.name} assigned to ${specGroup.placementCount} placements`,
-    });
+    // Show toast with click URL reminder for digital channels
+    if (isDigitalChannel && !fileData.clickUrl) {
+      toast({
+        title: 'Asset assigned',
+        description: `${fileData.file.name} assigned to ${specGroup.placementCount} placements. Remember to add a click-through URL before uploading.`,
+        variant: 'default',
+      });
+    } else {
+      toast({
+        title: 'Asset assigned',
+        description: `${fileData.file.name} assigned to ${specGroup.placementCount} placements`,
+      });
+    }
   };
 
   // Upload pending assets to server
@@ -1199,6 +1221,17 @@ export function CreativeAssetsManager({
           fileExtension: asset.detectedSpecs?.fileExtension,
           fileSize: asset.detectedSpecs?.fileSize,
         }));
+        
+        // Include digital ad properties if available
+        if (asset.clickUrl || asset.altText || asset.headline || asset.body || asset.ctaText) {
+          formData.append('digitalAdProperties', JSON.stringify({
+            clickUrl: asset.clickUrl,
+            altText: asset.altText,
+            headline: asset.headline,
+            body: asset.body,
+            ctaText: asset.ctaText,
+          }));
+        }
 
         const token = localStorage.getItem('auth_token');
         const response = await fetch(`${API_BASE_URL}/creative-assets/upload`, {
@@ -1719,6 +1752,49 @@ export function CreativeAssetsManager({
                 </div>
               )}
 
+              {/* Batch Click URL for digital channels */}
+              {['website', 'newsletter', 'streaming'].includes(activeChannel) && pendingFiles.size > 0 && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Link className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">Click-Through URL</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="url"
+                      placeholder="https://advertiser.com/landing-page"
+                      className="h-8 text-sm flex-1"
+                      value={batchClickUrl}
+                      onChange={(e) => setBatchClickUrl(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!batchClickUrl.trim()}
+                      onClick={() => {
+                        if (!batchClickUrl.trim()) return;
+                        setPendingFiles(prev => {
+                          const next = new Map(prev);
+                          next.forEach((fileData, id) => {
+                            next.set(id, { ...fileData, clickUrl: batchClickUrl.trim() });
+                          });
+                          return next;
+                        });
+                        toast({
+                          title: 'Click URL Applied',
+                          description: `Applied to ${pendingFiles.size} pending file${pendingFiles.size !== 1 ? 's' : ''}`,
+                        });
+                      }}
+                    >
+                      Apply to All ({pendingFiles.size})
+                    </Button>
+                  </div>
+                  <p className="text-xs text-blue-700 mt-2">
+                    Enter a URL and click "Apply to All" to set the same click-through URL for all pending files. You can edit individual URLs below.
+                  </p>
+                </div>
+              )}
+
               {/* Pending files queue */}
               {pendingFiles.size > 0 && (
                 <div className="mt-4 space-y-2">
@@ -1799,7 +1875,7 @@ export function CreativeAssetsManager({
                       
                       {/* Assignment dropdown - filtered by active channel tab */}
                       {!fileData.isAnalyzing && (
-                        <div className="pl-6">
+                        <div className="pl-6 space-y-2">
                           <Select onValueChange={(value) => handleAssignToSpec(id, value)}>
                             <SelectTrigger className="h-8 w-full text-xs">
                               <SelectValue placeholder={activeChannel === 'all' ? "Assign to..." : `Assign to ${channelConfig[activeChannel]?.label || activeChannel}...`} />
@@ -1862,6 +1938,43 @@ export function CreativeAssetsManager({
                               })()}
                             </SelectContent>
                           </Select>
+                          
+                          {/* Click URL input for digital channels */}
+                          {['website', 'newsletter', 'streaming'].includes(activeChannel) && (
+                            <div className="flex items-center gap-2">
+                              {fileData.clickUrl ? (
+                                <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                              ) : (
+                                <Link className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                              )}
+                              <Input
+                                type="url"
+                                placeholder="Click-through URL (required)"
+                                className={`h-7 text-xs ${fileData.clickUrl ? 'border-green-300 bg-green-50/50' : ''}`}
+                                value={fileData.clickUrl || ''}
+                                onChange={(e) => {
+                                  setPendingFiles(prev => {
+                                    const next = new Map(prev);
+                                    const existing = next.get(id);
+                                    if (existing) {
+                                      next.set(id, { ...existing, clickUrl: e.target.value });
+                                    }
+                                    return next;
+                                  });
+                                }}
+                              />
+                              {fileData.clickUrl && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0"
+                                  onClick={() => window.open(fileData.clickUrl, '_blank')}
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -2123,6 +2236,55 @@ export function CreativeAssetsManager({
                                               {formatBytes(asset.detectedSpecs.fileSize)}
                                             </p>
                                           )}
+                                          
+                                          {/* Click URL for digital placements */}
+                                          {['website', 'newsletter', 'streaming'].includes(spec.channel || '') && (
+                                            <div className="pt-2 space-y-1">
+                                              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <Link className="h-3 w-3" />
+                                                Click-Through URL
+                                              </Label>
+                                              <div className="flex items-center gap-1">
+                                                <Input
+                                                  type="url"
+                                                  placeholder="https://advertiser.com/landing"
+                                                  className="h-7 text-xs flex-1"
+                                                  value={asset.clickUrl || ''}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  onChange={(e) => {
+                                                    const newAssetsMap = new Map(uploadedAssets);
+                                                    const existingAsset = newAssetsMap.get(spec.specGroupId);
+                                                    if (existingAsset) {
+                                                      newAssetsMap.set(spec.specGroupId, {
+                                                        ...existingAsset,
+                                                        clickUrl: e.target.value
+                                                      });
+                                                      onAssetsChange(newAssetsMap);
+                                                    }
+                                                  }}
+                                                />
+                                                {asset.clickUrl && (
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-7 w-7 p-0"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      window.open(asset.clickUrl, '_blank');
+                                                    }}
+                                                  >
+                                                    <ExternalLink className="h-3 w-3" />
+                                                  </Button>
+                                                )}
+                                              </div>
+                                              {!asset.clickUrl && (
+                                                <p className="text-xs text-amber-600">
+                                                  ⚠️ Required for tracking scripts
+                                                </p>
+                                              )}
+                                            </div>
+                                          )}
+                                          
                                           {/* Actions */}
                                           <div className="pt-1">
                                             {asset.uploadStatus === 'uploaded' && asset.assetId ? (
