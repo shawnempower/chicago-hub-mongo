@@ -44,7 +44,9 @@ import {
   Users,
   UserPlus,
   Bot,
-  BarChart3
+  BarChart3,
+  Play,
+  Pause
 } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
@@ -61,22 +63,28 @@ import { CampaignPerformanceDashboard } from '@/components/admin/CampaignPerform
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-800 border border-gray-300 hover:bg-gray-100',
+  active: 'bg-blue-100 text-blue-800',
+  paused: 'bg-amber-100 text-amber-800',
+  completed: 'bg-purple-100 text-purple-800',
+  cancelled: 'bg-red-100 text-red-800',
+  archived: 'bg-gray-100 text-gray-600',
+  // Legacy statuses (for backwards compatibility with existing data)
   pending_review: 'bg-yellow-100 text-yellow-800',
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
-  active: 'bg-blue-100 text-blue-800',
-  completed: 'bg-purple-100 text-purple-800',
-  archived: 'bg-gray-100 text-gray-600',
 };
 
 const STATUS_LABELS = {
   draft: 'Draft',
+  active: 'Active',
+  paused: 'Paused',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  archived: 'Archived',
+  // Legacy statuses (for backwards compatibility with existing data)
   pending_review: 'Pending Review',
   approved: 'Approved',
   rejected: 'Rejected',
-  active: 'Active',
-  completed: 'Completed',
-  archived: 'Archived',
 };
 
 export default function CampaignDetail() {
@@ -304,49 +312,75 @@ export default function CampaignDetail() {
                       {STATUS_LABELS[campaign.status as keyof typeof STATUS_LABELS]}
                     </Badge>
                     
-                    {/* Status-based Action Buttons */}
+                    {/* Status-based Action Buttons - Simplified Workflow */}
                     {campaign.status === 'draft' && (
-                      <Button
-                        onClick={() => handleStatusUpdate('pending_review')}
-                        disabled={updating}
-                        size="sm"
-                      >
-                        <Clock className="mr-2 h-4 w-4" />
-                        Submit for Review
-                      </Button>
-                    )}
-                    
-                    {campaign.status === 'pending_review' && (
-                      <>
-                        <Button
-                          onClick={() => handleStatusUpdate('approved')}
-                          disabled={updating}
-                          size="sm"
-                        >
-                          <CheckCircle2 className="mr-2 h-4 w-4" />
-                          Approve
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleStatusUpdate('rejected')}
-                          disabled={updating}
-                          size="sm"
-                        >
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Reject
-                        </Button>
-                      </>
-                    )}
-                    
-                    {campaign.status === 'approved' && (
                       <Button
                         onClick={() => handleStatusUpdate('active')}
                         disabled={updating}
                         size="sm"
+                        className="bg-green-600 hover:bg-green-700"
                       >
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Mark as Active
+                        <Play className="mr-2 h-4 w-4" />
+                        Launch Campaign
                       </Button>
+                    )}
+                    
+                    {/* Legacy: Handle old pending_review/approved statuses */}
+                    {(campaign.status === 'pending_review' || campaign.status === 'approved') && (
+                      <Button
+                        onClick={() => handleStatusUpdate('active')}
+                        disabled={updating}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Play className="mr-2 h-4 w-4" />
+                        Launch Campaign
+                      </Button>
+                    )}
+                    
+                    {campaign.status === 'active' && (
+                      <>
+                        <Button
+                          onClick={() => handleStatusUpdate('paused')}
+                          disabled={updating}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Pause className="mr-2 h-4 w-4" />
+                          Pause
+                        </Button>
+                        <Button
+                          onClick={() => handleStatusUpdate('completed')}
+                          disabled={updating}
+                          size="sm"
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Complete
+                        </Button>
+                      </>
+                    )}
+                    
+                    {campaign.status === 'paused' && (
+                      <>
+                        <Button
+                          onClick={() => handleStatusUpdate('active')}
+                          disabled={updating}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Play className="mr-2 h-4 w-4" />
+                          Resume
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => handleStatusUpdate('cancelled')}
+                          disabled={updating}
+                          size="sm"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Cancel
+                        </Button>
+                      </>
                     )}
                     
                     {/* Delete Button - Icon Only */}

@@ -72,6 +72,7 @@ import {
   Link,
   ExternalLink,
   GitBranch,
+  RefreshCw,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -266,6 +267,7 @@ export function CreativeAssetsManager({
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<{ assetId: string; specGroupId: string; fileName: string } | null>(null);
+  const [replacingSpecGroupId, setReplacingSpecGroupId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
   const [previewAsset, setPreviewAsset] = useState<{ url: string; fileName: string } | null>(null);
   const [processingZip, setProcessingZip] = useState(false);
@@ -856,6 +858,74 @@ export function CreativeAssetsManager({
     
     console.log(`[Upload] Processing ${fileArray.length} file(s)`);
     
+    // Handle replacement mode - replace an existing asset with a new one
+    if (replacingSpecGroupId && fileArray.length > 0) {
+      const file = fileArray[0]; // Only use first file for replacement
+      const existingAsset = uploadedAssets.get(replacingSpecGroupId);
+      
+      console.log(`[Replace] Replacing asset for spec group: ${replacingSpecGroupId}`);
+      
+      // First, delete the old asset if it exists on the server
+      if (existingAsset?.assetId) {
+        try {
+          const token = localStorage.getItem('auth_token');
+          await fetch(`${API_BASE_URL}/creative-assets/${existingAsset.assetId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          console.log(`[Replace] Deleted old asset: ${existingAsset.assetId}`);
+        } catch (error) {
+          console.error('[Replace] Error deleting old asset:', error);
+        }
+      }
+      
+      // Create a preview URL for the new file
+      const previewUrl = URL.createObjectURL(file);
+      
+      // Detect specs for the new file
+      let detectedSpecs;
+      if (file.type.startsWith('image/')) {
+        try {
+          const img = new Image();
+          await new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            img.src = previewUrl;
+          });
+          detectedSpecs = {
+            dimensions: `${img.naturalWidth}x${img.naturalHeight}`,
+            width: img.naturalWidth,
+            height: img.naturalHeight
+          };
+        } catch (e) {
+          console.warn('[Replace] Could not detect image dimensions');
+        }
+      }
+      
+      // Set the new file as pending for this spec group
+      const newAssetsMap = new Map(uploadedAssets);
+      newAssetsMap.set(replacingSpecGroupId, {
+        file,
+        previewUrl,
+        uploadStatus: 'pending',
+        detectedSpecs
+      });
+      setUploadedAssets(newAssetsMap);
+      
+      // Clear replacement mode
+      setReplacingSpecGroupId(null);
+      
+      toast({
+        title: 'Asset Replaced',
+        description: `"${file.name}" is ready to upload. Click "Upload All" to save.`
+      });
+      
+      // Call the callback if provided
+      onAssetsChange?.(newAssetsMap);
+      
+      return; // Exit early - don't process as regular upload
+    }
+    
     // Check if any ZIP files
     const zipFiles = fileArray.filter(f => 
       f.name.endsWith('.zip') || f.type === 'application/zip' || f.type === 'application/x-zip-compressed'
@@ -1104,7 +1174,7 @@ export function CreativeAssetsManager({
         variant: 'default',
       });
     }
-  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile, recentlySplitSpecId, pendingFiles, toast]);
+  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile, recentlySplitSpecId, pendingFiles, toast, replacingSpecGroupId]);
 
   // Dropzone
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
@@ -1297,6 +1367,13 @@ export function CreativeAssetsManager({
   const handleDeleteAssetClick = (assetId: string, specGroupId: string, fileName: string) => {
     setAssetToDelete({ assetId, specGroupId, fileName });
     setDeleteDialogOpen(true);
+  };
+  
+  // Replace asset - deletes old and opens file picker for new
+  const handleReplaceAssetClick = (specGroupId: string) => {
+    setReplacingSpecGroupId(specGroupId);
+    // Open file dialog - the handleFilesSelected will check for replacement mode
+    openFileDialog();
   };
 
   const handleDeleteAssetConfirm = async () => {
@@ -2556,6 +2633,12 @@ export function CreativeAssetsManager({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => handleReplaceAssetClick(specGroupId)}
+                            >
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Replace asset
+                            </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="text-destructive"
                               onClick={() => handleDeleteAssetClick(asset.assetId!, specGroupId, asset.file?.name || asset.fileName || 'asset')}

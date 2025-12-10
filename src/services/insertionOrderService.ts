@@ -639,14 +639,18 @@ export class InsertionOrderService {
           publicationId: pub.publicationId,
           publicationName: pub.publicationName,
           generatedAt: new Date(),
-          status: allAssetsReady ? 'sent' : 'draft', // Draft if assets missing
-          sentAt: allAssetsReady ? new Date() : undefined,
+          // Always send immediately - publications see "Assets Pending" status if not ready
+          status: 'sent',
+          sentAt: new Date(),
           // Asset references for dynamic loading (assets loaded via /fresh-assets endpoint)
           assetReferences,
           assetStatus: {
             totalPlacements,
             placementsWithAssets,
             allAssetsReady,
+            pendingUpload: !allAssetsReady,  // Mark as pending if assets not ready
+            assetsReadyAt: allAssetsReady ? new Date() : undefined,
+            lastAssetUpdateAt: allAssetsReady ? new Date() : undefined,
             lastChecked: new Date()
           },
           adSpecifications: [],
@@ -654,12 +658,12 @@ export class InsertionOrderService {
           placementStatuses,
           placementStatusHistory: [],
           statusHistory: [{
-            status: allAssetsReady ? 'sent' : 'draft',
+            status: 'sent',
             timestamp: new Date(),
             changedBy: userId,
             notes: allAssetsReady 
-              ? 'Order sent to publication' 
-              : `Order created - awaiting ${totalPlacements - placementsWithAssets} creative asset(s)`
+              ? 'Order sent to publication with all assets ready' 
+              : `Order sent to publication - awaiting ${totalPlacements - placementsWithAssets} creative asset(s)`
           }]
         };
 
@@ -799,6 +803,7 @@ export class InsertionOrderService {
       placementsWithAssets: number;
       allAssetsReady: boolean;
     };
+    assetsJustBecameReady?: boolean;  // True if assets transitioned to ready on this call
     error?: string;
   }> {
     try {
@@ -880,25 +885,57 @@ export class InsertionOrderService {
 
       // Update order's asset status if it changed
       const currentStatus = order.assetStatus;
-      if (!currentStatus || 
+      const statusChanged = !currentStatus || 
           currentStatus.placementsWithAssets !== placementsWithAssets ||
-          currentStatus.allAssetsReady !== allAssetsReady) {
+          currentStatus.allAssetsReady !== allAssetsReady;
+      
+      // Check if assets just became ready (transition from not ready to ready)
+      const assetsJustBecameReady = allAssetsReady && 
+          currentStatus && 
+          !currentStatus.allAssetsReady;
+      
+      if (statusChanged) {
+        const newAssetStatus: any = {
+          totalPlacements,
+          placementsWithAssets,
+          allAssetsReady,
+          pendingUpload: !allAssetsReady,
+          lastAssetUpdateAt: new Date(),
+          lastChecked: new Date()
+        };
+        
+        // Set assetsReadyAt when transitioning to ready
+        if (assetsJustBecameReady) {
+          newAssetStatus.assetsReadyAt = new Date();
+        } else if (currentStatus?.assetsReadyAt) {
+          // Preserve existing assetsReadyAt
+          newAssetStatus.assetsReadyAt = currentStatus.assetsReadyAt;
+        }
+        
         await this.ordersCollection.updateOne(
           { _id: order._id },
           { 
             $set: { 
-              assetStatus: {
-                totalPlacements,
-                placementsWithAssets,
-                allAssetsReady,
-                lastChecked: new Date()
-              },
+              assetStatus: newAssetStatus,
               updatedAt: new Date()
             } 
           }
         );
+        
+        // Return flag indicating assets just became ready (for notification triggering)
+        return {
+          success: true,
+          assets,
+          assetStatus: {
+            totalPlacements,
+            placementsWithAssets,
+            allAssetsReady
+          },
+          assetsJustBecameReady
+        };
       }
 
+      // No status change
       return {
         success: true,
         assets,
@@ -906,7 +943,8 @@ export class InsertionOrderService {
           totalPlacements,
           placementsWithAssets,
           allAssetsReady
-        }
+        },
+        assetsJustBecameReady: false
       };
     } catch (error) {
       console.error('Error loading fresh assets for order:', error);
@@ -914,6 +952,7 @@ export class InsertionOrderService {
         success: false,
         assets: [],
         assetStatus: { totalPlacements: 0, placementsWithAssets: 0, allAssetsReady: false },
+        assetsJustBecameReady: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }

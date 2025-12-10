@@ -695,6 +695,77 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
       return res.status(400).json({ error: result.error });
     }
 
+    // Send notification and email to the other party
+    try {
+      const { notifyMessageReceived } = await import('../../src/services/notificationService');
+      const { emailService } = await import('../emailService');
+      
+      // Get order details for notification context
+      const order = await insertionOrderService.getOrderByCampaignAndPublication(campaignId, parseInt(publicationId));
+      
+      if (order) {
+        if (senderType === 'hub') {
+          // Hub sent message -> notify publication users
+          const { permissionsService } = await import('../../src/integrations/mongodb/permissionsService');
+          const { getDatabase } = await import('../../src/integrations/mongodb/client');
+          const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+          
+          // Find users with publication access
+          const permissions = await getDatabase().collection(COLLECTIONS.USER_PERMISSIONS).find({
+            'publications.publicationId': parseInt(publicationId)
+          }).toArray();
+          
+          for (const perm of permissions) {
+            // Create in-app notification
+            await notifyMessageReceived({
+              userId: perm.userId,
+              senderName,
+              campaignId,
+              campaignName: order.campaignName,
+              orderId: order._id?.toString() || '',
+              publicationId: parseInt(publicationId),
+              messagePreview: content.trim()
+            });
+            
+            // Send email notification
+            if (emailService) {
+              const user = await getDatabase().collection(COLLECTIONS.USERS).findOne({ _id: perm.userId });
+              if (user?.email) {
+                // Use generic notification email
+                // Could add a sendMessageNotificationEmail method to emailService later
+                console.log(`📧 Would send message notification email to ${user.email}`);
+              }
+            }
+          }
+        } else {
+          // Publication sent message -> notify hub admins
+          const { getDatabase } = await import('../../src/integrations/mongodb/client');
+          const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+          
+          // Find hub admin users
+          const hubPermissions = await getDatabase().collection(COLLECTIONS.USER_PERMISSIONS).find({
+            'hubAccess.hubId': order.hubId,
+            role: { $in: ['admin', 'hub_user'] }
+          }).toArray();
+          
+          for (const perm of hubPermissions) {
+            await notifyMessageReceived({
+              userId: perm.userId,
+              senderName,
+              campaignId,
+              campaignName: order.campaignName,
+              orderId: order._id?.toString() || '',
+              hubId: order.hubId,
+              messagePreview: content.trim()
+            });
+          }
+        }
+      }
+    } catch (notifyError) {
+      console.error('Error sending message notifications:', notifyError);
+      // Don't fail the request if notification fails
+    }
+
     res.json({ success: true, message: result.message });
   } catch (error) {
     console.error('Error adding message:', error);

@@ -137,6 +137,9 @@ export interface PublicationInsertionOrderDocument {
     totalPlacements: number;
     placementsWithAssets: number;
     allAssetsReady: boolean;
+    pendingUpload: boolean;        // Assets expected but not yet uploaded
+    assetsReadyAt?: Date;          // When all assets became ready
+    lastAssetUpdateAt?: Date;      // When assets were last changed
     lastChecked?: Date;
   };
   

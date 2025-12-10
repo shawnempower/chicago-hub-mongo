@@ -79,6 +79,17 @@ interface RoleChangeEmailData {
   changedBy: string;
 }
 
+interface AssetsReadyEmailData {
+  recipientEmail: string;
+  recipientName?: string;
+  publicationName: string;
+  campaignName: string;
+  advertiserName?: string;
+  assetCount: number;
+  orderUrl: string;
+  hubName?: string;
+}
+
 export class EmailService {
   private mg: any;
   private config: EmailConfig;
@@ -792,6 +803,73 @@ export class EmailService {
     return await this.sendEmail({
       to: adminEmail,
       subject: `🎯 New Lead: ${leadData.businessName} - ${leadData.contactName}`,
+      html
+    });
+  }
+
+  // Assets ready notification email (for publications)
+  async sendAssetsReadyEmail(data: AssetsReadyEmailData): Promise<{ success: boolean; error?: string }> {
+    const infoBoxContent = `
+      <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
+        ${data.advertiserName ? `<strong style="color: ${this.BRAND_COLORS.navy};">🏢 Advertiser:</strong> ${data.advertiserName}<br>` : ''}
+        <strong style="color: ${this.BRAND_COLORS.navy};">📦 Assets Ready:</strong> <span style="color: ${this.BRAND_COLORS.green};">${data.assetCount} file${data.assetCount !== 1 ? 's' : ''}</span>
+      </p>
+    `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        Great news! The creative assets for your campaign <strong>"${data.campaignName}"</strong> are now ready for download.
+      </p>
+      
+      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.green)}
+      
+      <p style="margin: 0 0 12px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
+        You can now:
+      </p>
+      <ul style="margin: 0 0 24px 0; padding-left: 24px;">
+        <li style="margin-bottom: 8px;">📥 Download print-ready files</li>
+        <li style="margin-bottom: 8px;">📋 Copy tracking scripts for digital placements</li>
+        <li style="margin-bottom: 8px;">👁️ Preview all creative assets</li>
+        <li style="margin-bottom: 8px;">✅ Confirm placement specifications</li>
+      </ul>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('View Order & Download Assets', data.orderUrl, this.BRAND_COLORS.green)}
+      </div>
+      
+      <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${data.orderUrl}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${data.orderUrl}</a>
+      </p>
+      
+      ${this.generateAlertBox(
+        '<strong>Next Step:</strong> Review the creative assets and accept the placements to move forward with production.',
+        'info'
+      )}
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>${data.hubName || 'The Chicago Hub Team'}</strong>
+      </p>
+    `;
+
+    const html = this.generateEmailTemplate({
+      title: 'Creative Assets Ready!',
+      preheader: `Download assets for ${data.campaignName}`,
+      content,
+      headerColor: this.BRAND_COLORS.green,
+      headerIcon: '📦',
+      recipientEmail: data.recipientEmail
+    });
+
+    return await this.sendEmail({
+      to: data.recipientEmail,
+      subject: `📦 Creative Assets Ready: ${data.campaignName}`,
       html
     });
   }

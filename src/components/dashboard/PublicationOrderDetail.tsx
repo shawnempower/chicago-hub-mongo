@@ -15,7 +15,8 @@ import {
   Loader2, CheckCircle2, BarChart3, Code, Copy, ExternalLink,
   Calendar, DollarSign, Layers, MessageSquare, Download,
   ChevronDown, ChevronUp, Clock, Package, RefreshCw,
-  Eye, Users, Newspaper, Radio, Headphones, CalendarDays, Target
+  Eye, Users, Newspaper, Radio, Headphones, CalendarDays, Target,
+  Lock
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -513,16 +514,92 @@ export function PublicationOrderDetail() {
         <OrderStatusBadge status={order.status as OrderStatus} />
       </div>
 
-      {/* Review Banner for "sent" orders */}
-      {needsReview && (
+      {/* Assets Pending Banner - Show when assets are still being prepared */}
+      {order.assetStatus?.pendingUpload && !order.assetStatus?.allAssetsReady && (
         <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-amber-600 animate-pulse" />
+                <div>
+                  <p className="font-medium text-amber-900">Creative Assets Being Prepared</p>
+                  <p className="text-sm text-amber-700">
+                    The hub is preparing creative assets for this campaign. You'll be notified when they're ready.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <Progress 
+                  value={(order.assetStatus.placementsWithAssets / order.assetStatus.totalPlacements) * 100} 
+                  className="h-2 w-32" 
+                />
+                <span className="text-xs text-amber-600">
+                  {order.assetStatus.placementsWithAssets} of {order.assetStatus.totalPlacements} ready
+                </span>
+              </div>
+            </div>
+            
+            {/* Show which specific assets are missing */}
+            {freshAssets.filter(a => !a.hasAsset).length > 0 && (
+              <div className="mt-3 pt-3 border-t border-amber-200">
+                <p className="text-xs font-medium text-amber-800 mb-2">
+                  Awaiting assets for:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {freshAssets
+                    .filter(a => !a.hasAsset)
+                    .map(missing => (
+                      <div 
+                        key={missing.placementId} 
+                        className="flex items-center gap-1.5 text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full"
+                      >
+                        <AlertCircle className="h-3 w-3" />
+                        <span className="font-medium">{missing.placementName}</span>
+                        {missing.dimensions && (
+                          <span className="text-amber-600">({missing.dimensions})</span>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Assets Ready Banner - Show when assets just became ready */}
+      {order.assetStatus?.allAssetsReady && order.assetStatus?.assetsReadyAt && (
+        <Card className="border-green-300 bg-green-50">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="font-medium text-amber-900">Review Required</p>
-                  <p className="text-sm text-amber-700">
+                  <p className="font-medium text-green-900">All Creative Assets Ready</p>
+                  <p className="text-sm text-green-700">
+                    {order.assetStatus.totalPlacements} asset{order.assetStatus.totalPlacements !== 1 ? 's' : ''} available for download
+                  </p>
+                </div>
+              </div>
+              <Button size="sm" onClick={() => setActiveTab('placements')} className="bg-green-600 hover:bg-green-700">
+                <Download className="h-4 w-4 mr-2" />
+                View Assets
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Review Banner for "sent" orders */}
+      {needsReview && (
+        <Card className="border-blue-300 bg-blue-50">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-900">Review Required</p>
+                  <p className="text-sm text-blue-700">
                     Accept or reject {pendingCount} placement{pendingCount !== 1 ? 's' : ''} to confirm this order
                   </p>
                 </div>
@@ -1135,8 +1212,43 @@ export function PublicationOrderDetail() {
                           </div>
 
                           <div className="p-3 space-y-3">
-                            {/* Digital: Show Scripts only */}
-                            {isDigital && scripts.length > 0 && (
+                            {/* Access gating: scripts/assets only available after acceptance */}
+                            {(() => {
+                              const isPending = placementStatus === 'pending';
+                              const isRejected = placementStatus === 'rejected';
+                              const hasContent = isDigital ? scripts.length > 0 : placementAssets.length > 0;
+                              
+                              // Only show locked state if there's actually content to unlock
+                              if (isPending && hasContent) {
+                                return (
+                                  <div className="bg-gray-50 p-4 rounded-lg border-2 border-dashed border-gray-200">
+                                    <div className="flex items-center justify-center gap-2 text-gray-500">
+                                      <Lock className="h-5 w-5" />
+                                      <div className="text-center">
+                                        <p className="font-medium text-gray-600">Accept to Access</p>
+                                        <p className="text-sm text-gray-500">
+                                          {isDigital 
+                                            ? `${scripts.length} tracking script${scripts.length !== 1 ? 's' : ''} available after acceptance`
+                                            : `${placementAssets.length} asset${placementAssets.length !== 1 ? 's' : ''} available after acceptance`
+                                          }
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
+                              // Don't show anything for rejected placements
+                              if (isRejected) {
+                                return null;
+                              }
+                              
+                              // Show actual content for accepted/in_production/delivered
+                              return null; // Handled below
+                            })()}
+                            
+                            {/* Digital: Show Scripts only - after acceptance */}
+                            {isDigital && scripts.length > 0 && ['accepted', 'in_production', 'delivered'].includes(placementStatus) && (
                               <Accordion type="single" collapsible className="space-y-1">
                                 {scripts.map((script) => (
                                       <AccordionItem 
@@ -1313,16 +1425,16 @@ export function PublicationOrderDetail() {
                               </Accordion>
                             )}
 
-                            {/* Digital: No scripts yet */}
-                            {isDigital && scripts.length === 0 && (
+                            {/* Digital: No scripts yet - show awaiting message regardless of status */}
+                            {isDigital && scripts.length === 0 && placementStatus !== 'rejected' && (
                               <div className="text-center py-3 text-muted-foreground text-sm bg-gray-50 rounded">
                                 <Code className="h-5 w-5 mx-auto mb-1 opacity-50" />
                                 Scripts will appear when assets are uploaded
                               </div>
                             )}
 
-                            {/* Non-Digital: Show Assets */}
-                            {!isDigital && placementAssets.length > 0 && (
+                            {/* Non-Digital: Show Assets - only after acceptance */}
+                            {!isDigital && placementAssets.length > 0 && ['accepted', 'in_production', 'delivered'].includes(placementStatus) && (
                               <div className="space-y-2">
                                 {placementAssets.map((asset: any) => (
                                   <CreativeAssetCard
@@ -1335,8 +1447,8 @@ export function PublicationOrderDetail() {
                               </div>
                             )}
 
-                            {/* Non-Digital: No assets yet */}
-                            {!isDigital && placementAssets.length === 0 && (
+                            {/* Non-Digital: No assets yet - show awaiting message regardless of status */}
+                            {!isDigital && placementAssets.length === 0 && placementStatus !== 'rejected' && (
                               <div className="text-center py-3 text-muted-foreground text-sm bg-gray-50 rounded">
                                 <Clock className="h-5 w-5 mx-auto mb-1 opacity-50" />
                                 Awaiting creative assets from hub

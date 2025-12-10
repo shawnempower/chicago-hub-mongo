@@ -7,6 +7,7 @@ import { User, ChevronDown, Globe, BookOpen } from "lucide-react";
 import empowerLogo from "@/assets/empower-logo.png";
 import { PublicationSelector } from "@/components/PublicationSelector";
 import { HubSelector } from "@/components/HubSelector";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface HeaderProps {
   onAssistantClick: () => void;
@@ -147,6 +148,9 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
               Apply to Network
             </Button>
           )}
+          
+          {/* Notification Bell - only show for logged in users */}
+          {user && <NotificationBell />}
           
           {user ? (
             <DropdownMenu>

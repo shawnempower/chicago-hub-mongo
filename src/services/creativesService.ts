@@ -402,6 +402,23 @@ export class CreativesService {
   }
 
   /**
+   * Find asset by content hash (for deduplication)
+   * Returns existing asset if same content was already uploaded for this campaign
+   */
+  async findByHash(campaignId: string, contentHash: string): Promise<CreativeAsset | null> {
+    try {
+      return await this.collection.findOne({
+        'associations.campaignId': campaignId,
+        'metadata.contentHash': contentHash,
+        deletedAt: { $exists: false }
+      });
+    } catch (error) {
+      console.error('Error finding asset by hash:', error);
+      return null;
+    }
+  }
+
+  /**
    * Count assets matching filters
    */
   async count(filters: CreativeAssetListFilters): Promise<number> {

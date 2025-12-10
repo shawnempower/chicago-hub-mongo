@@ -34,6 +34,14 @@ interface InsertionOrder {
   campaignEndDate?: Date;
   messageCount?: number;
   hasUnreadMessages?: boolean;
+  assetStatus?: {
+    totalPlacements: number;
+    placementsWithAssets: number;
+    allAssetsReady: boolean;
+    pendingUpload?: boolean;
+    assetsReadyAt?: Date;
+    lastAssetUpdateAt?: Date;
+  };
 }
 
 interface PlacementStats {
@@ -72,6 +80,7 @@ export function HubOrdersManagement() {
     { value: 'rejected', label: 'Has Rejections' },
     { value: 'pending', label: 'Has Pending' },
     { value: 'no_assets', label: 'Missing Assets' },
+    { value: 'awaiting_assets', label: 'Awaiting Assets' },
   ] as const;
 
   useEffect(() => {
@@ -142,6 +151,11 @@ export function HubOrdersManagement() {
     }
     if (!order.uploadedAssetCount || order.uploadedAssetCount === 0) {
       issues.push('no_assets');
+    }
+    // Check for orders with partial assets (awaiting more)
+    const assetStatus = (order as any).assetStatus;
+    if (assetStatus?.pendingUpload && !assetStatus?.allAssetsReady) {
+      issues.push('awaiting_assets');
     }
     
     return issues;
@@ -659,6 +673,11 @@ export function HubOrdersManagement() {
                             {issues.includes('no_assets') && (
                               <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
                                 No Assets
+                              </Badge>
+                            )}
+                            {issues.includes('awaiting_assets') && !issues.includes('no_assets') && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                                Awaiting Assets
                               </Badge>
                             )}
                           </div>

@@ -1320,6 +1320,7 @@ export const COLLECTIONS = {
   TRACKING_SCRIPTS: 'tracking_scripts', // Generated tracking tags for digital channels
   DAILY_AGGREGATES: 'daily_aggregates', // Pre-computed daily rollups for reporting
   ESP_REFERENCE: 'esp_reference', // Email service provider compatibility data
+  NOTIFICATIONS: 'notifications', // In-app notifications for users
 } as const;
 
 // MongoDB Indexes Configuration
@@ -1552,5 +1553,14 @@ export const INDEXES = {
     { slug: 1 },                           // Unique lookup
     { htmlSupport: 1 },                    // Filter by support level
     { isActive: 1 }
+  ],
+  notifications: [
+    { userId: 1, read: 1, createdAt: -1 }, // User's unread notifications
+    { userId: 1, createdAt: -1 },          // User's all notifications (timeline)
+    { userId: 1, type: 1, createdAt: -1 }, // Filter by type
+    { groupKey: 1 },                       // For deduplication/grouping
+    { expiresAt: 1 },                      // For cleanup job
+    { campaignId: 1 },                     // Notifications for a campaign
+    { orderId: 1 }                         // Notifications for an order
   ]
 };

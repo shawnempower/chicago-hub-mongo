@@ -234,9 +234,17 @@ router.patch('/:id/status', authenticateToken, async (req: any, res: Response) =
     const isAdmin = profile?.isAdmin;
     const isCreator = campaign.metadata.createdBy === req.user.id;
     
-    // Only admin can approve/reject, creator can request approval
-    if (status === 'approved' && !isAdmin) {
-      return res.status(403).json({ error: 'Only admins can approve campaigns' });
+    // Valid status transitions - simplified workflow (draft -> active is now allowed)
+    // Legacy approval statuses are still supported for backwards compatibility
+    const validStatuses = ['draft', 'active', 'paused', 'completed', 'cancelled', 'archived', 
+                          'pending_review', 'pending_approval', 'approved', 'rejected'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status: ${status}` });
+    }
+    
+    // Legacy: Only admin can set legacy approved/rejected statuses
+    if ((status === 'approved' || status === 'rejected') && !isAdmin) {
+      return res.status(403).json({ error: 'Only admins can set legacy approval statuses' });
     }
     
     if (!isAdmin && !isCreator) {

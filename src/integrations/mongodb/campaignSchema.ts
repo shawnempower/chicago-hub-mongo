@@ -227,8 +227,9 @@ export interface Campaign {
     executedAt: Date;
   };
   
-  // Campaign status
-  status: 'draft' | 'pending_approval' | 'approved' | 'active' | 'paused' | 'completed' | 'cancelled';
+  // Campaign status - simplified workflow (draft -> active -> completed)
+  // Legacy statuses (pending_approval, approved, rejected, pending_review) kept for backwards compatibility
+  status: 'draft' | 'active' | 'paused' | 'completed' | 'cancelled' | 'archived' | 'pending_approval' | 'approved' | 'rejected' | 'pending_review';
   
   // Creative assets tracking
   creativeAssets?: {

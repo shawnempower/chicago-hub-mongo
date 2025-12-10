@@ -73,6 +73,7 @@ import performanceEntriesRouter from './routes/performance-entries';
 import proofOfPerformanceRouter from './routes/proof-of-performance';
 import reportingRouter from './routes/reporting';
 import trackingScriptsRouter from './routes/tracking-scripts';
+import notificationsRouter from './routes/notifications';
 import { authenticateToken } from './middleware/authenticate';
 import { activityTrackingMiddleware } from './middleware/activityTracking';
 import { createLogger } from '../src/utils/logger';
@@ -193,6 +194,7 @@ app.use('/api/performance-entries', activityTrackingMiddleware, performanceEntri
 app.use('/api/proof-of-performance', activityTrackingMiddleware, proofOfPerformanceRouter); // Proof uploads and verification
 app.use('/api/reporting', reportingRouter); // Campaign and order performance reporting
 app.use('/api/tracking-scripts', activityTrackingMiddleware, trackingScriptsRouter); // Ad tracking script generation
+app.use('/api/notifications', notificationsRouter); // User notifications
 
 // ===== STANDALONE ROUTES =====
 // Health check

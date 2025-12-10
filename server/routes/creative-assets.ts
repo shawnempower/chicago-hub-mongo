@@ -6,6 +6,7 @@
 
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
+import crypto from 'crypto';
 import { authenticateToken } from '../middleware/authenticate';
 import { creativesService } from '../../src/services/creativesService';
 import { fileStorage } from '../storage/fileStorage';
@@ -118,6 +119,27 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
       }
     }
 
+    // Calculate content hash for deduplication
+    const contentHash = crypto
+      .createHash('sha256')
+      .update(file.buffer)
+      .digest('hex');
+
+    // Check for existing asset with same content in this campaign
+    if (campaignId) {
+      const existingAsset = await creativesService.findByHash(campaignId, contentHash);
+      if (existingAsset) {
+        console.log(`⚡ Duplicate detected: "${file.originalname}" matches existing asset ${existingAsset._id}`);
+        return res.json({
+          assetId: existingAsset._id?.toString() || existingAsset.assetId,
+          fileUrl: existingAsset.metadata.fileUrl,
+          fileName: existingAsset.metadata.fileName,
+          isDuplicate: true,
+          message: 'Asset already exists - same file was previously uploaded'
+        });
+      }
+    }
+
     // Determine category and path for S3 storage
     const category = campaignId ? 'creative-assets/campaigns' : packageId ? 'creative-assets/packages' : 'creative-assets/insertion-orders';
     const subPath = campaignId || packageId || insertionOrderId;
@@ -160,7 +182,9 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
         detectedDPI: detectedSpecs?.estimatedDPI,
         // Store standard ID and spec group ID for matching
         suggestedStandardId,
-        specGroupId
+        specGroupId,
+        // Store content hash for deduplication
+        contentHash
       },
       associations: {
         campaignId,
@@ -207,6 +231,8 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
     if (campaignId) {
       try {
         const { generateScriptsForAsset } = await import('../../src/services/trackingScriptService');
+        console.log(`🔄 Auto-generating tracking scripts for asset: ${uploadResult.originalFileName} (campaign: ${campaignId})`);
+        
         const scriptResult = await generateScriptsForAsset({
           ...asset,
           fileUrl: uploadResult.fileUrl,
@@ -215,11 +241,109 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
         } as any);
         
         if (scriptResult.scriptsGenerated > 0) {
-          console.log(`Auto-generated ${scriptResult.scriptsGenerated} tracking scripts for uploaded asset`);
+          console.log(`✅ Auto-generated ${scriptResult.scriptsGenerated} tracking scripts for "${uploadResult.originalFileName}"`);
+        } else if (scriptResult.error) {
+          console.warn(`⚠️ Script generation returned error for "${uploadResult.originalFileName}": ${scriptResult.error}`);
+        } else {
+          console.log(`ℹ️ No scripts generated for "${uploadResult.originalFileName}" - may be non-digital asset or no orders found`);
         }
       } catch (scriptError) {
-        console.error('Error auto-generating tracking scripts:', scriptError);
+        console.error('❌ Error auto-generating tracking scripts:', scriptError);
         // Don't fail the upload, just log the error
+      }
+
+      // Check if this upload completes any orders' assets and send notifications
+      try {
+        const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+        const orders = await insertionOrderService.getOrdersForCampaign(campaignId);
+        
+        for (const order of orders) {
+          // Check fresh asset status for each order
+          const freshStatus = await insertionOrderService.loadFreshAssetsForOrder(
+            order.campaignId,
+            order.publicationId
+          );
+          
+          // If assets just became ready, send notification
+          if (freshStatus.assetsJustBecameReady) {
+            console.log(`📧 Assets just completed for order: ${order.publicationName} - sending notification`);
+            
+            try {
+              // Get publication contact email
+              const { getDatabase } = await import('../../src/integrations/mongodb/client');
+              const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+              const db = getDatabase();
+              
+              // Find publication to get contact info
+              const publication = await db.collection(COLLECTIONS.PUBLICATIONS).findOne({
+                publicationId: order.publicationId
+              });
+              
+              // Find users with access to this publication
+              const permissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
+                'publications.publicationId': order.publicationId
+              }).toArray();
+              
+              // Get user emails from permissions
+              const userIds = permissions.map((p: any) => p.userId);
+              
+              if (userIds.length > 0) {
+                const { emailService } = await import('../emailService');
+                
+                if (emailService) {
+                  // Get campaign for advertiser name
+                  const campaign = await db.collection(COLLECTIONS.CAMPAIGNS).findOne({
+                    campaignId: order.campaignId
+                  });
+                  
+                  // Send email to each user with publication access
+                  const { ObjectId } = await import('mongodb');
+                  for (const userId of userIds) {
+                    const userIdObj = typeof userId === 'string' ? new ObjectId(userId) : userId;
+                    const user = await db.collection(COLLECTIONS.USERS).findOne({
+                      _id: userIdObj
+                    });
+                    
+                    if (user?.email) {
+                      const orderUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`;
+                      
+                      // Send email notification
+                      await emailService.sendAssetsReadyEmail({
+                        recipientEmail: user.email,
+                        recipientName: user.firstName,
+                        publicationName: order.publicationName,
+                        campaignName: order.campaignName,
+                        advertiserName: campaign?.basicInfo?.advertiserName,
+                        assetCount: freshStatus.assetStatus.placementsWithAssets,
+                        orderUrl,
+                        hubName: campaign?.hubName
+                      });
+
+                      // Create in-app notification
+                      const { notifyAssetsReady } = await import('../../src/services/notificationService');
+                      await notifyAssetsReady({
+                        userId: userId.toString(),
+                        publicationId: order.publicationId,
+                        campaignId: order.campaignId,
+                        campaignName: order.campaignName,
+                        orderId: order._id?.toString() || '',
+                        assetCount: freshStatus.assetStatus.placementsWithAssets
+                      });
+
+                      console.log(`✅ Sent assets ready email + notification to ${user.email} for ${order.publicationName}`);
+                    }
+                  }
+                }
+              }
+            } catch (notifyError) {
+              console.error('Error sending assets ready notification:', notifyError);
+              // Don't fail the upload for notification errors
+            }
+          }
+        }
+      } catch (orderError) {
+        console.error('Error checking order asset status:', orderError);
+        // Don't fail the upload for notification errors
       }
     }
 

@@ -151,7 +151,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
         <h3 className="text-2xl font-bold mb-2">Campaign Created Successfully!</h3>
         <p className="text-muted-foreground text-center max-w-md">
           Your campaign "{formData.name}" has been created and saved as a draft. 
-          You can now generate an insertion order and submit it for approval.
+          You can now generate an insertion order and launch the campaign.
         </p>
         <Badge variant="secondary" className="mt-4">
           Campaign ID: {campaignId}
@@ -272,11 +272,11 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
             </div>
 
             <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <CheckCircle2 className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h4 className="font-semibold text-amber-900 mb-1">Submit for Approval</h4>
-                <p className="text-sm text-amber-800">
-                  When ready, submit the campaign for admin review and approval before launch.
+                <h4 className="font-semibold text-green-900 mb-1">Ready to Launch</h4>
+                <p className="text-sm text-green-800">
+                  When ready, launch the campaign to start sending insertion orders to publications.
                 </p>
               </div>
             </div>

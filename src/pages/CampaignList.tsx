@@ -39,22 +39,28 @@ import { cn } from '@/lib/utils';
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-800',
+  active: 'bg-blue-100 text-blue-800',
+  paused: 'bg-amber-100 text-amber-800',
+  completed: 'bg-purple-100 text-purple-800',
+  cancelled: 'bg-red-100 text-red-800',
+  archived: 'bg-gray-100 text-gray-600',
+  // Legacy statuses (for backwards compatibility)
   pending_review: 'bg-yellow-100 text-yellow-800',
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
-  active: 'bg-blue-100 text-blue-800',
-  completed: 'bg-purple-100 text-purple-800',
-  archived: 'bg-gray-100 text-gray-600',
 };
 
 const STATUS_LABELS = {
   draft: 'Draft',
+  active: 'Active',
+  paused: 'Paused',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  archived: 'Archived',
+  // Legacy statuses (for backwards compatibility)
   pending_review: 'Pending Review',
   approved: 'Approved',
   rejected: 'Rejected',
-  active: 'Active',
-  completed: 'Completed',
-  archived: 'Archived',
 };
 
 export default function CampaignList() {
@@ -205,9 +211,12 @@ export default function CampaignList() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Statuses</SelectItem>
-                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
-                      ))}
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="paused">Paused</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
                     </SelectContent>
                   </Select>
 

@@ -293,18 +293,19 @@ export async function generateScriptsForAsset(
     // Get campaign ID from asset
     const campaignId = asset.associations?.campaignId || (asset as any).campaignId;
     if (!campaignId) {
-      console.log('Asset has no campaignId, skipping script generation');
+      console.log('[TrackingScripts] Asset has no campaignId, skipping script generation');
+      console.log('[TrackingScripts] Asset associations:', JSON.stringify(asset.associations || {}));
       return { success: true, scriptsGenerated: 0 };
     }
 
     // Check if this is a digital asset (image files for web/newsletter/streaming)
     const channel = (
-      asset.associations?.channel || 
-      asset.specifications?.channel || 
+      asset.associations?.channel ||
+      asset.specifications?.channel ||
       asset.metadata?.channel ||
       ''
     ).toLowerCase();
-    
+
     const fileType = asset.fileType || asset.metadata?.fileType || '';
     const fileName = asset.originalFilename || asset.metadata?.originalFileName || '';
     const isImage = fileType.startsWith('image/') || 
@@ -314,21 +315,24 @@ export async function generateScriptsForAsset(
     
     const isDigitalChannel = DIGITAL_CHANNELS.some(dc => channel.includes(dc));
     
+    console.log(`[TrackingScripts] Processing asset: ${fileName}, fileType: ${fileType}, channel: ${channel}, isImage: ${isImage}, isDigitalChannel: ${isDigitalChannel}`);
+    
     // Only generate scripts for digital assets (images or explicitly digital channels)
     if (!isImage && !isDigitalChannel) {
-      console.log(`Asset ${fileName} is not digital, skipping script generation`);
+      console.log(`[TrackingScripts] Asset ${fileName} is not digital (fileType: ${fileType}, channel: ${channel}), skipping`);
       return { success: true, scriptsGenerated: 0 };
     }
 
     // Get campaign details
     const campaign = await campaignsCollection.findOne({ campaignId });
     if (!campaign) {
-      console.log(`Campaign ${campaignId} not found`);
+      console.log(`[TrackingScripts] Campaign ${campaignId} not found in database`);
       return { success: false, scriptsGenerated: 0, error: 'Campaign not found' };
     }
 
     const advertiserName = campaign.basicInfo?.advertiserName || 'Advertiser';
     const campaignName = campaign.basicInfo?.name || 'Campaign';
+    console.log(`[TrackingScripts] Found campaign: ${campaignName}`);
 
     // Get ALL orders for this campaign
     const orders = await ordersCollection.find({
@@ -337,11 +341,11 @@ export async function generateScriptsForAsset(
     }).toArray();
 
     if (orders.length === 0) {
-      console.log(`No orders found for campaign ${campaignId}`);
+      console.log(`[TrackingScripts] No orders found for campaign ${campaignId} - scripts cannot be generated without orders`);
       return { success: true, scriptsGenerated: 0 };
     }
 
-    console.log(`Generating scripts for asset "${fileName}" across ${orders.length} orders`);
+    console.log(`[TrackingScripts] Generating scripts for asset "${fileName}" across ${orders.length} orders`);
 
     // Parse dimensions from asset
     let width = asset.specifications?.width || asset.metadata?.width;
