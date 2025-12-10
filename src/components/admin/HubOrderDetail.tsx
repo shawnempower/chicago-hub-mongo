@@ -250,7 +250,7 @@ export function HubOrderDetail() {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{order.publicationName}</h1>
+            <h1 className="text-lg font-semibold font-sans">{order.publicationName}</h1>
             <p className="text-sm text-muted-foreground">
               Order for: {order.campaignName}
             </p>

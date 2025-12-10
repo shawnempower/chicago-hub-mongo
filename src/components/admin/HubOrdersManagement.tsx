@@ -338,7 +338,13 @@ export function HubOrdersManagement() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold font-sans text-slate-900">Orders Management</h2>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold font-sans">
+          Orders
+        </h1>
+        <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
+      </div>
 
       {/* Stats */}
       {stats && (
@@ -397,7 +403,6 @@ export function HubOrdersManagement() {
               {hasActiveFilters ? ` of ${orders.length}` : ''})
             </CardTitle>
             <div className="flex items-center gap-2 overflow-x-auto">
-              <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
               {/* Campaign Filter */}
               <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
                 <SelectTrigger 

@@ -98,8 +98,11 @@ export const HubTeamManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold font-sans text-slate-900">Team Management</h2>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold font-sans">
+          Team
+        </h1>
         <Button onClick={() => setInviteDialogOpen(true)} className="gap-2">
           <UserPlus className="h-4 w-4" />
           Invite User

@@ -1050,12 +1050,9 @@ export const HubPackageManagement = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Package Builder</h2>
-          <p className="text-muted-foreground">
-            Build and manage custom media packages
-          </p>
-        </div>
+        <h1 className="text-lg font-semibold font-sans">
+          Packages
+        </h1>
         <div className="flex gap-2">
           <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
           <Button 

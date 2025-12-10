@@ -175,15 +175,29 @@ export default function CampaignList() {
                 </Card>
               ) : null}
 
-              {/* Header with filters and search - all in one row */}
-              <div className="flex items-center justify-between gap-4 bg-white rounded-lg border border-slate-200 px-6 py-4 mb-6">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-base font-semibold font-sans text-slate-900 whitespace-nowrap">
-                    All Campaigns ({campaigns.length})
-                  </h2>
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <h1 className="text-lg font-semibold font-sans">
+                    Campaigns ({campaigns.length})
+                  </h1>
                 </div>
-                
-                <div className="flex items-center gap-2">
+
+                {/* Filters and search row */}
+                <div className="flex items-center justify-between gap-4">
+                  {/* Search Bar - Left */}
+                  <div className="relative min-w-[300px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search campaigns..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 h-9 border-input bg-white hover:bg-[#F9F8F3] shadow-sm transition-all duration-200"
+                    />
+                  </div>
+
+                  {/* Filters - Right */}
+                  <div className="flex items-center gap-2">
                   {/* Status Filter Dropdown */}
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="h-9 w-[180px] border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200">
@@ -197,27 +211,16 @@ export default function CampaignList() {
                     </SelectContent>
                   </Select>
 
-                  {/* Search Bar */}
-                  <div className="relative min-w-[240px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search campaigns..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 h-9 border-input bg-white hover:bg-[#F9F8F3] shadow-sm transition-all duration-200"
-                    />
-                  </div>
-
                   {/* Create Campaign Button */}
                   <Button onClick={() => navigate('/campaigns/new')} size="sm" className="h-9">
                     <Plus className="mr-2 h-4 w-4" />
                     Create Campaign
                   </Button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Campaign List */}
-              {loading ? (
+                {/* Campaign List */}
+                {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
@@ -321,6 +324,7 @@ export default function CampaignList() {
                   ))}
                 </div>
               )}
+              </div>
             </div>
           </div>
         </main>

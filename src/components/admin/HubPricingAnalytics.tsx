@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { PricingAnalytics, ChannelPricingAnalytics } from '@/hooks/useDashboardStats';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
 import { Loader2, TrendingUp, AlertCircle, Info, Star, ThumbsUp, AlertTriangle, CheckCircle } from 'lucide-react';
@@ -129,6 +130,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
   const { selectedHubId } = useHubContext();
   const [activeChannel, setActiveChannel] = useState('website');
   const [showActivityLog, setShowActivityLog] = useState(false);
+  const [pricingFilter, setPricingFilter] = useState<'all' | 'way-too-high' | 'too-high' | 'fair'>('all');
 
   // Extract detailed inventory items from publications
   const detailedInventory = useMemo(() => {
@@ -496,33 +498,18 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 font-sans text-lg">
-                <TrendingUp className="h-5 w-5" />
-                Pricing Analytics by Channel
-              </CardTitle>
-              <CardDescription>
-                Unit economics analysis showing cost per 1000 audience reach for each pricing model.
-                Compare pricing models fairly by normalizing to audience size (CPM, per 1K subscribers, per 1K circulation, etc.).
-              </CardDescription>
-            </div>
-            <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
-          </div>
-        </CardHeader>
-      </Card>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold font-sans">
+          Pricing Analytics
+        </h1>
+        <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
+      </div>
 
       {/* Pricing Health Score Card */}
       {pricingHealth && (
-        <Card className={`border ${
-          pricingHealth.health.score >= 80 ? 'border-green-300 bg-green-50/50' :
-          pricingHealth.health.score >= 60 ? 'border-yellow-300 bg-yellow-50/50' :
-          'border-gray-300 bg-gray-50/50'
-        }`}>
+        <Card className="border-gray-200 bg-white">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between">
               <div className="flex-1">
                 <CardTitle className="text-xl flex items-center gap-2 font-sans">
                   {pricingHealth.health.score >= 80 ? <CheckCircle className="h-6 w-6 text-green-600" /> :
@@ -536,53 +523,85 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                   {pricingHealth.health.score >= 80 ? 
                     "Most of your inventory is priced competitively. You're ready to build great packages!" :
                    pricingHealth.health.score >= 60 ?
-                    "Some items are overpriced compared to similar outlets. Review the alerts below to improve." :
-                    "Many items are significantly overpriced. This makes it hard to sell packages. Fix the critical issues below."}
+                    "Some items are overpriced compared to similar outlets." :
+                    "Many items are significantly overpriced. This makes it hard to sell packages."}
                 </CardDescription>
               </div>
-              <div className="text-right">
-                <div className={`text-6xl font-bold font-sans ${
-                  pricingHealth.health.score >= 80 ? 'text-green-600' :
-                  pricingHealth.health.score >= 60 ? 'text-yellow-600' :
-                  'text-red-600'
-                }`}>
-                  {pricingHealth.health.score}
+              <div className={`flex flex-col items-center justify-center px-8 py-4 rounded-lg border ${
+                pricingHealth.health.score >= 80 ? 'border-green-600 bg-green-50' :
+                pricingHealth.health.score >= 60 ? 'border-yellow-600 bg-yellow-50' :
+                'border-red-600 bg-red-50'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`text-4xl font-bold font-sans ${
+                    pricingHealth.health.score >= 80 ? 'text-green-600' :
+                    pricingHealth.health.score >= 60 ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`}>
+                    {pricingHealth.health.score}
+                  </div>
+                  <div className={`text-sm font-sans ${
+                    pricingHealth.health.score >= 80 ? 'text-green-600' :
+                    pricingHealth.health.score >= 60 ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`}>
+                    health score
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground mt-1 font-sans">health score</div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-5 gap-3">
-              <div className="bg-white rounded-lg p-3 text-center border border-green-300">
-                <Star className="h-5 w-5 text-green-600 mx-auto mb-1" />
-                <div className="text-2xl font-bold font-sans text-green-600">{pricingHealth.health.breakdown.excellent}</div>
-                <div className="text-xs text-muted-foreground font-medium font-sans">Great Value</div>
-                <div className="text-[10px] text-green-700 mt-1 font-sans">Use in packages</div>
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <div className="flex items-start gap-2 text-left mb-2">
+                  <Star className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-semibold font-sans text-green-600">Great Value</div>
+                    <div className="text-[10px] text-muted-foreground font-sans">Use in packages</div>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.excellent}</div>
               </div>
-              <div className="bg-white rounded-lg p-3 text-center border border-green-200">
-                <ThumbsUp className="h-5 w-5 text-green-500 mx-auto mb-1" />
-                <div className="text-2xl font-bold font-sans text-green-500">{pricingHealth.health.breakdown.good}</div>
-                <div className="text-xs text-muted-foreground font-medium font-sans">Good Price</div>
-                <div className="text-[10px] text-green-600 mt-1 font-sans">Ready to sell</div>
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <div className="flex items-start gap-2 text-left mb-2">
+                  <ThumbsUp className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-semibold font-sans text-green-500">Good Price</div>
+                    <div className="text-[10px] text-muted-foreground font-sans">Ready to sell</div>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.good}</div>
               </div>
-              <div className="bg-white rounded-lg p-3 text-center border border-yellow-200">
-                <Info className="h-5 w-5 text-yellow-600 mx-auto mb-1" />
-                <div className="text-2xl font-bold font-sans text-yellow-600">{pricingHealth.health.breakdown.fair}</div>
-                <div className="text-xs text-muted-foreground font-medium font-sans">Fair</div>
-                <div className="text-[10px] text-yellow-700 mt-1 font-sans">Could improve</div>
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <div className="flex items-start gap-2 text-left mb-2">
+                  <Info className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-semibold font-sans text-yellow-600">Fair</div>
+                    <div className="text-[10px] text-muted-foreground font-sans">Could improve</div>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.fair}</div>
               </div>
-              <div className="bg-white rounded-lg p-3 text-center border border-orange-300">
-                <AlertTriangle className="h-5 w-5 text-orange-600 mx-auto mb-1" />
-                <div className="text-2xl font-bold font-sans text-orange-600">{pricingHealth.health.breakdown.review}</div>
-                <div className="text-xs text-muted-foreground font-medium font-sans">Too High</div>
-                <div className="text-[10px] text-orange-700 mt-1 font-sans">Needs review</div>
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <div className="flex items-start gap-2 text-left mb-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-semibold font-sans text-orange-600">Too High</div>
+                    <div className="text-[10px] text-muted-foreground font-sans">Needs review</div>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.review}</div>
               </div>
-              <div className="bg-white rounded-lg p-3 text-center border border-red-300">
-                <AlertCircle className="h-5 w-5 text-red-600 mx-auto mb-1" />
-                <div className="text-2xl font-bold font-sans text-red-600">{pricingHealth.health.breakdown.critical}</div>
-                <div className="text-xs text-muted-foreground font-medium font-sans">Way Too High</div>
-                <div className="text-[10px] text-red-700 mt-1 font-sans">Fix immediately</div>
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <div className="flex items-start gap-2 text-left mb-2">
+                  <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-semibold font-sans text-red-600">Way Too High</div>
+                    <div className="text-[10px] text-muted-foreground font-sans">Fix immediately</div>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.critical}</div>
               </div>
             </div>
           </CardContent>
@@ -591,367 +610,204 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
 
       {/* All Publications by Pricing Status */}
       {detailedInventory.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2 font-sans">
-              <AlertCircle className="h-5 w-5" />
-              All Publications by Pricing Status
-            </CardTitle>
-            <CardDescription>
-              Complete inventory breakdown showing which publications are priced fairly, too high, or way too high
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="way-too-high" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="way-too-high" className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                  Way Too High ({detailedInventory.filter(item => item.assessment.status === 'critical').length})
-                </TabsTrigger>
-                <TabsTrigger value="too-high" className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-orange-600" />
-                  Too High ({detailedInventory.filter(item => item.assessment.status === 'review').length})
-                </TabsTrigger>
-                <TabsTrigger value="fair" className="flex items-center gap-2">
-                  <Info className="h-4 w-4 text-yellow-600" />
-                  Fair ({detailedInventory.filter(item => item.assessment.status === 'fair').length})
-                </TabsTrigger>
-              </TabsList>
+        <>
+          {/* Filter Buttons - Outside Card */}
+          <div className="flex justify-between items-center">
+            <div className="flex gap-2">
+              <button 
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  pricingFilter === 'all' 
+                    ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                    : 'border border-transparent'
+                }`}
+                style={pricingFilter !== 'all' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
+                onClick={() => setPricingFilter('all')}
+              >
+                All
+              </button>
+              <button 
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                  pricingFilter === 'way-too-high' 
+                    ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                    : 'border border-transparent'
+                }`}
+                style={pricingFilter !== 'way-too-high' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
+                onClick={() => setPricingFilter('way-too-high')}
+              >
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                Way Too High ({detailedInventory.filter(item => item.assessment.status === 'critical').length})
+              </button>
+              <button 
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                  pricingFilter === 'too-high' 
+                    ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                    : 'border border-transparent'
+                }`}
+                style={pricingFilter !== 'too-high' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
+                onClick={() => setPricingFilter('too-high')}
+              >
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                Too High ({detailedInventory.filter(item => item.assessment.status === 'review').length})
+              </button>
+              <button 
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                  pricingFilter === 'fair' 
+                    ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                    : 'border border-transparent'
+                }`}
+                style={pricingFilter !== 'fair' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
+                onClick={() => setPricingFilter('fair')}
+              >
+                <Info className="h-4 w-4 text-yellow-600" />
+                Fair ({detailedInventory.filter(item => item.assessment.status === 'fair').length})
+              </button>
+            </div>
+          </div>
 
-              {/* Way Too High */}
-              <TabsContent value="way-too-high" className="mt-4">
-                {(() => {
-                  const criticalItems = detailedInventory
-                    .filter(item => item.assessment.status === 'critical')
-                    .sort((a, b) => b.assessment.multiplier - a.assessment.multiplier);
-                  
-                  if (criticalItems.length === 0) {
-                    return (
-                      <div className="text-center py-8 text-green-600">
-                        <CheckCircle className="h-12 w-12 mx-auto mb-3" />
-                        <p className="font-semibold">No Critical Pricing Issues!</p>
-                        <p className="text-sm text-muted-foreground">All items are priced reasonably.</p>
-                      </div>
-                    );
-                  }
+          {/* Filtered Items Display - Outside Card */}
+          {(() => {
+            const getFilteredItems = () => {
+              if (pricingFilter === 'all') {
+                return detailedInventory.sort((a, b) => b.assessment.multiplier - a.assessment.multiplier);
+              } else if (pricingFilter === 'way-too-high') {
+                return detailedInventory
+                  .filter(item => item.assessment.status === 'critical')
+                  .sort((a, b) => b.assessment.multiplier - a.assessment.multiplier);
+              } else if (pricingFilter === 'too-high') {
+                return detailedInventory
+                  .filter(item => item.assessment.status === 'review')
+                  .sort((a, b) => b.assessment.multiplier - a.assessment.multiplier);
+              } else {
+                return detailedInventory
+                  .filter(item => item.assessment.status === 'fair')
+                  .sort((a, b) => a.unitPrice - b.unitPrice);
+              }
+            };
+
+            const filteredItems = getFilteredItems();
+
+            if (filteredItems.length === 0) {
+              return (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center py-8 text-green-600">
+                      <CheckCircle className="h-12 w-12 mx-auto mb-3" />
+                      <p className="font-semibold">No Items in This Category!</p>
+                      <p className="text-sm text-muted-foreground">All items are priced reasonably.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            return (
+              <div className="space-y-3">
+                {filteredItems.map((item, idx) => {
+                  const suggested = getSuggestedPrice(item.channel, item.pricingModel, item.audience);
+                  const textColor = item.assessment.status === 'critical' ? 'text-red-700' :
+                                   item.assessment.status === 'review' ? 'text-orange-700' :
+                                   'text-yellow-700';
+                  const strongTextColor = item.assessment.status === 'critical' ? 'text-red-600' :
+                                         item.assessment.status === 'review' ? 'text-orange-600' :
+                                         'text-yellow-700';
+                  const badgeBg = item.assessment.status === 'critical' ? 'bg-red-100 border-red-300' :
+                                 item.assessment.status === 'review' ? 'bg-orange-100 border-orange-300' :
+                                 'bg-yellow-100 border-yellow-300';
+                  const badgeText = item.assessment.status === 'critical' ? 'text-red-700' :
+                                   item.assessment.status === 'review' ? 'text-orange-700' :
+                                   'text-yellow-700';
+                  const IconComponent = item.assessment.status === 'critical' ? AlertCircle :
+                                       item.assessment.status === 'review' ? AlertTriangle :
+                                       Info;
+                  const statusLabel = item.assessment.status === 'critical' ? 'Way Too High' :
+                                     item.assessment.status === 'review' ? 'Too High' :
+                                     'Fair';
 
                   return (
-                    <div className="space-y-3">
-                      <div className="text-sm text-muted-foreground mb-3">
-                        These items are 10x+ over benchmark pricing. They need immediate attention.
-                      </div>
-                      {criticalItems.map((item, idx) => {
-                        const suggested = getSuggestedPrice(item.channel, item.pricingModel, item.audience);
-                        return (
-                          <div key={idx} className="border rounded-lg p-4 bg-red-50/50 border-red-200">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="font-bold text-base mb-1">
-                                  {item.publicationName}
-                                </div>
-                                <div className="text-sm text-gray-700 mb-2">
-                                  {item.itemName} • <Badge variant="outline" className="capitalize">{item.channel}</Badge> • {PRICING_MODEL_LABELS[item.pricingModel] || item.pricingModel}
-                                </div>
-                                <div className="text-sm space-y-1">
-                                  <div>
-                                    <span className="text-red-700">Charging ${item.price.toLocaleString()}/month to reach {item.audience.toLocaleString()} people</span>
-                                  </div>
-                                  <div className="font-semibold text-red-900">
-                                    ${item.unitPrice.toFixed(2)} per 1K • {item.assessment.multiplier.toFixed(1)}x over benchmark
-                                  </div>
-                                  {suggested && (
-                                    <div className="text-green-700">
-                                      Suggested: ${suggested.low}-${suggested.high}/month (${suggested.target} target)
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <span className="text-3xl ml-4">{item.assessment.icon}</span>
+                    <Card key={idx} className="bg-white border-gray-200">
+                      <CardContent className="pt-6">
+                        {/* Header Row */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="font-bold text-base text-gray-900">
+                              {item.publicationName}
+                            </div>
+                            <div className="text-sm text-gray-700">
+                              {item.itemName} • <span className="capitalize">{item.channel}</span> • {PRICING_MODEL_LABELS[item.pricingModel] || item.pricingModel}
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </TabsContent>
-
-              {/* Too High */}
-              <TabsContent value="too-high" className="mt-4">
-                {(() => {
-                  const reviewItems = detailedInventory
-                    .filter(item => item.assessment.status === 'review')
-                    .sort((a, b) => b.assessment.multiplier - a.assessment.multiplier);
-                  
-                  if (reviewItems.length === 0) {
-                    return (
-                      <div className="text-center py-8 text-green-600">
-                        <CheckCircle className="h-12 w-12 mx-auto mb-3" />
-                        <p className="font-semibold">No Items Need Review!</p>
-                        <p className="text-sm text-muted-foreground">All items are priced within acceptable ranges.</p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="space-y-3">
-                      <div className="text-sm text-muted-foreground mb-3">
-                        These items are 2-10x over benchmark pricing. Consider reviewing and adjusting.
-                      </div>
-                      {reviewItems.map((item, idx) => {
-                        const suggested = getSuggestedPrice(item.channel, item.pricingModel, item.audience);
-                        return (
-                          <div key={idx} className="border rounded-lg p-4 bg-orange-50/50 border-orange-200">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="font-bold text-base mb-1">
-                                  {item.publicationName}
-                                </div>
-                                <div className="text-sm text-gray-700 mb-2">
-                                  {item.itemName} • <Badge variant="outline" className="capitalize">{item.channel}</Badge> • {PRICING_MODEL_LABELS[item.pricingModel] || item.pricingModel}
-                                </div>
-                                <div className="text-sm space-y-1">
-                                  <div>
-                                    <span className="text-orange-700">Charging ${item.price.toLocaleString()}/month to reach {item.audience.toLocaleString()} people</span>
-                                  </div>
-                                  <div className="font-semibold text-orange-900">
-                                    ${item.unitPrice.toFixed(2)} per 1K • {item.assessment.multiplier.toFixed(1)}x over benchmark
-                                  </div>
-                                  {suggested && (
-                                    <div className="text-green-700">
-                                      Suggested: ${suggested.low}-${suggested.high}/month (${suggested.target} target)
-                                    </div>
-                                  )}
-                                </div>
+                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium flex-shrink-0 ${badgeBg} ${badgeText}`}>
+                            <IconComponent className="h-3.5 w-3.5" />
+                            {statusLabel}
+                          </div>
+                        </div>
+                        
+                        {/* 2-Column Layout */}
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Column 1: Currently Charging (Containerized) */}
+                          <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                            <div className="text-xs text-gray-600 mb-2 font-medium">Currently Charging</div>
+                            <div className="text-sm space-y-1">
+                              <div className="text-gray-700">
+                                ${item.price.toLocaleString()}/month to reach {item.audience.toLocaleString()} people
                               </div>
-                              <span className="text-3xl ml-4">{item.assessment.icon}</span>
+                              <div className="font-semibold text-gray-900">
+                                ${item.unitPrice.toFixed(2)} per 1K • <span className={strongTextColor}>{item.assessment.multiplier.toFixed(1)}x{item.assessment.status === 'fair' ? '' : ' over'} benchmark</span>
+                              </div>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </TabsContent>
-
-              {/* Fair */}
-              <TabsContent value="fair" className="mt-4">
-                {(() => {
-                  const fairItems = detailedInventory
-                    .filter(item => item.assessment.status === 'fair')
-                    .sort((a, b) => a.unitPrice - b.unitPrice);
-                  
-                  if (fairItems.length === 0) {
-                    return (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Info className="h-12 w-12 mx-auto mb-3" />
-                        <p className="font-semibold">No Items in Fair Range</p>
-                        <p className="text-sm">Items are either great value or need adjustment.</p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="space-y-3">
-                      <div className="text-sm text-muted-foreground mb-3">
-                        These items are priced acceptably but could be optimized for better package performance.
-                      </div>
-                      {fairItems.map((item, idx) => {
-                        const suggested = getSuggestedPrice(item.channel, item.pricingModel, item.audience);
-                        return (
-                          <div key={idx} className="border rounded-lg p-4 bg-yellow-50/30 border-yellow-200">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="font-bold text-base mb-1">
-                                  {item.publicationName}
+                          
+                          {/* Column 2: Suggested (Containerized) */}
+                          {suggested && (
+                            <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                              <div className="text-xs text-gray-600 mb-2 font-medium">
+                                {item.assessment.status === 'fair' ? 'Optimal' : 'Suggested'}
+                              </div>
+                              <div className="text-sm">
+                                <div className="font-semibold text-green-700">
+                                  ${suggested.low}-${suggested.high}/month
                                 </div>
-                                <div className="text-sm text-gray-700 mb-2">
-                                  {item.itemName} • <Badge variant="outline" className="capitalize">{item.channel}</Badge> • {PRICING_MODEL_LABELS[item.pricingModel] || item.pricingModel}
-                                </div>
-                                <div className="text-sm space-y-1">
-                                  <div>
-                                    <span className="text-yellow-700">Charging ${item.price.toLocaleString()}/month to reach {item.audience.toLocaleString()} people</span>
-                                  </div>
-                                  <div className="font-semibold text-yellow-900">
-                                    ${item.unitPrice.toFixed(2)} per 1K • {item.assessment.multiplier.toFixed(1)}x benchmark
-                                  </div>
-                                  {suggested && (
-                                    <div className="text-green-700">
-                                      Optimal: ${suggested.low}-${suggested.high}/month (${suggested.target} target)
-                                    </div>
-                                  )}
+                                <div className="text-gray-700 mt-1">
+                                  (${suggested.target} target)
                                 </div>
                               </div>
-                              <span className="text-3xl ml-4">{item.assessment.icon}</span>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Total Audience Reach Across All Channels */}
-      {totalAudienceAcrossChannels && totalAudienceAcrossChannels.grandTotal > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-sans">Total Audience Reach</CardTitle>
-            <CardDescription>Combined potential audience across all inventory channels</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-muted-foreground mb-1 font-sans">Total Combined Audience</p>
-                <p className="text-3xl font-bold font-sans">
-                  {formatAudience(totalAudienceAcrossChannels.grandTotal)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Across {totalAudienceAcrossChannels.grandInventory} inventory items
-                </p>
-              </div>
-              
-              {Object.entries(totalAudienceAcrossChannels.byChannel)
-                .sort(([, a], [, b]) => b.audience - a.audience)
-                .slice(0, 3)
-                .map(([channel, data]) => {
-                  const channelConfig = CHANNELS.find(c => c.key === channel);
-                  const Icon = channelConfig?.icon || Info;
-                  return (
-                    <div key={channel} className="bg-white rounded-lg p-4 shadow-sm">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground capitalize">{channel}</p>
-                      </div>
-                      <p className="text-2xl font-bold">
-                        {formatAudience(data.audience)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {getAudienceMetricLabel(channel)} • {data.inventory} items
-                      </p>
-                    </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
                   );
                 })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Channel Summary (if data available) */}
-      {channelSummary && (
-        <div className="grid gap-4 md:grid-cols-5">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
-                Channel
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                {(() => {
-                  const Icon = CHANNEL_COLORS[activeChannel]?.icon || Info;
-                  return <Icon className="h-6 w-6" />;
-                })()}
-                <span className="text-xl font-bold capitalize">{activeChannel}</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {channelSummary.totalSamples} items • {channelSummary.models} model{channelSummary.models !== 1 ? 's' : ''}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
-                Total Audience
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatAudience(channelSummary.totalPotentialReach)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {getAudienceMetricLabel(activeChannel)}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
-                Avg Audience Size
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatAudience(channelSummary.avgAudience)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Per inventory item
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
-                Avg Normalized Price
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCPR(channelSummary.avgUnitPrice)}</div>
-              <p className="text-xs text-muted-foreground mt-1">{getNormalizedUnitLabel(activeChannel)}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground font-sans">
-                Price Range
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCPR(channelSummary.minUnitPrice)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                to {formatCPR(channelSummary.maxUnitPrice)}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            );
+          })()}
+        </>
       )}
 
       {/* Channel Tabs */}
-      <Card>
-        <CardContent className="pt-6">
-          <Tabs value={activeChannel} onValueChange={setActiveChannel}>
-            <TabsList className="grid w-full grid-cols-6">
-              {CHANNELS.map(channel => {
-                const Icon = channel.icon;
-                const hasData = pricingAnalytics[channel.key as keyof PricingAnalytics] && 
-                  Object.keys(pricingAnalytics[channel.key as keyof PricingAnalytics]).length > 0;
-                
-                return (
-                  <TabsTrigger 
-                    key={channel.key} 
-                    value={channel.key}
-                    disabled={!hasData}
-                    className="flex items-center gap-2"
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="hidden sm:inline">{channel.label}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
+      <Tabs value={activeChannel} onValueChange={setActiveChannel}>
+        <TabsList className="grid w-full grid-cols-6">
+          {CHANNELS.map(channel => {
+            const Icon = channel.icon;
+            const hasData = pricingAnalytics[channel.key as keyof PricingAnalytics] && 
+              Object.keys(pricingAnalytics[channel.key as keyof PricingAnalytics]).length > 0;
+            
+            return (
+              <TabsTrigger 
+                key={channel.key} 
+                value={channel.key}
+                disabled={!hasData}
+                className="flex items-center gap-2"
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{channel.label}</span>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
 
             {CHANNELS.map(channel => (
-              <TabsContent key={channel.key} value={channel.key} className="mt-6">
+              <TabsContent key={channel.key} value={channel.key} className="mt-0">
                 {sortedModels.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -1081,10 +937,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                               ''
                             }>
                               <TableCell className="font-medium">
-                                <div className="flex items-center gap-2">
-                                  {assessment && <span className="text-lg">{assessment.icon}</span>}
-                                  <span>{PRICING_MODEL_LABELS[model] || model}</span>
-                                </div>
+                                <span>{PRICING_MODEL_LABELS[model] || model}</span>
                               </TableCell>
                               <TableCell className="text-center">
                                 {data.sampleSize}
@@ -1234,53 +1087,57 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                       </Table>
                     </div>
 
-                    {/* Legend */}
-                    <Card className="bg-gradient-to-br from-green-50 to-blue-50 border-green-200">
-                      <CardContent className="pt-4">
-                        <div className="text-xs space-y-3">
-                          <div>
-                            <p className="font-semibold text-base mb-2 text-green-900">📊 Understanding Normalized Pricing ({getNormalizedUnitLabel(activeChannel)})</p>
-                            <p className="text-muted-foreground mb-3">
-                              All prices are normalized to cost per 1000 audience (similar to CPM in digital advertising) 
-                              to enable fair "apples-to-apples" comparisons across different pricing models and inventory sizes.
-                            </p>
+                    {/* Legend - Accordion */}
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="pricing-explanation" className="border rounded-lg bg-white">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <span className="font-semibold text-sm text-gray-900 font-sans">
+                            Understanding Normalized Pricing ({getNormalizedUnitLabel(activeChannel)})
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">
+                          <div className="text-xs space-y-4 font-sans text-gray-700">
+                            <div>
+                              <p className="mb-3">
+                                All prices are normalized to cost per 1000 audience (similar to CPM in digital advertising) 
+                                to enable fair "apples-to-apples" comparisons across different pricing models and inventory sizes.
+                              </p>
+                            </div>
+                            
+                            <div>
+                              <p className="font-semibold text-gray-900 mb-2">Key Metrics Explained:</p>
+                              <ul className="space-y-1.5 ml-4">
+                                <li><strong>Normalized Price:</strong> Cost per 1000 {getAudienceMetricLabel(activeChannel).toLowerCase()} ({getNormalizedUnitLabel(activeChannel)}) - THE key metric for fair comparison</li>
+                                <li><strong>Audience Size:</strong> Total {getAudienceMetricLabel(activeChannel).toLowerCase()} available for each pricing model</li>
+                                <li><strong>Statistical Analysis:</strong>
+                                  <ul className="ml-4 mt-1 space-y-0.5">
+                                    <li>• <strong>Average:</strong> Mean normalized price across all items in this model</li>
+                                    <li>• <strong>Median:</strong> Middle value - more reliable when outliers exist</li>
+                                    <li>• <strong>Std Dev:</strong> Consistency indicator (low = consistent, medium = moderate, high = high variance)</li>
+                                    <li>• <strong>Min/Max:</strong> Range of normalized prices in this model</li>
+                                  </ul>
+                                </li>
+                                <li><strong>Total (avg):</strong> Actual average monthly price before normalization (for cost reference)</li>
+                              </ul>
+                            </div>
+                            
+                            <div>
+                              <p className="font-semibold text-gray-900 mb-2">Real-World Example:</p>
+                              <p>
+                                Newsletter with 50K subscribers at $1,000/send = <strong>$20 per 1K subscribers</strong><br/>
+                                Newsletter with 10K subscribers at $300/send = <strong>$30 per 1K subscribers</strong><br/>
+                                → First option offers <strong>better unit economics</strong> (33% lower cost per subscriber reached)
+                              </p>
+                            </div>
                           </div>
-                          
-                          <div className="bg-white/80 rounded-lg p-3 space-y-2">
-                            <p className="font-semibold text-green-800">Key Metrics Explained:</p>
-                            <ul className="space-y-1.5 ml-4">
-                              <li><strong>Normalized Price:</strong> Cost per 1000 {getAudienceMetricLabel(activeChannel).toLowerCase()} ({getNormalizedUnitLabel(activeChannel)}) - THE key metric for fair comparison</li>
-                              <li><strong>Audience Size:</strong> Total {getAudienceMetricLabel(activeChannel).toLowerCase()} available for each pricing model</li>
-                              <li><strong>Statistical Analysis:</strong>
-                                <ul className="ml-4 mt-1 space-y-0.5">
-                                  <li>• <strong>Average:</strong> Mean normalized price across all items in this model</li>
-                                  <li>• <strong>Median:</strong> Middle value - more reliable when outliers exist</li>
-                                  <li>• <strong>Std Dev:</strong> Consistency indicator (<span className="inline-block w-2 h-2 bg-green-600 rounded-full"></span> <span className="text-green-600">consistent</span>, <span className="inline-block w-2 h-2 bg-yellow-600 rounded-full"></span> <span className="text-yellow-600">moderate</span>, <span className="inline-block w-2 h-2 bg-red-600 rounded-full"></span> <span className="text-red-600">high variance</span>)</li>
-                                  <li>• <strong>Min/Max:</strong> Range of normalized prices in this model</li>
-                                </ul>
-                              </li>
-                              <li><strong>Total (avg):</strong> Actual average monthly price before normalization (for cost reference)</li>
-                            </ul>
-                          </div>
-                          
-                          <div className="bg-blue-50/80 rounded-lg p-3 border border-blue-200">
-                            <p className="font-semibold text-blue-900 mb-1">💡 Real-World Example:</p>
-                            <p className="text-muted-foreground">
-                              Newsletter with 50K subscribers at $1,000/send = <strong>$20 per 1K subscribers</strong><br/>
-                              Newsletter with 10K subscribers at $300/send = <strong>$30 per 1K subscribers</strong><br/>
-                              → First option offers <strong>better unit economics</strong> (33% lower cost per subscriber reached)
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   </div>
                 )}
               </TabsContent>
             ))}
           </Tabs>
-        </CardContent>
-      </Card>
 
       {/* Activity Log Dialog */}
       <ActivityLogDialog

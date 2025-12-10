@@ -26,6 +26,7 @@ import {
   Database,
   MoreHorizontal,
   X,
+  Activity,
 } from 'lucide-react';
 import { API_BASE_URL } from '@/config/api';
 import { getPublications } from '@/api/publications';
@@ -519,17 +520,39 @@ export const LeadManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with title, filters, and search - all in one row */}
-      <div className="flex items-center justify-between gap-4 bg-white rounded-lg border border-slate-200 px-6 py-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-base font-semibold text-slate-900 whitespace-nowrap">
-            All Leads ({visibleCount}
-            {hasActiveFilters ? ` of ${leads.length}` : ''})
-          </h2>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold font-sans">
+          Leads ({visibleCount}{hasActiveFilters ? ` of ${leads.length}` : ''})
+        </h1>
+      </div>
+
+      {/* Filters and search row */}
+      <div className="flex items-center justify-between gap-4">
+          {/* Search Bar - Left */}
+          <div className="relative min-w-[300px]">
+            <Input
+              placeholder="Search leads…"
+              value={searchTerm}
+              onChange={event => setSearchTerm(event.target.value)}
+              className={`${filterTriggerClass} pr-9 ${
+                searchTerm ? 'border-primary/40 bg-primary/10 text-primary' : ''
+              }`}
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0"
+                onClick={() => setSearchTerm('')}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* Filters - Right */}
+          <div className="flex items-center gap-2">
           {/* Status Filter Dropdown */}
           <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
             <PopoverTrigger asChild>
@@ -699,28 +722,6 @@ export const LeadManagement = () => {
             {showArchived ? 'Hide Archived' : 'Show Archived'}
           </Button>
 
-          {/* Search Bar */}
-          <div className="relative min-w-[200px]">
-            <Input
-              placeholder="Search leads…"
-              value={searchTerm}
-              onChange={event => setSearchTerm(event.target.value)}
-              className={`${filterTriggerClass} pr-9 ${
-                searchTerm ? 'border-primary/40 bg-primary/10 text-primary' : ''
-              }`}
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0"
-                onClick={() => setSearchTerm('')}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-
           {/* More Options Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -729,6 +730,10 @@ export const LeadManagement = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setShowActivityLog(true)}>
+                <Activity className="mr-2 h-4 w-4" />
+                Activity Log
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={seedTestLeads} disabled={seeding}>
                 <Database className="mr-2 h-4 w-4" />
                 {seeding ? 'Creating…' : 'Add Test Leads'}
@@ -741,7 +746,7 @@ export const LeadManagement = () => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
+          </div>
       </div>
 
       {/* Table Card */}
