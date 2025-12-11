@@ -9,6 +9,16 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { OrderStatusBadge } from '../orders/OrderStatusBadge';
 import { OrderTimeline } from '../orders/OrderTimeline';
 import { OrderMessaging } from '../orders/OrderMessaging';
@@ -24,7 +34,8 @@ import {
   Package,
   BarChart3,
   ClipboardList,
-  Code
+  Code,
+  Trash2
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/config/api';
@@ -89,6 +100,7 @@ export function HubOrderDetail() {
   const [order, setOrder] = useState<OrderDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatives, setCreatives] = useState<any[]>([]);
+  const [showRescindDialog, setShowRescindDialog] = useState(false);
 
   useEffect(() => {
     if (campaignId && publicationId) {
@@ -142,6 +154,49 @@ export function HubOrderDetail() {
     } catch (error) {
       console.error('Error fetching creatives:', error);
     }
+  };
+
+  const handleRescindOrder = async () => {
+    if (!campaignId || !publicationId) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(
+        `${API_BASE_URL}/admin/orders/${campaignId}/${publicationId}`,
+        {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to rescind order');
+      }
+      
+      toast({
+        title: 'Order Rescinded',
+        description: `Order for ${order?.publicationName} has been rescinded.`,
+      });
+      
+      setShowRescindDialog(false);
+      // Navigate back to orders list
+      navigate('/hubcentral?tab=orders');
+    } catch (error) {
+      console.error('Error rescinding order:', error);
+      toast({
+        title: 'Rescind Failed',
+        description: error instanceof Error ? error.message : 'Failed to rescind order. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Check if order has live placements
+  const hasLivePlacements = () => {
+    if (!order?.placementStatuses) return false;
+    const statuses = Object.values(order.placementStatuses);
+    return statuses.some(s => s === 'in_production' || s === 'delivered');
   };
 
   const handleSendMessage = async (content: string, attachments?: Array<{ fileName: string; fileUrl: string; fileType: string; fileSize?: number }>) => {
@@ -262,6 +317,17 @@ export function HubOrderDetail() {
             <FileText className="h-4 w-4 mr-2" />
             View Printable
           </Button>
+          {!hasLivePlacements() && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+              onClick={() => setShowRescindDialog(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Rescind Order
+            </Button>
+          )}
           <Button 
             variant="outline" 
             size="sm"
@@ -538,6 +604,33 @@ export function HubOrderDetail() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Rescind Order Confirmation Dialog */}
+      <AlertDialog open={showRescindDialog} onOpenChange={setShowRescindDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rescind Publication Order?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>This will remove the insertion order for <strong>{order?.publicationName}</strong> from campaign <strong>{order?.campaignName}</strong>.</p>
+              <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                <li>The publication will no longer see this order</li>
+                <li>Any confirmations or status updates will be lost</li>
+                <li>Messages with this publication will be removed</li>
+              </ul>
+              <p className="text-amber-600 font-medium mt-3">This cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRescindOrder}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Yes, Rescind Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

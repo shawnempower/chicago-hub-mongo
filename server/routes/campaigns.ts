@@ -173,13 +173,17 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
     const { id } = req.params;
-    
-    const campaign = await campaignsService.getById(id);
-    
+
+    // Try to find by MongoDB _id first, then by campaignId
+    let campaign = await campaignsService.getById(id);
+    if (!campaign) {
+      campaign = await campaignsService.getByCampaignId(id);
+    }
+
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
     }
-    
+
     res.json({ campaign });
   } catch (error) {
     console.error('Error fetching campaign:', error);
@@ -336,6 +340,62 @@ router.post('/:id/publication-insertion-orders', authenticateToken, async (req: 
     
     // Fetch the generated orders
     const generatedOrders = await insertionOrderService.getOrdersForCampaign(campaignIdToUse);
+    
+    // Send notifications to publication users for each generated order
+    try {
+      const { notifyOrderReceived } = await import('../../src/services/notificationService');
+      const { emailService } = await import('../emailService');
+      const { getDatabase } = await import('../../src/integrations/mongodb/client');
+      const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+      
+      const db = getDatabase();
+      
+      for (const order of generatedOrders) {
+        // Find users with access to this publication
+        const permissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
+          'publications.publicationId': order.publicationId
+        }).toArray();
+        
+        const orderUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`;
+        
+        for (const perm of permissions) {
+          // Create in-app notification
+          await notifyOrderReceived({
+            userId: perm.userId,
+            publicationId: order.publicationId,
+            publicationName: order.publicationName,
+            campaignId: order.campaignId,
+            campaignName: order.campaignName,
+            orderId: order._id?.toString() || ''
+          });
+          
+          // Send email notification
+          if (emailService) {
+            const user = await db.collection(COLLECTIONS.USERS).findOne({ _id: perm.userId });
+            if (user?.email) {
+              await emailService.sendOrderSentEmail({
+                recipientEmail: user.email,
+                recipientName: user.firstName,
+                publicationName: order.publicationName,
+                campaignName: order.campaignName,
+                advertiserName: campaign.basicInfo?.advertiserName,
+                hubName: campaign.hubName,
+                flightDates: campaign.timeline?.startDate && campaign.timeline?.endDate 
+                  ? `${new Date(campaign.timeline.startDate).toLocaleDateString()} - ${new Date(campaign.timeline.endDate).toLocaleDateString()}`
+                  : undefined,
+                totalValue: order.totalCost,
+                orderUrl
+              });
+            }
+          }
+        }
+      }
+      
+      console.log(`📧 Sent order notifications for ${generatedOrders.length} publication orders`);
+    } catch (notifyError) {
+      console.error('Error sending order notifications:', notifyError);
+      // Don't fail the request if notifications fail
+    }
     
     res.json({ 
       success: true, 

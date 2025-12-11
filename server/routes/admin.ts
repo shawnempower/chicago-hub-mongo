@@ -1004,6 +1004,30 @@ router.post('/leads', authenticateToken, async (req: any, res: Response) => {
     };
     
     const lead = await leadInquiriesService.create(leadData);
+    
+    // Send lead notification email to admin
+    try {
+      const { emailService } = await import('../emailService');
+      
+      if (emailService && lead) {
+        await emailService.sendLeadNotificationEmail({
+          contactName: lead.contactName,
+          contactEmail: lead.contactEmail,
+          contactPhone: lead.contactPhone,
+          businessName: lead.businessName,
+          websiteUrl: lead.websiteUrl,
+          budgetRange: lead.budgetRange,
+          timeline: lead.timeline,
+          marketingGoals: lead.marketingGoals
+        });
+        
+        console.log(`📧 Sent lead notification email for ${lead.businessName}`);
+      }
+    } catch (notifyError) {
+      console.error('Error sending lead notification email:', notifyError);
+      // Don't fail the request if email fails
+    }
+    
     res.status(201).json({ lead });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create lead' });

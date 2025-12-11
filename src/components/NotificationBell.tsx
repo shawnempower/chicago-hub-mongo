@@ -40,6 +40,7 @@ const NOTIFICATION_ICONS: Record<string, React.ReactNode> = {
   asset_updated: <RefreshCw className="h-4 w-4 text-orange-500" />,
   placement_accepted: <Check className="h-4 w-4 text-green-500" />,
   placement_rejected: <AlertCircle className="h-4 w-4 text-red-500" />,
+  placement_delivered: <CheckCheck className="h-4 w-4 text-purple-500" />,
   reminder: <Bell className="h-4 w-4 text-amber-500" />,
 };
 

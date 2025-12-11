@@ -256,6 +256,107 @@ router.delete('/:campaignId/publication-orders', async (req: any, res: Response)
 });
 
 /**
+ * DELETE /api/admin/orders/:campaignId/:publicationId/placement/:placementId
+ * Rescind/remove a specific placement from an order
+ */
+router.delete('/:campaignId/:publicationId/placement/:placementId', async (req: any, res: Response) => {
+  try {
+    const { campaignId, publicationId, placementId } = req.params;
+    const userId = req.user?.id;
+
+    // Decode the placementId (it may be URL encoded)
+    const decodedPlacementId = decodeURIComponent(placementId);
+
+    const result = await insertionOrderService.rescindPlacement(
+      campaignId,
+      parseInt(publicationId),
+      decodedPlacementId
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    // Send notification to publication users about the rescinded placement
+    try {
+      const { getDatabase } = await import('../../../src/integrations/mongodb/client');
+      const { COLLECTIONS } = await import('../../../src/integrations/mongodb/schemas');
+      const { notificationService } = await import('../../../src/services/notificationService');
+      
+      const db = getDatabase();
+      const order = result.updatedOrder;
+      
+      if (order) {
+        // Find publication users to notify
+        const pubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
+          'publications.publicationId': parseInt(publicationId)
+        }).toArray();
+        
+        // Format placement name for notification
+        const placementName = decodedPlacementId
+          .split('/').pop()
+          ?.replace(/-/g, ' ')
+          .replace(/\b\w/g, (l: string) => l.toUpperCase()) || decodedPlacementId;
+        
+        for (const perm of pubPermissions) {
+          await notificationService.create({
+            userId: perm.userId,
+            publicationId: parseInt(publicationId),
+            type: 'placement_rejected', // Reuse existing type
+            title: 'Placement Removed',
+            message: `Hub admin removed "${placementName}" from your order for "${order.campaignName}"`,
+            campaignId,
+            orderId: order._id?.toString() || '',
+            link: `/dashboard?tab=order-detail&campaignId=${campaignId}&publicationId=${publicationId}`
+          });
+        }
+        
+        console.log(`📧 Sent placement rescinded notifications to publication users`);
+      }
+    } catch (notifyError) {
+      console.error('Error sending placement rescinded notifications:', notifyError);
+      // Don't fail the request if notification fails
+    }
+
+    res.json({ 
+      success: true,
+      message: `Placement rescinded successfully`,
+      updatedOrder: result.updatedOrder
+    });
+  } catch (error) {
+    console.error('Error rescinding placement:', error);
+    res.status(500).json({ error: 'Failed to rescind placement' });
+  }
+});
+
+/**
+ * DELETE /api/admin/orders/:campaignId/:publicationId
+ * Delete/rescind a single publication order
+ */
+router.delete('/:campaignId/:publicationId', async (req: any, res: Response) => {
+  try {
+    const { campaignId, publicationId } = req.params;
+
+    const result = await insertionOrderService.deleteOrderForPublication(
+      campaignId,
+      parseInt(publicationId)
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ 
+      success: true,
+      message: `Publication order rescinded successfully`
+    });
+  } catch (error) {
+    console.error('Error deleting publication order:', error);
+    res.status(500).json({ error: 'Failed to delete publication order' });
+  }
+});
+
+/**
  * POST /api/admin/orders/bulk-update-status
  * Bulk update status for multiple orders
  */

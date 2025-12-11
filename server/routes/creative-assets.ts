@@ -588,6 +588,45 @@ router.put('/:id', async (req: any, res: Response) => {
     // Update asset
     const updatedAsset = await creativesService.update(id, updates);
 
+    // Send notification to publication users if this asset is associated with orders
+    try {
+      if (updatedAsset?.associations?.campaignId) {
+        const { notifyAssetUpdated } = await import('../../src/services/notificationService');
+        const { getDatabase } = await import('../../src/integrations/mongodb/client');
+        const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+        const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+        
+        const db = getDatabase();
+        const campaignId = updatedAsset.associations.campaignId;
+        
+        // Get all orders for this campaign
+        const orders = await insertionOrderService.getOrdersForCampaign(campaignId);
+        
+        for (const order of orders) {
+          // Find users with access to this publication
+          const permissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
+            'publications.publicationId': order.publicationId
+          }).toArray();
+          
+          for (const perm of permissions) {
+            await notifyAssetUpdated({
+              userId: perm.userId,
+              publicationId: order.publicationId,
+              campaignId,
+              campaignName: order.campaignName,
+              orderId: order._id?.toString() || '',
+              assetName: updatedAsset.metadata?.fileName || 'Creative Asset'
+            });
+          }
+        }
+        
+        console.log(`📧 Sent asset updated notifications for campaign ${campaignId}`);
+      }
+    } catch (notifyError) {
+      console.error('Error sending asset updated notifications:', notifyError);
+      // Don't fail the request if notifications fail
+    }
+
     res.json({ success: true, asset: updatedAsset });
   } catch (error) {
     console.error('Error updating creative asset:', error);

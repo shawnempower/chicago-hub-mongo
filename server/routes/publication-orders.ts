@@ -497,7 +497,76 @@ router.post('/:campaignId/:publicationId/confirm', async (req: any, res: Respons
       return res.status(400).json({ error: result.error });
     }
 
-    // TODO: Send email notification to hub
+    // Send notifications to hub admins
+    try {
+      const { notifyOrderConfirmed } = await import('../../src/services/notificationService');
+      const { emailService } = await import('../emailService');
+      const { getDatabase } = await import('../../src/integrations/mongodb/client');
+      const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+      
+      const db = getDatabase();
+      const order = result.order;
+      
+      if (order?.hubId) {
+        // Get campaign for additional context
+        const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
+        const campaign = await campaignsService.getByCampaignId(campaignId) || await campaignsService.getById(campaignId);
+        
+        // Find hub admins from permissions
+        const hubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
+          'hubAccess.hubId': order.hubId,
+          role: { $in: ['admin', 'hub_user'] }
+        }).toArray();
+        
+        // Also find system admins from user_profiles
+        const systemAdmins = await db.collection(COLLECTIONS.USER_PROFILES).find({
+          isAdmin: true
+        }).toArray();
+        
+        // Combine user IDs, avoiding duplicates
+        const notifyUserIds = new Set<string>();
+        hubPermissions.forEach(p => notifyUserIds.add(p.userId));
+        systemAdmins.forEach(a => notifyUserIds.add(a.userId));
+        
+        const campaignUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/campaigns/${campaignId}`;
+        
+        for (const recipientUserId of notifyUserIds) {
+          // Create in-app notification
+          await notifyOrderConfirmed({
+            userId: recipientUserId,
+            hubId: order.hubId,
+            publicationName: order.publicationName,
+            publicationId,
+            campaignId: campaignId,
+            campaignName: order.campaignName,
+            orderId: order._id?.toString() || ''
+          });
+          
+          // Send email notification
+          if (emailService) {
+            const { ObjectId } = await import('mongodb');
+            const userIdObj = typeof recipientUserId === 'string' ? new ObjectId(recipientUserId) : recipientUserId;
+            const user = await db.collection(COLLECTIONS.USERS).findOne({ _id: userIdObj });
+            if (user?.email) {
+              await emailService.sendOrderConfirmedEmail({
+                recipientEmail: user.email,
+                recipientName: user.firstName,
+                publicationName: order.publicationName,
+                campaignName: order.campaignName,
+                advertiserName: campaign?.basicInfo?.advertiserName,
+                confirmedAt: new Date(),
+                campaignUrl
+              });
+            }
+          }
+        }
+        
+        console.log(`📧 Sent order confirmed notifications to hub admins for ${order.publicationName}`);
+      }
+    } catch (notifyError) {
+      console.error('Error sending order confirmed notifications:', notifyError);
+      // Don't fail the request if notifications fail
+    }
 
     res.json({ success: true, order: result.order });
   } catch (error) {
@@ -741,16 +810,27 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
           // Publication sent message -> notify hub admins
           const { getDatabase } = await import('../../src/integrations/mongodb/client');
           const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+          const db = getDatabase();
           
-          // Find hub admin users
-          const hubPermissions = await getDatabase().collection(COLLECTIONS.USER_PERMISSIONS).find({
+          // Find hub admin users from permissions
+          const hubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
             'hubAccess.hubId': order.hubId,
             role: { $in: ['admin', 'hub_user'] }
           }).toArray();
           
-          for (const perm of hubPermissions) {
+          // Also find system admins from user_profiles
+          const systemAdmins = await db.collection(COLLECTIONS.USER_PROFILES).find({
+            isAdmin: true
+          }).toArray();
+          
+          // Combine user IDs, avoiding duplicates
+          const notifyUserIds = new Set<string>();
+          hubPermissions.forEach(p => notifyUserIds.add(p.userId));
+          systemAdmins.forEach(a => notifyUserIds.add(a.userId));
+          
+          for (const recipientUserId of notifyUserIds) {
             await notifyMessageReceived({
-              userId: perm.userId,
+              userId: recipientUserId,
               senderName,
               campaignId,
               campaignName: order.campaignName,
@@ -876,6 +956,114 @@ router.put('/:campaignId/:publicationId/placement-status', async (req: any, res:
     }
 
     console.log('Placement status updated:', { campaignId, publicationId, placementId, status });
+
+    // Send notifications to hub admins for placement status changes
+    try {
+      const { 
+        notifyPlacementAccepted, 
+        notifyPlacementRejected, 
+        notifyPlacementDelivered 
+      } = await import('../../src/services/notificationService');
+      const { emailService } = await import('../emailService');
+      const { getDatabase } = await import('../../src/integrations/mongodb/client');
+      const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+      
+      const db = getDatabase();
+      
+      // Get order details for notification context
+      const order = await insertionOrderService.getOrderByCampaignAndPublication(campaignId, parseInt(publicationId));
+      
+      if (order?.hubId && ['accepted', 'rejected', 'delivered'].includes(status)) {
+        // Get campaign for additional context
+        const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
+        const campaign = await campaignsService.getByCampaignId(campaignId) || await campaignsService.getById(campaignId);
+        
+        // Find hub admins from permissions
+        const hubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
+          'hubAccess.hubId': order.hubId,
+          role: { $in: ['admin', 'hub_user'] }
+        }).toArray();
+        
+        // Also find system admins from user_profiles
+        const systemAdmins = await db.collection(COLLECTIONS.USER_PROFILES).find({
+          isAdmin: true
+        }).toArray();
+        
+        // Combine user IDs, avoiding duplicates
+        const notifyUserIds = new Set<string>();
+        hubPermissions.forEach(p => notifyUserIds.add(p.userId));
+        systemAdmins.forEach(a => notifyUserIds.add(a.userId));
+        
+        const campaignUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/campaigns/${campaignId}`;
+        
+        // Extract placement name from placementId (e.g., "print/full-page" -> "Full Page Print")
+        const placementName = placementId.split('/').pop()?.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || placementId;
+        
+        for (const recipientUserId of notifyUserIds) {
+          if (status === 'accepted') {
+            // In-app notification only for accepted
+            await notifyPlacementAccepted({
+              userId: recipientUserId,
+              hubId: order.hubId,
+              publicationName: order.publicationName,
+              publicationId,
+              placementName,
+              campaignId,
+              campaignName: order.campaignName,
+              orderId: order._id?.toString() || ''
+            });
+          } else if (status === 'rejected') {
+            // In-app notification for rejected
+            await notifyPlacementRejected({
+              userId: recipientUserId,
+              hubId: order.hubId,
+              publicationName: order.publicationName,
+              publicationId,
+              placementName,
+              campaignId,
+              campaignName: order.campaignName,
+              orderId: order._id?.toString() || '',
+              reason: notes
+            });
+            
+            // Email notification for rejected
+            if (emailService) {
+              const { ObjectId } = await import('mongodb');
+              const userIdObj = typeof recipientUserId === 'string' ? new ObjectId(recipientUserId) : recipientUserId;
+              const user = await db.collection(COLLECTIONS.USERS).findOne({ _id: userIdObj });
+              if (user?.email) {
+                await emailService.sendPlacementRejectedEmail({
+                  recipientEmail: user.email,
+                  recipientName: user.firstName,
+                  publicationName: order.publicationName,
+                  placementName,
+                  campaignName: order.campaignName,
+                  rejectionReason: notes,
+                  campaignUrl
+                });
+              }
+            }
+          } else if (status === 'delivered') {
+            // In-app notification only for delivered
+            await notifyPlacementDelivered({
+              userId: recipientUserId,
+              hubId: order.hubId,
+              publicationName: order.publicationName,
+              publicationId,
+              placementName,
+              campaignId,
+              campaignName: order.campaignName,
+              orderId: order._id?.toString() || ''
+            });
+          }
+        }
+        
+        console.log(`📧 Sent placement ${status} notifications to hub admins`);
+      }
+    } catch (notifyError) {
+      console.error('Error sending placement status notifications:', notifyError);
+      // Don't fail the request if notifications fail
+    }
 
     res.json({ success: true, orderConfirmed: result.orderConfirmed });
   } catch (error) {

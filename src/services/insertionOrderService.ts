@@ -279,7 +279,25 @@ export class InsertionOrderService {
       const campaignMap = new Map<string, Campaign>();
       campaigns.forEach(c => campaignMap.set(c.campaignId, c));
 
-      // Enrich orders with campaign data and message counts
+      // Get all creative assets for matching to placements
+      const allCampaignAssets = await creativeAssetsCollection.find({
+        'associations.campaignId': { $in: campaignIds },
+        deletedAt: { $exists: false }
+      }).toArray();
+
+      // Group assets by campaign
+      const assetsByCampaign = new Map<string, any[]>();
+      allCampaignAssets.forEach((asset: any) => {
+        const cid = asset.associations?.campaignId;
+        if (cid) {
+          if (!assetsByCampaign.has(cid)) {
+            assetsByCampaign.set(cid, []);
+          }
+          assetsByCampaign.get(cid)!.push(asset);
+        }
+      });
+
+      // Enrich orders with campaign data, message counts, and fresh asset status
       return orders.map(order => {
         const campaign = campaignMap.get(order.campaignId);
         const pub = campaign?.selectedInventory?.publications?.find(
@@ -292,14 +310,47 @@ export class InsertionOrderService {
           (m: any) => m.sender === 'publication'
         ) || false;
         
+        // Calculate fresh asset status based on current assets
+        const campaignAssets = assetsByCampaign.get(order.campaignId) || [];
+        const assetReferences = order.assetReferences || [];
+        const totalPlacements = assetReferences.length || pub?.inventoryItems?.length || 0;
+        
+        let placementsWithAssets = 0;
+        if (assetReferences.length > 0) {
+          // Match assets to placements by specGroupId
+          for (const ref of assetReferences) {
+            const hasAsset = campaignAssets.some((asset: any) => 
+              asset.metadata?.specGroupId === ref.specGroupId
+            );
+            if (hasAsset) placementsWithAssets++;
+          }
+        } else {
+          // Fallback: count total campaign assets as uploaded
+          placementsWithAssets = assetCountMap.get(order.campaignId) || 0;
+        }
+        
+        const allAssetsReady = placementsWithAssets >= totalPlacements && totalPlacements > 0;
+        
+        // Create fresh asset status (overrides stale stored value)
+        const freshAssetStatus = {
+          totalPlacements,
+          placementsWithAssets,
+          allAssetsReady,
+          pendingUpload: totalPlacements > 0 && !allAssetsReady,
+          // Preserve timestamps from stored status if available
+          assetsReadyAt: allAssetsReady ? (order.assetStatus?.assetsReadyAt || new Date()) : undefined,
+          lastAssetUpdateAt: order.assetStatus?.lastAssetUpdateAt
+        };
+        
         return {
           ...order,
           uploadedAssetCount: assetCountMap.get(order.campaignId) || 0,
-          placementCount: pub?.inventoryItems?.length || 0,
+          placementCount: totalPlacements,
           campaignStartDate: campaign?.timeline?.startDate,
           campaignEndDate: campaign?.timeline?.endDate,
           messageCount,
-          hasUnreadMessages
+          hasUnreadMessages,
+          assetStatus: freshAssetStatus
         } as PublicationInsertionOrderWithCampaign;
       });
     } catch (error) {
@@ -712,6 +763,244 @@ export class InsertionOrderService {
       return {
         success: false,
         deletedCount: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Delete/rescind a single publication order
+   * Cannot rescind if any placements are in_production or delivered
+   */
+  async deleteOrderForPublication(
+    campaignId: string,
+    publicationId: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // First, check if any placements are live (in_production or delivered)
+      const order = await this.ordersCollection.findOne({
+        campaignId,
+        publicationId,
+        deletedAt: { $exists: false }
+      });
+
+      if (!order) {
+        return { success: false, error: 'Order not found' };
+      }
+
+      // Check for live placements
+      const placementStatuses = order.placementStatuses || {};
+      const liveStatuses = ['in_production', 'delivered'];
+      const livePlacements = Object.entries(placementStatuses).filter(
+        ([_, status]) => liveStatuses.includes(status as string)
+      );
+
+      if (livePlacements.length > 0) {
+        return { 
+          success: false, 
+          error: `Cannot rescind order: ${livePlacements.length} placement(s) are already live (in production or delivered)` 
+        };
+      }
+
+      const result = await this.ordersCollection.updateOne(
+        { _id: order._id },
+        { $set: { deletedAt: new Date() } }
+      );
+
+      if (result.modifiedCount === 0) {
+        return { success: false, error: 'Failed to rescind order' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting publication order:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Rescind/remove a specific placement from a publication order
+   * This allows hub admins to remove individual placements without rescinding the entire order
+   */
+  async rescindPlacement(
+    campaignId: string,
+    publicationId: number,
+    placementId: string
+  ): Promise<{ success: boolean; error?: string; updatedOrder?: PublicationInsertionOrderDocument }> {
+    try {
+      // Get the order
+      const order = await this.ordersCollection.findOne({
+        campaignId,
+        publicationId,
+        deletedAt: { $exists: false }
+      });
+
+      if (!order) {
+        return { success: false, error: 'Order not found' };
+      }
+
+      // Check if placement is live (in_production or delivered)
+      const placementStatus = order.placementStatuses?.[placementId];
+      if (placementStatus === 'in_production' || placementStatus === 'delivered') {
+        return {
+          success: false,
+          error: `Cannot rescind placement: it is already ${placementStatus === 'in_production' ? 'in production' : 'delivered'}`
+        };
+      }
+
+      // Find and remove the placement from selectedInventory
+      const selectedInventory = order.selectedInventory || { publications: [] };
+      let placementFound = false;
+      let placementCost = 0;
+
+      console.log(`[RescindPlacement] Looking for placement: ${placementId}`);
+      console.log(`[RescindPlacement] Order has placementStatuses keys:`, Object.keys(order.placementStatuses || {}));
+
+      // Find the publication in selectedInventory
+      const pubIndex = selectedInventory.publications?.findIndex(
+        (p: any) => String(p.publicationId) === String(publicationId)
+      );
+
+      if (pubIndex !== undefined && pubIndex >= 0 && selectedInventory.publications) {
+        const pub = selectedInventory.publications[pubIndex];
+        
+        console.log(`[RescindPlacement] Found publication with ${pub.inventoryItems?.length || 0} inventory items`);
+        
+        // Debug: log all item paths
+        pub.inventoryItems?.forEach((item: any, idx: number) => {
+          console.log(`[RescindPlacement] Item ${idx}: itemPath="${item.itemPath}", sourcePath="${item.sourcePath}", name="${item.itemName}"`);
+        });
+        
+        // Try multiple matching strategies
+        let itemIndex = -1;
+        
+        // Strategy 1: Match by itemPath or sourcePath
+        itemIndex = pub.inventoryItems?.findIndex(
+          (item: any) => item.itemPath === placementId || item.sourcePath === placementId
+        ) ?? -1;
+        
+        // Strategy 2: Match by itemPath/sourcePath containing the placementId path parts
+        if (itemIndex < 0 && pub.inventoryItems) {
+          // The placementId might be like "distributionChannels.website.advertisingOpportunities[1]"
+          // while item.itemPath might be the raw path
+          itemIndex = pub.inventoryItems.findIndex((item: any, idx: number) => {
+            // Also check if this item's index in statuses matches
+            const possibleKeys = [
+              item.itemPath,
+              item.sourcePath,
+              `placement-${idx}`
+            ].filter(Boolean);
+            
+            console.log(`[RescindPlacement] Item ${idx} (${item.itemName}): paths = ${possibleKeys.join(', ')}`);
+            
+            return possibleKeys.includes(placementId);
+          });
+        }
+        
+        // Strategy 3: Try to find by extracting index from placementId like "...advertisingOpportunities[1]"
+        if (itemIndex < 0 && pub.inventoryItems) {
+          const indexMatch = placementId.match(/\[(\d+)\]$/);
+          if (indexMatch) {
+            const targetIndex = parseInt(indexMatch[1], 10);
+            // Find items that match the channel type from the placementId
+            const channelType = placementId.includes('.print') ? 'print' :
+                               placementId.includes('.website') ? 'website' :
+                               placementId.includes('.newsletter') ? 'newsletter' :
+                               placementId.includes('.digital') ? 'digital' : null;
+            
+            if (channelType) {
+              let channelItemIndex = 0;
+              for (let i = 0; i < pub.inventoryItems.length; i++) {
+                const item = pub.inventoryItems[i];
+                const itemChannel = (item.channel || '').toLowerCase();
+                if (itemChannel === channelType || 
+                    (channelType === 'newsletter' && itemChannel === 'newsletters') ||
+                    (channelType === 'website' && itemChannel === 'digital')) {
+                  if (channelItemIndex === targetIndex) {
+                    itemIndex = i;
+                    console.log(`[RescindPlacement] Found item by channel index: ${item.itemName}`);
+                    break;
+                  }
+                  channelItemIndex++;
+                }
+              }
+            }
+          }
+        }
+
+        if (itemIndex >= 0 && pub.inventoryItems) {
+          placementFound = true;
+          const item = pub.inventoryItems[itemIndex];
+          placementCost = item.cost || item.price || item.itemPricing?.hubPrice || 0;
+          
+          console.log(`[RescindPlacement] Found item to remove: ${item.itemName}, cost: ${placementCost}`);
+          
+          // Remove the placement
+          pub.inventoryItems.splice(itemIndex, 1);
+          
+          // Update publication total
+          if (pub.publicationTotal) {
+            pub.publicationTotal -= placementCost;
+          }
+        }
+      }
+
+      if (!placementFound) {
+        console.log(`[RescindPlacement] Placement not found in inventory items`);
+        return { success: false, error: 'Placement not found in order' };
+      }
+
+      // Remove placement status
+      const updatedPlacementStatuses = { ...order.placementStatuses };
+      delete updatedPlacementStatuses[placementId];
+
+      // Update order totals
+      const currentTotal = order.orderTotal || 0;
+      const newTotal = Math.max(0, currentTotal - placementCost);
+
+      // Update the order
+      const result = await this.ordersCollection.findOneAndUpdate(
+        { _id: order._id },
+        {
+          $set: {
+            selectedInventory,
+            placementStatuses: updatedPlacementStatuses,
+            orderTotal: newTotal,
+            updatedAt: new Date()
+          },
+          $push: {
+            statusHistory: {
+              status: order.status,
+              changedAt: new Date(),
+              changedBy: 'hub_admin',
+              notes: `Placement "${placementId}" was rescinded by hub admin`
+            }
+          }
+        },
+        { returnDocument: 'after' }
+      );
+
+      if (!result) {
+        return { success: false, error: 'Failed to update order' };
+      }
+
+      // Check if all placements have been removed - if so, soft delete the order
+      const remainingPlacements = selectedInventory.publications?.[0]?.inventoryItems?.length || 0;
+      if (remainingPlacements === 0) {
+        await this.ordersCollection.updateOne(
+          { _id: order._id },
+          { $set: { deletedAt: new Date() } }
+        );
+      }
+
+      return { success: true, updatedOrder: result };
+    } catch (error) {
+      console.error('Error rescinding placement:', error);
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }

@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -90,6 +90,7 @@ const STATUS_LABELS = {
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { campaign, loading, refetch } = useCampaign(id || null);
   const { generateOrders, generating: generatingOrders } = useGeneratePublicationOrders();
@@ -99,6 +100,22 @@ export default function CampaignDetail() {
   const [publicationOrders, setPublicationOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [showActivityLog, setShowActivityLog] = useState(false);
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
+  const [rescindTarget, setRescindTarget] = useState<{ publicationId: number; publicationName: string } | null>(null);
+  const [rescindPlacementTarget, setRescindPlacementTarget] = useState<{ 
+    publicationId: number; 
+    publicationName: string;
+    placementId: string;
+    placementName: string;
+  } | null>(null);
+  
+  // Read tab from URL query params (e.g., ?tab=orders maps to insertion-order)
+  const tabFromUrl = searchParams.get('tab');
+  const initialTab = tabFromUrl === 'orders' ? 'insertion-order' : 
+                     tabFromUrl === 'creative' ? 'creative-requirements' :
+                     tabFromUrl === 'performance' ? 'performance' :
+                     'overview';
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Fetch publication insertion orders from the new collection
   useEffect(() => {
@@ -152,6 +169,113 @@ export default function CampaignDetail() {
       toast({
         title: 'Generation Failed',
         description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRegenerateOrders = async () => {
+    if (!id || !campaign?.campaignId) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      // Delete existing orders first
+      await fetch(`${API_BASE_URL}/admin/orders/${id}/publication-orders`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      // Then regenerate
+      await handleGeneratePublicationOrders();
+      setShowRegenerateDialog(false);
+    } catch (error) {
+      console.error('Error regenerating publication orders:', error);
+      toast({
+        title: 'Regeneration Failed',
+        description: 'Failed to regenerate publication orders. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRescindOrder = async () => {
+    if (!campaign?.campaignId || !rescindTarget) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(
+        `${API_BASE_URL}/admin/orders/${campaign.campaignId}/${rescindTarget.publicationId}`,
+        {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      
+      if (!response.ok) throw new Error('Failed to rescind order');
+      
+      // Remove from local state
+      setPublicationOrders(prev => 
+        prev.filter(o => o.publicationId !== rescindTarget.publicationId)
+      );
+      
+      toast({
+        title: 'Order Rescinded',
+        description: `Publication order for ${rescindTarget.publicationName} has been rescinded.`,
+      });
+      setRescindTarget(null);
+    } catch (error) {
+      console.error('Error rescinding order:', error);
+      toast({
+        title: 'Rescind Failed',
+        description: 'Failed to rescind publication order. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRescindPlacement = async () => {
+    if (!campaign?.campaignId || !rescindPlacementTarget) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const encodedPlacementId = encodeURIComponent(rescindPlacementTarget.placementId);
+      const response = await fetch(
+        `${API_BASE_URL}/admin/orders/${campaign.campaignId}/${rescindPlacementTarget.publicationId}/placement/${encodedPlacementId}`,
+        {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to rescind placement');
+      }
+
+      const data = await response.json();
+
+      // Update local state with the updated order
+      if (data.updatedOrder) {
+        setPublicationOrders(prev => 
+          prev.map(o => o.publicationId === rescindPlacementTarget.publicationId 
+            ? data.updatedOrder 
+            : o
+          )
+        );
+      }
+
+      toast({
+        title: 'Placement Removed',
+        description: `"${rescindPlacementTarget.placementName}" has been removed from ${rescindPlacementTarget.publicationName}'s order.`,
+      });
+      setRescindPlacementTarget(null);
+      
+      // Refetch to ensure everything is in sync
+      refetch();
+    } catch (error) {
+      console.error('Error rescinding placement:', error);
+      toast({
+        title: 'Rescind Failed',
+        description: error instanceof Error ? error.message : 'Failed to rescind placement. Please try again.',
         variant: 'destructive',
       });
     }
@@ -478,7 +602,7 @@ export default function CampaignDetail() {
               </div>
 
               {/* Main Content Tabs */}
-              <Tabs defaultValue="overview">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4 gap-0">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="creative-requirements">Creative Requirements</TabsTrigger>
@@ -708,32 +832,33 @@ export default function CampaignDetail() {
                         </p>
                         
                         {/* Placement Status Summary */}
-                        <div className="mb-3 grid grid-cols-5 gap-2 text-xs">
-                          {(() => {
-                            let totalPlacements = 0;
-                            let acceptedCount = 0;
-                            let inProductionCount = 0;
-                            let deliveredCount = 0;
-                            let rejectedCount = 0;
+                        {(() => {
+                          let totalPlacements = 0;
+                          let acceptedCount = 0;
+                          let inProductionCount = 0;
+                          let deliveredCount = 0;
+                          let rejectedCount = 0;
+                          
+                          publicationOrders.forEach((order: any) => {
+                            const statuses = order.placementStatuses || {};
+                            const pub = campaign.selectedInventory?.publications?.find((p: any) => p.publicationId === order.publicationId);
+                            const placementCount = pub?.inventoryItems?.length || 0;
+                            totalPlacements += placementCount;
                             
-                            publicationOrders.forEach((order: any) => {
-                              const statuses = order.placementStatuses || {};
-                              const pub = campaign.selectedInventory?.publications?.find((p: any) => p.publicationId === order.publicationId);
-                              const placementCount = pub?.inventoryItems?.length || 0;
-                              totalPlacements += placementCount;
-                              
-                              Object.values(statuses).forEach((status: any) => {
-                                if (status === 'accepted') acceptedCount++;
-                                if (status === 'in_production') inProductionCount++;
-                                if (status === 'delivered') deliveredCount++;
-                                if (status === 'rejected') rejectedCount++;
-                              });
+                            Object.values(statuses).forEach((status: any) => {
+                              if (status === 'accepted') acceptedCount++;
+                              if (status === 'in_production') inProductionCount++;
+                              if (status === 'delivered') deliveredCount++;
+                              if (status === 'rejected') rejectedCount++;
                             });
-                            
-                            const pendingCount = totalPlacements - acceptedCount - inProductionCount - deliveredCount - rejectedCount;
-                            
-                            return (
-                              <>
+                          });
+                          
+                          const pendingCount = totalPlacements - acceptedCount - inProductionCount - deliveredCount - rejectedCount;
+                          const hasLivePlacements = inProductionCount > 0 || deliveredCount > 0;
+                          
+                          return (
+                            <>
+                              <div className="mb-3 grid grid-cols-5 gap-2 text-xs">
                                 <div className="bg-green-100 p-2 rounded border border-green-300">
                                   <div className="font-bold text-green-900">{acceptedCount}</div>
                                   <div className="text-green-700">Accepted</div>
@@ -754,50 +879,39 @@ export default function CampaignDetail() {
                                   <div className="font-bold text-red-900">{rejectedCount}</div>
                                   <div className="text-red-700">Rejected</div>
                                 </div>
-                              </>
-                            );
-                          })()}
-                        </div>
-                        <Button 
-                          onClick={async () => {
-                            if (!id) return;
-                            // Delete existing orders first
-                            try {
-                              const token = localStorage.getItem('auth_token');
-                              await fetch(`${API_BASE_URL}/admin/orders/${id}/publication-orders`, {
-                                method: 'DELETE',
-                                headers: {
-                                  'Authorization': `Bearer ${token}`
-                                }
-                              });
-                              // Then regenerate
-                              await handleGeneratePublicationOrders();
-                            } catch (error) {
-                              console.error('Error regenerating publication orders:', error);
-                              toast({
-                                title: 'Regeneration Failed',
-                                description: 'Failed to regenerate publication orders. Please try again.',
-                                variant: 'destructive',
-                              });
-                            }
-                          }}
-                          disabled={generatingOrders}
-                          variant="outline"
-                          size="sm"
-                          className="border-green-600 text-green-700 hover:bg-green-100"
-                        >
-                          {generatingOrders ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Regenerating...
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <Button 
+                                  onClick={() => setShowRegenerateDialog(true)}
+                                  disabled={generatingOrders || hasLivePlacements}
+                                  variant="outline"
+                                  size="sm"
+                                  className={hasLivePlacements 
+                                    ? "border-gray-300 text-gray-400 cursor-not-allowed" 
+                                    : "border-amber-600 text-amber-700 hover:bg-amber-100"
+                                  }
+                                >
+                                  {generatingOrders ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Regenerating...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Package className="mr-2 h-4 w-4" />
+                                      Regenerate Publication Orders
+                                    </>
+                                  )}
+                                </Button>
+                                {hasLivePlacements && (
+                                  <span className="text-xs text-muted-foreground italic">
+                                    Cannot regenerate: {inProductionCount + deliveredCount} placement(s) are live
+                                  </span>
+                                )}
+                              </div>
                             </>
-                          ) : (
-                            <>
-                              <Package className="mr-2 h-4 w-4" />
-                              Regenerate Publication Orders
-                            </>
-                          )}
-                        </Button>
+                          );
+                        })()}
                       </div>
                     </div>
                   </CardContent>
@@ -881,11 +995,42 @@ export default function CampaignDetail() {
                                     {/* Publication Header Row */}
                                     <TableRow className="border-b bg-gray-50/50 hover:bg-gray-50/50">
                                       <TableHead colSpan={4} className="py-4">
-                                        <div className="flex items-baseline gap-2">
-                                          <span className="font-semibold text-foreground text-base">{pub.publicationName}</span>
-                                          <span className="text-xs text-muted-foreground font-normal">
-                                            {pub.inventoryItems?.length || 0} placements
-                                          </span>
+                                        <div className="flex items-center gap-3">
+                                          <div className="flex items-baseline gap-2">
+                                            <span className="font-semibold text-foreground text-base">{pub.publicationName}</span>
+                                            <span className="text-xs text-muted-foreground font-normal">
+                                              {pub.inventoryItems?.length || 0} placements
+                                            </span>
+                                          </div>
+                                          {(() => {
+                                            const pubOrder = publicationOrders.find((o: any) => o.publicationId === pub.publicationId);
+                                            if (!pubOrder) return null;
+                                            
+                                            // Check if any placements are live
+                                            const statuses = Object.values(pubOrder.placementStatuses || {});
+                                            const hasLivePlacements = statuses.some(
+                                              (s: any) => s === 'in_production' || s === 'delivered'
+                                            );
+                                            
+                                            return hasLivePlacements ? (
+                                              <span className="text-xs text-muted-foreground italic">
+                                                (Has live placements)
+                                              </span>
+                                            ) : (
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() => setRescindTarget({ 
+                                                  publicationId: pub.publicationId, 
+                                                  publicationName: pub.publicationName 
+                                                })}
+                                              >
+                                                <XCircle className="h-3 w-3 mr-1" />
+                                                Rescind Order
+                                              </Button>
+                                            );
+                                          })()}
                                         </div>
                                       </TableHead>
                                       <TableHead colSpan={2} className="py-4 text-right">
@@ -901,12 +1046,13 @@ export default function CampaignDetail() {
                                     </TableRow>
                                     {/* Column Labels Row */}
                                     <TableRow>
-                                      <TableHead className="w-[12%]">Channel</TableHead>
-                                      <TableHead className="w-[30%]">Ad Placement</TableHead>
-                                      <TableHead className="w-[14%] text-center">Quantity</TableHead>
-                                      <TableHead className="w-[18%] text-center">Audience</TableHead>
-                                      <TableHead className="w-[13%] text-right">Unit Cost</TableHead>
-                                      <TableHead className="w-[13%] text-right">Total</TableHead>
+                                      <TableHead className="w-[10%]">Channel</TableHead>
+                                      <TableHead className="w-[28%]">Ad Placement</TableHead>
+                                      <TableHead className="w-[12%] text-center">Quantity</TableHead>
+                                      <TableHead className="w-[16%] text-center">Audience</TableHead>
+                                      <TableHead className="w-[11%] text-right">Unit Cost</TableHead>
+                                      <TableHead className="w-[11%] text-right">Total</TableHead>
+                                      <TableHead className="w-[12%] text-center">Actions</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                     <TableBody>
@@ -989,6 +1135,27 @@ export default function CampaignDetail() {
                                             </TableCell>
                                             <TableCell className="text-right text-sm font-semibold">
                                               ${lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                              {publicationOrder && !['in_production', 'delivered'].includes(placementStatus) && (
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                  onClick={() => setRescindPlacementTarget({
+                                                    publicationId: pub.publicationId,
+                                                    publicationName: pub.publicationName,
+                                                    placementId,
+                                                    placementName: item.itemName
+                                                  })}
+                                                >
+                                                  <XCircle className="h-3 w-3 mr-1" />
+                                                  Remove
+                                                </Button>
+                                              )}
+                                              {['in_production', 'delivered'].includes(placementStatus) && (
+                                                <span className="text-xs text-muted-foreground">Live</span>
+                                              )}
                                             </TableCell>
                                           </TableRow>
                                         );
@@ -1083,6 +1250,95 @@ export default function CampaignDetail() {
             </div>
           </div>
         </main>
+
+        {/* Regenerate Orders Confirmation Dialog */}
+        <AlertDialog open={showRegenerateDialog} onOpenChange={setShowRegenerateDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Regenerate Publication Orders?</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>This will <strong>delete all existing publication orders</strong> and create new ones. This action:</p>
+                <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                  <li>Resets all placement statuses to "Pending"</li>
+                  <li>Removes any messages/conversations with publications</li>
+                  <li>Clears confirmation dates and status history</li>
+                  <li>Publications will see new orders and need to re-confirm</li>
+                </ul>
+                <p className="text-amber-600 font-medium mt-3">This cannot be undone.</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleRegenerateOrders}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                {generatingOrders ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  'Yes, Regenerate Orders'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Rescind Order Confirmation Dialog */}
+        <AlertDialog open={!!rescindTarget} onOpenChange={(open) => !open && setRescindTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Rescind Publication Order?</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>This will remove the insertion order for <strong>{rescindTarget?.publicationName}</strong>.</p>
+                <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                  <li>The publication will no longer see this order</li>
+                  <li>Any confirmations or status updates will be lost</li>
+                  <li>Messages with this publication will be removed</li>
+                </ul>
+                <p className="text-amber-600 font-medium mt-3">You can regenerate orders later if needed.</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleRescindOrder}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Yes, Rescind Order
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Rescind Placement Confirmation Dialog */}
+        <AlertDialog open={!!rescindPlacementTarget} onOpenChange={(open) => !open && setRescindPlacementTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove Placement?</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>This will remove <strong>"{rescindPlacementTarget?.placementName}"</strong> from <strong>{rescindPlacementTarget?.publicationName}</strong>'s order.</p>
+                <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                  <li>The placement will be removed from the order</li>
+                  <li>Order total will be adjusted accordingly</li>
+                  <li>The publication will be notified</li>
+                </ul>
+                <p className="text-muted-foreground text-sm mt-3">Other placements in this order will remain unchanged.</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleRescindPlacement}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Yes, Remove Placement
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Activity Log Dialog */}
         <ActivityLogDialog

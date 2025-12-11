@@ -90,6 +90,38 @@ interface AssetsReadyEmailData {
   hubName?: string;
 }
 
+interface OrderSentEmailData {
+  recipientEmail: string;
+  recipientName?: string;
+  publicationName: string;
+  campaignName: string;
+  advertiserName?: string;
+  hubName?: string;
+  flightDates?: string;
+  totalValue?: number;
+  orderUrl: string;
+}
+
+interface OrderConfirmedEmailData {
+  recipientEmail: string;
+  recipientName?: string;
+  publicationName: string;
+  campaignName: string;
+  advertiserName?: string;
+  confirmedAt?: Date;
+  campaignUrl: string;
+}
+
+interface PlacementRejectedEmailData {
+  recipientEmail: string;
+  recipientName?: string;
+  publicationName: string;
+  placementName: string;
+  campaignName: string;
+  rejectionReason?: string;
+  campaignUrl: string;
+}
+
 export class EmailService {
   private mg: any;
   private config: EmailConfig;
@@ -114,6 +146,16 @@ export class EmailService {
       key: config.apiKey,
       url: config.baseUrl
     });
+  }
+
+  /**
+   * Check if notification emails are enabled via environment variable.
+   * Auth emails (password reset, verification, welcome) are ALWAYS sent regardless of this setting.
+   * This allows disabling notification emails in dev/staging environments.
+   */
+  private isNotificationEmailEnabled(): boolean {
+    const enabled = process.env.EMAIL_NOTIFICATIONS_ENABLED;
+    return enabled === 'true' || enabled === '1';
   }
 
   private async sendEmail(emailData: EmailData): Promise<{ success: boolean; error?: string }> {
@@ -487,7 +529,13 @@ export class EmailService {
   }
 
   // User invitation email (for hub/publication access)
-  async sendInvitationEmail(data: InvitationEmailData): Promise<{ success: boolean; error?: string }> {
+  async sendInvitationEmail(data: InvitationEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Check if notification emails are enabled
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send invitation email to ${data.recipientEmail} for ${data.resourceName}`);
+      return { success: true, skipped: true };
+    }
+
     const acceptLink = `${this.getBaseUrl()}/accept-invitation/${data.invitationToken}`;
     const resourceTypeLabel = data.resourceType === 'hub' ? 'Hub' : 'Publication';
 
@@ -564,7 +612,13 @@ export class EmailService {
   }
 
   // Access granted notification
-  async sendAccessGrantedEmail(data: AccessGrantedEmailData): Promise<{ success: boolean; error?: string }> {
+  async sendAccessGrantedEmail(data: AccessGrantedEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Check if notification emails are enabled
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send access granted email to ${data.recipientEmail} for ${data.resourceName}`);
+      return { success: true, skipped: true };
+    }
+
     const dashboardLink = `${this.getBaseUrl()}/dashboard`;
     const resourceTypeLabel = data.resourceType === 'hub' ? 'Hub' : 'Publication';
 
@@ -622,7 +676,13 @@ export class EmailService {
   }
 
   // Access revoked notification
-  async sendAccessRevokedEmail(data: AccessRevokedEmailData): Promise<{ success: boolean; error?: string }> {
+  async sendAccessRevokedEmail(data: AccessRevokedEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Check if notification emails are enabled
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send access revoked email to ${data.recipientEmail} for ${data.resourceName}`);
+      return { success: true, skipped: true };
+    }
+
     const resourceTypeLabel = data.resourceType === 'hub' ? 'Hub' : 'Publication';
 
     const infoBoxContent = `
@@ -674,7 +734,13 @@ export class EmailService {
   }
 
   // Role change notification
-  async sendRoleChangeEmail(data: RoleChangeEmailData): Promise<{ success: boolean; error?: string }> {
+  async sendRoleChangeEmail(data: RoleChangeEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Check if notification emails are enabled
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send role change email to ${data.recipientEmail} (${data.oldRole} -> ${data.newRole})`);
+      return { success: true, skipped: true };
+    }
+
     const roleLabels: Record<string, string> = {
       admin: 'Administrator',
       hub_user: 'Hub User',
@@ -730,7 +796,13 @@ export class EmailService {
   }
 
   // Lead inquiry notification email (for admins)
-  async sendLeadNotificationEmail(leadData: any): Promise<{ success: boolean; error?: string }> {
+  async sendLeadNotificationEmail(leadData: any): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Check if notification emails are enabled
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send lead notification email for ${leadData.businessName} - ${leadData.contactName}`);
+      return { success: true, skipped: true };
+    }
+
     const adminEmail = process.env.ADMIN_EMAIL || this.config.fromEmail;
     
     const generateInfoRow = (label: string, value: string) => `
@@ -808,7 +880,13 @@ export class EmailService {
   }
 
   // Assets ready notification email (for publications)
-  async sendAssetsReadyEmail(data: AssetsReadyEmailData): Promise<{ success: boolean; error?: string }> {
+  async sendAssetsReadyEmail(data: AssetsReadyEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Check if notification emails are enabled
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send assets ready email to ${data.recipientEmail} for campaign "${data.campaignName}"`);
+      return { success: true, skipped: true };
+    }
+
     const infoBoxContent = `
       <p style="margin: 0; line-height: 1.8; font-size: 15px;">
         <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
@@ -870,6 +948,224 @@ export class EmailService {
     return await this.sendEmail({
       to: data.recipientEmail,
       subject: `📦 Creative Assets Ready: ${data.campaignName}`,
+      html
+    });
+  }
+
+  // Order sent notification email (for publications)
+  async sendOrderSentEmail(data: OrderSentEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Check if notification emails are enabled
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send order sent email to ${data.recipientEmail} for campaign "${data.campaignName}"`);
+      return { success: true, skipped: true };
+    }
+
+    const infoBoxContent = `
+      <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
+        ${data.advertiserName ? `<strong style="color: ${this.BRAND_COLORS.navy};">🏢 Advertiser:</strong> ${data.advertiserName}<br>` : ''}
+        <strong style="color: ${this.BRAND_COLORS.navy};">📰 Publication:</strong> ${data.publicationName}<br>
+        ${data.flightDates ? `<strong style="color: ${this.BRAND_COLORS.navy};">📅 Flight Dates:</strong> ${data.flightDates}<br>` : ''}
+        ${data.totalValue ? `<strong style="color: ${this.BRAND_COLORS.navy};">💰 Order Value:</strong> $${data.totalValue.toLocaleString()}<br>` : ''}
+      </p>
+    `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        You have received a new insertion order for <strong>"${data.campaignName}"</strong>.
+      </p>
+      
+      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.orange)}
+      
+      <p style="margin: 0 0 12px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
+        Please review and:
+      </p>
+      <ul style="margin: 0 0 24px 0; padding-left: 24px;">
+        <li style="margin-bottom: 8px;">📋 Review the order details and placements</li>
+        <li style="margin-bottom: 8px;">✅ Accept or reject individual placements</li>
+        <li style="margin-bottom: 8px;">💬 Send any questions via the messaging system</li>
+        <li style="margin-bottom: 8px;">📥 Download creative assets when available</li>
+      </ul>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('View Order Details', data.orderUrl, this.BRAND_COLORS.orange)}
+      </div>
+      
+      <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${data.orderUrl}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${data.orderUrl}</a>
+      </p>
+      
+      ${this.generateAlertBox(
+        '<strong>Action Required:</strong> Please review and respond to this order at your earliest convenience.',
+        'info'
+      )}
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>${data.hubName || 'The Chicago Hub Team'}</strong>
+      </p>
+    `;
+
+    const html = this.generateEmailTemplate({
+      title: 'New Insertion Order',
+      preheader: `New order received for ${data.campaignName}`,
+      content,
+      headerColor: this.BRAND_COLORS.orange,
+      headerIcon: '📋',
+      recipientEmail: data.recipientEmail
+    });
+
+    return await this.sendEmail({
+      to: data.recipientEmail,
+      subject: `📋 New Insertion Order: ${data.campaignName}`,
+      html
+    });
+  }
+
+  // Order confirmed notification email (for hub admins)
+  async sendOrderConfirmedEmail(data: OrderConfirmedEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Check if notification emails are enabled
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send order confirmed email to ${data.recipientEmail} for campaign "${data.campaignName}"`);
+      return { success: true, skipped: true };
+    }
+
+    const confirmedDate = data.confirmedAt ? new Date(data.confirmedAt).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }) : new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const infoBoxContent = `
+      <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
+        ${data.advertiserName ? `<strong style="color: ${this.BRAND_COLORS.navy};">🏢 Advertiser:</strong> ${data.advertiserName}<br>` : ''}
+        <strong style="color: ${this.BRAND_COLORS.navy};">📰 Publication:</strong> ${data.publicationName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">✅ Confirmed:</strong> <span style="color: ${this.BRAND_COLORS.green};">${confirmedDate}</span>
+      </p>
+    `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        Great news! <strong>${data.publicationName}</strong> has confirmed their order for <strong>"${data.campaignName}"</strong>.
+      </p>
+      
+      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.green)}
+      
+      <p style="margin: 0 0 16px 0;">
+        The publication has reviewed and accepted the order. You can now proceed with the next steps of your campaign.
+      </p>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('View Campaign', data.campaignUrl, this.BRAND_COLORS.green)}
+      </div>
+      
+      <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${data.campaignUrl}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${data.campaignUrl}</a>
+      </p>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>The Chicago Hub Team</strong>
+      </p>
+    `;
+
+    const html = this.generateEmailTemplate({
+      title: 'Order Confirmed!',
+      preheader: `${data.publicationName} confirmed order for ${data.campaignName}`,
+      content,
+      headerColor: this.BRAND_COLORS.green,
+      headerIcon: '✅',
+      recipientEmail: data.recipientEmail
+    });
+
+    return await this.sendEmail({
+      to: data.recipientEmail,
+      subject: `✅ Order Confirmed: ${data.publicationName} - ${data.campaignName}`,
+      html
+    });
+  }
+
+  // Placement rejected notification email (for hub admins)
+  async sendPlacementRejectedEmail(data: PlacementRejectedEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Check if notification emails are enabled
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send placement rejected email to ${data.recipientEmail} for "${data.placementName}" on campaign "${data.campaignName}"`);
+      return { success: true, skipped: true };
+    }
+
+    const infoBoxContent = `
+      <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">📰 Publication:</strong> ${data.publicationName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">❌ Rejected Placement:</strong> <span style="color: ${this.BRAND_COLORS.red};">${data.placementName}</span>
+        ${data.rejectionReason ? `<br><strong style="color: ${this.BRAND_COLORS.navy};">📝 Reason:</strong> ${data.rejectionReason}` : ''}
+      </p>
+    `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        <strong>${data.publicationName}</strong> has rejected a placement for <strong>"${data.campaignName}"</strong>.
+      </p>
+      
+      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.red)}
+      
+      <p style="margin: 0 0 12px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
+        Recommended next steps:
+      </p>
+      <ul style="margin: 0 0 24px 0; padding-left: 24px;">
+        <li style="margin-bottom: 8px;">💬 Contact the publication to understand the rejection</li>
+        <li style="margin-bottom: 8px;">🔄 Consider alternative placements or publications</li>
+        <li style="margin-bottom: 8px;">📝 Update the campaign if needed</li>
+      </ul>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('View Campaign', data.campaignUrl, this.BRAND_COLORS.orange)}
+      </div>
+      
+      <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${data.campaignUrl}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${data.campaignUrl}</a>
+      </p>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>The Chicago Hub Team</strong>
+      </p>
+    `;
+
+    const html = this.generateEmailTemplate({
+      title: 'Placement Rejected',
+      preheader: `${data.publicationName} rejected "${data.placementName}" for ${data.campaignName}`,
+      content,
+      headerColor: this.BRAND_COLORS.red,
+      headerIcon: '❌',
+      recipientEmail: data.recipientEmail
+    });
+
+    return await this.sendEmail({
+      to: data.recipientEmail,
+      subject: `❌ Placement Rejected: ${data.placementName} - ${data.campaignName}`,
       html
     });
   }

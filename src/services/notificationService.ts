@@ -299,6 +299,7 @@ export async function notifyOrderConfirmed(params: {
   userId: string;
   hubId: string;
   publicationName: string;
+  publicationId: string;
   campaignId: string;
   campaignName: string;
   orderId: string;
@@ -311,7 +312,7 @@ export async function notifyOrderConfirmed(params: {
     message: `${params.publicationName} confirmed their order for "${params.campaignName}"`,
     campaignId: params.campaignId,
     orderId: params.orderId,
-    link: `/campaigns/${params.campaignId}`,
+    link: `/campaigns/${params.campaignId}?tab=orders&publication=${params.publicationId}`,
     groupKey: `order_confirmed:${params.orderId}`
   });
 }
@@ -320,6 +321,7 @@ export async function notifyPlacementRejected(params: {
   userId: string;
   hubId: string;
   publicationName: string;
+  publicationId: string;
   placementName: string;
   campaignId: string;
   campaignName: string;
@@ -334,7 +336,7 @@ export async function notifyPlacementRejected(params: {
     message: `${params.publicationName} rejected "${params.placementName}" for "${params.campaignName}"${params.reason ? `: ${params.reason}` : ''}`,
     campaignId: params.campaignId,
     orderId: params.orderId,
-    link: `/campaigns/${params.campaignId}`,
+    link: `/campaigns/${params.campaignId}?tab=orders&publication=${params.publicationId}`,
     groupKey: `placement_rejected:${params.orderId}:${params.placementName}`
   });
 }
@@ -357,5 +359,51 @@ export async function notifyAssetUpdated(params: {
     orderId: params.orderId,
     link: `/dashboard?tab=order-detail&campaignId=${params.campaignId}&publicationId=${params.publicationId}`,
     groupKey: `asset_updated:${params.orderId}:${params.assetName}`
+  });
+}
+
+export async function notifyPlacementAccepted(params: {
+  userId: string;
+  hubId: string;
+  publicationName: string;
+  publicationId: string;
+  placementName: string;
+  campaignId: string;
+  campaignName: string;
+  orderId: string;
+}): Promise<void> {
+  await notificationService.create({
+    userId: params.userId,
+    hubId: params.hubId,
+    type: 'placement_accepted',
+    title: 'Placement Accepted',
+    message: `${params.publicationName} accepted "${params.placementName}" for "${params.campaignName}"`,
+    campaignId: params.campaignId,
+    orderId: params.orderId,
+    link: `/campaigns/${params.campaignId}?tab=orders&publication=${params.publicationId}`,
+    groupKey: `placement_accepted:${params.orderId}:${params.placementName}`
+  });
+}
+
+export async function notifyPlacementDelivered(params: {
+  userId: string;
+  hubId: string;
+  publicationName: string;
+  publicationId: string;
+  placementName: string;
+  campaignId: string;
+  campaignName: string;
+  orderId: string;
+}): Promise<void> {
+  await notificationService.create({
+    userId: params.userId,
+    hubId: params.hubId,
+    type: 'placement_delivered',
+    title: 'Placement Delivered',
+    message: `${params.publicationName} marked "${params.placementName}" as delivered for "${params.campaignName}"`,
+    campaignId: params.campaignId,
+    orderId: params.orderId,
+    link: `/campaigns/${params.campaignId}?tab=orders&publication=${params.publicationId}`,
+    groupKey: `placement_delivered:${params.orderId}:${params.placementName}`
   });
 }

@@ -7,8 +7,18 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { OrderStatusBadge, OrderStatus } from '../orders/OrderStatusBadge';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X, Image, AlertCircle, CheckCircle2, Calendar, MessageCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X, Image, AlertCircle, CheckCircle2, Calendar, MessageCircle, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -75,6 +85,7 @@ export function HubOrdersManagement() {
   const [issuePopoverOpen, setIssuePopoverOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
   const [showActivityLog, setShowActivityLog] = useState(false);
+  const [rescindTarget, setRescindTarget] = useState<{ campaignId: string; publicationId: number; publicationName: string; campaignName: string } | null>(null);
 
   const issueOptions = [
     { value: 'rejected', label: 'Has Rejections' },
@@ -121,6 +132,56 @@ export function HubOrdersManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRescindOrder = async () => {
+    if (!rescindTarget) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(
+        `${API_BASE_URL}/admin/orders/${rescindTarget.campaignId}/${rescindTarget.publicationId}`,
+        {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to rescind order');
+      }
+      
+      // Remove from local state
+      setOrders(prev => prev.filter(
+        o => !(o.campaignId === rescindTarget.campaignId && o.publicationId === rescindTarget.publicationId)
+      ));
+      
+      // Recalculate stats
+      const updatedOrders = orders.filter(
+        o => !(o.campaignId === rescindTarget.campaignId && o.publicationId === rescindTarget.publicationId)
+      );
+      setStats(calculateStats(updatedOrders));
+      
+      toast({
+        title: 'Order Rescinded',
+        description: `Order for ${rescindTarget.publicationName} has been rescinded.`,
+      });
+      setRescindTarget(null);
+    } catch (error) {
+      console.error('Error rescinding order:', error);
+      toast({
+        title: 'Rescind Failed',
+        description: error instanceof Error ? error.message : 'Failed to rescind order. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Check if order has live placements
+  const hasLivePlacements = (order: InsertionOrder) => {
+    const statuses = Object.values(order.placementStatuses || {});
+    return statuses.some(s => s === 'in_production' || s === 'delivered');
   };
 
   // Get unique campaigns for filter dropdown
@@ -686,17 +747,37 @@ export function HubOrdersManagement() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/hubcentral?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/hubcentral?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          {!hasLivePlacements(order) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRescindTarget({
+                                  campaignId: order.campaignId,
+                                  publicationId: order.publicationId,
+                                  publicationName: order.publicationName,
+                                  campaignName: order.campaignName
+                                });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -715,6 +796,33 @@ export function HubOrdersManagement() {
         activityTypes={['order_create', 'order_update', 'order_delete']}
         hubId={selectedHubId}
       />
+
+      {/* Rescind Order Confirmation Dialog */}
+      <AlertDialog open={!!rescindTarget} onOpenChange={(open) => !open && setRescindTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rescind Publication Order?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>This will remove the insertion order for <strong>{rescindTarget?.publicationName}</strong> from campaign <strong>{rescindTarget?.campaignName}</strong>.</p>
+              <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                <li>The publication will no longer see this order</li>
+                <li>Any confirmations or status updates will be lost</li>
+                <li>Messages with this publication will be removed</li>
+              </ul>
+              <p className="text-amber-600 font-medium mt-3">This cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRescindOrder}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Yes, Rescind Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -15,6 +15,7 @@ export type NotificationType =
   | 'asset_updated'      // Hub replaced/updated an asset
   | 'placement_accepted' // Placement accepted by publication
   | 'placement_rejected' // Placement rejected by publication
+  | 'placement_delivered' // Placement marked as delivered
   | 'reminder';          // General reminder notification
 
 export interface NotificationDocument {

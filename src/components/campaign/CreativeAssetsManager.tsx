@@ -1268,6 +1268,22 @@ export function CreativeAssetsManager({
       .filter(([_, asset]) => asset.uploadStatus === 'pending' && asset.file);
 
     if (pendingAssets.length === 0) return;
+    
+    // Validate that digital assets have click URLs
+    const digitalAssetsWithoutClickUrl = pendingAssets.filter(([specGroupId, asset]) => {
+      const spec = groupedSpecs.find(s => s.specGroupId === specGroupId);
+      const isDigitalChannel = spec && ['website', 'newsletter', 'streaming'].includes(spec.channel || '');
+      return isDigitalChannel && !asset.clickUrl?.trim();
+    });
+    
+    if (digitalAssetsWithoutClickUrl.length > 0) {
+      toast({
+        title: 'Click-Through URL Required',
+        description: `Please add a click-through URL for ${digitalAssetsWithoutClickUrl.length} digital asset${digitalAssetsWithoutClickUrl.length !== 1 ? 's' : ''} before uploading.`,
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setUploadProgress({ current: 0, total: pendingAssets.length });
 
@@ -1425,6 +1441,18 @@ export function CreativeAssetsManager({
   // Count pending uploads
   const pendingUploadCount = Array.from(uploadedAssets.values())
     .filter(a => a.uploadStatus === 'pending').length;
+  
+  // Count pending digital assets missing click URLs
+  const pendingDigitalAssetsMissingClickUrl = Array.from(uploadedAssets.entries())
+    .filter(([specGroupId, asset]) => {
+      if (asset.uploadStatus !== 'pending') return false;
+      // Check if this is a digital channel (website, newsletter, streaming)
+      const spec = groupedSpecs.find(s => s.specGroupId === specGroupId);
+      const isDigitalChannel = spec && ['website', 'newsletter', 'streaming'].includes(spec.channel || '');
+      return isDigitalChannel && !asset.clickUrl?.trim();
+    });
+  
+  const hasPendingDigitalAssetsWithoutClickUrl = pendingDigitalAssetsMissingClickUrl.length > 0;
   
   // Handle split click
   const handleSplitClick = (specGroupId: string, publicationId: number, publicationName: string) => {
@@ -2059,13 +2087,56 @@ export function CreativeAssetsManager({
                 </div>
               )}
 
+              {/* Batch Click URL for assigned pending digital assets */}
+              {hasPendingDigitalAssetsWithoutClickUrl && (
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-medium text-amber-900">Click-Through URL Required</span>
+                  </div>
+                  <p className="text-xs text-amber-700 mb-3">
+                    {pendingDigitalAssetsMissingClickUrl.length} website/newsletter asset{pendingDigitalAssetsMissingClickUrl.length !== 1 ? 's need' : ' needs'} a click-through URL before saving.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="url"
+                      placeholder="https://advertiser.com/landing-page"
+                      className="h-8 text-sm flex-1"
+                      value={batchClickUrl}
+                      onChange={(e) => setBatchClickUrl(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!batchClickUrl.trim()}
+                      onClick={() => {
+                        if (!batchClickUrl.trim()) return;
+                        // Apply to all pending digital assets missing click URL
+                        const newAssetsMap = new Map(uploadedAssets);
+                        pendingDigitalAssetsMissingClickUrl.forEach(([specGroupId, asset]) => {
+                          newAssetsMap.set(specGroupId, { ...asset, clickUrl: batchClickUrl.trim() });
+                        });
+                        onAssetsChange(newAssetsMap);
+                        setBatchClickUrl('');
+                        toast({
+                          title: 'Click URL Applied',
+                          description: `Applied to ${pendingDigitalAssetsMissingClickUrl.length} pending asset${pendingDigitalAssetsMissingClickUrl.length !== 1 ? 's' : ''}`,
+                        });
+                      }}
+                    >
+                      Apply to All ({pendingDigitalAssetsMissingClickUrl.length})
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Upload button - always visible for clarity */}
               <div className="mt-4">
                 <Button
                   onClick={handleUploadAll}
                   className="w-full"
-                  disabled={uploadProgress !== null || pendingUploadCount === 0}
-                  variant={pendingUploadCount > 0 ? "default" : "outline"}
+                  disabled={uploadProgress !== null || pendingUploadCount === 0 || hasPendingDigitalAssetsWithoutClickUrl}
+                  variant={pendingUploadCount > 0 && !hasPendingDigitalAssetsWithoutClickUrl ? "default" : "outline"}
                 >
                   {uploadProgress ? (
                     <>
@@ -2084,7 +2155,7 @@ export function CreativeAssetsManager({
                     </>
                   )}
                 </Button>
-                {pendingUploadCount > 0 && (
+                {pendingUploadCount > 0 && !hasPendingDigitalAssetsWithoutClickUrl && (
                   <p className="text-xs text-center text-amber-600 mt-2">
                     {pendingUploadCount} asset{pendingUploadCount !== 1 ? 's' : ''} ready to save
                   </p>
