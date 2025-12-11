@@ -1,13 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { PricingAnalytics, ChannelPricingAnalytics } from '@/hooks/useDashboardStats';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
-import { Loader2, TrendingUp, AlertCircle, Info, Star, ThumbsUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Loader2, TrendingUp, AlertCircle, Info, Star, ThumbsUp, AlertTriangle, CheckCircle, ArrowUp, BarChart3 } from 'lucide-react';
 import { assessPricing, getSuggestedPrice } from '@/utils/pricingBenchmarks';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
@@ -131,6 +133,22 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
   const [activeChannel, setActiveChannel] = useState('website');
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [pricingFilter, setPricingFilter] = useState<'all' | 'way-too-high' | 'too-high' | 'fair'>('all');
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
+
+  // Handle scroll to top button visibility
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Extract detailed inventory items from publications
   const detailedInventory = useMemo(() => {
@@ -511,7 +529,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <CardTitle className="text-xl flex items-center gap-2 font-sans">
+                <CardTitle className="text-[18px] flex items-center gap-2 font-sans">
                   {pricingHealth.health.score >= 80 ? <CheckCircle className="h-6 w-6 text-green-600" /> :
                    pricingHealth.health.score >= 60 ? <AlertTriangle className="h-6 w-6 text-yellow-600" /> :
                    <AlertCircle className="h-6 w-6 text-red-600" />}
@@ -519,7 +537,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                    pricingHealth.health.score >= 60 ? "Your Pricing Needs Some Work" :
                    "Your Pricing Needs Attention"}
                 </CardTitle>
-                <CardDescription className="mt-2 text-base">
+                <CardDescription className="mt-2 text-[14px]">
                   {pricingHealth.health.score >= 80 ? 
                     "Most of your inventory is priced competitively. You're ready to build great packages!" :
                    pricingHealth.health.score >= 60 ?
@@ -558,51 +576,73 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                   <Star className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <div className="text-sm font-semibold font-sans text-green-600">Great Value</div>
-                    <div className="text-[10px] text-muted-foreground font-sans">Use in packages</div>
                   </div>
                 </div>
-                <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.excellent}</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.excellent}</div>
+                  <div className="text-xs text-muted-foreground font-sans">To use in packages</div>
+                </div>
               </div>
               <div className="bg-white rounded-lg p-3 border border-gray-200">
                 <div className="flex items-start gap-2 text-left mb-2">
                   <ThumbsUp className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <div className="text-sm font-semibold font-sans text-green-500">Good Price</div>
-                    <div className="text-[10px] text-muted-foreground font-sans">Ready to sell</div>
                   </div>
                 </div>
-                <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.good}</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.good}</div>
+                  <div className="text-xs text-muted-foreground font-sans">Ready to sell</div>
+                </div>
               </div>
               <div className="bg-white rounded-lg p-3 border border-gray-200">
                 <div className="flex items-start gap-2 text-left mb-2">
                   <Info className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <div className="text-sm font-semibold font-sans text-yellow-600">Fair</div>
-                    <div className="text-[10px] text-muted-foreground font-sans">Could improve</div>
                   </div>
                 </div>
-                <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.fair}</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.fair}</div>
+                  <div className="text-xs text-muted-foreground font-sans">Could improve</div>
+                </div>
               </div>
               <div className="bg-white rounded-lg p-3 border border-gray-200">
                 <div className="flex items-start gap-2 text-left mb-2">
                   <AlertTriangle className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <div className="text-sm font-semibold font-sans text-orange-600">Too High</div>
-                    <div className="text-[10px] text-muted-foreground font-sans">Needs review</div>
                   </div>
                 </div>
-                <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.review}</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.review}</div>
+                  <div className="text-xs text-muted-foreground font-sans">Needs review</div>
+                </div>
               </div>
               <div className="bg-white rounded-lg p-3 border border-gray-200">
                 <div className="flex items-start gap-2 text-left mb-2">
                   <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <div className="text-sm font-semibold font-sans text-red-600">Way Too High</div>
-                    <div className="text-[10px] text-muted-foreground font-sans">Fix immediately</div>
                   </div>
                 </div>
-                <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.critical}</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl font-bold font-sans text-gray-900">{pricingHealth.health.breakdown.critical}</div>
+                  <div className="text-xs text-muted-foreground font-sans">To fix immediately</div>
+                </div>
               </div>
+            </div>
+            
+            {/* Dive Deeper Button */}
+            <div className="mt-4 flex justify-end">
+              <Button
+                onClick={() => setShowPricingModal(true)}
+                variant="outline"
+                className="bg-white border-gray-300 hover:bg-gray-50 text-gray-700"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Dive Deeper
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -784,30 +824,40 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
         </>
       )}
 
-      {/* Channel Tabs */}
-      <Tabs value={activeChannel} onValueChange={setActiveChannel}>
-        <TabsList className="grid w-full grid-cols-6">
-          {CHANNELS.map(channel => {
-            const Icon = channel.icon;
-            const hasData = pricingAnalytics[channel.key as keyof PricingAnalytics] && 
-              Object.keys(pricingAnalytics[channel.key as keyof PricingAnalytics]).length > 0;
-            
-            return (
-              <TabsTrigger 
-                key={channel.key} 
-                value={channel.key}
-                disabled={!hasData}
-                className="flex items-center gap-2"
-              >
-                <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{channel.label}</span>
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+      {/* Pricing Analytics Modal */}
+      <Dialog open={showPricingModal} onOpenChange={setShowPricingModal}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold font-sans flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Detailed Pricing Analytics
+            </DialogTitle>
+          </DialogHeader>
+          
+          {/* Channel Tabs in Modal */}
+          <Tabs value={activeChannel} onValueChange={setActiveChannel}>
+            <TabsList className="grid w-full grid-cols-6">
+              {CHANNELS.map(channel => {
+                const Icon = channel.icon;
+                const hasData = pricingAnalytics[channel.key as keyof PricingAnalytics] && 
+                  Object.keys(pricingAnalytics[channel.key as keyof PricingAnalytics]).length > 0;
+                
+                return (
+                  <TabsTrigger 
+                    key={channel.key} 
+                    value={channel.key}
+                    disabled={!hasData}
+                    className="flex items-center gap-2"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="hidden sm:inline">{channel.label}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
 
             {CHANNELS.map(channel => (
-              <TabsContent key={channel.key} value={channel.key} className="mt-0">
+              <TabsContent key={channel.key} value={channel.key} className="mt-4">
                 {sortedModels.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -1138,6 +1188,8 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
               </TabsContent>
             ))}
           </Tabs>
+        </DialogContent>
+      </Dialog>
 
       {/* Activity Log Dialog */}
       <ActivityLogDialog
@@ -1147,6 +1199,17 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
         activityTypes={['publication_update']}
         hubId={selectedHubId}
       />
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-24 z-50 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-3 shadow-lg transition-all duration-300 hover:scale-110"
+          aria-label="Scroll to top"
+        >
+          <ArrowUp className="h-6 w-6" />
+        </button>
+      )}
     </div>
   );
 };

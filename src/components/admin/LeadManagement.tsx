@@ -528,7 +528,7 @@ export const LeadManagement = () => {
       </div>
 
       {/* Filters and search row */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-4">
           {/* Search Bar - Left */}
           <div className="relative min-w-[300px]">
             <Input
@@ -550,6 +550,9 @@ export const LeadManagement = () => {
               </Button>
             )}
           </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
 
           {/* Filters - Right */}
           <div className="flex items-center gap-2">
@@ -721,6 +724,7 @@ export const LeadManagement = () => {
           >
             {showArchived ? 'Hide Archived' : 'Show Archived'}
           </Button>
+          </div>
 
           {/* More Options Menu */}
           <DropdownMenu>
@@ -746,7 +750,6 @@ export const LeadManagement = () => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          </div>
       </div>
 
       {/* Table Card */}
