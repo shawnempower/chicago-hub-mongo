@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePublication } from '@/contexts/PublicationContext';
+import { API_BASE_URL } from '@/config/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,8 +26,12 @@ import {
   Calendar,
   AlertTriangle,
   UserPlus,
-  X
+  X,
+  Code,
+  Newspaper
 } from 'lucide-react';
+import { getAdServerOptions, getESPOptions } from '@/utils/trackingTagTransforms';
+import type { PublicationAdServer, PublicationESP } from '@/integrations/mongodb/schemas';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 
@@ -62,6 +67,15 @@ export const PublicationSettings: React.FC = () => {
       requireDeposit: true,
       minimumBookingDays: 7,
       cancellationPolicy: 'flexible'
+    },
+    adDelivery: {
+      adServer: (selectedPublication?.adDeliverySettings?.adServer || 'direct') as PublicationAdServer,
+      esp: (selectedPublication?.adDeliverySettings?.esp || 'other') as PublicationESP,
+      espOther: selectedPublication?.adDeliverySettings?.espOther || {
+        name: '',
+        emailIdMergeTag: '',
+        cacheBusterMergeTag: ''
+      }
     }
   });
 
@@ -142,9 +156,29 @@ export const PublicationSettings: React.FC = () => {
     
     setSaving(true);
     try {
-      // Here you would save the settings (visibility, notifications, advertising)
-      // For now, just show success message
-      console.log('💾 Saving settings:', settings);
+      const token = localStorage.getItem('auth_token');
+      
+      // Save ad delivery settings to publications collection
+      const response = await fetch(`${API_BASE_URL}/publications/${selectedPublication.publicationId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          adDeliverySettings: {
+            adServer: settings.adDelivery.adServer,
+            esp: settings.adDelivery.esp,
+            espOther: settings.adDelivery.esp === 'other' ? settings.adDelivery.espOther : undefined
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save settings');
+      }
+      
+      console.log('💾 Settings saved:', settings);
       
       toast({
         title: "Settings saved",
@@ -253,6 +287,127 @@ export const PublicationSettings: React.FC = () => {
         resourceName={selectedPublication.basicInfo?.publicationName || 'Publication'}
         onInviteSent={() => setRefreshKey(prev => prev + 1)}
       />
+
+      {/* Ad Delivery Settings - Full width, right below Team Members */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-sans text-base">
+            <Code className="h-5 w-5" />
+            Ad Delivery Settings
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Configure how tracking tags are formatted for your ad servers and email platforms
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Web/Display Ad Server */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Globe className="h-4 w-4 text-blue-600" />
+                <h4 className="font-medium text-sm">Web/Display Ads</h4>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="adServer">Ad Server Platform</Label>
+                <Select 
+                  value={settings.adDelivery.adServer}
+                  onValueChange={(value: PublicationAdServer) => updateSetting('adDelivery', 'adServer', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your ad server" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAdServerOptions().map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {settings.adDelivery.adServer === 'gam' && 'Tags will include GAM click macros (%%CLICK_URL_UNESC%%) and cache busters (%%CACHEBUSTER%%)'}
+                  {settings.adDelivery.adServer === 'broadstreet' && 'Tags will include Broadstreet click macros ({{click}}) and timestamps ([timestamp])'}
+                  {settings.adDelivery.adServer === 'direct' && 'Tags will use JavaScript for dynamic cache busting - paste directly into your CMS'}
+                </p>
+              </div>
+            </div>
+
+            {/* Newsletter ESP */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Newspaper className="h-4 w-4 text-purple-600" />
+                <h4 className="font-medium text-sm">Newsletter Ads</h4>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="esp">Email Service Provider</Label>
+                <Select 
+                  value={settings.adDelivery.esp}
+                  onValueChange={(value: PublicationESP) => updateSetting('adDelivery', 'esp', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your ESP" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getESPOptions().map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Newsletter tags will use your ESP's merge tag syntax for subscriber tracking
+                </p>
+              </div>
+
+              {/* Custom ESP fields when "other" is selected */}
+              {settings.adDelivery.esp === 'other' && (
+                <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+                  <p className="text-xs font-medium text-muted-foreground">Custom ESP Merge Tags</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="espName" className="text-xs">ESP Name</Label>
+                    <Input
+                      id="espName"
+                      placeholder="e.g., My Email Platform"
+                      value={settings.adDelivery.espOther?.name || ''}
+                      onChange={(e) => updateSetting('adDelivery', 'espOther', {
+                        ...settings.adDelivery.espOther,
+                        name: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="emailIdTag" className="text-xs">Subscriber ID Merge Tag</Label>
+                    <Input
+                      id="emailIdTag"
+                      placeholder="e.g., {{subscriber.id}}"
+                      value={settings.adDelivery.espOther?.emailIdMergeTag || ''}
+                      onChange={(e) => updateSetting('adDelivery', 'espOther', {
+                        ...settings.adDelivery.espOther,
+                        emailIdMergeTag: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cacheBusterTag" className="text-xs">Timestamp/Cache Buster Merge Tag</Label>
+                    <Input
+                      id="cacheBusterTag"
+                      placeholder="e.g., {{timestamp}}"
+                      value={settings.adDelivery.espOther?.cacheBusterMergeTag || ''}
+                      onChange={(e) => updateSetting('adDelivery', 'espOther', {
+                        ...settings.adDelivery.espOther,
+                        cacheBusterMergeTag: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Visibility Settings */}

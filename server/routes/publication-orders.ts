@@ -269,6 +269,12 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
       
     }
     
+    // Fetch publication's ad delivery settings
+    const { getDatabase: getDb } = await import('../../src/integrations/mongodb/client');
+    const { COLLECTIONS: COLS } = await import('../../src/integrations/mongodb/schemas');
+    const publicationsCollection = getDb().collection(COLS.PUBLICATIONS);
+    const publicationDoc = await publicationsCollection.findOne({ publicationId: parseInt(publicationId) });
+    
     // Include campaign data with inventory for ad specs
     const orderWithCampaignData = {
       ...order,
@@ -278,6 +284,9 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
         timeline: campaign.timeline,
         objectives: campaign.objectives,
         basicInfo: campaign.basicInfo
+      } : null,
+      publicationSettings: publicationDoc ? {
+        adDeliverySettings: publicationDoc.adDeliverySettings
       } : null
     };
 

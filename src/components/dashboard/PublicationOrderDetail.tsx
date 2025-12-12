@@ -16,8 +16,20 @@ import {
   Calendar, DollarSign, Layers, MessageSquare, Download,
   ChevronDown, ChevronUp, Clock, Package, RefreshCw,
   Eye, Users, Newspaper, Radio, Headphones, CalendarDays, Target,
-  Lock
+  Lock, XCircle, PlayCircle, Timer
 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { 
+  transformForAdServer, 
+  transformForESP, 
+  getAdServerName, 
+  getESPName,
+  getAdServerInstructions,
+  getESPInstructions,
+  AD_SERVER_MACROS,
+  ESP_MERGE_TAGS
+} from '@/utils/trackingTagTransforms';
+import type { PublicationAdServer, PublicationESP } from '@/integrations/mongodb/schemas';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -46,6 +58,15 @@ export function PublicationOrderDetail() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [copiedScriptId, setCopiedScriptId] = useState<string | null>(null);
+  
+  // Tag tester state
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testingScript, setTestingScript] = useState<TrackingScript | null>(null);
+  const [testResults, setTestResults] = useState<{
+    impressionPixel: { status: 'pending' | 'success' | 'error'; time?: number; error?: string };
+    clickTracker: { status: 'pending' | 'success' | 'error'; time?: number; error?: string };
+    creativeUrl: { status: 'pending' | 'success' | 'error'; time?: number; size?: string; error?: string };
+  } | null>(null);
   
   // Fresh assets and tracking scripts
   const [freshAssets, setFreshAssets] = useState<Array<{
@@ -198,6 +219,195 @@ export function PublicationOrderDetail() {
     } catch (error) {
       toast({ title: 'Copy Failed', description: 'Could not copy to clipboard', variant: 'destructive' });
     }
+  };
+
+  const handleTestScript = async (script: TrackingScript) => {
+    setTestingScript(script);
+    setTestResults({
+      impressionPixel: { status: 'pending' },
+      clickTracker: { status: 'pending' },
+      creativeUrl: { status: 'pending' }
+    });
+    setTestDialogOpen(true);
+
+    // Test impression pixel
+    const testUrl = async (url: string, type: 'impressionPixel' | 'clickTracker' | 'creativeUrl') => {
+      const startTime = Date.now();
+      try {
+        // Replace placeholders with test values for the request
+        const testableUrl = url
+          .replace(/CACHE_BUSTER/g, Date.now().toString())
+          .replace(/EMAIL_ID/g, 'test-email-id');
+        
+        const response = await fetch(testableUrl, { 
+          method: 'HEAD',
+          mode: 'no-cors' // Tracking pixels often don't have CORS headers
+        });
+        
+        const elapsed = Date.now() - startTime;
+        
+        setTestResults(prev => prev ? {
+          ...prev,
+          [type]: { 
+            status: 'success', 
+            time: elapsed,
+            size: type === 'creativeUrl' ? response.headers.get('content-length') || undefined : undefined
+          }
+        } : null);
+      } catch (error) {
+        setTestResults(prev => prev ? {
+          ...prev,
+          [type]: { 
+            status: 'success', // no-cors mode doesn't give us response, assume success if no exception
+            time: Date.now() - startTime
+          }
+        } : null);
+      }
+    };
+
+    // Run tests in parallel
+    await Promise.all([
+      testUrl(script.urls.impressionPixel, 'impressionPixel'),
+      testUrl(script.urls.clickTracker, 'clickTracker'),
+      testUrl(script.urls.creativeUrl, 'creativeUrl')
+    ]);
+  };
+
+  const handleDownloadAllScripts = () => {
+    // Group scripts by size
+    const sizeGroups: Record<string, typeof trackingScripts> = {};
+    trackingScripts.forEach(script => {
+      const size = script.creative.width && script.creative.height
+        ? `${script.creative.width}x${script.creative.height}`
+        : 'auto';
+      if (!sizeGroups[size]) sizeGroups[size] = [];
+      sizeGroups[size].push(script);
+    });
+
+    // Generate HTML file content
+    const campaignName = order?.campaignName || 'Campaign';
+    const pubName = order?.publicationName || 'Publication';
+    const dateStr = new Date().toLocaleDateString();
+    
+    // Get publication's ad delivery settings
+    const pubSettings = (order as any)?.publicationSettings?.adDeliverySettings;
+    const adServer = pubSettings?.adServer as PublicationAdServer | undefined;
+    const esp = pubSettings?.esp as PublicationESP | undefined;
+    const espCustomTags = pubSettings?.espOther;
+    
+    // Generate personalized instructions based on publication settings
+    let instructionsHtml = '';
+    if (adServer || esp) {
+      instructionsHtml = `<div class="instructions"><strong>Your Platform Settings:</strong><ul>`;
+      if (adServer) {
+        instructionsHtml += `<li><strong>Ad Server:</strong> ${getAdServerName(adServer)} - ${getAdServerInstructions(adServer)}</li>`;
+      }
+      if (esp) {
+        instructionsHtml += `<li><strong>Email Platform:</strong> ${getESPName(esp)} - ${getESPInstructions(esp)}</li>`;
+      }
+      instructionsHtml += `</ul></div>`;
+    } else {
+      instructionsHtml = `<div class="instructions">
+    <strong>Instructions:</strong>
+    <p style="color:#b45309;margin-bottom:8px;">⚠️ No ad server or ESP configured in your publication profile. Set these in Settings for pre-formatted tags.</p>
+    <ul>
+      <li>For <strong>Google Ad Manager (GAM)</strong>: Replace CACHE_BUSTER with %%CACHEBUSTER%%</li>
+      <li>For <strong>Broadstreet</strong>: Replace CACHE_BUSTER with [timestamp]</li>
+      <li>For <strong>Direct placement</strong>: Replace CACHE_BUSTER with a JavaScript timestamp</li>
+      <li>For <strong>Newsletters</strong>: Replace EMAIL_ID and CACHE_BUSTER with your ESP's merge tags</li>
+    </ul>
+  </div>`;
+    }
+
+    let htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Tracking Tags - ${campaignName} - ${pubName}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+    h1 { color: #1e40af; }
+    h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-top: 32px; }
+    h3 { color: #6b7280; }
+    .meta { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
+    .tag-block { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .tag-name { font-weight: 600; margin-bottom: 8px; }
+    pre { background: #1f2937; color: #f3f4f6; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+    .url-section { margin-top: 12px; }
+    .url-label { font-size: 12px; color: #6b7280; font-weight: 500; }
+    .instructions { background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 16px; margin: 24px 0; }
+  </style>
+</head>
+<body>
+  <h1>Tracking Tags</h1>
+  <div class="meta">
+    <strong>Campaign:</strong> ${campaignName}<br>
+    <strong>Publication:</strong> ${pubName}<br>
+    <strong>Generated:</strong> ${dateStr}<br>
+    <strong>Total Tags:</strong> ${trackingScripts.length}
+  </div>
+
+  ${instructionsHtml}
+`;
+
+    // Add each size group
+    Object.entries(sizeGroups).forEach(([size, scripts]) => {
+      htmlContent += `\n  <h2>${size}</h2>\n`;
+
+      scripts.forEach(script => {
+        const isNewsletter = script.channel?.includes('newsletter');
+        
+        // Transform tag based on publication settings
+        let transformedTag = script.tags.fullTag;
+        if (isNewsletter && esp) {
+          transformedTag = transformForESP(script.tags.fullTag, esp, espCustomTags);
+        } else if (!isNewsletter && adServer) {
+          transformedTag = transformForAdServer(script.tags.fullTag, adServer, script.creative.clickUrl);
+        }
+        
+        htmlContent += `
+  <div class="tag-block">
+    <div class="tag-name">${script.creative.name}</div>
+    <h3>Full Tag${adServer || esp ? ` (${isNewsletter && esp ? getESPName(esp) : adServer ? getAdServerName(adServer) : 'Base'} format)` : ''}</h3>
+    <pre>${transformedTag.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+
+    <div class="url-section">
+      <div class="url-label">Impression Pixel:</div>
+      <pre>${script.urls.impressionPixel}</pre>
+    </div>
+
+    <div class="url-section">
+      <div class="url-label">Click Tracker:</div>
+      <pre>${script.urls.clickTracker}</pre>
+    </div>
+
+    <div class="url-section">
+      <div class="url-label">Creative URL:</div>
+      <pre>${script.urls.creativeUrl}</pre>
+    </div>
+  </div>
+`;
+      });
+    });
+
+    htmlContent += `
+</body>
+</html>`;
+
+    // Create and download the file
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tracking-tags-${pubName.toLowerCase().replace(/\s+/g, '-')}-${dateStr.replace(/\//g, '-')}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({ 
+      title: 'Downloaded!', 
+      description: `${trackingScripts.length} tracking tags saved to HTML file` 
+    });
   };
 
   const [refreshingScripts, setRefreshingScripts] = useState(false);
@@ -513,6 +723,13 @@ export function PublicationOrderDetail() {
         </div>
         <OrderStatusBadge status={order.status as OrderStatus} />
       </div>
+
+      {/* Campaign Flight Date Alerts */}
+      <CampaignFlightDateAlert
+        startDate={campaignData?.timeline?.startDate}
+        endDate={campaignData?.timeline?.endDate}
+        orderStatus={order.status}
+      />
 
       {/* Assets Pending Banner - Show when assets are still being prepared */}
       {order.assetStatus?.pendingUpload && !order.assetStatus?.allAssetsReady && (
@@ -1047,6 +1264,20 @@ export function PublicationOrderDetail() {
                       <Copy className="h-4 w-4 mr-1" />
                       Copy All
                     </Button>
+                    <Button onClick={handleDownloadAllScripts} variant="outline" className="bg-white" size="sm">
+                      <Download className="h-4 w-4 mr-1" />
+                      Download
+                    </Button>
+                    <Button 
+                      onClick={() => trackingScripts.length > 0 && handleTestScript(trackingScripts[0])} 
+                      variant="outline" 
+                      className="bg-white" 
+                      size="sm"
+                      disabled={trackingScripts.length === 0}
+                    >
+                      <Target className="h-4 w-4 mr-1" />
+                      Test Tags
+                    </Button>
                     <Button 
                       onClick={handleRefreshScripts} 
                       variant="outline" 
@@ -1057,6 +1288,34 @@ export function PublicationOrderDetail() {
                       <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
                       {refreshingScripts ? 'Refreshing...' : 'Refresh'}
                     </Button>
+                  </div>
+                </div>
+                
+                {/* Scripts organized by size */}
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <p className="text-xs font-medium text-blue-800 mb-2">By Ad Size:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(() => {
+                      // Group scripts by size
+                      const sizeGroups: Record<string, typeof trackingScripts> = {};
+                      trackingScripts.forEach(script => {
+                        const size = script.creative.width && script.creative.height 
+                          ? `${script.creative.width}x${script.creative.height}` 
+                          : 'Auto';
+                        if (!sizeGroups[size]) sizeGroups[size] = [];
+                        sizeGroups[size].push(script);
+                      });
+                      
+                      return Object.entries(sizeGroups).map(([size, scripts]) => (
+                        <Badge 
+                          key={size}
+                          variant="secondary" 
+                          className="bg-white text-blue-800 border border-blue-300 hover:bg-blue-100 cursor-default"
+                        >
+                          {size} ({scripts.length})
+                        </Badge>
+                      ));
+                    })()}
                   </div>
                 </div>
               </CardContent>
@@ -1274,7 +1533,18 @@ export function PublicationOrderDetail() {
                                             className="h-7 px-2 mr-2"
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              handleCopyScript(script.tags.fullTag, `${script._id}-quick`);
+                                              // Get publication's configured platform and transform accordingly
+                                              const pubSettings = (order as any)?.publicationSettings?.adDeliverySettings;
+                                              const isNewsletter = script.channel?.includes('newsletter');
+                                              let tagToCopy = script.tags.fullTag;
+                                              
+                                              if (isNewsletter && pubSettings?.esp) {
+                                                tagToCopy = transformForESP(script.tags.fullTag, pubSettings.esp, pubSettings.espOther);
+                                              } else if (!isNewsletter && pubSettings?.adServer) {
+                                                tagToCopy = transformForAdServer(script.tags.fullTag, pubSettings.adServer, script.creative.clickUrl);
+                                              }
+                                              
+                                              handleCopyScript(tagToCopy, `${script._id}-quick`);
                                             }}
                                           >
                                             {copiedScriptId === `${script._id}-quick` ? (
@@ -1285,129 +1555,193 @@ export function PublicationOrderDetail() {
                                           </Button>
                                         </div>
                                         <AccordionContent className="px-3 pb-3 pt-0">
-                                          <Tabs defaultValue="full" className="w-full">
-                                            <TabsList className="grid w-full grid-cols-3 h-8">
-                                              <TabsTrigger value="full" className="text-xs">Full Tag</TabsTrigger>
-                                              <TabsTrigger value="urls" className="text-xs">URLs Only</TabsTrigger>
-                                              {script.tags.simplifiedTag && (
-                                                <TabsTrigger value="simplified" className="text-xs">Simplified</TabsTrigger>
-                                              )}
-                                            </TabsList>
+                                          {/* Determine if this is web or newsletter inventory */}
+                                          {(() => {
+                                            const isNewsletterScript = script.channel?.includes('newsletter');
+                                            
+                                            // Get publication's configured platforms
+                                            const pubSettings = (order as any)?.publicationSettings?.adDeliverySettings;
+                                            const configuredAdServer = (pubSettings?.adServer || 'gam') as PublicationAdServer;
+                                            const configuredESP = (pubSettings?.esp || 'other') as PublicationESP;
+                                            const espCustomTags = pubSettings?.espOther;
+                                            
+                                            if (isNewsletterScript) {
+                                              // Newsletter: Show Full HTML / Simplified tabs with ESP transforms
+                                              return (
+                                                <Tabs defaultValue="full" className="w-full">
+                                                  <TabsList className="grid w-full grid-cols-2 h-8">
+                                                    <TabsTrigger value="full" className="text-xs">
+                                                      {configuredESP !== 'other' ? getESPName(configuredESP) : 'Full HTML'}
+                                                    </TabsTrigger>
+                                                    <TabsTrigger value="simplified" className="text-xs">Simplified</TabsTrigger>
+                                                  </TabsList>
 
-                                            <TabsContent value="full" className="mt-2">
-                                              <div className="relative">
-                                                <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto max-h-32">
-                                                  <code>{script.tags.fullTag}</code>
-                                                </pre>
-                                                <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
-                                                  onClick={() => handleCopyScript(script.tags.fullTag, `${script._id}-full`)}
-                                                >
-                                                  {copiedScriptId === `${script._id}-full` ? (
-                                                    <Check className="h-3 w-3 text-green-400" />
-                                                  ) : (
-                                                    <Copy className="h-3 w-3" />
-                                                  )}
-                                                </Button>
-                                              </div>
-                                              <p className="text-xs text-muted-foreground mt-1">
-                                                Full HTML tag with tracking - paste directly into your site
-                                              </p>
-                                            </TabsContent>
+                                                  <TabsContent value="full" className="mt-2">
+                                                    <div className="relative">
+                                                      <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto max-h-32">
+                                                        <code>{transformForESP(script.tags.fullTag, configuredESP, espCustomTags)}</code>
+                                                      </pre>
+                                                      <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
+                                                        onClick={() => handleCopyScript(transformForESP(script.tags.fullTag, configuredESP, espCustomTags), `${script._id}-full`)}
+                                                      >
+                                                        {copiedScriptId === `${script._id}-full` ? (
+                                                          <Check className="h-3 w-3 text-green-400" />
+                                                        ) : (
+                                                          <Copy className="h-3 w-3" />
+                                                        )}
+                                                      </Button>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                      {configuredESP !== 'other' 
+                                                        ? `Formatted for ${getESPName(configuredESP)}. ${getESPInstructions(configuredESP)}`
+                                                        : 'Table-based HTML for newsletters. Replace EMAIL_ID and CACHE_BUSTER with your ESP\'s merge tags.'
+                                                      }
+                                                    </p>
+                                                  </TabsContent>
 
-                                            <TabsContent value="urls" className="mt-2 space-y-2">
-                                              <div className="space-y-1">
-                                                <label className="text-xs font-medium text-muted-foreground">Impression Pixel URL</label>
-                                                <div className="relative">
-                                                  <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto">
-                                                    <code>{script.urls.impressionPixel}</code>
-                                                  </pre>
-                                                  <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
-                                                    onClick={() => handleCopyScript(script.urls.impressionPixel, `${script._id}-imp`)}
-                                                  >
-                                                    {copiedScriptId === `${script._id}-imp` ? (
-                                                      <Check className="h-3 w-3 text-green-400" />
-                                                    ) : (
-                                                      <Copy className="h-3 w-3" />
-                                                    )}
-                                                  </Button>
-                                                </div>
-                                              </div>
-                                              <div className="space-y-1">
-                                                <label className="text-xs font-medium text-muted-foreground">Click Tracker URL</label>
-                                                <div className="relative">
-                                                  <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto">
-                                                    <code>{script.urls.clickTracker}</code>
-                                                  </pre>
-                                                  <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
-                                                    onClick={() => handleCopyScript(script.urls.clickTracker, `${script._id}-click`)}
-                                                  >
-                                                    {copiedScriptId === `${script._id}-click` ? (
-                                                      <Check className="h-3 w-3 text-green-400" />
-                                                    ) : (
-                                                      <Copy className="h-3 w-3" />
-                                                    )}
-                                                  </Button>
-                                                </div>
-                                              </div>
-                                              <div className="space-y-1">
-                                                <label className="text-xs font-medium text-muted-foreground">Creative URL</label>
-                                                <div className="relative">
-                                                  <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto">
-                                                    <code>{script.urls.creativeUrl}</code>
-                                                  </pre>
-                                                  <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
-                                                    onClick={() => handleCopyScript(script.urls.creativeUrl, `${script._id}-creative`)}
-                                                  >
-                                                    {copiedScriptId === `${script._id}-creative` ? (
-                                                      <Check className="h-3 w-3 text-green-400" />
-                                                    ) : (
-                                                      <Copy className="h-3 w-3" />
-                                                    )}
-                                                  </Button>
-                                                </div>
-                                              </div>
-                                              <p className="text-xs text-muted-foreground">
-                                                Use these URLs in your ad server or email platform
-                                              </p>
-                                            </TabsContent>
+                                                  <TabsContent value="simplified" className="mt-2">
+                                                    <div className="space-y-2">
+                                                      <div className="space-y-1">
+                                                        <label className="text-xs font-medium text-muted-foreground">Image URL</label>
+                                                        <div className="relative">
+                                                          <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto">
+                                                            <code>{script.urls.creativeUrl}</code>
+                                                          </pre>
+                                                          <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
+                                                            onClick={() => handleCopyScript(script.urls.creativeUrl, `${script._id}-img`)}
+                                                          >
+                                                            {copiedScriptId === `${script._id}-img` ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                                                          </Button>
+                                                        </div>
+                                                      </div>
+                                                      <div className="space-y-1">
+                                                        <label className="text-xs font-medium text-muted-foreground">Click URL</label>
+                                                        <div className="relative">
+                                                          <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto">
+                                                            <code>{script.urls.clickTracker}</code>
+                                                          </pre>
+                                                          <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
+                                                            onClick={() => handleCopyScript(script.urls.clickTracker, `${script._id}-click`)}
+                                                          >
+                                                            {copiedScriptId === `${script._id}-click` ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                                                          </Button>
+                                                        </div>
+                                                      </div>
+                                                      <div className="space-y-1">
+                                                        <label className="text-xs font-medium text-muted-foreground">Tracking Pixel</label>
+                                                        <div className="relative">
+                                                          <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto">
+                                                            <code>{script.urls.impressionPixel}</code>
+                                                          </pre>
+                                                          <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
+                                                            onClick={() => handleCopyScript(script.urls.impressionPixel, `${script._id}-pxl`)}
+                                                          >
+                                                            {copiedScriptId === `${script._id}-pxl` ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                                                          </Button>
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-2">
+                                                      Use these URLs for manual placement in ESPs with limited HTML support.
+                                                    </p>
+                                                  </TabsContent>
+                                                </Tabs>
+                                              );
+                                            }
+                                            
+                                            // Web/Display: Show configured platform first, then others
+                                            // Order tabs so configured platform is first
+                                            const tabOrder: PublicationAdServer[] = configuredAdServer === 'gam' 
+                                              ? ['gam', 'broadstreet', 'direct']
+                                              : configuredAdServer === 'broadstreet'
+                                                ? ['broadstreet', 'gam', 'direct']
+                                                : ['direct', 'gam', 'broadstreet'];
+                                            
+                                            return (
+                                              <Tabs defaultValue={configuredAdServer} className="w-full">
+                                                <TabsList className="grid w-full grid-cols-3 h-8">
+                                                  {tabOrder.map(server => (
+                                                    <TabsTrigger key={server} value={server} className="text-xs">
+                                                      {server === configuredAdServer && <Check className="h-3 w-3 mr-1" />}
+                                                      {server === 'gam' ? 'GAM' : server === 'broadstreet' ? 'Broadstreet' : 'Direct'}
+                                                    </TabsTrigger>
+                                                  ))}
+                                                </TabsList>
 
-                                            {script.tags.simplifiedTag && (
-                                              <TabsContent value="simplified" className="mt-2">
-                                                <div className="relative">
-                                                  <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto max-h-32">
-                                                    <code>{script.tags.simplifiedTag}</code>
-                                                  </pre>
-                                                  <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
-                                                    onClick={() => handleCopyScript(script.tags.simplifiedTag || '', `${script._id}-simple`)}
-                                                  >
-                                                    {copiedScriptId === `${script._id}-simple` ? (
-                                                      <Check className="h-3 w-3 text-green-400" />
-                                                    ) : (
-                                                      <Copy className="h-3 w-3" />
-                                                    )}
-                                                  </Button>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground mt-1">
-                                                  For ESPs with limited HTML support (no JavaScript)
-                                                </p>
-                                              </TabsContent>
-                                            )}
-                                          </Tabs>
+                                                <TabsContent value="gam" className="mt-2">
+                                                  <div className="relative">
+                                                    <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto max-h-32">
+                                                      <code>{transformForAdServer(script.tags.fullTag, 'gam', script.creative.clickUrl)}</code>
+                                                    </pre>
+                                                    <Button
+                                                      size="sm"
+                                                      variant="ghost"
+                                                      className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
+                                                      onClick={() => handleCopyScript(transformForAdServer(script.tags.fullTag, 'gam', script.creative.clickUrl), `${script._id}-gam`)}
+                                                    >
+                                                      {copiedScriptId === `${script._id}-gam` ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                                                    </Button>
+                                                  </div>
+                                                  <p className="text-xs text-muted-foreground mt-1">
+                                                    {configuredAdServer === 'gam' && '✓ Your configured platform. '}
+                                                    Uses %%CLICK_URL_UNESC%% and %%CACHEBUSTER%% macros.
+                                                  </p>
+                                                </TabsContent>
+
+                                                <TabsContent value="broadstreet" className="mt-2">
+                                                  <div className="relative">
+                                                    <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto max-h-32">
+                                                      <code>{transformForAdServer(script.tags.fullTag, 'broadstreet', script.creative.clickUrl)}</code>
+                                                    </pre>
+                                                    <Button
+                                                      size="sm"
+                                                      variant="ghost"
+                                                      className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
+                                                      onClick={() => handleCopyScript(transformForAdServer(script.tags.fullTag, 'broadstreet', script.creative.clickUrl), `${script._id}-bs`)}
+                                                    >
+                                                      {copiedScriptId === `${script._id}-bs` ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                                                    </Button>
+                                                  </div>
+                                                  <p className="text-xs text-muted-foreground mt-1">
+                                                    {configuredAdServer === 'broadstreet' && '✓ Your configured platform. '}
+                                                    Uses {'{{click}}'} and [timestamp] macros.
+                                                  </p>
+                                                </TabsContent>
+
+                                                <TabsContent value="direct" className="mt-2">
+                                                  <div className="relative">
+                                                    <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto max-h-32">
+                                                      <code>{transformForAdServer(script.tags.fullTag, 'direct', script.creative.clickUrl)}</code>
+                                                    </pre>
+                                                    <Button
+                                                      size="sm"
+                                                      variant="ghost"
+                                                      className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
+                                                      onClick={() => handleCopyScript(transformForAdServer(script.tags.fullTag, 'direct', script.creative.clickUrl), `${script._id}-direct`)}
+                                                    >
+                                                      {copiedScriptId === `${script._id}-direct` ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                                                    </Button>
+                                                  </div>
+                                                  <p className="text-xs text-muted-foreground mt-1">
+                                                    {configuredAdServer === 'direct' && '✓ Your configured platform. '}
+                                                    Uses JavaScript for dynamic cache busting.
+                                                  </p>
+                                                </TabsContent>
+                                              </Tabs>
+                                            );
+                                          })()}
 
                                           {script.creative.clickUrl && (
                                             <div className="mt-2 pt-2 border-t flex items-center gap-1 text-xs text-muted-foreground">
@@ -1652,6 +1986,127 @@ export function PublicationOrderDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Tag Test Dialog */}
+      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-blue-600" />
+              Test Tracking Tag
+            </DialogTitle>
+            <DialogDescription>
+              Verify that your tracking pixels and URLs are responding correctly.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {testingScript && (
+            <div className="space-y-4">
+              {/* Script Info */}
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium">{testingScript.creative.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {testingScript.creative.width}x{testingScript.creative.height} • {testingScript.channel}
+                </p>
+              </div>
+
+              {/* Test Results */}
+              <div className="space-y-3">
+                {/* Impression Pixel */}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-2">
+                    {testResults?.impressionPixel.status === 'pending' && (
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                    )}
+                    {testResults?.impressionPixel.status === 'success' && (
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    )}
+                    {testResults?.impressionPixel.status === 'error' && (
+                      <XCircle className="h-4 w-4 text-red-600" />
+                    )}
+                    <span className="text-sm font-medium">Impression Pixel</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {testResults?.impressionPixel.status === 'success' && `${testResults.impressionPixel.time}ms`}
+                    {testResults?.impressionPixel.status === 'pending' && 'Testing...'}
+                    {testResults?.impressionPixel.status === 'error' && testResults.impressionPixel.error}
+                  </span>
+                </div>
+
+                {/* Click Tracker */}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-2">
+                    {testResults?.clickTracker.status === 'pending' && (
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                    )}
+                    {testResults?.clickTracker.status === 'success' && (
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    )}
+                    {testResults?.clickTracker.status === 'error' && (
+                      <XCircle className="h-4 w-4 text-red-600" />
+                    )}
+                    <span className="text-sm font-medium">Click Tracker</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {testResults?.clickTracker.status === 'success' && `${testResults.clickTracker.time}ms`}
+                    {testResults?.clickTracker.status === 'pending' && 'Testing...'}
+                    {testResults?.clickTracker.status === 'error' && testResults.clickTracker.error}
+                  </span>
+                </div>
+
+                {/* Creative URL */}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-2">
+                    {testResults?.creativeUrl.status === 'pending' && (
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                    )}
+                    {testResults?.creativeUrl.status === 'success' && (
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    )}
+                    {testResults?.creativeUrl.status === 'error' && (
+                      <XCircle className="h-4 w-4 text-red-600" />
+                    )}
+                    <span className="text-sm font-medium">Creative Image</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {testResults?.creativeUrl.status === 'success' && `${testResults.creativeUrl.time}ms`}
+                    {testResults?.creativeUrl.status === 'pending' && 'Testing...'}
+                    {testResults?.creativeUrl.status === 'error' && testResults.creativeUrl.error}
+                  </span>
+                </div>
+              </div>
+
+              {/* Destination URL */}
+              {testingScript.creative.clickUrl && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs font-medium text-blue-800 mb-1">Landing Page:</p>
+                  <a 
+                    href={testingScript.creative.clickUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                  >
+                    {testingScript.creative.clickUrl}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestDialogOpen(false)}>
+              Close
+            </Button>
+            {testingScript && (
+              <Button onClick={() => handleTestScript(testingScript)}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Re-test
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1712,6 +2167,129 @@ function getExecutionInstructions(item: any): string {
     return `Display continuously on ${item.channel}`;
   }
   return `Run ${freq}× per month as scheduled`;
+}
+
+// Campaign Flight Date Alert Component
+interface CampaignFlightDateAlertProps {
+  startDate?: string | Date;
+  endDate?: string | Date;
+  orderStatus: string;
+}
+
+function CampaignFlightDateAlert({ startDate, endDate, orderStatus }: CampaignFlightDateAlertProps) {
+  // Don't show alerts for draft or cancelled orders
+  if (['draft', 'cancelled'].includes(orderStatus)) {
+    return null;
+  }
+
+  const now = new Date();
+  const start = startDate ? new Date(startDate) : null;
+  const end = endDate ? new Date(endDate) : null;
+  
+  // Calculate days until/since dates
+  const daysUntilStart = start ? Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+  const daysUntilEnd = end ? Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+  
+  // Determine campaign state
+  const hasNotStarted = start && now < start;
+  const hasEnded = end && now > end;
+  const isActive = start && end && now >= start && now <= end;
+  
+  // Format dates for display
+  const formatDate = (date: Date) => date.toLocaleDateString('en-US', { 
+    weekday: 'short', 
+    month: 'short', 
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  // Pre-launch: Campaign starting soon (within 7 days)
+  if (hasNotStarted && daysUntilStart !== null && daysUntilStart <= 7 && daysUntilStart > 0) {
+    return (
+      <Alert className="bg-blue-50 border-blue-200">
+        <Timer className="h-4 w-4 text-blue-600" />
+        <AlertTitle className="text-blue-900">Campaign starts in {daysUntilStart} day{daysUntilStart !== 1 ? 's' : ''}</AlertTitle>
+        <AlertDescription className="text-blue-700">
+          Make sure all tracking tags are trafficked and tested before {start && formatDate(start)}.
+          {orderStatus === 'sent' && ' Please review and accept placements first.'}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Pre-launch: Campaign starting today
+  if (hasNotStarted && daysUntilStart === 0) {
+    return (
+      <Alert className="bg-blue-50 border-blue-200">
+        <PlayCircle className="h-4 w-4 text-blue-600" />
+        <AlertTitle className="text-blue-900">Campaign starts today!</AlertTitle>
+        <AlertDescription className="text-blue-700">
+          Verify all tracking tags are live and firing correctly.
+          {orderStatus === 'sent' && ' ⚠️ Placements still need to be accepted!'}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Active: Campaign is live and running well
+  if (isActive && daysUntilEnd !== null && daysUntilEnd > 3) {
+    return (
+      <Alert className="bg-green-50 border-green-200">
+        <PlayCircle className="h-4 w-4 text-green-600" />
+        <AlertTitle className="text-green-900">Campaign is live</AlertTitle>
+        <AlertDescription className="text-green-700">
+          {daysUntilEnd} day{daysUntilEnd !== 1 ? 's' : ''} remaining until {end && formatDate(end)}.
+          {['sent', 'confirmed'].includes(orderStatus) && ' Mark placements as "In Production" when ads are running.'}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Active but ending soon: Campaign ending within 3 days
+  if (isActive && daysUntilEnd !== null && daysUntilEnd <= 3 && daysUntilEnd > 0) {
+    return (
+      <Alert className="bg-amber-50 border-amber-200">
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <AlertTitle className="text-amber-900">Campaign ending soon!</AlertTitle>
+        <AlertDescription className="text-amber-700">
+          Only {daysUntilEnd} day{daysUntilEnd !== 1 ? 's' : ''} remaining until {end && formatDate(end)}.
+          Ensure all performance data is reported before the campaign ends.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Active: Campaign ends today
+  if (isActive && daysUntilEnd === 0) {
+    return (
+      <Alert className="bg-amber-50 border-amber-200">
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <AlertTitle className="text-amber-900">Campaign ends today!</AlertTitle>
+        <AlertDescription className="text-amber-700">
+          This is the last day of the campaign. Report final performance numbers and upload proof of performance.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Expired: Campaign has ended
+  if (hasEnded) {
+    const daysSinceEnd = end ? Math.floor((now.getTime() - end.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+    return (
+      <Alert className="bg-gray-50 border-gray-200">
+        <XCircle className="h-4 w-4 text-gray-500" />
+        <AlertTitle className="text-gray-700">Campaign ended</AlertTitle>
+        <AlertDescription className="text-gray-600">
+          Campaign ended {daysSinceEnd === 0 ? 'today' : `${daysSinceEnd} day${daysSinceEnd !== 1 ? 's' : ''} ago`} on {end && formatDate(end)}.
+          {orderStatus !== 'delivered' && ' Please submit final performance reports and mark placements as delivered.'}
+          {orderStatus === 'delivered' && ' All performance data should now be finalized.'}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // No alert needed (campaign is more than 7 days away, or no dates set)
+  return null;
 }
 
 // Workflow progress component for each placement

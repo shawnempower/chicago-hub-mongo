@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Newsletter Preview | Ad Test</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #e5e5e5;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .email-header {
+      background: #1a1a1a;
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .email-header h1 { margin: 0; font-size: 24px; letter-spacing: 2px; }
+    .email-header p { margin: 10px 0 0; color: #888; font-size: 14px; }
+    
+    .email-content { padding: 30px; }
+    
+    .story {
+      margin-bottom: 30px;
+      padding-bottom: 30px;
+      border-bottom: 1px solid #eee;
+    }
+    .story h2 {
+      font-size: 20px;
+      margin: 0 0 10px;
+      line-height: 1.4;
+    }
+    .story h2 a { color: #1a1a1a; text-decoration: none; }
+    .story h2 a:hover { color: #0066cc; }
+    .story p { color: #555; line-height: 1.6; margin: 0; }
+    .story .read-more {
+      display: inline-block;
+      margin-top: 10px;
+      color: #0066cc;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    
+    /* Ad Styles */
+    .ad-block {
+      background: #f8f9fa;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .ad-label {
+      font-size: 10px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .ad-block img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    .ad-block a { display: block; text-decoration: none; }
+    
+    /* Text Ad */
+    .text-ad {
+      background: #f8f9fa;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 8px;
+      border-left: 4px solid #0066cc;
+    }
+    .text-ad .sponsor-label {
+      font-size: 11px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .text-ad h3 {
+      font-size: 18px;
+      margin: 0 0 10px;
+      line-height: 1.3;
+    }
+    .text-ad h3 a { color: #1a1a1a; text-decoration: none; }
+    .text-ad p { color: #555; line-height: 1.5; margin: 0 0 12px; font-size: 14px; }
+    .text-ad .cta {
+      display: inline-block;
+      background: #0066cc;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .text-ad .cta:hover { background: #0055aa; }
+    
+    .email-footer {
+      background: #f5f5f5;
+      padding: 20px 30px;
+      text-align: center;
+      font-size: 12px;
+      color: #888;
+    }
+    .email-footer a { color: #666; }
+    
+    /* Event Log */
+    .event-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      max-height: 180px;
+      overflow-y: auto;
+      font-family: 'Monaco', monospace;
+      font-size: 12px;
+    }
+    .event-panel-header {
+      background: #333;
+      padding: 8px 15px;
+      display: flex;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+    }
+    .event-panel-header button {
+      background: #555;
+      border: none;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    .event-log { padding: 10px 15px; }
+    .event-entry { padding: 3px 0; }
+    .event-entry.impression { color: #4ade80; }
+    .event-entry.click { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-header">
+      <h1>DAILY DIGEST</h1>
+      <p>December 11, 2025 | Chicago Reader</p>
+    </div>
+    
+    <div class="email-content">
+      <!-- Story 1 -->
+      <div class="story">
+        <h2><a href="#">City Council Approves Historic $500M Community Investment</a></h2>
+        <p>In a unanimous vote, aldermen approved the "Neighborhoods First" initiative targeting underserved communities on the South and West sides...</p>
+        <a href="#" class="read-more">Read More →</a>
+      </div>
+      
+      <!-- Sponsored Image Ad -->
+      <div class="ad-block" data-ad-id="newsletter-image-1" data-order-id="507f1f77bcf86cd799439011" data-campaign-id="camp_2024_q4_coca_cola" data-creative="cr_coca_cola_600x200" data-pub="chireader" data-pub-id="1035" data-channel="newsletter">
+        <div class="ad-label">Sponsored</div>
+        <a href="#" class="ad-click" data-landing="https://coca-cola.com/summer2026?utm_source=newsletter&utm_medium=email">
+          <img src="https://via.placeholder.com/600x200/E61E26/FFFFFF?text=Coca+Cola+Summer+2026+-+Newsletter+Banner" 
+               width="600" height="200" alt="Coca Cola Summer 2026" />
+        </a>
+      </div>
+      
+      <!-- Story 2 -->
+      <div class="story">
+        <h2><a href="#">Bears Continue Winning Streak with Sunday Victory</a></h2>
+        <p>The Chicago Bears secured their third consecutive win, defeating the Minnesota Vikings 24-17 at Soldier Field in front of a sold-out crowd...</p>
+        <a href="#" class="read-more">Read More →</a>
+      </div>
+      
+      <!-- Sponsored Text Ad -->
+      <div class="text-ad" data-ad-id="newsletter-text-1" data-order-id="707f1f77bcf86cd799439033" data-campaign-id="camp_2024_q4_maplewood" data-creative="cr_local_restaurant_text" data-pub="chireader" data-pub-id="1035" data-channel="newsletter">
+        <div class="sponsor-label">Sponsored</div>
+        <h3><a href="#" class="ad-click" data-landing="https://localrestaurant.com/holiday-menu?utm_source=newsletter">Celebrate the Holidays at Maplewood Kitchen</a></h3>
+        <p>Join us for our special holiday menu featuring locally-sourced ingredients and classic Chicago flavors. Book your reservation today and enjoy 20% off your first visit.</p>
+        <a href="#" class="cta ad-click" data-landing="https://localrestaurant.com/holiday-menu?utm_source=newsletter&utm_content=cta">Reserve Your Table →</a>
+      </div>
+      
+      <!-- Story 3 -->
+      <div class="story">
+        <h2><a href="#">New Restaurant Boom Transforms Logan Square</a></h2>
+        <p>Five new restaurants have opened in the neighborhood this month alone, reflecting a renewed appetite for dining out following pandemic recovery...</p>
+        <a href="#" class="read-more">Read More →</a>
+      </div>
+      
+      <!-- Story 4 -->
+      <div class="story">
+        <h2><a href="#">CTA Announces Major Service Expansion for 2026</a></h2>
+        <p>The Chicago Transit Authority unveiled plans for new express bus routes and extended rail service hours starting next year...</p>
+        <a href="#" class="read-more">Read More →</a>
+      </div>
+      
+      <!-- Sponsored Image Ad 2 -->
+      <div class="ad-block" data-ad-id="newsletter-image-2" data-order-id="607f1f77bcf86cd799439022" data-campaign-id="camp_2024_q4_local_biz" data-creative="cr_local_business_300x250" data-pub="chireader" data-pub-id="1035" data-channel="newsletter">
+        <div class="ad-label">Sponsored</div>
+        <a href="#" class="ad-click" data-landing="https://localbusiness.com?utm_source=newsletter&utm_medium=email">
+          <img src="https://via.placeholder.com/300x250/2563eb/FFFFFF?text=Local+Business+-+Newsletter" 
+               width="300" height="250" alt="Local Business" />
+        </a>
+      </div>
+    </div>
+    
+    <div class="email-footer">
+      <p>You're receiving this email because you subscribed to Chicago Reader Daily Digest.</p>
+      <p><a href="#">Unsubscribe</a> | <a href="#">Update Preferences</a> | <a href="#">View in Browser</a></p>
+    </div>
+  </div>
+  
+  <!-- Event Log Panel -->
+  <div class="event-panel" id="eventPanel">
+    <div class="event-panel-header">
+      <span>📡 Newsletter Tracking Events</span>
+      <div>
+        <button onclick="clearEvents()">Clear</button>
+        <button onclick="togglePanel()">Toggle</button>
+      </div>
+    </div>
+    <div class="event-log" id="eventLog"></div>
+  </div>
+
+  <script>
+    // Configuration - Using CloudFront distribution for tracking pixel
+    const TRACKING_BASE = 'https://dxafls8akrlrp.cloudfront.net';
+    const PIXEL_PATH = '/pxl.png';
+    
+    let events = JSON.parse(localStorage.getItem('tracking_events') || '[]');
+    
+    function logEvent(type, data) {
+      const timestamp = new Date().toISOString();
+      const event = { type, timestamp, ...data };
+      events.push(event);
+      localStorage.setItem('tracking_events', JSON.stringify(events));
+      
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = `event-entry ${type}`;
+      entry.innerHTML = `
+        <span style="color:#888">${timestamp.split('T')[1].split('.')[0]}</span>
+        <strong>${type.toUpperCase()}</strong> | oid: ${data.orderId?.slice(-8) || 'n/a'} | cid: ${data.campaignId || 'n/a'} | cr: ${data.creative}
+      `;
+      log.insertBefore(entry, log.firstChild);
+      
+      console.log(`[TRACKING] ${type}`, event);
+    }
+    
+    function fireImpression(adBlock) {
+      // Required parameters
+      const orderId = adBlock.dataset.orderId;
+      const campaignId = adBlock.dataset.campaignId;
+      const pub = adBlock.dataset.pub;
+      const channel = adBlock.dataset.channel;
+      const cacheBuster = Date.now();
+      
+      // Optional parameters
+      const creative = adBlock.dataset.creative;
+      const pubId = adBlock.dataset.pubId;
+      
+      // Build pixel URL with full attribution parameters
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'display',
+        cb: cacheBuster
+      });
+      
+      // Add optional params
+      if (creative) params.set('cr', creative);
+      if (pubId) params.set('pid', pubId);
+      
+      const pixelUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      
+      const pixel = new Image(1, 1);
+      pixel.src = pixelUrl;
+      
+      logEvent('impression', { orderId, campaignId, creative, pub, pubId, channel, url: pixelUrl });
+    }
+    
+    function handleClick(e) {
+      e.preventDefault();
+      const adBlock = e.target.closest('[data-ad-id]');
+      const link = e.target.closest('.ad-click');
+      
+      if (!adBlock || !link) return;
+      
+      // Required parameters
+      const orderId = adBlock.dataset.orderId;
+      const campaignId = adBlock.dataset.campaignId;
+      const pub = adBlock.dataset.pub;
+      const channel = adBlock.dataset.channel;
+      const landing = link.dataset.landing;
+      
+      // Optional parameters
+      const creative = adBlock.dataset.creative;
+      const pubId = adBlock.dataset.pubId;
+      
+      // Build click URL with full attribution parameters
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'click',
+        cb: Date.now()
+      });
+      
+      if (creative) params.set('cr', creative);
+      if (pubId) params.set('pid', pubId);
+      
+      const clickPixelUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      const clickPixel = new Image(1, 1);
+      clickPixel.src = clickPixelUrl;
+      
+      logEvent('click', { orderId, campaignId, creative, pub, pubId, channel, landing, pixelUrl: clickPixelUrl });
+      
+      console.log(`[CLICK] Pixel fired: ${clickPixelUrl}`);
+      console.log(`[CLICK] Would redirect to: ${landing}`);
+      alert(`Click tracked!\n\nOrder: ${orderId}\nCampaign: ${campaignId}\nCreative: ${creative}\n\nWould redirect to:\n${landing}`);
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      // Fire impressions
+      document.querySelectorAll('[data-ad-id]').forEach(fireImpression);
+      
+      // Setup click handlers
+      document.querySelectorAll('.ad-click').forEach(link => {
+        link.addEventListener('click', handleClick);
+      });
+    });
+    
+    function clearEvents() {
+      events = [];
+      localStorage.removeItem('tracking_events');
+      document.getElementById('eventLog').innerHTML = '';
+    }
+    
+    let panelCollapsed = false;
+    function togglePanel() {
+      panelCollapsed = !panelCollapsed;
+      document.getElementById('eventLog').style.display = panelCollapsed ? 'none' : 'block';
+    }
+  </script>
+</body>
+</html>

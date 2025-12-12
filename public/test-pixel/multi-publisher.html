@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Publisher Test | Ad Tracking</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 { text-align: center; margin-bottom: 10px; color: #1a1a1a; }
+    .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+    
+    .publishers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .publisher-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .publisher-header {
+      padding: 15px 20px;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .publisher-header.chireader { background: #e61e26; }
+    .publisher-header.suntimes { background: #0066cc; }
+    .publisher-header.tribune { background: #00274d; }
+    .publisher-header.blockclub { background: #1a1a1a; }
+    
+    .publisher-content { padding: 20px; }
+    .publisher-meta {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #f8f8f8;
+      border-radius: 6px;
+    }
+    .publisher-meta code {
+      background: #e0e0e0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+    
+    .ad-slot {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .ad-slot .ad-label {
+      font-size: 10px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .ad-unit { display: inline-block; }
+    .ad-unit img { display: block; border-radius: 4px; }
+    .ad-unit a { display: block; }
+    
+    /* Event Log */
+    .event-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      max-height: 180px;
+      overflow-y: auto;
+      font-family: 'Monaco', monospace;
+      font-size: 12px;
+    }
+    .event-panel-header {
+      background: #333;
+      padding: 8px 15px;
+      display: flex;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+    }
+    .event-panel-header button {
+      background: #555;
+      border: none;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    .event-log { padding: 10px 15px; }
+    .event-entry { padding: 3px 0; }
+    .event-entry.impression { color: #4ade80; }
+    .event-entry.click { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <h1>Multi-Publisher Test</h1>
+  <p class="subtitle">Test tracking across multiple publications with different orders and campaigns</p>
+  
+  <div class="publishers-grid">
+    <!-- Chicago Reader -->
+    <div class="publisher-card">
+      <div class="publisher-header chireader">Chicago Reader</div>
+      <div class="publisher-content">
+        <div class="publisher-meta">
+          <strong>Publication:</strong> <code>p=chireader</code> <code>pid=1035</code><br>
+          <strong>Order:</strong> <code>oid=507f1f77bcf86cd799439011</code><br>
+          <strong>Campaign:</strong> <code>cid=camp_2024_q4_coca_cola</code>
+        </div>
+        <div class="ad-slot">
+          <div class="ad-label">Leaderboard 728x90</div>
+          <div class="ad-unit" 
+               data-order-id="507f1f77bcf86cd799439011" 
+               data-campaign-id="camp_2024_q4_coca_cola" 
+               data-creative="cr_coca_cola_728x90" 
+               data-pub="chireader" 
+               data-pub-id="1035" 
+               data-channel="website" 
+               data-size="728x90">
+            <a href="#" class="ad-click" data-landing="https://coca-cola.com?utm_source=chireader">
+              <img src="https://via.placeholder.com/728x90/E61E26/FFFFFF?text=Coca+Cola+-+Chicago+Reader" width="728" height="90" alt="Ad" />
+            </a>
+          </div>
+        </div>
+        <div class="ad-slot">
+          <div class="ad-label">Medium Rectangle 300x250</div>
+          <div class="ad-unit" 
+               data-order-id="507f1f77bcf86cd799439011" 
+               data-campaign-id="camp_2024_q4_coca_cola" 
+               data-creative="cr_coca_cola_300x250" 
+               data-pub="chireader" 
+               data-pub-id="1035" 
+               data-channel="website" 
+               data-size="300x250">
+            <a href="#" class="ad-click" data-landing="https://coca-cola.com?utm_source=chireader">
+              <img src="https://via.placeholder.com/300x250/E61E26/FFFFFF?text=Coca+Cola" width="300" height="250" alt="Ad" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sun-Times -->
+    <div class="publisher-card">
+      <div class="publisher-header suntimes">Chicago Sun-Times</div>
+      <div class="publisher-content">
+        <div class="publisher-meta">
+          <strong>Publication:</strong> <code>p=suntimes</code> <code>pid=1042</code><br>
+          <strong>Order:</strong> <code>oid=608f2f88cdf97de8aa540022</code><br>
+          <strong>Campaign:</strong> <code>cid=camp_2024_q4_coca_cola</code>
+        </div>
+        <div class="ad-slot">
+          <div class="ad-label">Leaderboard 728x90</div>
+          <div class="ad-unit" 
+               data-order-id="608f2f88cdf97de8aa540022" 
+               data-campaign-id="camp_2024_q4_coca_cola" 
+               data-creative="cr_coca_cola_728x90" 
+               data-pub="suntimes" 
+               data-pub-id="1042" 
+               data-channel="website" 
+               data-size="728x90">
+            <a href="#" class="ad-click" data-landing="https://coca-cola.com?utm_source=suntimes">
+              <img src="https://via.placeholder.com/728x90/0066cc/FFFFFF?text=Coca+Cola+-+Sun+Times" width="728" height="90" alt="Ad" />
+            </a>
+          </div>
+        </div>
+        <div class="ad-slot">
+          <div class="ad-label">Medium Rectangle 300x250</div>
+          <div class="ad-unit" 
+               data-order-id="608f2f88cdf97de8aa540022" 
+               data-campaign-id="camp_2024_q4_coca_cola" 
+               data-creative="cr_coca_cola_300x250" 
+               data-pub="suntimes" 
+               data-pub-id="1042" 
+               data-channel="website" 
+               data-size="300x250">
+            <a href="#" class="ad-click" data-landing="https://coca-cola.com?utm_source=suntimes">
+              <img src="https://via.placeholder.com/300x250/0066cc/FFFFFF?text=Coca+Cola" width="300" height="250" alt="Ad" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tribune -->
+    <div class="publisher-card">
+      <div class="publisher-header tribune">Chicago Tribune</div>
+      <div class="publisher-content">
+        <div class="publisher-meta">
+          <strong>Publication:</strong> <code>p=tribune</code> <code>pid=1055</code><br>
+          <strong>Order:</strong> <code>oid=709f3f99def08ef9bb651033</code><br>
+          <strong>Campaign:</strong> <code>cid=camp_2024_q4_mcdonalds</code>
+        </div>
+        <div class="ad-slot">
+          <div class="ad-label">Leaderboard 728x90</div>
+          <div class="ad-unit" 
+               data-order-id="709f3f99def08ef9bb651033" 
+               data-campaign-id="camp_2024_q4_mcdonalds" 
+               data-creative="cr_mcdonalds_728x90" 
+               data-pub="tribune" 
+               data-pub-id="1055" 
+               data-channel="website" 
+               data-size="728x90">
+            <a href="#" class="ad-click" data-landing="https://mcdonalds.com?utm_source=tribune">
+              <img src="https://via.placeholder.com/728x90/FFC72C/000000?text=McDonalds+-+Tribune" width="728" height="90" alt="Ad" />
+            </a>
+          </div>
+        </div>
+        <div class="ad-slot">
+          <div class="ad-label">Medium Rectangle 300x250</div>
+          <div class="ad-unit" 
+               data-order-id="709f3f99def08ef9bb651033" 
+               data-campaign-id="camp_2024_q4_mcdonalds" 
+               data-creative="cr_mcdonalds_300x250" 
+               data-pub="tribune" 
+               data-pub-id="1055" 
+               data-channel="website" 
+               data-size="300x250">
+            <a href="#" class="ad-click" data-landing="https://mcdonalds.com?utm_source=tribune">
+              <img src="https://via.placeholder.com/300x250/FFC72C/000000?text=McDonalds" width="300" height="250" alt="Ad" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Block Club Chicago -->
+    <div class="publisher-card">
+      <div class="publisher-header blockclub">Block Club Chicago</div>
+      <div class="publisher-content">
+        <div class="publisher-meta">
+          <strong>Publication:</strong> <code>p=blockclub</code> <code>pid=1078</code><br>
+          <strong>Order:</strong> <code>oid=810f4faaefg19fg0cc762044</code><br>
+          <strong>Campaign:</strong> <code>cid=camp_2024_q4_local_bank</code>
+        </div>
+        <div class="ad-slot">
+          <div class="ad-label">Leaderboard 728x90</div>
+          <div class="ad-unit" 
+               data-order-id="810f4faaefg19fg0cc762044" 
+               data-campaign-id="camp_2024_q4_local_bank" 
+               data-creative="cr_local_bank_728x90" 
+               data-pub="blockclub" 
+               data-pub-id="1078" 
+               data-channel="website" 
+               data-size="728x90">
+            <a href="#" class="ad-click" data-landing="https://localbank.com?utm_source=blockclub">
+              <img src="https://via.placeholder.com/728x90/2563eb/FFFFFF?text=Local+Bank+-+Block+Club" width="728" height="90" alt="Ad" />
+            </a>
+          </div>
+        </div>
+        <div class="ad-slot">
+          <div class="ad-label">Medium Rectangle 300x250</div>
+          <div class="ad-unit" 
+               data-order-id="810f4faaefg19fg0cc762044" 
+               data-campaign-id="camp_2024_q4_local_bank" 
+               data-creative="cr_local_bank_300x250" 
+               data-pub="blockclub" 
+               data-pub-id="1078" 
+               data-channel="website" 
+               data-size="300x250">
+            <a href="#" class="ad-click" data-landing="https://localbank.com?utm_source=blockclub">
+              <img src="https://via.placeholder.com/300x250/2563eb/FFFFFF?text=Local+Bank" width="300" height="250" alt="Ad" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Event Log Panel -->
+  <div class="event-panel" id="eventPanel">
+    <div class="event-panel-header">
+      <span>📡 Multi-Publisher Tracking Events</span>
+      <div>
+        <button onclick="clearEvents()">Clear</button>
+        <button onclick="togglePanel()">Toggle</button>
+      </div>
+    </div>
+    <div class="event-log" id="eventLog"></div>
+  </div>
+
+  <script>
+    const TRACKING_BASE = 'https://dxafls8akrlrp.cloudfront.net';
+    const PIXEL_PATH = '/pxl.png';
+    
+    let events = JSON.parse(localStorage.getItem('tracking_events') || '[]');
+    
+    function logEvent(type, data) {
+      const timestamp = new Date().toISOString();
+      const event = { type, timestamp, ...data };
+      events.push(event);
+      localStorage.setItem('tracking_events', JSON.stringify(events));
+      
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = `event-entry ${type}`;
+      entry.innerHTML = `
+        <span style="color:#888">${timestamp.split('T')[1].split('.')[0]}</span>
+        <strong>${type.toUpperCase()}</strong> | pub: ${data.pub} | cid: ${data.campaignId} | cr: ${data.creative}
+      `;
+      log.insertBefore(entry, log.firstChild);
+      
+      console.log(`[TRACKING] ${type}`, event);
+    }
+    
+    function fireImpression(adUnit) {
+      const orderId = adUnit.dataset.orderId;
+      const campaignId = adUnit.dataset.campaignId;
+      const pub = adUnit.dataset.pub;
+      const channel = adUnit.dataset.channel;
+      const creative = adUnit.dataset.creative;
+      const pubId = adUnit.dataset.pubId;
+      const size = adUnit.dataset.size;
+      const cacheBuster = Date.now();
+      
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'display',
+        cb: cacheBuster
+      });
+      
+      if (creative) params.set('cr', creative);
+      if (pubId) params.set('pid', pubId);
+      if (size) params.set('s', size);
+      
+      const pixelUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      
+      const pixel = new Image(1, 1);
+      pixel.src = pixelUrl;
+      
+      logEvent('impression', { orderId, campaignId, creative, pub, pubId, channel, size, url: pixelUrl });
+    }
+    
+    function handleClick(e) {
+      e.preventDefault();
+      const adUnit = e.target.closest('[data-order-id]');
+      const link = e.target.closest('.ad-click');
+      
+      if (!adUnit || !link) return;
+      
+      const orderId = adUnit.dataset.orderId;
+      const campaignId = adUnit.dataset.campaignId;
+      const pub = adUnit.dataset.pub;
+      const channel = adUnit.dataset.channel;
+      const creative = adUnit.dataset.creative;
+      const pubId = adUnit.dataset.pubId;
+      const landing = link.dataset.landing;
+      
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'click',
+        cb: Date.now()
+      });
+      
+      if (creative) params.set('cr', creative);
+      if (pubId) params.set('pid', pubId);
+      
+      const clickUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      const clickPixel = new Image(1, 1);
+      clickPixel.src = clickUrl;
+      
+      logEvent('click', { orderId, campaignId, creative, pub, pubId, channel, landing, url: clickUrl });
+      
+      alert(`Click tracked!\n\nPublication: ${pub}\nCampaign: ${campaignId}\nCreative: ${creative}\n\nWould redirect to:\n${landing}`);
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('[data-order-id]').forEach(fireImpression);
+      document.querySelectorAll('.ad-click').forEach(link => {
+        link.addEventListener('click', handleClick);
+      });
+    });
+    
+    function clearEvents() {
+      events = [];
+      localStorage.removeItem('tracking_events');
+      document.getElementById('eventLog').innerHTML = '';
+    }
+    
+    let panelCollapsed = false;
+    function togglePanel() {
+      panelCollapsed = !panelCollapsed;
+      document.getElementById('eventLog').style.display = panelCollapsed ? 'none' : 'block';
+    }
+  </script>
+</body>
+</html>

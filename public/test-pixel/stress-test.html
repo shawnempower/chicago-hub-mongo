@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stress Test | Ad Tracking</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1 { text-align: center; margin-bottom: 10px; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .control-panel {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 25px;
+      border: 1px solid #334155;
+    }
+    .control-panel h2 {
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: #94a3b8;
+    }
+    
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 5px;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 14px;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: #7c3aed;
+    }
+    
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #7c3aed;
+      color: white;
+    }
+    .btn-primary:hover { background: #6d28d9; }
+    .btn-primary:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+    }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-secondary {
+      background: #334155;
+      color: white;
+    }
+    .btn-secondary:hover { background: #475569; }
+    
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .stat-card {
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 15px;
+      border: 1px solid #334155;
+      text-align: center;
+    }
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #4ade80;
+    }
+    .stat-card .label {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 5px;
+      text-transform: uppercase;
+    }
+    .stat-card.clicks .value { color: #fbbf24; }
+    .stat-card.rate .value { color: #60a5fa; }
+    .stat-card.errors .value { color: #ef4444; }
+    
+    /* Progress */
+    .progress-section {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      border: 1px solid #334155;
+    }
+    .progress-bar {
+      height: 8px;
+      background: #334155;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #7c3aed, #a855f7);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    
+    /* Log */
+    .log-section {
+      background: #1e293b;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      overflow: hidden;
+    }
+    .log-header {
+      padding: 15px 20px;
+      background: #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .log-header h3 { font-size: 14px; }
+    .log-content {
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Monaco', monospace;
+      font-size: 12px;
+      padding: 15px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #334155;
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .log-entry.success { color: #4ade80; }
+    .log-entry.error { color: #ef4444; }
+    .log-entry .timestamp { color: #64748b; margin-right: 10px; }
+    
+    /* Presets */
+    .preset-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    .preset-btn {
+      padding: 6px 12px;
+      background: #334155;
+      border: none;
+      border-radius: 4px;
+      color: #94a3b8;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .preset-btn:hover { background: #475569; color: white; }
+  </style>
+</head>
+<body>
+  <h1>⚡ Stress Test</h1>
+  <p class="subtitle">Generate high-volume tracking events to test pixel throughput</p>
+  
+  <div class="container">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="value" id="impressionCount">0</div>
+        <div class="label">Impressions</div>
+      </div>
+      <div class="stat-card clicks">
+        <div class="value" id="clickCount">0</div>
+        <div class="label">Clicks</div>
+      </div>
+      <div class="stat-card rate">
+        <div class="value" id="rateValue">0</div>
+        <div class="label">Events/sec</div>
+      </div>
+      <div class="stat-card errors">
+        <div class="value" id="errorCount">0</div>
+        <div class="label">Errors</div>
+      </div>
+    </div>
+    
+    <!-- Control Panel -->
+    <div class="control-panel">
+      <h2>Test Configuration</h2>
+      
+      <div class="preset-buttons">
+        <button class="preset-btn" onclick="applyPreset('light')">Light (100 events)</button>
+        <button class="preset-btn" onclick="applyPreset('medium')">Medium (500 events)</button>
+        <button class="preset-btn" onclick="applyPreset('heavy')">Heavy (1000 events)</button>
+        <button class="preset-btn" onclick="applyPreset('burst')">Burst (50/sec)</button>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Total Impressions</label>
+          <input type="number" id="totalImpressions" value="100" min="1" max="10000">
+        </div>
+        <div class="form-group">
+          <label>Events per Second</label>
+          <input type="number" id="eventsPerSecond" value="10" min="1" max="100">
+        </div>
+        <div class="form-group">
+          <label>Click Rate (%)</label>
+          <input type="number" id="clickRate" value="2" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Publications</label>
+          <select id="publicationMode">
+            <option value="single">Single (chireader)</option>
+            <option value="multiple">Multiple (4 pubs)</option>
+            <option value="random">Random selection</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Campaigns</label>
+          <select id="campaignMode">
+            <option value="single">Single campaign</option>
+            <option value="multiple">Multiple (3 campaigns)</option>
+            <option value="random">Random IDs</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Channel</label>
+          <select id="channelMode">
+            <option value="website">Website only</option>
+            <option value="newsletter">Newsletter only</option>
+            <option value="mixed">Mixed channels</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="button-row">
+        <button class="btn-primary" id="startBtn" onclick="startTest()">▶️ Start Test</button>
+        <button class="btn-danger" id="stopBtn" onclick="stopTest()" disabled>⏹️ Stop</button>
+        <button class="btn-secondary" onclick="resetStats()">🔄 Reset Stats</button>
+        <button class="btn-secondary" onclick="clearLog()">🗑️ Clear Log</button>
+      </div>
+    </div>
+    
+    <!-- Progress -->
+    <div class="progress-section">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-text">
+        <span id="progressLabel">Ready</span>
+        <span id="progressPercent">0%</span>
+      </div>
+    </div>
+    
+    <!-- Log -->
+    <div class="log-section">
+      <div class="log-header">
+        <h3>Event Log</h3>
+        <span id="logCount">0 entries</span>
+      </div>
+      <div class="log-content" id="logContent">
+        <div class="log-entry" style="color: #64748b;">Waiting to start...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TRACKING_BASE = 'https://dxafls8akrlrp.cloudfront.net';
+    const PIXEL_PATH = '/pxl.png';
+    
+    // Sample data pools
+    const PUBLICATIONS = [
+      { code: 'chireader', id: 1035, name: 'Chicago Reader' },
+      { code: 'suntimes', id: 1042, name: 'Sun-Times' },
+      { code: 'tribune', id: 1055, name: 'Tribune' },
+      { code: 'blockclub', id: 1078, name: 'Block Club' },
+    ];
+    
+    const CAMPAIGNS = [
+      { id: 'camp_2024_q4_coca_cola', name: 'Coca-Cola Q4' },
+      { id: 'camp_2024_q4_mcdonalds', name: 'McDonalds Q4' },
+      { id: 'camp_2024_q4_toyota', name: 'Toyota Q4' },
+    ];
+    
+    const SIZES = ['728x90', '300x250', '300x600', '320x50', '160x600'];
+    const CHANNELS = ['website', 'newsletter', 'streaming'];
+    
+    // Stats
+    let stats = {
+      impressions: 0,
+      clicks: 0,
+      errors: 0,
+      startTime: null,
+    };
+    
+    let isRunning = false;
+    let testInterval = null;
+    let currentCount = 0;
+    let targetCount = 0;
+    let logEntries = [];
+    
+    function generateOrderId() {
+      return Array.from({length: 24}, () => 
+        Math.floor(Math.random() * 16).toString(16)
+      ).join('');
+    }
+    
+    function getPublication() {
+      const mode = document.getElementById('publicationMode').value;
+      if (mode === 'single') return PUBLICATIONS[0];
+      if (mode === 'multiple') return PUBLICATIONS[currentCount % PUBLICATIONS.length];
+      return PUBLICATIONS[Math.floor(Math.random() * PUBLICATIONS.length)];
+    }
+    
+    function getCampaign() {
+      const mode = document.getElementById('campaignMode').value;
+      if (mode === 'single') return CAMPAIGNS[0];
+      if (mode === 'multiple') return CAMPAIGNS[currentCount % CAMPAIGNS.length];
+      return { id: `camp_random_${generateOrderId().slice(0, 8)}`, name: 'Random Campaign' };
+    }
+    
+    function getChannel() {
+      const mode = document.getElementById('channelMode').value;
+      if (mode === 'website') return 'website';
+      if (mode === 'newsletter') return 'newsletter';
+      return CHANNELS[Math.floor(Math.random() * CHANNELS.length)];
+    }
+    
+    function firePixel(eventType) {
+      const pub = getPublication();
+      const campaign = getCampaign();
+      const channel = getChannel();
+      const size = SIZES[Math.floor(Math.random() * SIZES.length)];
+      const orderId = generateOrderId();
+      
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaign.id,
+        p: pub.code,
+        pid: pub.id,
+        ch: channel,
+        t: eventType,
+        cr: `cr_${campaign.id.split('_').pop()}_${size}`,
+        s: size,
+        cb: Date.now()
+      });
+      
+      const pixelUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      
+      return new Promise((resolve, reject) => {
+        const pixel = new Image(1, 1);
+        pixel.onload = () => resolve({ pub, campaign, channel, eventType, size });
+        pixel.onerror = () => reject(new Error('Pixel failed'));
+        pixel.src = pixelUrl;
+        
+        // Timeout after 5s
+        setTimeout(() => reject(new Error('Timeout')), 5000);
+      });
+    }
+    
+    function addLogEntry(message, type = 'success') {
+      const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+      logEntries.unshift({ timestamp, message, type });
+      
+      // Keep only last 200 entries
+      if (logEntries.length > 200) logEntries.pop();
+      
+      updateLogDisplay();
+    }
+    
+    function updateLogDisplay() {
+      const logContent = document.getElementById('logContent');
+      logContent.innerHTML = logEntries.map(entry => `
+        <div class="log-entry ${entry.type}">
+          <span class="timestamp">${entry.timestamp}</span>
+          ${entry.message}
+        </div>
+      `).join('');
+      document.getElementById('logCount').textContent = `${logEntries.length} entries`;
+    }
+    
+    function updateStats() {
+      document.getElementById('impressionCount').textContent = stats.impressions.toLocaleString();
+      document.getElementById('clickCount').textContent = stats.clicks.toLocaleString();
+      document.getElementById('errorCount').textContent = stats.errors.toLocaleString();
+      
+      if (stats.startTime) {
+        const elapsed = (Date.now() - stats.startTime) / 1000;
+        const rate = elapsed > 0 ? ((stats.impressions + stats.clicks) / elapsed).toFixed(1) : 0;
+        document.getElementById('rateValue').textContent = rate;
+      }
+    }
+    
+    function updateProgress() {
+      const percent = targetCount > 0 ? Math.round((currentCount / targetCount) * 100) : 0;
+      document.getElementById('progressFill').style.width = `${percent}%`;
+      document.getElementById('progressPercent').textContent = `${percent}%`;
+      document.getElementById('progressLabel').textContent = 
+        isRunning ? `Processing ${currentCount} of ${targetCount}` : 
+        currentCount >= targetCount ? 'Complete!' : 'Ready';
+    }
+    
+    async function runBatch() {
+      if (!isRunning || currentCount >= targetCount) {
+        stopTest();
+        return;
+      }
+      
+      const clickRate = parseInt(document.getElementById('clickRate').value) / 100;
+      const shouldClick = Math.random() < clickRate;
+      
+      try {
+        // Fire impression
+        const result = await firePixel('display');
+        stats.impressions++;
+        currentCount++;
+        addLogEntry(`IMPRESSION | ${result.pub.code} | ${result.campaign.id} | ${result.size}`);
+        
+        // Maybe fire click
+        if (shouldClick) {
+          await firePixel('click');
+          stats.clicks++;
+          addLogEntry(`CLICK | ${result.pub.code} | ${result.campaign.id}`, 'success');
+        }
+      } catch (err) {
+        stats.errors++;
+        addLogEntry(`ERROR: ${err.message}`, 'error');
+      }
+      
+      updateStats();
+      updateProgress();
+      
+      // Store in localStorage for dashboard
+      const events = JSON.parse(localStorage.getItem('tracking_events') || '[]');
+      events.push({
+        type: 'impression',
+        timestamp: new Date().toISOString(),
+        creative: `cr_stress_test_${currentCount}`,
+        pub: getPublication().code,
+        channel: getChannel()
+      });
+      localStorage.setItem('tracking_events', JSON.stringify(events.slice(-500)));
+    }
+    
+    function startTest() {
+      if (isRunning) return;
+      
+      isRunning = true;
+      currentCount = 0;
+      targetCount = parseInt(document.getElementById('totalImpressions').value);
+      const eventsPerSecond = parseInt(document.getElementById('eventsPerSecond').value);
+      stats.startTime = Date.now();
+      
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('stopBtn').disabled = false;
+      
+      addLogEntry(`Starting test: ${targetCount} impressions at ${eventsPerSecond}/sec`);
+      
+      // Run at specified rate
+      const intervalMs = 1000 / eventsPerSecond;
+      testInterval = setInterval(runBatch, intervalMs);
+    }
+    
+    function stopTest() {
+      isRunning = false;
+      if (testInterval) {
+        clearInterval(testInterval);
+        testInterval = null;
+      }
+      
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+      
+      if (currentCount > 0) {
+        const duration = ((Date.now() - stats.startTime) / 1000).toFixed(1);
+        addLogEntry(`Test complete: ${currentCount} events in ${duration}s`);
+      }
+      
+      updateProgress();
+    }
+    
+    function resetStats() {
+      stats = { impressions: 0, clicks: 0, errors: 0, startTime: null };
+      currentCount = 0;
+      updateStats();
+      updateProgress();
+      addLogEntry('Stats reset');
+    }
+    
+    function clearLog() {
+      logEntries = [];
+      updateLogDisplay();
+    }
+    
+    function applyPreset(preset) {
+      const presets = {
+        light: { total: 100, rate: 10, click: 2 },
+        medium: { total: 500, rate: 20, click: 2 },
+        heavy: { total: 1000, rate: 30, click: 3 },
+        burst: { total: 200, rate: 50, click: 5 },
+      };
+      
+      const config = presets[preset];
+      document.getElementById('totalImpressions').value = config.total;
+      document.getElementById('eventsPerSecond').value = config.rate;
+      document.getElementById('clickRate').value = config.click;
+      
+      addLogEntry(`Applied "${preset}" preset: ${config.total} events at ${config.rate}/sec`);
+    }
+    
+    // Initial update
+    updateStats();
+    updateProgress();
+  </script>
+</body>
+</html>

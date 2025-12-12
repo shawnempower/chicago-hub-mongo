@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Streaming & Podcast Ads Test | Ad Tracking</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1 { text-align: center; margin-bottom: 10px; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; }
+    
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 30px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .content-card {
+      background: rgba(30, 41, 59, 0.8);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid #334155;
+    }
+    .card-header {
+      padding: 20px;
+      background: rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .card-header .icon { font-size: 32px; }
+    .card-header h2 { font-size: 18px; }
+    .card-header .badge {
+      background: #7c3aed;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    
+    .card-body { padding: 20px; }
+    
+    /* Video Player Simulation */
+    .video-player {
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    .video-screen {
+      aspect-ratio: 16/9;
+      background: linear-gradient(45deg, #1a1a1a, #333);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .video-screen .play-button {
+      width: 80px;
+      height: 80px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .video-screen .play-button:hover { background: rgba(255,255,255,0.3); transform: scale(1.1); }
+    .video-screen .play-button::after {
+      content: '';
+      border-left: 25px solid white;
+      border-top: 15px solid transparent;
+      border-bottom: 15px solid transparent;
+      margin-left: 8px;
+    }
+    .video-controls {
+      background: #1a1a1a;
+      padding: 10px 15px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .progress-bar {
+      flex: 1;
+      height: 4px;
+      background: #333;
+      border-radius: 2px;
+      position: relative;
+    }
+    .progress-bar .fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: #7c3aed;
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.1s;
+    }
+    .time-display { font-size: 12px; color: #888; font-family: monospace; }
+    
+    /* Pre-roll Ad Overlay */
+    .ad-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .ad-overlay.hidden { display: none; }
+    .ad-overlay .ad-label {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .ad-overlay .skip-btn {
+      position: absolute;
+      bottom: 60px;
+      right: 20px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .ad-overlay .skip-btn:hover { background: rgba(255,255,255,0.3); }
+    .ad-overlay .countdown {
+      position: absolute;
+      bottom: 60px;
+      right: 20px;
+      color: #888;
+      font-size: 13px;
+    }
+    
+    /* Podcast Player */
+    .podcast-player {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .podcast-header {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .podcast-cover {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+    .podcast-info h3 { font-size: 16px; margin-bottom: 5px; }
+    .podcast-info .episode { color: #94a3b8; font-size: 13px; }
+    .podcast-info .host { color: #64748b; font-size: 12px; margin-top: 5px; }
+    
+    .podcast-controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .podcast-controls .play-btn {
+      width: 50px;
+      height: 50px;
+      background: #7c3aed;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .podcast-controls .play-btn:hover { background: #6d28d9; transform: scale(1.05); }
+    .podcast-controls .play-btn::after {
+      content: '';
+      border-left: 16px solid white;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      margin-left: 4px;
+    }
+    .podcast-controls .progress {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+    }
+    
+    /* Mid-roll Ad */
+    .midroll-ad {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .midroll-ad.hidden { display: none; }
+    .midroll-ad .ad-icon { font-size: 24px; }
+    .midroll-ad .ad-content { flex: 1; }
+    .midroll-ad .ad-content .sponsor { font-size: 11px; opacity: 0.8; }
+    .midroll-ad .ad-content .title { font-size: 14px; font-weight: 600; }
+    .midroll-ad .ad-cta {
+      background: rgba(0,0,0,0.2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+    }
+    
+    /* Data display */
+    .tracking-info {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    .tracking-info code {
+      background: rgba(124, 58, 237, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    
+    /* Event Log */
+    .event-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      max-height: 180px;
+      overflow-y: auto;
+      font-family: 'Monaco', monospace;
+      font-size: 12px;
+    }
+    .event-panel-header {
+      background: #333;
+      padding: 8px 15px;
+      display: flex;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+    }
+    .event-panel-header button {
+      background: #555;
+      border: none;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    .event-log { padding: 10px 15px; }
+    .event-entry { padding: 3px 0; }
+    .event-entry.impression { color: #4ade80; }
+    .event-entry.click { color: #fbbf24; }
+    .event-entry.view { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <h1>🎬 Streaming & Podcast Ads Test</h1>
+  <p class="subtitle">Test pre-roll video ads and mid-roll podcast sponsorships</p>
+  
+  <div class="content-grid">
+    <!-- Video Pre-Roll -->
+    <div class="content-card">
+      <div class="card-header">
+        <span class="icon">📺</span>
+        <div>
+          <h2>Video Pre-Roll Ad</h2>
+          <span class="badge">Streaming</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="video-player">
+          <div class="video-screen">
+            <!-- Pre-roll Ad Overlay -->
+            <div class="ad-overlay" id="prerollAd"
+                 data-order-id="901f5fbbfgh20gh1dd873055"
+                 data-campaign-id="camp_2024_q4_toyota"
+                 data-creative="cr_toyota_preroll_16x9"
+                 data-pub="wgntv"
+                 data-pub-id="1090"
+                 data-channel="streaming">
+              <div class="ad-label">Advertisement</div>
+              <img src="https://via.placeholder.com/480x270/1d4ed8/FFFFFF?text=Toyota+Pre-Roll+Video+Ad" 
+                   style="max-width:100%; border-radius:4px; cursor:pointer;" 
+                   class="ad-click" 
+                   data-landing="https://toyota.com?utm_source=wgntv&utm_medium=preroll" />
+              <div class="countdown" id="prerollCountdown">Ad: 5s</div>
+            </div>
+            <div class="play-button" id="playButton" onclick="startVideo()"></div>
+          </div>
+          <div class="video-controls">
+            <span class="time-display" id="timeDisplay">0:00</span>
+            <div class="progress-bar">
+              <div class="fill" id="progressFill"></div>
+            </div>
+            <span class="time-display">3:24</span>
+          </div>
+        </div>
+        
+        <div class="tracking-info">
+          <strong>Pre-Roll Tracking:</strong><br>
+          <code>oid=901f5fbbfgh20gh1dd873055</code><br>
+          <code>cid=camp_2024_q4_toyota</code><br>
+          <code>ch=streaming</code> <code>p=wgntv</code>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Podcast Mid-Roll -->
+    <div class="content-card">
+      <div class="card-header">
+        <span class="icon">🎙️</span>
+        <div>
+          <h2>Podcast Mid-Roll Sponsorship</h2>
+          <span class="badge">Podcast</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="podcast-player">
+          <div class="podcast-header">
+            <div class="podcast-cover">🎧</div>
+            <div class="podcast-info">
+              <h3>Chicago Stories Podcast</h3>
+              <div class="episode">Episode 142: The Loop's Hidden History</div>
+              <div class="host">Hosted by Maria Rodriguez</div>
+            </div>
+          </div>
+          
+          <div class="podcast-controls">
+            <div class="play-btn" onclick="playPodcast()"></div>
+            <div class="progress"></div>
+            <span class="time-display">42:15</span>
+          </div>
+          
+          <!-- Mid-roll Ad -->
+          <div class="midroll-ad" id="midrollAd"
+               data-order-id="a02f6fccghi31hi2ee984066"
+               data-campaign-id="camp_2024_q4_squarespace"
+               data-creative="cr_squarespace_midroll_audio"
+               data-pub="chicagostories"
+               data-pub-id="1105"
+               data-channel="podcast">
+            <span class="ad-icon">📢</span>
+            <div class="ad-content">
+              <div class="sponsor">Sponsored by Squarespace</div>
+              <div class="title">Build your dream website today</div>
+            </div>
+            <a href="#" class="ad-cta ad-click" data-landing="https://squarespace.com/chicagostories?utm_source=podcast">Learn More</a>
+          </div>
+        </div>
+        
+        <div class="tracking-info">
+          <strong>Podcast Tracking:</strong><br>
+          <code>oid=a02f6fccghi31hi2ee984066</code><br>
+          <code>cid=camp_2024_q4_squarespace</code><br>
+          <code>ch=podcast</code> <code>p=chicagostories</code>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Audio Stream Ad -->
+    <div class="content-card">
+      <div class="card-header">
+        <span class="icon">📻</span>
+        <div>
+          <h2>Audio Streaming Ad</h2>
+          <span class="badge">Streaming</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="podcast-player">
+          <div class="podcast-header">
+            <div class="podcast-cover" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">🎵</div>
+            <div class="podcast-info">
+              <h3>WBBM-FM Chicago</h3>
+              <div class="episode">Live Stream - News & Talk</div>
+              <div class="host">780 AM / 105.9 FM</div>
+            </div>
+          </div>
+          
+          <div class="podcast-controls">
+            <div class="play-btn" onclick="playAudioStream()" style="background: #ec4899;"></div>
+            <div class="progress" style="background: linear-gradient(90deg, #ec4899 30%, rgba(255,255,255,0.1) 30%);"></div>
+            <span class="time-display">LIVE</span>
+          </div>
+          
+          <!-- Audio Stream Ad -->
+          <div class="midroll-ad" id="audioStreamAd"
+               style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);"
+               data-order-id="b13f7fddghi42ij3ff095077"
+               data-campaign-id="camp_2024_q4_geico"
+               data-creative="cr_geico_audio_15s"
+               data-pub="wbbm"
+               data-pub-id="1120"
+               data-channel="streaming">
+            <span class="ad-icon">🚗</span>
+            <div class="ad-content">
+              <div class="sponsor">From our sponsor GEICO</div>
+              <div class="title">15 minutes could save you 15%</div>
+            </div>
+            <a href="#" class="ad-cta ad-click" data-landing="https://geico.com?utm_source=wbbm&utm_medium=audio">Get Quote</a>
+          </div>
+        </div>
+        
+        <div class="tracking-info">
+          <strong>Audio Stream Tracking:</strong><br>
+          <code>oid=b13f7fddghi42ij3ff095077</code><br>
+          <code>cid=camp_2024_q4_geico</code><br>
+          <code>ch=streaming</code> <code>p=wbbm</code>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Connected TV Ad -->
+    <div class="content-card">
+      <div class="card-header">
+        <span class="icon">📡</span>
+        <div>
+          <h2>Connected TV (CTV) Ad</h2>
+          <span class="badge">Streaming</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="video-player">
+          <div class="video-screen" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+            <div class="ad-overlay" id="ctvAd"
+                 data-order-id="c24f8feehij53jk4gg106088"
+                 data-campaign-id="camp_2024_q4_amazon"
+                 data-creative="cr_amazon_ctv_30s"
+                 data-pub="localctv"
+                 data-pub-id="1135"
+                 data-channel="streaming">
+              <div class="ad-label">Streaming Ad</div>
+              <img src="https://via.placeholder.com/480x270/f97316/FFFFFF?text=Amazon+Prime+-+CTV+Ad" 
+                   style="max-width:100%; border-radius:4px; cursor:pointer;" 
+                   class="ad-click" 
+                   data-landing="https://amazon.com/prime?utm_source=localctv&utm_medium=ctv" />
+              <div class="skip-btn" onclick="skipCtvAd()">Skip Ad →</div>
+            </div>
+          </div>
+          <div class="video-controls">
+            <span class="time-display">AD</span>
+            <div class="progress-bar">
+              <div class="fill" style="width: 60%; background: #f97316;"></div>
+            </div>
+            <span class="time-display">0:18</span>
+          </div>
+        </div>
+        
+        <div class="tracking-info">
+          <strong>CTV Tracking:</strong><br>
+          <code>oid=c24f8feehij53jk4gg106088</code><br>
+          <code>cid=camp_2024_q4_amazon</code><br>
+          <code>ch=streaming</code> <code>p=localctv</code>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Event Log Panel -->
+  <div class="event-panel" id="eventPanel">
+    <div class="event-panel-header">
+      <span>📡 Streaming Tracking Events</span>
+      <div>
+        <button onclick="clearEvents()">Clear</button>
+        <button onclick="togglePanel()">Toggle</button>
+      </div>
+    </div>
+    <div class="event-log" id="eventLog"></div>
+  </div>
+
+  <script>
+    const TRACKING_BASE = 'https://dxafls8akrlrp.cloudfront.net';
+    const PIXEL_PATH = '/pxl.png';
+    
+    let events = JSON.parse(localStorage.getItem('tracking_events') || '[]');
+    
+    function logEvent(type, data) {
+      const timestamp = new Date().toISOString();
+      const event = { type, timestamp, ...data };
+      events.push(event);
+      localStorage.setItem('tracking_events', JSON.stringify(events));
+      
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = `event-entry ${type}`;
+      entry.innerHTML = `
+        <span style="color:#888">${timestamp.split('T')[1].split('.')[0]}</span>
+        <strong>${type.toUpperCase()}</strong> | ch: ${data.channel} | pub: ${data.pub} | cr: ${data.creative}
+      `;
+      log.insertBefore(entry, log.firstChild);
+      
+      console.log(`[TRACKING] ${type}`, event);
+    }
+    
+    function fireImpression(element) {
+      const orderId = element.dataset.orderId;
+      const campaignId = element.dataset.campaignId;
+      const pub = element.dataset.pub;
+      const channel = element.dataset.channel;
+      const creative = element.dataset.creative;
+      const pubId = element.dataset.pubId;
+      
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'display',
+        cb: Date.now()
+      });
+      
+      if (creative) params.set('cr', creative);
+      if (pubId) params.set('pid', pubId);
+      
+      const pixelUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      const pixel = new Image(1, 1);
+      pixel.src = pixelUrl;
+      
+      logEvent('impression', { orderId, campaignId, creative, pub, pubId, channel, url: pixelUrl });
+    }
+    
+    function fireViewEvent(element, viewDuration) {
+      const orderId = element.dataset.orderId;
+      const campaignId = element.dataset.campaignId;
+      const pub = element.dataset.pub;
+      const channel = element.dataset.channel;
+      const creative = element.dataset.creative;
+      
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'view',
+        cb: Date.now()
+      });
+      
+      if (creative) params.set('cr', creative);
+      
+      const pixelUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      const pixel = new Image(1, 1);
+      pixel.src = pixelUrl;
+      
+      logEvent('view', { orderId, campaignId, creative, pub, channel, viewDuration, url: pixelUrl });
+    }
+    
+    function handleClick(e) {
+      e.preventDefault();
+      const adContainer = e.target.closest('[data-order-id]');
+      const link = e.target.closest('.ad-click') || e.target;
+      
+      if (!adContainer) return;
+      
+      const orderId = adContainer.dataset.orderId;
+      const campaignId = adContainer.dataset.campaignId;
+      const pub = adContainer.dataset.pub;
+      const channel = adContainer.dataset.channel;
+      const creative = adContainer.dataset.creative;
+      const pubId = adContainer.dataset.pubId;
+      const landing = link.dataset?.landing || '#';
+      
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'click',
+        cb: Date.now()
+      });
+      
+      if (creative) params.set('cr', creative);
+      if (pubId) params.set('pid', pubId);
+      
+      const clickUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      const clickPixel = new Image(1, 1);
+      clickPixel.src = clickUrl;
+      
+      logEvent('click', { orderId, campaignId, creative, pub, pubId, channel, landing, url: clickUrl });
+      
+      alert(`Streaming Ad Click!\n\nChannel: ${channel}\nPublication: ${pub}\nCampaign: ${campaignId}\n\nWould redirect to:\n${landing}`);
+    }
+    
+    // Video player simulation
+    let prerollCountdown = 5;
+    function startVideo() {
+      const preroll = document.getElementById('prerollAd');
+      const playBtn = document.getElementById('playButton');
+      
+      // Fire impression
+      fireImpression(preroll);
+      
+      // Start countdown
+      const countdownEl = document.getElementById('prerollCountdown');
+      const interval = setInterval(() => {
+        prerollCountdown--;
+        countdownEl.textContent = prerollCountdown > 0 ? `Ad: ${prerollCountdown}s` : '';
+        
+        if (prerollCountdown <= 0) {
+          clearInterval(interval);
+          // Fire view completion
+          fireViewEvent(preroll, 5000);
+          // Hide ad
+          preroll.classList.add('hidden');
+          playBtn.style.display = 'flex';
+          // Simulate video progress
+          simulateProgress();
+        }
+      }, 1000);
+      
+      playBtn.style.display = 'none';
+    }
+    
+    function simulateProgress() {
+      let progress = 0;
+      const progressFill = document.getElementById('progressFill');
+      const timeDisplay = document.getElementById('timeDisplay');
+      
+      const interval = setInterval(() => {
+        progress += 1;
+        progressFill.style.width = (progress / 204 * 100) + '%';
+        const mins = Math.floor(progress / 60);
+        const secs = progress % 60;
+        timeDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        
+        if (progress >= 204) clearInterval(interval);
+      }, 1000);
+    }
+    
+    function playPodcast() {
+      const midroll = document.getElementById('midrollAd');
+      fireImpression(midroll);
+    }
+    
+    function playAudioStream() {
+      const audioAd = document.getElementById('audioStreamAd');
+      fireImpression(audioAd);
+    }
+    
+    function skipCtvAd() {
+      const ctvAd = document.getElementById('ctvAd');
+      fireViewEvent(ctvAd, 18000);
+      ctvAd.classList.add('hidden');
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      // Fire initial impressions for visible ads
+      const ctvAd = document.getElementById('ctvAd');
+      fireImpression(ctvAd);
+      
+      // Setup click handlers
+      document.querySelectorAll('.ad-click').forEach(el => {
+        el.addEventListener('click', handleClick);
+      });
+    });
+    
+    function clearEvents() {
+      events = [];
+      localStorage.removeItem('tracking_events');
+      document.getElementById('eventLog').innerHTML = '';
+    }
+    
+    let panelCollapsed = false;
+    function togglePanel() {
+      panelCollapsed = !panelCollapsed;
+      document.getElementById('eventLog').style.display = panelCollapsed ? 'none' : 'block';
+    }
+  </script>
+</body>
+</html>

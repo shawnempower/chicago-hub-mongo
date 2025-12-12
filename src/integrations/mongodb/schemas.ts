@@ -24,6 +24,29 @@ export type UserRole = 'admin' | 'hub_user' | 'publication_user' | 'standard';
 // Access scope types for scalability
 export type AccessScope = 'all' | 'hub_level' | 'group_level' | 'individual';
 
+// ===== AD DELIVERY SETTINGS TYPES =====
+// Ad server options for web/display inventory
+export type PublicationAdServer = 'gam' | 'broadstreet' | 'direct';
+
+// Email Service Provider options for newsletter inventory
+export type PublicationESP = 
+  | 'mailchimp'
+  | 'constant_contact'
+  | 'campaign_monitor'
+  | 'klaviyo'
+  | 'sailthru'
+  | 'active_campaign'
+  | 'sendgrid'
+  | 'beehiiv'
+  | 'convertkit'
+  | 'emma'
+  | 'hubspot'
+  | 'brevo'
+  | 'mailer_lite'
+  | 'drip'
+  | 'aweber'
+  | 'other';
+
 export interface UserSession {
   _id?: string | ObjectId;
   userId: string;
@@ -872,6 +895,22 @@ export interface Publication {
     responseTime?: string;
     decisionMakers?: string[];
   };
+  
+  // Ad Delivery Settings - controls how tracking tags are formatted for this publication
+  adDeliverySettings?: {
+    // Web/Display Ad Server - determines macro format for click tracking and cache busting
+    adServer?: PublicationAdServer;
+    
+    // Newsletter Email Service Provider - determines merge tag format for subscriber tracking
+    esp?: PublicationESP;
+    
+    // Additional ESP details when 'other' is selected
+    espOther?: {
+      name?: string;
+      emailIdMergeTag?: string;    // Custom merge tag for subscriber ID
+      cacheBusterMergeTag?: string; // Custom merge tag for timestamp
+    };
+  };
 }
 
 export interface PublicationInsert extends Omit<Publication, '_id'> {}
@@ -1541,8 +1580,9 @@ export const INDEXES = {
   ],
   tracking_scripts: [
     { campaignId: 1 },
-    { publicationCode: 1 },
-    { creativeId: 1 }
+    { publicationId: 1 },
+    { creativeId: 1 },
+    { campaignId: 1, publicationId: 1, creativeId: 1 }  // Compound unique index - prevents duplicate scripts
   ],
   daily_aggregates: [
     { date: 1, campaignId: 1, publicationId: 1, channel: 1 },  // Compound unique key

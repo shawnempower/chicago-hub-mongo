@@ -36,7 +36,20 @@ router.use(authenticateToken);
  * - /c - Click redirect (logs click, redirects to destination)
  * - /a/* - Asset serving (serves creative images)
  */
-const TRACKING_CDN_BASE_URL = process.env.TRACKING_CDN_URL || 'https://track.yournetwork.com';
+// Ensure TRACKING_CDN_URL has https:// prefix
+function getTrackingCdnBaseUrl(): string {
+  const url = process.env.TRACKING_CDN_URL;
+  if (!url) {
+    console.error('[TrackingScripts] TRACKING_CDN_URL environment variable is required');
+    return '';
+  }
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return `https://${url}`;
+  }
+  return url;
+}
+
+const TRACKING_CDN_BASE_URL = getTrackingCdnBaseUrl();
 
 /**
  * GET /api/tracking-scripts
@@ -185,7 +198,7 @@ router.post('/generate', async (req: any, res: Response) => {
       campaignId,
       creativeId,
       publicationId,
-      publicationCode,
+      orderId,  // Now required - MongoDB _id of the publication insertion order
       publicationName,
       channel,
       creative,
@@ -194,10 +207,10 @@ router.post('/generate', async (req: any, res: Response) => {
       campaignName
     } = req.body;
     
-    // Validate required fields
-    if (!campaignId || !creativeId || !publicationId || !publicationCode || !channel || !creative) {
+    // Validate required fields (removed publicationCode - now using only publicationId)
+    if (!campaignId || !creativeId || !publicationId || !channel || !creative) {
       return res.status(400).json({ 
-        error: 'Missing required fields: campaignId, creativeId, publicationId, publicationCode, channel, creative' 
+        error: 'Missing required fields: campaignId, creativeId, publicationId, channel, creative' 
       });
     }
     
@@ -210,31 +223,58 @@ router.post('/generate', async (req: any, res: Response) => {
     const db = getDatabase();
     const collection = db.collection<TrackingScript>(COLLECTIONS.TRACKING_SCRIPTS);
     
+    // If orderId not provided, look up the order
+    let resolvedOrderId = orderId;
+    if (!resolvedOrderId) {
+      const ordersCollection = db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS);
+      const order = await ordersCollection.findOne({
+        campaignId,
+        publicationId: parseInt(publicationId),
+        deletedAt: { $exists: false }
+      });
+      if (order) {
+        resolvedOrderId = order._id.toString();
+      }
+    }
+    
+    if (!resolvedOrderId) {
+      return res.status(400).json({ 
+        error: 'Could not find order for this campaign/publication. Either provide orderId or ensure an order exists.' 
+      });
+    }
+    
     // Check if script already exists for this combination
     const existing = await collection.findOne({
       campaignId,
       creativeId,
-      publicationId,
+      publicationId: parseInt(publicationId),
       channel,
       deletedAt: { $exists: false }
     });
     
-    // Build tracking URLs
+    // Build tracking URLs with new simplified structure
     const channelCode = CHANNEL_TYPE_CODES[channel as TrackingChannel];
     const size = creative.width && creative.height ? `${creative.width}x${creative.height}` : undefined;
+    const isNewsletter = channel.includes('newsletter');
     
     const urls = {
-      impressionPixel: buildTrackingUrl(TRACKING_CDN_BASE_URL, 'i.gif', {
+      impressionPixel: buildTrackingUrl(TRACKING_CDN_BASE_URL, '/pxl.png', 'display', {
+        orderId: resolvedOrderId,
+        campaignId,
+        publicationId: parseInt(publicationId),
+        channel: channelCode,
         creativeId,
-        publicationCode,
-        channelType: channelCode,
-        size
+        size,
+        emailId: isNewsletter ? 'EMAIL_ID' : undefined
       }),
-      clickTracker: buildTrackingUrl(TRACKING_CDN_BASE_URL, 'c', {
+      clickTracker: buildTrackingUrl(TRACKING_CDN_BASE_URL, '/c', 'click', {
+        orderId: resolvedOrderId,
+        campaignId,
+        publicationId: parseInt(publicationId),
+        channel: channelCode,
         creativeId,
-        publicationCode,
-        channelType: channelCode,
-        size
+        redirectUrl: creative.clickUrl,  // Include landing page URL for redirect
+        emailId: isNewsletter ? 'EMAIL_ID' : undefined
       }),
       creativeUrl: creative.imageUrl || `${TRACKING_CDN_BASE_URL}/a/${creativeId}`
     };
@@ -273,8 +313,8 @@ router.post('/generate', async (req: any, res: Response) => {
     const scriptData: TrackingScriptInsert = {
       campaignId,
       creativeId,
-      publicationId,
-      publicationCode,
+      publicationId: parseInt(publicationId),
+      // publicationCode removed - no longer used, only publicationId needed
       publicationName: publicationName || `Publication ${publicationId}`,
       channel: channel as TrackingChannel,
       creative: {
@@ -353,6 +393,7 @@ router.post('/generate-batch', async (req: any, res: Response) => {
     }
     
     const results: { success: any[]; errors: any[] } = { success: [], errors: [] };
+    const db = getDatabase();
     
     for (const item of items) {
       try {
@@ -361,14 +402,15 @@ router.post('/generate-batch', async (req: any, res: Response) => {
           campaignId,
           creativeId,
           publicationId,
-          publicationCode,
+          orderId,  // Optional - will look up if not provided
           publicationName,
           channel,
           creative,
           espCompatibility
         } = item;
         
-        if (!campaignId || !creativeId || !publicationId || !publicationCode || !channel || !creative) {
+        // Validate required fields (removed publicationCode - using only publicationId)
+        if (!campaignId || !creativeId || !publicationId || !channel || !creative) {
           results.errors.push({ 
             item, 
             error: 'Missing required fields' 
@@ -376,25 +418,53 @@ router.post('/generate-batch', async (req: any, res: Response) => {
           continue;
         }
         
-        const db = getDatabase();
         const collection = db.collection<TrackingScript>(COLLECTIONS.TRACKING_SCRIPTS);
         
-        // Build tracking URLs
+        // Look up orderId if not provided
+        let resolvedOrderId = orderId;
+        if (!resolvedOrderId) {
+          const ordersCollection = db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS);
+          const order = await ordersCollection.findOne({
+            campaignId,
+            publicationId: parseInt(publicationId),
+            deletedAt: { $exists: false }
+          });
+          if (order) {
+            resolvedOrderId = order._id.toString();
+          }
+        }
+        
+        if (!resolvedOrderId) {
+          results.errors.push({ 
+            item, 
+            error: 'Could not find order for this campaign/publication' 
+          });
+          continue;
+        }
+        
+        // Build tracking URLs with new simplified structure
         const channelCode = CHANNEL_TYPE_CODES[channel as TrackingChannel];
         const size = creative.width && creative.height ? `${creative.width}x${creative.height}` : undefined;
+        const isNewsletter = channel.includes('newsletter');
         
         const urls = {
-          impressionPixel: buildTrackingUrl(TRACKING_CDN_BASE_URL, 'i.gif', {
+          impressionPixel: buildTrackingUrl(TRACKING_CDN_BASE_URL, '/pxl.png', 'display', {
+            orderId: resolvedOrderId,
+            campaignId,
+            publicationId: parseInt(publicationId),
+            channel: channelCode,
             creativeId,
-            publicationCode,
-            channelType: channelCode,
-            size
+            size,
+            emailId: isNewsletter ? 'EMAIL_ID' : undefined
           }),
-          clickTracker: buildTrackingUrl(TRACKING_CDN_BASE_URL, 'c', {
+          clickTracker: buildTrackingUrl(TRACKING_CDN_BASE_URL, '/c', 'click', {
+            orderId: resolvedOrderId,
+            campaignId,
+            publicationId: parseInt(publicationId),
+            channel: channelCode,
             creativeId,
-            publicationCode,
-            channelType: channelCode,
-            size
+            redirectUrl: creative.clickUrl,
+            emailId: isNewsletter ? 'EMAIL_ID' : undefined
           }),
           creativeUrl: creative.imageUrl || `${TRACKING_CDN_BASE_URL}/a/${creativeId}`
         };
@@ -431,8 +501,8 @@ router.post('/generate-batch', async (req: any, res: Response) => {
         const scriptData: TrackingScriptInsert = {
           campaignId,
           creativeId,
-          publicationId,
-          publicationCode,
+          publicationId: parseInt(publicationId),
+          // publicationCode removed - no longer used, only publicationId needed
           publicationName: publicationName || `Publication ${publicationId}`,
           channel: channel as TrackingChannel,
           creative: {

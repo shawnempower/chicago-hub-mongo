@@ -55,6 +55,15 @@ import { toast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/config/api';
 import { cn } from '@/lib/utils';
 import { TrackingScript, TrackingChannel, ESPCompatibility } from '@/integrations/mongodb/trackingScriptSchema';
+import { 
+  transformForAdServer, 
+  transformForESP,
+  getAdServerName,
+  getESPName,
+  getAdServerInstructions,
+  getESPInstructions
+} from '@/utils/trackingTagTransforms';
+import type { PublicationAdServer, PublicationESP } from '@/integrations/mongodb/schemas';
 
 interface TrackingScriptGeneratorProps {
   campaignId: string;
@@ -133,14 +142,7 @@ export function TrackingScriptGenerator({
 }: TrackingScriptGeneratorProps) {
   const [scripts, setScripts] = useState<TrackingScript[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
-  
-  // Generate form state
-  const [selectedCreative, setSelectedCreative] = useState<string>('');
-  const [selectedChannel, setSelectedChannel] = useState<TrackingChannel>('website');
-  const [customClickUrl, setCustomClickUrl] = useState<string>('');
   
   // Digital channels that support tracking
   const digitalChannels = ['website', 'newsletter', 'streaming'];
@@ -173,82 +175,6 @@ export function TrackingScriptGenerator({
       });
     } finally {
       setLoading(false);
-    }
-  };
-  
-  const handleGenerate = async () => {
-    if (!selectedCreative) {
-      toast({
-        title: 'Select Creative',
-        description: 'Please select a creative to generate tracking for',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    const creative = creatives.find(c => c._id === selectedCreative);
-    if (!creative) return;
-    
-    try {
-      setGenerating(true);
-      const token = localStorage.getItem('auth_token');
-      
-      const response = await fetch(`${API_BASE_URL}/tracking-scripts/generate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          campaignId,
-          creativeId: creative._id,
-          publicationId,
-          publicationCode,
-          publicationName,
-          channel: selectedChannel,
-          creative: {
-            name: creative.name,
-            clickUrl: customClickUrl || creative.clickUrl || '',
-            imageUrl: creative.imageUrl,
-            width: creative.format?.width,
-            height: creative.format?.height,
-            altText: creative.altText || creative.name,
-            headline: creative.headline,
-            body: creative.body,
-            ctaText: creative.ctaText
-          },
-          espCompatibility,
-          advertiserName,
-          campaignName
-        })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to generate script');
-      }
-      
-      const data = await response.json();
-      
-      toast({
-        title: data.updated ? 'Script Updated' : 'Script Generated',
-        description: `Tracking script ${data.updated ? 'updated' : 'created'} for ${creative.name}`
-      });
-      
-      setShowGenerateDialog(false);
-      setSelectedCreative('');
-      setCustomClickUrl('');
-      fetchScripts();
-      onScriptsGenerated?.();
-    } catch (error) {
-      console.error('Error generating script:', error);
-      toast({
-        title: 'Error',
-        description: (error as Error).message,
-        variant: 'destructive'
-      });
-    } finally {
-      setGenerating(false);
     }
   };
   
@@ -326,7 +252,7 @@ export function TrackingScriptGenerator({
               Tracking Scripts
             </CardTitle>
             <CardDescription>
-              Generate tracking tags for {publicationName}
+              Tracking tags for {publicationName} - auto-generated when assets are uploaded
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -335,127 +261,10 @@ export function TrackingScriptGenerator({
                 {ESP_LABELS[espCompatibility]}
               </Badge>
             )}
-            <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
-              <DialogTrigger asChild>
-                <Button size="sm" disabled={creatives.length === 0}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Generate Script
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Generate Tracking Script</DialogTitle>
-                  <DialogDescription>
-                    Create tracking tags for {publicationName} to traffic in their {selectedChannel === 'newsletter_image' || selectedChannel === 'newsletter_text' ? 'newsletter' : selectedChannel}
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Creative</Label>
-                    <Select value={selectedCreative} onValueChange={setSelectedCreative}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a creative..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {creatives.map(creative => (
-                          <SelectItem key={creative._id} value={creative._id}>
-                            <div className="flex items-center gap-2">
-                              <span>{creative.name}</span>
-                              {creative.format?.dimensions && (
-                                <span className="text-xs text-muted-foreground">
-                                  ({creative.format.dimensions})
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Channel Type</Label>
-                    <Select value={selectedChannel} onValueChange={(v) => setSelectedChannel(v as TrackingChannel)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="website">
-                          <div className="flex items-center gap-2">
-                            <Globe className="h-4 w-4" />
-                            Website/Display Ad
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="newsletter_image">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            Newsletter (Image Ad)
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="newsletter_text">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            Newsletter (Text Ad)
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="streaming">
-                          <div className="flex items-center gap-2">
-                            <Video className="h-4 w-4" />
-                            Streaming Video
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Click-Through URL (optional override)</Label>
-                    <Input
-                      placeholder="https://advertiser.com/landing-page"
-                      value={customClickUrl}
-                      onChange={(e) => setCustomClickUrl(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Leave blank to use the creative's default click URL
-                    </p>
-                  </div>
-                  
-                  {(selectedChannel === 'newsletter_image' || selectedChannel === 'newsletter_text') && (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
-                        <div className="text-sm">
-                          <p className="font-medium text-amber-800">Newsletter Tracking Note</p>
-                          <p className="text-amber-700">
-                            Impression tracking in newsletters is affected by email privacy features (Apple Mail Privacy Protection, Gmail caching). Click tracking remains reliable.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowGenerateDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleGenerate} disabled={generating || !selectedCreative}>
-                    {generating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Code className="h-4 w-4 mr-2" />
-                        Generate
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button size="sm" variant="outline" onClick={fetchScripts} disabled={loading}>
+              <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </Button>
           </div>
         </div>
       </CardHeader>
@@ -494,131 +303,210 @@ export function TrackingScriptGenerator({
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4">
-                  <Tabs defaultValue="full" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="full">Full Tag</TabsTrigger>
-                      <TabsTrigger value="urls">URLs Only</TabsTrigger>
-                      {script.tags.simplifiedTag && (
-                        <TabsTrigger value="simplified">Simplified</TabsTrigger>
-                      )}
-                    </TabsList>
+                  {/* Determine if this is web or newsletter inventory */}
+                  {(() => {
+                    const isNewsletterScript = script.channel?.includes('newsletter');
                     
-                    <TabsContent value="full" className="mt-4">
-                      <div className="relative">
-                        <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
-                          <code>{script.tags.fullTag}</code>
-                        </pre>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="absolute top-2 right-2"
-                          onClick={() => handleCopy(script.tags.fullTag, `${script._id}-full`)}
-                        >
-                          {copiedId === `${script._id}-full` ? (
-                            <Check className="h-4 w-4" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Complete HTML tag with impression pixel and click tracking
-                      </p>
-                    </TabsContent>
+                    if (isNewsletterScript) {
+                      // Newsletter: Show ESP format tabs
+                      return (
+                        <Tabs defaultValue="base" className="w-full">
+                          <TabsList className="grid w-full grid-cols-4">
+                            <TabsTrigger value="base">Base Tag</TabsTrigger>
+                            <TabsTrigger value="mailchimp">Mailchimp</TabsTrigger>
+                            <TabsTrigger value="constant_contact">Const. Contact</TabsTrigger>
+                            <TabsTrigger value="urls">URLs</TabsTrigger>
+                          </TabsList>
+                          
+                          <TabsContent value="base" className="mt-4">
+                            <div className="relative">
+                              <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
+                                <code>{script.tags.fullTag}</code>
+                              </pre>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="absolute top-2 right-2"
+                                onClick={() => handleCopy(script.tags.fullTag, `${script._id}-base`)}
+                              >
+                                {copiedId === `${script._id}-base` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Base tag with EMAIL_ID and CACHE_BUSTER placeholders. Replace with your ESP's merge tags.
+                            </p>
+                          </TabsContent>
+                          
+                          <TabsContent value="mailchimp" className="mt-4">
+                            <div className="relative">
+                              <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
+                                <code>{transformForESP(script.tags.fullTag, 'mailchimp')}</code>
+                              </pre>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="absolute top-2 right-2"
+                                onClick={() => handleCopy(transformForESP(script.tags.fullTag, 'mailchimp'), `${script._id}-mc`)}
+                              >
+                                {copiedId === `${script._id}-mc` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Uses *|UNIQID|* and *|DATE:U|* merge tags for Mailchimp.
+                            </p>
+                          </TabsContent>
+                          
+                          <TabsContent value="constant_contact" className="mt-4">
+                            <div className="relative">
+                              <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
+                                <code>{transformForESP(script.tags.fullTag, 'constant_contact')}</code>
+                              </pre>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="absolute top-2 right-2"
+                                onClick={() => handleCopy(transformForESP(script.tags.fullTag, 'constant_contact'), `${script._id}-cc`)}
+                              >
+                                {copiedId === `${script._id}-cc` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Uses [[CONTACT_ID]] and [[DATE]] merge tags for Constant Contact.
+                            </p>
+                          </TabsContent>
+                          
+                          <TabsContent value="urls" className="mt-4 space-y-3">
+                            <div>
+                              <Label className="text-xs">Impression Pixel</Label>
+                              <div className="flex gap-2 mt-1">
+                                <Input value={script.urls.impressionPixel} readOnly className="font-mono text-xs" />
+                                <Button size="sm" variant="outline" onClick={() => handleCopy(script.urls.impressionPixel, `${script._id}-imp`)}>
+                                  {copiedId === `${script._id}-imp` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                </Button>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Click Tracker</Label>
+                              <div className="flex gap-2 mt-1">
+                                <Input value={script.urls.clickTracker} readOnly className="font-mono text-xs" />
+                                <Button size="sm" variant="outline" onClick={() => handleCopy(script.urls.clickTracker, `${script._id}-click`)}>
+                                  {copiedId === `${script._id}-click` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                </Button>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Creative URL</Label>
+                              <div className="flex gap-2 mt-1">
+                                <Input value={script.urls.creativeUrl} readOnly className="font-mono text-xs" />
+                                <Button size="sm" variant="outline" onClick={() => handleCopy(script.urls.creativeUrl, `${script._id}-creative`)}>
+                                  {copiedId === `${script._id}-creative` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                </Button>
+                              </div>
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+                      );
+                    }
                     
-                    <TabsContent value="urls" className="mt-4 space-y-3">
-                      <div>
-                        <Label className="text-xs">Impression Pixel</Label>
-                        <div className="flex gap-2 mt-1">
-                          <Input 
-                            value={script.urls.impressionPixel} 
-                            readOnly 
-                            className="font-mono text-xs"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCopy(script.urls.impressionPixel, `${script._id}-imp`)}
-                          >
-                            {copiedId === `${script._id}-imp` ? (
-                              <Check className="h-4 w-4" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs">Click Tracker</Label>
-                        <div className="flex gap-2 mt-1">
-                          <Input 
-                            value={script.urls.clickTracker} 
-                            readOnly 
-                            className="font-mono text-xs"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCopy(script.urls.clickTracker, `${script._id}-click`)}
-                          >
-                            {copiedId === `${script._id}-click` ? (
-                              <Check className="h-4 w-4" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs">Creative URL</Label>
-                        <div className="flex gap-2 mt-1">
-                          <Input 
-                            value={script.urls.creativeUrl} 
-                            readOnly 
-                            className="font-mono text-xs"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCopy(script.urls.creativeUrl, `${script._id}-creative`)}
-                          >
-                            {copiedId === `${script._id}-creative` ? (
-                              <Check className="h-4 w-4" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </TabsContent>
-                    
-                    {script.tags.simplifiedTag && (
-                      <TabsContent value="simplified" className="mt-4">
-                        <div className="relative">
-                          <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
-                            <code>{script.tags.simplifiedTag}</code>
-                          </pre>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="absolute top-2 right-2"
-                            onClick={() => handleCopy(script.tags.simplifiedTag || '', `${script._id}-simple`)}
-                          >
-                            {copiedId === `${script._id}-simple` ? (
-                              <Check className="h-4 w-4" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Simplified version for ESPs with limited HTML support
-                        </p>
-                      </TabsContent>
-                    )}
-                  </Tabs>
+                    // Web/Display: Show Ad Server format tabs
+                    return (
+                      <Tabs defaultValue="gam" className="w-full">
+                        <TabsList className="grid w-full grid-cols-4">
+                          <TabsTrigger value="gam">GAM</TabsTrigger>
+                          <TabsTrigger value="broadstreet">Broadstreet</TabsTrigger>
+                          <TabsTrigger value="direct">Direct</TabsTrigger>
+                          <TabsTrigger value="urls">URLs</TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="gam" className="mt-4">
+                          <div className="relative">
+                            <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
+                              <code>{transformForAdServer(script.tags.fullTag, 'gam', script.creative.clickUrl)}</code>
+                            </pre>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="absolute top-2 right-2"
+                              onClick={() => handleCopy(transformForAdServer(script.tags.fullTag, 'gam', script.creative.clickUrl), `${script._id}-gam`)}
+                            >
+                              {copiedId === `${script._id}-gam` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            For Google Ad Manager. Uses %%CLICK_URL_UNESC%% and %%CACHEBUSTER%% macros.
+                          </p>
+                        </TabsContent>
+                        
+                        <TabsContent value="broadstreet" className="mt-4">
+                          <div className="relative">
+                            <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
+                              <code>{transformForAdServer(script.tags.fullTag, 'broadstreet', script.creative.clickUrl)}</code>
+                            </pre>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="absolute top-2 right-2"
+                              onClick={() => handleCopy(transformForAdServer(script.tags.fullTag, 'broadstreet', script.creative.clickUrl), `${script._id}-bs`)}
+                            >
+                              {copiedId === `${script._id}-bs` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            For Broadstreet. Uses {'{{click}}'} and [timestamp] macros.
+                          </p>
+                        </TabsContent>
+                        
+                        <TabsContent value="direct" className="mt-4">
+                          <div className="relative">
+                            <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm whitespace-pre-wrap">
+                              <code>{transformForAdServer(script.tags.fullTag, 'direct', script.creative.clickUrl)}</code>
+                            </pre>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="absolute top-2 right-2"
+                              onClick={() => handleCopy(transformForAdServer(script.tags.fullTag, 'direct', script.creative.clickUrl), `${script._id}-direct`)}
+                            >
+                              {copiedId === `${script._id}-direct` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            For direct CMS placement. Includes bot protection and lazy loading.
+                          </p>
+                        </TabsContent>
+                        
+                        <TabsContent value="urls" className="mt-4 space-y-3">
+                          <div>
+                            <Label className="text-xs">Impression Pixel</Label>
+                            <div className="flex gap-2 mt-1">
+                              <Input value={script.urls.impressionPixel} readOnly className="font-mono text-xs" />
+                              <Button size="sm" variant="outline" onClick={() => handleCopy(script.urls.impressionPixel, `${script._id}-imp`)}>
+                                {copiedId === `${script._id}-imp` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Click Tracker</Label>
+                            <div className="flex gap-2 mt-1">
+                              <Input value={script.urls.clickTracker} readOnly className="font-mono text-xs" />
+                              <Button size="sm" variant="outline" onClick={() => handleCopy(script.urls.clickTracker, `${script._id}-click`)}>
+                                {copiedId === `${script._id}-click` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Creative URL</Label>
+                            <div className="flex gap-2 mt-1">
+                              <Input value={script.urls.creativeUrl} readOnly className="font-mono text-xs" />
+                              <Button size="sm" variant="outline" onClick={() => handleCopy(script.urls.creativeUrl, `${script._id}-creative`)}>
+                                {copiedId === `${script._id}-creative` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                    );
+                  })()}
                   
                   <Separator className="my-4" />
                   

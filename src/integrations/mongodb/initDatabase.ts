@@ -20,7 +20,8 @@ export const initializeDatabase = async () => {
             (collectionName === 'storefront_configurations' && 'publicationId' in indexSpec) ||
             (collectionName === 'user_profiles' && 'userId' in indexSpec) ||
             (collectionName === 'saved_outlets' && 'userId' in indexSpec && 'outletId' in indexSpec) ||
-            (collectionName === 'saved_packages' && 'userId' in indexSpec && 'packageId' in indexSpec);
+            (collectionName === 'saved_packages' && 'userId' in indexSpec && 'packageId' in indexSpec) ||
+            (collectionName === 'tracking_scripts' && 'campaignId' in indexSpec && 'publicationId' in indexSpec && 'creativeId' in indexSpec);
 
           const options = isUnique ? { unique: true } : {};
           

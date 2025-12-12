@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A/B Creative Test | Ad Tracking</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 { text-align: center; margin-bottom: 10px; color: #1a1a1a; }
+    .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    /* Campaign Info */
+    .campaign-info {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .campaign-info h2 { font-size: 18px; color: #1a1a1a; }
+    .campaign-info .meta {
+      font-size: 13px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .campaign-info .meta code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+    .campaign-info .stats {
+      display: flex;
+      gap: 30px;
+    }
+    .campaign-info .stat {
+      text-align: center;
+    }
+    .campaign-info .stat .value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #7c3aed;
+    }
+    .campaign-info .stat .label {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+    }
+    
+    /* Variant Grid */
+    .variants-section h3 {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 15px;
+      padding-left: 5px;
+    }
+    .variants-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .variant-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .variant-badge {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 10;
+    }
+    .variant-badge.a { background: #3b82f6; color: white; }
+    .variant-badge.b { background: #f97316; color: white; }
+    .variant-badge.control { background: #64748b; color: white; }
+    .variant-badge.winner { background: #22c55e; color: white; }
+    
+    .variant-header {
+      padding: 15px 20px;
+      background: #f8f8f8;
+      border-bottom: 1px solid #eee;
+    }
+    .variant-header h4 { font-size: 14px; color: #333; }
+    .variant-header .id { font-size: 11px; color: #888; font-family: monospace; }
+    
+    .variant-creative {
+      padding: 20px;
+      text-align: center;
+      background: #fafafa;
+    }
+    .ad-unit {
+      display: inline-block;
+      cursor: pointer;
+    }
+    .ad-unit img {
+      display: block;
+      border-radius: 4px;
+      transition: transform 0.2s;
+    }
+    .ad-unit:hover img { transform: scale(1.02); }
+    
+    .variant-stats {
+      padding: 15px 20px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      border-top: 1px solid #eee;
+    }
+    .variant-stats .stat {
+      text-align: center;
+    }
+    .variant-stats .stat .value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #333;
+    }
+    .variant-stats .stat .label {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+    }
+    .variant-stats .stat.highlight .value { color: #22c55e; }
+    .variant-stats .stat.negative .value { color: #ef4444; }
+    
+    /* Results Panel */
+    .results-panel {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .results-panel h3 {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 15px;
+    }
+    .results-bar {
+      display: flex;
+      gap: 2px;
+      height: 40px;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+    .results-bar .segment {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .results-bar .segment.a { background: #3b82f6; }
+    .results-bar .segment.b { background: #f97316; }
+    .results-legend {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+    }
+    .results-legend .item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .results-legend .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+    .results-legend .dot.a { background: #3b82f6; }
+    .results-legend .dot.b { background: #f97316; }
+    
+    /* Event Log */
+    .event-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      max-height: 180px;
+      overflow-y: auto;
+      font-family: 'Monaco', monospace;
+      font-size: 12px;
+    }
+    .event-panel-header {
+      background: #333;
+      padding: 8px 15px;
+      display: flex;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+    }
+    .event-panel-header button {
+      background: #555;
+      border: none;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    .event-log { padding: 10px 15px; }
+    .event-entry { padding: 3px 0; }
+    .event-entry.impression { color: #4ade80; }
+    .event-entry.click { color: #fbbf24; }
+    .event-entry.variant-a { border-left: 3px solid #3b82f6; padding-left: 10px; }
+    .event-entry.variant-b { border-left: 3px solid #f97316; padding-left: 10px; }
+  </style>
+</head>
+<body>
+  <h1>🧪 A/B Creative Test</h1>
+  <p class="subtitle">Compare performance across different creative variants for the same campaign</p>
+  
+  <div class="container">
+    <!-- Campaign Info -->
+    <div class="campaign-info">
+      <div>
+        <h2>Coca-Cola Holiday Campaign 2024</h2>
+        <div class="meta">
+          <code>cid=camp_2024_q4_coca_cola</code>
+          <code>oid=507f1f77bcf86cd799439011</code>
+          <code>p=chireader</code>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <div class="value" id="totalImpressions">0</div>
+          <div class="label">Impressions</div>
+        </div>
+        <div class="stat">
+          <div class="value" id="totalClicks">0</div>
+          <div class="label">Clicks</div>
+        </div>
+        <div class="stat">
+          <div class="value" id="totalCtr">0.00%</div>
+          <div class="label">CTR</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Results Bar -->
+    <div class="results-panel">
+      <h3>Performance Comparison</h3>
+      <div class="results-bar">
+        <div class="segment a" id="barA" style="width: 50%;">Variant A: 0%</div>
+        <div class="segment b" id="barB" style="width: 50%;">Variant B: 0%</div>
+      </div>
+      <div class="results-legend">
+        <div class="item"><div class="dot a"></div>Variant A (Holiday Theme)</div>
+        <div class="item"><div class="dot b"></div>Variant B (Product Focus)</div>
+      </div>
+    </div>
+    
+    <!-- Variants -->
+    <div class="variants-section">
+      <h3>Creative Variants - 728x90 Leaderboard</h3>
+      <div class="variants-grid">
+        <!-- Variant A -->
+        <div class="variant-card">
+          <div class="variant-badge a">Variant A</div>
+          <div class="variant-header">
+            <h4>Holiday Theme - Emotional Appeal</h4>
+            <div class="id">cr_coca_cola_728x90_holiday_v1</div>
+          </div>
+          <div class="variant-creative">
+            <div class="ad-unit" 
+                 data-variant="A"
+                 data-order-id="507f1f77bcf86cd799439011" 
+                 data-campaign-id="camp_2024_q4_coca_cola" 
+                 data-creative="cr_coca_cola_728x90_holiday_v1" 
+                 data-pub="chireader" 
+                 data-pub-id="1035" 
+                 data-channel="website" 
+                 data-size="728x90">
+              <a href="#" class="ad-click" data-landing="https://coca-cola.com/holiday?variant=a">
+                <img src="https://via.placeholder.com/728x90/165e3b/FFFFFF?text=🎄+Share+the+Magic+This+Holiday+Season+-+Coca+Cola" width="728" height="90" alt="Ad" />
+              </a>
+            </div>
+          </div>
+          <div class="variant-stats">
+            <div class="stat">
+              <div class="value" id="impA">0</div>
+              <div class="label">Impressions</div>
+            </div>
+            <div class="stat">
+              <div class="value" id="clickA">0</div>
+              <div class="label">Clicks</div>
+            </div>
+            <div class="stat highlight">
+              <div class="value" id="ctrA">0.00%</div>
+              <div class="label">CTR</div>
+            </div>
+            <div class="stat">
+              <div class="value" id="shareA">50%</div>
+              <div class="label">Traffic</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Variant B -->
+        <div class="variant-card">
+          <div class="variant-badge b">Variant B</div>
+          <div class="variant-header">
+            <h4>Product Focus - Direct CTA</h4>
+            <div class="id">cr_coca_cola_728x90_product_v2</div>
+          </div>
+          <div class="variant-creative">
+            <div class="ad-unit" 
+                 data-variant="B"
+                 data-order-id="507f1f77bcf86cd799439011" 
+                 data-campaign-id="camp_2024_q4_coca_cola" 
+                 data-creative="cr_coca_cola_728x90_product_v2" 
+                 data-pub="chireader" 
+                 data-pub-id="1035" 
+                 data-channel="website" 
+                 data-size="728x90">
+              <a href="#" class="ad-click" data-landing="https://coca-cola.com/holiday?variant=b">
+                <img src="https://via.placeholder.com/728x90/dc2626/FFFFFF?text=🥤+Try+NEW+Coca+Cola+Zero+Sugar+-+Buy+Now" width="728" height="90" alt="Ad" />
+              </a>
+            </div>
+          </div>
+          <div class="variant-stats">
+            <div class="stat">
+              <div class="value" id="impB">0</div>
+              <div class="label">Impressions</div>
+            </div>
+            <div class="stat">
+              <div class="value" id="clickB">0</div>
+              <div class="label">Clicks</div>
+            </div>
+            <div class="stat highlight">
+              <div class="value" id="ctrB">0.00%</div>
+              <div class="label">CTR</div>
+            </div>
+            <div class="stat">
+              <div class="value" id="shareB">50%</div>
+              <div class="label">Traffic</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="variants-section">
+      <h3>Creative Variants - 300x250 Medium Rectangle</h3>
+      <div class="variants-grid">
+        <!-- Variant A - 300x250 -->
+        <div class="variant-card">
+          <div class="variant-badge a">Variant A</div>
+          <div class="variant-header">
+            <h4>Holiday Theme - 300x250</h4>
+            <div class="id">cr_coca_cola_300x250_holiday_v1</div>
+          </div>
+          <div class="variant-creative">
+            <div class="ad-unit" 
+                 data-variant="A"
+                 data-order-id="507f1f77bcf86cd799439011" 
+                 data-campaign-id="camp_2024_q4_coca_cola" 
+                 data-creative="cr_coca_cola_300x250_holiday_v1" 
+                 data-pub="chireader" 
+                 data-pub-id="1035" 
+                 data-channel="website" 
+                 data-size="300x250">
+              <a href="#" class="ad-click" data-landing="https://coca-cola.com/holiday?variant=a&size=300x250">
+                <img src="https://via.placeholder.com/300x250/165e3b/FFFFFF?text=🎄%0AHoliday%0AMagic" width="300" height="250" alt="Ad" />
+              </a>
+            </div>
+          </div>
+          <div class="variant-stats">
+            <div class="stat">
+              <div class="value" id="impA2">0</div>
+              <div class="label">Impressions</div>
+            </div>
+            <div class="stat">
+              <div class="value" id="clickA2">0</div>
+              <div class="label">Clicks</div>
+            </div>
+            <div class="stat highlight">
+              <div class="value" id="ctrA2">0.00%</div>
+              <div class="label">CTR</div>
+            </div>
+            <div class="stat">
+              <div class="value" id="shareA2">50%</div>
+              <div class="label">Traffic</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Variant B - 300x250 -->
+        <div class="variant-card">
+          <div class="variant-badge b">Variant B</div>
+          <div class="variant-header">
+            <h4>Product Focus - 300x250</h4>
+            <div class="id">cr_coca_cola_300x250_product_v2</div>
+          </div>
+          <div class="variant-creative">
+            <div class="ad-unit" 
+                 data-variant="B"
+                 data-order-id="507f1f77bcf86cd799439011" 
+                 data-campaign-id="camp_2024_q4_coca_cola" 
+                 data-creative="cr_coca_cola_300x250_product_v2" 
+                 data-pub="chireader" 
+                 data-pub-id="1035" 
+                 data-channel="website" 
+                 data-size="300x250">
+              <a href="#" class="ad-click" data-landing="https://coca-cola.com/holiday?variant=b&size=300x250">
+                <img src="https://via.placeholder.com/300x250/dc2626/FFFFFF?text=🥤%0AZero%0ASugar" width="300" height="250" alt="Ad" />
+              </a>
+            </div>
+          </div>
+          <div class="variant-stats">
+            <div class="stat">
+              <div class="value" id="impB2">0</div>
+              <div class="label">Impressions</div>
+            </div>
+            <div class="stat">
+              <div class="value" id="clickB2">0</div>
+              <div class="label">Clicks</div>
+            </div>
+            <div class="stat highlight">
+              <div class="value" id="ctrB2">0.00%</div>
+              <div class="label">CTR</div>
+            </div>
+            <div class="stat">
+              <div class="value" id="shareB2">50%</div>
+              <div class="label">Traffic</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Event Log Panel -->
+  <div class="event-panel" id="eventPanel">
+    <div class="event-panel-header">
+      <span>📡 A/B Test Tracking Events</span>
+      <div>
+        <button onclick="clearEvents()">Clear</button>
+        <button onclick="togglePanel()">Toggle</button>
+      </div>
+    </div>
+    <div class="event-log" id="eventLog"></div>
+  </div>
+
+  <script>
+    const TRACKING_BASE = 'https://dxafls8akrlrp.cloudfront.net';
+    const PIXEL_PATH = '/pxl.png';
+    
+    let events = JSON.parse(localStorage.getItem('tracking_events') || '[]');
+    
+    // Stats by variant
+    let variantStats = {
+      A: { impressions: 0, clicks: 0 },
+      B: { impressions: 0, clicks: 0 }
+    };
+    
+    function logEvent(type, data) {
+      const timestamp = new Date().toISOString();
+      const event = { type, timestamp, ...data };
+      events.push(event);
+      localStorage.setItem('tracking_events', JSON.stringify(events));
+      
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      const variantClass = data.variant ? `variant-${data.variant.toLowerCase()}` : '';
+      entry.className = `event-entry ${type} ${variantClass}`;
+      entry.innerHTML = `
+        <span style="color:#888">${timestamp.split('T')[1].split('.')[0]}</span>
+        <strong>${type.toUpperCase()}</strong> | Variant ${data.variant || '?'} | ${data.creative} | ${data.size || ''}
+      `;
+      log.insertBefore(entry, log.firstChild);
+      
+      console.log(`[TRACKING] ${type}`, event);
+    }
+    
+    function updateStats() {
+      const totalImp = variantStats.A.impressions + variantStats.B.impressions;
+      const totalClicks = variantStats.A.clicks + variantStats.B.clicks;
+      const totalCtr = totalImp > 0 ? ((totalClicks / totalImp) * 100).toFixed(2) : 0;
+      
+      document.getElementById('totalImpressions').textContent = totalImp;
+      document.getElementById('totalClicks').textContent = totalClicks;
+      document.getElementById('totalCtr').textContent = totalCtr + '%';
+      
+      // Variant A stats
+      const ctrA = variantStats.A.impressions > 0 
+        ? ((variantStats.A.clicks / variantStats.A.impressions) * 100).toFixed(2) 
+        : 0;
+      document.getElementById('impA').textContent = variantStats.A.impressions;
+      document.getElementById('clickA').textContent = variantStats.A.clicks;
+      document.getElementById('ctrA').textContent = ctrA + '%';
+      
+      // Variant B stats
+      const ctrB = variantStats.B.impressions > 0 
+        ? ((variantStats.B.clicks / variantStats.B.impressions) * 100).toFixed(2) 
+        : 0;
+      document.getElementById('impB').textContent = variantStats.B.impressions;
+      document.getElementById('clickB').textContent = variantStats.B.clicks;
+      document.getElementById('ctrB').textContent = ctrB + '%';
+      
+      // Traffic share
+      const shareA = totalImp > 0 ? Math.round((variantStats.A.impressions / totalImp) * 100) : 50;
+      const shareB = totalImp > 0 ? Math.round((variantStats.B.impressions / totalImp) * 100) : 50;
+      document.getElementById('shareA').textContent = shareA + '%';
+      document.getElementById('shareB').textContent = shareB + '%';
+      
+      // Results bar
+      document.getElementById('barA').style.width = shareA + '%';
+      document.getElementById('barA').textContent = `A: ${ctrA}% CTR`;
+      document.getElementById('barB').style.width = shareB + '%';
+      document.getElementById('barB').textContent = `B: ${ctrB}% CTR`;
+    }
+    
+    function fireImpression(adUnit) {
+      const variant = adUnit.dataset.variant;
+      const orderId = adUnit.dataset.orderId;
+      const campaignId = adUnit.dataset.campaignId;
+      const pub = adUnit.dataset.pub;
+      const channel = adUnit.dataset.channel;
+      const creative = adUnit.dataset.creative;
+      const pubId = adUnit.dataset.pubId;
+      const size = adUnit.dataset.size;
+      
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'display',
+        cb: Date.now()
+      });
+      
+      if (creative) params.set('cr', creative);
+      if (pubId) params.set('pid', pubId);
+      if (size) params.set('s', size);
+      
+      const pixelUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      const pixel = new Image(1, 1);
+      pixel.src = pixelUrl;
+      
+      variantStats[variant].impressions++;
+      logEvent('impression', { variant, orderId, campaignId, creative, pub, pubId, channel, size, url: pixelUrl });
+      updateStats();
+    }
+    
+    function handleClick(e) {
+      e.preventDefault();
+      const adUnit = e.target.closest('[data-variant]');
+      const link = e.target.closest('.ad-click');
+      
+      if (!adUnit || !link) return;
+      
+      const variant = adUnit.dataset.variant;
+      const orderId = adUnit.dataset.orderId;
+      const campaignId = adUnit.dataset.campaignId;
+      const pub = adUnit.dataset.pub;
+      const channel = adUnit.dataset.channel;
+      const creative = adUnit.dataset.creative;
+      const pubId = adUnit.dataset.pubId;
+      const size = adUnit.dataset.size;
+      const landing = link.dataset.landing;
+      
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'click',
+        cb: Date.now()
+      });
+      
+      if (creative) params.set('cr', creative);
+      if (pubId) params.set('pid', pubId);
+      
+      const clickUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      const clickPixel = new Image(1, 1);
+      clickPixel.src = clickUrl;
+      
+      variantStats[variant].clicks++;
+      logEvent('click', { variant, orderId, campaignId, creative, pub, pubId, channel, size, landing, url: clickUrl });
+      updateStats();
+      
+      alert(`Click tracked for Variant ${variant}!\n\nCreative: ${creative}\nSize: ${size}\n\nWould redirect to:\n${landing}`);
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      // Fire impressions for all ads
+      document.querySelectorAll('[data-variant]').forEach(fireImpression);
+      
+      // Setup click handlers
+      document.querySelectorAll('.ad-click').forEach(link => {
+        link.addEventListener('click', handleClick);
+      });
+    });
+    
+    function clearEvents() {
+      events = [];
+      localStorage.removeItem('tracking_events');
+      document.getElementById('eventLog').innerHTML = '';
+      variantStats = { A: { impressions: 0, clicks: 0 }, B: { impressions: 0, clicks: 0 } };
+      updateStats();
+    }
+    
+    let panelCollapsed = false;
+    function togglePanel() {
+      panelCollapsed = !panelCollapsed;
+      document.getElementById('eventLog').style.display = panelCollapsed ? 'none' : 'block';
+    }
+  </script>
+</body>
+</html>

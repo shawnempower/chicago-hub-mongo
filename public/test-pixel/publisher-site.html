@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chicago Reader - Local News | Ad Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: #f8f8f8;
+      color: #333;
+    }
+    
+    /* Header */
+    header {
+      background: #1a1a1a;
+      color: white;
+      padding: 15px 20px;
+      text-align: center;
+    }
+    header h1 { font-size: 28px; letter-spacing: 2px; }
+    nav {
+      background: #333;
+      padding: 10px;
+      text-align: center;
+    }
+    nav a {
+      color: #ccc;
+      text-decoration: none;
+      margin: 0 15px;
+      font-size: 14px;
+    }
+    nav a:hover { color: white; }
+    
+    /* Layout */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 30px;
+      padding: 30px 20px;
+    }
+    
+    /* Leaderboard Ad */
+    .leaderboard-container {
+      background: #fff;
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+    .ad-label {
+      font-size: 10px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+    
+    /* Main Content */
+    main { background: white; padding: 30px; border-radius: 4px; }
+    article h2 { font-size: 32px; line-height: 1.3; margin-bottom: 15px; }
+    article .byline { color: #666; font-size: 14px; margin-bottom: 20px; }
+    article p { line-height: 1.8; margin-bottom: 20px; font-size: 18px; }
+    
+    /* In-content Ad */
+    .in-content-ad {
+      background: #f5f5f5;
+      padding: 20px;
+      margin: 30px 0;
+      text-align: center;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
+    
+    /* Sidebar */
+    aside {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .sidebar-ad {
+      background: white;
+      padding: 15px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .sidebar-section {
+      background: white;
+      padding: 20px;
+      border-radius: 4px;
+    }
+    .sidebar-section h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+      color: #666;
+    }
+    .sidebar-section ul { list-style: none; }
+    .sidebar-section li {
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    
+    /* Ad styling */
+    .ad-unit {
+      position: relative;
+      display: inline-block;
+      background: #f0f0f0;
+    }
+    .ad-unit img { display: block; }
+    .ad-unit a { display: block; }
+    
+    /* Event Log Panel */
+    .event-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Monaco', monospace;
+      font-size: 12px;
+      z-index: 1000;
+    }
+    .event-panel-header {
+      background: #333;
+      padding: 8px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+    }
+    .event-panel-header button {
+      background: #555;
+      border: none;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .event-log { padding: 10px 15px; }
+    .event-entry { padding: 4px 0; border-bottom: 1px solid #333; }
+    .event-entry.impression { color: #4ade80; }
+    .event-entry.click { color: #fbbf24; }
+    .event-entry.viewability { color: #60a5fa; }
+    .event-entry .timestamp { color: #888; margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CHICAGO READER</h1>
+  </header>
+  <nav>
+    <a href="#">News</a>
+    <a href="#">Politics</a>
+    <a href="#">Arts</a>
+    <a href="#">Food & Drink</a>
+    <a href="#">Music</a>
+  </nav>
+  
+  <!-- Leaderboard Ad (728x90) -->
+  <div class="leaderboard-container">
+    <div class="ad-label">Advertisement</div>
+    <div class="ad-unit" data-ad-id="leaderboard-1" data-order-id="507f1f77bcf86cd799439011" data-campaign-id="camp_2024_q4_coca_cola" data-creative="cr_coca_cola_728x90" data-pub="chireader" data-pub-id="1035" data-channel="website" data-size="728x90">
+      <a href="#" class="ad-click" data-landing="https://coca-cola.com/summer2026?utm_source=chireader">
+        <img src="https://via.placeholder.com/728x90/E61E26/FFFFFF?text=Coca+Cola+Summer+2026+-+728x90" 
+             width="728" height="90" alt="Coca Cola Summer 2026" />
+      </a>
+    </div>
+  </div>
+  
+  <div class="container">
+    <main>
+      <article>
+        <h2>City Council Approves New Community Development Initiative</h2>
+        <p class="byline">By Jane Smith | December 11, 2025</p>
+        
+        <p>
+          In a landmark decision yesterday, the Chicago City Council voted unanimously to approve 
+          a comprehensive community development initiative that will bring $500 million in 
+          investments to underserved neighborhoods across the South and West sides.
+        </p>
+        
+        <p>
+          The initiative, dubbed "Neighborhoods First," represents the largest single investment 
+          in community infrastructure in the city's history. Funds will be allocated to affordable 
+          housing, small business grants, park improvements, and public transportation upgrades.
+        </p>
+        
+        <!-- In-Content Ad (300x250) -->
+        <div class="in-content-ad">
+          <div class="ad-label">Advertisement</div>
+          <div class="ad-unit" data-ad-id="in-content-1" data-order-id="507f1f77bcf86cd799439011" data-campaign-id="camp_2024_q4_coca_cola" data-creative="cr_coca_cola_300x250" data-pub="chireader" data-pub-id="1035" data-channel="website" data-size="300x250">
+            <a href="#" class="ad-click" data-landing="https://coca-cola.com/summer2026?utm_source=chireader&utm_placement=incontent">
+              <img src="https://via.placeholder.com/300x250/E61E26/FFFFFF?text=Coca+Cola+Refreshing+-+300x250" 
+                   width="300" height="250" alt="Coca Cola Refreshing" />
+            </a>
+          </div>
+        </div>
+        
+        <p>
+          "This is a historic day for Chicago," said Mayor Johnson at a press conference 
+          following the vote. "We're not just building infrastructure – we're building 
+          opportunity and hope in communities that have been overlooked for too long."
+        </p>
+        
+        <p>
+          Community leaders have praised the initiative, which was developed through extensive 
+          consultation with neighborhood organizations and residents. The plan includes specific 
+          provisions to ensure that local businesses and workers benefit from the investment.
+        </p>
+        
+        <p>
+          Implementation will begin in January 2026, with the first phase focusing on 
+          housing rehabilitation in Englewood, Austin, and Garfield Park. Small business 
+          grants will be available starting in March.
+        </p>
+        
+        <p>
+          Critics have raised concerns about the timeline and accountability measures, 
+          but supporters argue that the oversight committee established by the ordinance 
+          will ensure transparent use of funds.
+        </p>
+      </article>
+    </main>
+    
+    <aside>
+      <!-- Sidebar Ad 1 (300x250) -->
+      <div class="sidebar-ad">
+        <div class="ad-label">Advertisement</div>
+        <div class="ad-unit" data-ad-id="sidebar-1" data-order-id="607f1f77bcf86cd799439022" data-campaign-id="camp_2024_q4_local_biz" data-creative="cr_local_business_300x250" data-pub="chireader" data-pub-id="1035" data-channel="website" data-size="300x250">
+          <a href="#" class="ad-click" data-landing="https://localbusiness.com?utm_source=chireader">
+            <img src="https://via.placeholder.com/300x250/2563eb/FFFFFF?text=Local+Business+Ad+-+300x250" 
+                 width="300" height="250" alt="Local Business" />
+          </a>
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>Trending Stories</h3>
+        <ul>
+          <li>Bears Win Third Straight Game</li>
+          <li>New Restaurant Opens in Logan Square</li>
+          <li>CTA Announces Service Changes</li>
+          <li>Weather: Snow Expected This Weekend</li>
+        </ul>
+      </div>
+      
+      <!-- Sidebar Ad 2 (300x600) -->
+      <div class="sidebar-ad">
+        <div class="ad-label">Advertisement</div>
+        <div class="ad-unit" data-ad-id="sidebar-2" data-order-id="507f1f77bcf86cd799439011" data-campaign-id="camp_2024_q4_coca_cola" data-creative="cr_coca_cola_300x600" data-pub="chireader" data-pub-id="1035" data-channel="website" data-size="300x600">
+          <a href="#" class="ad-click" data-landing="https://coca-cola.com/summer2026?utm_source=chireader&utm_placement=sidebar">
+            <img src="https://via.placeholder.com/300x600/E61E26/FFFFFF?text=Coca+Cola+Half+Page+-+300x600" 
+                 width="300" height="600" alt="Coca Cola Half Page" />
+          </a>
+        </div>
+      </div>
+    </aside>
+  </div>
+  
+  <!-- Event Log Panel -->
+  <div class="event-panel" id="eventPanel">
+    <div class="event-panel-header">
+      <span>📡 Tracking Events</span>
+      <div>
+        <button onclick="clearEvents()">Clear</button>
+        <button onclick="togglePanel()">Toggle</button>
+      </div>
+    </div>
+    <div class="event-log" id="eventLog"></div>
+  </div>
+
+  <script>
+    // Configuration - Using CloudFront distribution for tracking pixel
+    const TRACKING_BASE = 'https://dxafls8akrlrp.cloudfront.net';
+    const PIXEL_PATH = '/pxl.png';
+    
+    // Event storage
+    let events = JSON.parse(localStorage.getItem('tracking_events') || '[]');
+    
+    function logEvent(type, data) {
+      const timestamp = new Date().toISOString();
+      const event = { type, timestamp, ...data };
+      events.push(event);
+      localStorage.setItem('tracking_events', JSON.stringify(events));
+      
+      // Update UI
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = `event-entry ${type}`;
+      entry.innerHTML = `
+        <span class="timestamp">${timestamp.split('T')[1].split('.')[0]}</span>
+        <strong>${type.toUpperCase()}</strong> | 
+        oid: ${data.orderId?.slice(-8) || 'n/a'} | cid: ${data.campaignId || 'n/a'} | cr: ${data.creative} | size: ${data.size || 'n/a'}
+      `;
+      log.insertBefore(entry, log.firstChild);
+      
+      console.log(`[TRACKING] ${type}`, event);
+    }
+    
+    function fireImpression(adUnit) {
+      // Required parameters
+      const orderId = adUnit.dataset.orderId;
+      const campaignId = adUnit.dataset.campaignId;
+      const pub = adUnit.dataset.pub;
+      const channel = adUnit.dataset.channel;
+      const cacheBuster = Date.now();
+      
+      // Optional parameters
+      const creative = adUnit.dataset.creative;
+      const pubId = adUnit.dataset.pubId;
+      const size = adUnit.dataset.size;
+      
+      // Build pixel URL with full attribution parameters
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'display',
+        cb: cacheBuster
+      });
+      
+      // Add optional params
+      if (creative) params.set('cr', creative);
+      if (pubId) params.set('pid', pubId);
+      if (size) params.set('s', size);
+      
+      const pixelUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      
+      // Fire pixel
+      const pixel = new Image(1, 1);
+      pixel.src = pixelUrl;
+      
+      // Log event
+      logEvent('impression', { orderId, campaignId, creative, pub, pubId, channel, size, url: pixelUrl });
+    }
+    
+    function handleClick(e) {
+      e.preventDefault();
+      const adUnit = e.target.closest('.ad-unit');
+      const link = e.target.closest('.ad-click');
+      
+      if (!adUnit || !link) return;
+      
+      // Required parameters
+      const orderId = adUnit.dataset.orderId;
+      const campaignId = adUnit.dataset.campaignId;
+      const pub = adUnit.dataset.pub;
+      const channel = adUnit.dataset.channel;
+      const landing = link.dataset.landing;
+      
+      // Optional parameters
+      const creative = adUnit.dataset.creative;
+      const pubId = adUnit.dataset.pubId;
+      
+      // Build click URL with full attribution parameters
+      const params = new URLSearchParams({
+        oid: orderId,
+        cid: campaignId,
+        p: pub,
+        ch: channel,
+        t: 'click',
+        cb: Date.now()
+      });
+      
+      if (creative) params.set('cr', creative);
+      if (pubId) params.set('pid', pubId);
+      
+      const clickUrl = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+      
+      // Fire click pixel before redirect
+      const clickPixel = new Image(1, 1);
+      clickPixel.src = clickUrl;
+      
+      // Log event
+      logEvent('click', { orderId, campaignId, creative, pub, pubId, channel, landing, url: clickUrl });
+      
+      // Simulate redirect (don't actually navigate in test)
+      console.log(`[CLICK] Would redirect to: ${landing}`);
+      alert(`Click tracked!\n\nOrder: ${orderId}\nCampaign: ${campaignId}\n\nWould redirect to:\n${landing}`);
+    }
+    
+    // Viewability tracking
+    function setupViewability(adUnit) {
+      const orderId = adUnit.dataset.orderId;
+      const campaignId = adUnit.dataset.campaignId;
+      const creative = adUnit.dataset.creative;
+      const pub = adUnit.dataset.pub;
+      const pubId = adUnit.dataset.pubId;
+      const channel = adUnit.dataset.channel;
+      
+      let viewStart = null;
+      let totalViewTime = 0;
+      let viewabilityFired = false;
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            if (!viewStart) viewStart = Date.now();
+          } else {
+            if (viewStart) {
+              totalViewTime += Date.now() - viewStart;
+              viewStart = null;
+            }
+          }
+          
+          // Fire viewability after 1 second at 50%+ visible
+          if (!viewabilityFired && totalViewTime >= 1000 && entry.intersectionRatio >= 0.5) {
+            viewabilityFired = true;
+            
+            logEvent('viewability', {
+              orderId,
+              campaignId,
+              creative,
+              pub,
+              channel,
+              viewTimeMs: totalViewTime,
+              viewPercent: Math.round(entry.intersectionRatio * 100)
+            });
+            
+            // Build viewability pixel URL with full attribution
+            const params = new URLSearchParams({
+              oid: orderId,
+              cid: campaignId,
+              p: pub,
+              ch: channel,
+              t: 'view',
+              cb: Date.now()
+            });
+            if (creative) params.set('cr', creative);
+            if (pubId) params.set('pid', pubId);
+            
+            const viewPixel = new Image(1, 1);
+            viewPixel.src = `${TRACKING_BASE}${PIXEL_PATH}?${params.toString()}`;
+          }
+        });
+      }, { threshold: [0, 0.5, 1.0] });
+      
+      observer.observe(adUnit);
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Fire impressions for all ads
+      document.querySelectorAll('.ad-unit').forEach(adUnit => {
+        fireImpression(adUnit);
+        setupViewability(adUnit);
+      });
+      
+      // Setup click handlers
+      document.querySelectorAll('.ad-click').forEach(link => {
+        link.addEventListener('click', handleClick);
+      });
+      
+      // Show existing events
+      events.slice(-20).reverse().forEach(event => {
+        const log = document.getElementById('eventLog');
+        const entry = document.createElement('div');
+        entry.className = `event-entry ${event.type}`;
+        entry.innerHTML = `
+          <span class="timestamp">${event.timestamp.split('T')[1].split('.')[0]}</span>
+          <strong>${event.type.toUpperCase()}</strong> | 
+          creative: ${event.creative} | pub: ${event.pub}
+        `;
+        log.appendChild(entry);
+      });
+    });
+    
+    function clearEvents() {
+      events = [];
+      localStorage.removeItem('tracking_events');
+      document.getElementById('eventLog').innerHTML = '';
+    }
+    
+    let panelCollapsed = false;
+    function togglePanel() {
+      panelCollapsed = !panelCollapsed;
+      document.getElementById('eventLog').style.display = panelCollapsed ? 'none' : 'block';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ad Pixel Test Suite</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #1a1a1a; margin-bottom: 10px; }
+    .subtitle { color: #666; margin-bottom: 40px; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card h2 { margin-top: 0; color: #333; }
+    .card p { color: #666; line-height: 1.6; }
+    .card a {
+      display: inline-block;
+      background: #0066cc;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      margin-top: 10px;
+    }
+    .card a:hover { background: #0055aa; }
+    .badge {
+      display: inline-block;
+      background: #e8f4ff;
+      color: #0066cc;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .console-panel {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 40px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 13px;
+    }
+    .console-panel h3 { color: #fff; margin-top: 0; }
+    .console-panel pre {
+      background: #2d2d2d;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    #event-log {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry { margin: 5px 0; padding: 5px 10px; border-radius: 4px; }
+    .log-impression { background: #1a3a1a; color: #4ade80; }
+    .log-click { background: #3a2a1a; color: #fbbf24; }
+    .log-viewability { background: #1a2a3a; color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <h1>🎯 Ad Pixel Test Suite</h1>
+  <p class="subtitle">Test ad serving, impression tracking, click tracking, and viewability</p>
+
+  <div class="card">
+    <h2>Publisher Website Simulation <span class="badge">Display Ads</span></h2>
+    <p>
+      Simulates a news publisher website with multiple ad placements (leaderboard, sidebar, in-content).
+      Watch the console to see impression pixels fire as ads load and viewability events as you scroll.
+    </p>
+    <a href="publisher-site.html">Open Publisher Site →</a>
+  </div>
+
+  <div class="card">
+    <h2>Newsletter Email Simulation <span class="badge">Email Ads</span></h2>
+    <p>
+      Simulates a newsletter email with image and text ad placements.
+      Impression pixels fire on load. Click tracking redirects through the tracker.
+    </p>
+    <a href="newsletter.html">Open Newsletter →</a>
+  </div>
+
+  <div class="card">
+    <h2>Multi-Publisher Test <span class="badge">Cross-Pub</span></h2>
+    <p>
+      Test tracking across multiple publications (Chicago Reader, Sun-Times, Tribune, Block Club).
+      Each publication has different order IDs and campaigns to test attribution.
+    </p>
+    <a href="multi-publisher.html">Open Multi-Publisher →</a>
+  </div>
+
+  <div class="card">
+    <h2>Streaming & Podcast Ads <span class="badge">Video/Audio</span></h2>
+    <p>
+      Test pre-roll video ads, podcast mid-roll sponsorships, audio streaming ads, and CTV placements.
+      Includes view completion tracking and skip functionality.
+    </p>
+    <a href="streaming-ads.html">Open Streaming Test →</a>
+  </div>
+
+  <div class="card">
+    <h2>A/B Creative Test <span class="badge">Variants</span></h2>
+    <p>
+      Compare performance across different creative variants for the same campaign.
+      Track impressions and clicks by variant with real-time CTR comparison.
+    </p>
+    <a href="ab-test.html">Open A/B Test →</a>
+  </div>
+
+  <div class="card">
+    <h2>Stress Test <span class="badge">High Volume</span></h2>
+    <p>
+      Generate high-volume tracking events to test pixel throughput.
+      Configure total events, rate per second, click rate, and publication distribution.
+    </p>
+    <a href="stress-test.html">Open Stress Test →</a>
+  </div>
+
+  <div class="card">
+    <h2>Tracking Dashboard <span class="badge">Live Events</span></h2>
+    <p>
+      Real-time view of all tracking events fired across test pages.
+      Open this in a separate window while testing other pages.
+    </p>
+    <a href="dashboard.html">Open Dashboard →</a>
+  </div>
+
+  <div class="console-panel">
+    <h3>📡 How It Works</h3>
+    <pre>
+Pixel URL: https://dxafls8akrlrp.cloudfront.net/pxl.png
+
+Required Parameters:
+  oid = order_id         (MongoDB _id from publication_insertion_orders)
+  cid = campaign_id      (e.g., camp_2024_q4_coca_cola)
+  p   = publication_code (e.g., chireader, suntimes)
+  ch  = channel          (website, newsletter, streaming, social, podcast)
+  t   = event_type       (display, click, view)
+  cb  = cache_buster     (timestamp to prevent caching)
+
+Optional Parameters:
+  cr  = creative_id      (e.g., cr_coca_cola_300x250)
+  pid = publication_id   (numeric publication ID, e.g., 1035)
+  s   = size             (e.g., 300x250, 728x90)
+  ip  = item_path        (inventory path in order)
+
+Channel Values:
+  website    - Display ads on publication websites
+  newsletter - Email newsletter placements
+  streaming  - Video/audio streaming ads
+  social     - Social media placements
+  podcast    - Podcast ad placements
+
+Event Type Values:
+  display - Ad impression (ad was rendered)
+  click   - User clicked on the ad
+  view    - Viewable impression (ad was in viewport 1s+)
+
+Example:
+  https://dxafls8akrlrp.cloudfront.net/pxl.png?oid=507f1f77bcf86cd799439011&cid=camp_2024_q4_coca_cola&p=chireader&pid=1035&ch=website&t=display&cr=cr_coca_cola_300x250&s=300x250&cb=1702345678
+    </pre>
+  </div>
+
+  <script>
+    // Clear old events on index page load
+    if (confirm('Clear previous tracking events?')) {
+      localStorage.removeItem('tracking_events');
+      console.log('Cleared tracking events');
+    }
+  </script>
+</body>
+</html>
