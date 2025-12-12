@@ -23,26 +23,23 @@ interface CampaignBasicsStepProps {
 
 export function CampaignBasicsStep({ formData, updateFormData }: CampaignBasicsStepProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       {/* Campaign Information */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Campaign Information</h3>
+        <h3 className="text-base font-semibold font-sans">Campaign Information</h3>
         
         <div className="space-y-2">
-          <Label htmlFor="name">Campaign Name <span className="text-red-500">*</span></Label>
+          <Label htmlFor="name" className="text-sm font-sans">Campaign Name <span className="text-red-500">*</span></Label>
           <Input
             id="name"
             placeholder="e.g., Summer 2026 Brand Awareness"
             value={formData.name}
             onChange={(e) => updateFormData({ name: e.target.value })}
           />
-          <p className="text-sm text-muted-foreground">
-            A descriptive name for this campaign
-          </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description">Campaign Description</Label>
+          <Label htmlFor="description" className="text-sm font-sans">Campaign Description</Label>
           <Textarea
             id="description"
             placeholder="Brief description of campaign goals and approach..."
@@ -50,18 +47,15 @@ export function CampaignBasicsStep({ formData, updateFormData }: CampaignBasicsS
             onChange={(e) => updateFormData({ description: e.target.value })}
             rows={3}
           />
-          <p className="text-sm text-muted-foreground">
-            Optional: Add details about the campaign strategy
-          </p>
         </div>
       </div>
 
       {/* Advertiser Information */}
       <div className="space-y-4 pt-4 border-t">
-        <h3 className="text-lg font-semibold">Advertiser Information</h3>
+        <h3 className="text-base font-semibold font-sans">Advertiser Information</h3>
         
         <div className="space-y-2">
-          <Label htmlFor="advertiserName">Advertiser Name <span className="text-red-500">*</span></Label>
+          <Label htmlFor="advertiserName" className="text-sm font-sans">Advertiser Name <span className="text-red-500">*</span></Label>
           <Input
             id="advertiserName"
             placeholder="Company or organization name"
@@ -72,7 +66,7 @@ export function CampaignBasicsStep({ formData, updateFormData }: CampaignBasicsS
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="contactName">Contact Name <span className="text-red-500">*</span></Label>
+            <Label htmlFor="contactName" className="text-sm font-sans">Contact Name <span className="text-red-500">*</span></Label>
             <Input
               id="contactName"
               placeholder="Primary contact person"
@@ -82,7 +76,7 @@ export function CampaignBasicsStep({ formData, updateFormData }: CampaignBasicsS
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contactCompany">Company</Label>
+            <Label htmlFor="contactCompany" className="text-sm font-sans">Company</Label>
             <Input
               id="contactCompany"
               placeholder="Organization (if different)"
@@ -94,7 +88,7 @@ export function CampaignBasicsStep({ formData, updateFormData }: CampaignBasicsS
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="contactEmail">Email Address <span className="text-red-500">*</span></Label>
+            <Label htmlFor="contactEmail" className="text-sm font-sans">Email Address <span className="text-red-500">*</span></Label>
             <Input
               id="contactEmail"
               type="email"
@@ -105,7 +99,7 @@ export function CampaignBasicsStep({ formData, updateFormData }: CampaignBasicsS
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contactPhone">Phone Number</Label>
+            <Label htmlFor="contactPhone" className="text-sm font-sans">Phone Number</Label>
             <Input
               id="contactPhone"
               type="tel"

@@ -47,29 +47,8 @@ export function CampaignTimelineStep({ formData, updateFormData }: CampaignTimel
 
   return (
     <div className="space-y-6">
-      {/* Quick Select */}
-      <div className="space-y-2">
-        <Label>Quick Select Duration</Label>
-        <div className="flex flex-wrap gap-2">
-          {[1, 3, 6, 12].map(months => (
-            <Button
-              key={months}
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickSelect(months)}
-            >
-              {months} {months === 1 ? 'Month' : 'Months'}
-            </Button>
-          ))}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Start today and run for a preset duration
-        </p>
-      </div>
-
       {/* Date Pickers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Start Date */}
         <div className="space-y-2">
           <Label>Start Date <span className="text-red-500">*</span></Label>
@@ -96,9 +75,6 @@ export function CampaignTimelineStep({ formData, updateFormData }: CampaignTimel
               />
             </PopoverContent>
           </Popover>
-          <p className="text-sm text-muted-foreground">
-            When the campaign begins
-          </p>
         </div>
 
         {/* End Date */}
@@ -133,70 +109,26 @@ export function CampaignTimelineStep({ formData, updateFormData }: CampaignTimel
               />
             </PopoverContent>
           </Popover>
-          <p className="text-sm text-muted-foreground">
-            When the campaign ends
-          </p>
         </div>
       </div>
 
-      {/* Duration Summary */}
-      {duration && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-blue-900 mb-1">Campaign Duration</h4>
-              <div className="text-sm text-blue-800 space-y-1">
-                <p>
-                  <strong>{duration.months}</strong> {duration.months === 1 ? 'month' : 'months'} 
-                  {' '}({duration.days} days)
-                </p>
-                <p>
-                  From <strong>{format(formData.startDate!, 'MMM d, yyyy')}</strong> to{' '}
-                  <strong>{format(formData.endDate!, 'MMM d, yyyy')}</strong>
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* Quick Select */}
+      <div className="space-y-2 pt-4 border-t">
+        <Label>Quick Select Duration</Label>
+        <div className="flex flex-wrap gap-2">
+          {[1, 3, 6, 12].map(months => (
+            <Button
+              key={months}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuickSelect(months)}
+            >
+              {months} {months === 1 ? 'Month' : 'Months'}
+            </Button>
+          ))}
         </div>
-      )}
-
-      {/* Lead Time Note */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <h4 className="font-semibold text-amber-900 mb-2">📅 Lead Time Requirements</h4>
-        <p className="text-sm text-amber-800 mb-2">
-          Most publications require <strong>5-10 business days lead time</strong> for campaign setup:
-        </p>
-        <ul className="text-sm text-amber-800 space-y-1 ml-4 list-disc">
-          <li><strong>Creative materials:</strong> Ads, graphics, copy must be submitted early</li>
-          <li><strong>Print publications:</strong> Often need 2-3 weeks for production schedules</li>
-          <li><strong>Radio/Podcast:</strong> Recording and approval time needed</li>
-          <li><strong>Website/Digital:</strong> Usually faster, but still need setup time</li>
-        </ul>
-        <p className="text-sm text-amber-800 mt-2">
-          Plan accordingly to ensure smooth campaign launch!
-        </p>
       </div>
-
-      {/* Recommendations */}
-      {duration && duration.months > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="font-semibold text-green-900 mb-2">💡 Campaign Recommendations</h4>
-          <ul className="text-sm text-green-800 space-y-1 ml-4 list-disc">
-            {duration.months >= 6 && (
-              <li>Long campaign - consider quarterly reviews and optimization opportunities</li>
-            )}
-            {duration.months >= 3 && duration.months < 6 && (
-              <li>Good duration for seasonal campaigns and sustained brand awareness</li>
-            )}
-            {duration.months < 3 && (
-              <li>Short campaign - focus on high-impact placements and clear messaging</li>
-            )}
-            <li>Volume discounts (12x frequency tiers) available for longer commitments</li>
-            <li>Consider budget pacing: front-load or distribute evenly?</li>
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

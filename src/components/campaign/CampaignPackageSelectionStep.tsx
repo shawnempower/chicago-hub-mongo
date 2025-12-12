@@ -167,21 +167,18 @@ export function CampaignPackageSelectionStep({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <Package className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-blue-900 mb-1">Select a Pre-Built Package</p>
-          <p className="text-sm text-blue-800">
-            Choose from curated packages with proven publication combinations. Each package includes 
-            pre-selected inventory, pricing, and reach estimates.
-          </p>
-        </div>
+      <div className="space-y-2">
+        <h3 className="text-base font-semibold font-sans">Select a Pre-Built Package</h3>
+        <p className="text-sm text-gray-600 font-sans">
+          Choose from curated packages with proven publication combinations. Each package includes 
+          pre-selected inventory, pricing, and reach estimates.
+        </p>
       </div>
 
       {/* Budget Comparison */}
       {budget > 0 && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-sm text-amber-900">
+          <p className="text-xs text-amber-900 font-sans">
             <strong>Your Budget:</strong> {formatCurrency(budget)} 
             <span className="text-amber-700 ml-2">
               (Packages within or close to your budget are highlighted)
@@ -211,12 +208,12 @@ export function CampaignPackageSelectionStep({
           return (
             <div
               key={packageId}
-              className={`p-5 rounded-lg border-2 cursor-pointer transition-all ${
+              className={`p-5 rounded-lg border cursor-pointer transition-all ${
                 isSelected
-                  ? 'border-green-500 bg-green-50'
+                  ? 'border-gray-300 bg-gray-50'
                   : isWithinBudget
-                  ? 'border-blue-300 bg-blue-50/50 hover:border-green-400'
-                  : 'border-gray-200 hover:border-green-300 hover:bg-green-50/30'
+                  ? 'border-blue-300 bg-blue-50/30 hover:border-gray-400'
+                  : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50/50'
               }`}
               onClick={() => handlePackageSelect(pkg)}
             >
@@ -226,73 +223,62 @@ export function CampaignPackageSelectionStep({
                   {/* Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Label htmlFor={packageId} className="cursor-pointer text-lg font-bold">
-                          {pkg.basicInfo.name}
-                        </Label>
-                        {isSelected && (
-                          <Badge variant="default" className="bg-green-600">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Selected
-                          </Badge>
-                        )}
-                        {isWithinBudget && !isSelected && (
-                          <Badge variant="outline" className="border-blue-500 text-blue-700">
-                            Within Budget
-                          </Badge>
-                        )}
-                      </div>
-                      {pkg.basicInfo.description && (
-                        <p className="text-sm text-muted-foreground">{pkg.basicInfo.description}</p>
-                      )}
+                      <Label htmlFor={packageId} className="cursor-pointer text-base font-semibold font-sans">
+                        {pkg.basicInfo.name}
+                      </Label>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">
+                      <p className="text-xl font-bold text-primary font-sans">
                         {formatCurrency(packagePrice)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground font-sans">
                         {pkg.pricing?.displayPrice || ''}
                       </p>
                     </div>
                   </div>
 
-                  {/* Key Metrics */}
-                  <div className="grid grid-cols-3 gap-4 mb-3">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                  {/* Key Metrics - Containerized */}
+                  <div className="p-3 bg-white border border-gray-200 rounded-lg mb-3 space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <p className="text-xs text-muted-foreground">Publications</p>
-                        <p className="text-sm font-semibold">{pubCount}</p>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground font-sans">Publications</p>
+                        </div>
+                        <p className="text-sm font-semibold font-sans">{pubCount}</p>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground font-sans">Total Reach</p>
+                        </div>
+                        <p className="text-sm font-semibold font-sans">{totalReach.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground font-sans">Commitment</p>
+                        </div>
+                        <p className="text-sm font-semibold font-sans">{pkg.campaignDetails?.minimumCommitment || 'Flexible'}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Total Reach</p>
-                        <p className="text-sm font-semibold">{totalReach.toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Commitment</p>
-                        <p className="text-sm font-semibold">{pkg.campaignDetails?.minimumCommitment || 'Flexible'}</p>
-                      </div>
+                    
+                    {/* Channels */}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
+                      {channels.map(channel => (
+                        <span 
+                          key={channel} 
+                          className="px-2.5 py-1 text-xs font-sans bg-gray-100 border border-gray-300 rounded-full capitalize"
+                        >
+                          {channel}
+                        </span>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Channels */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {channels.map(channel => (
-                      <Badge key={channel} variant="secondary" className="text-xs">
-                        {channel}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  {/* Publications Preview */}
-                  <details className="mt-3">
-                    <summary className="text-sm font-medium text-primary cursor-pointer hover:underline">
+                  {/* Publications Preview - Containerized */}
+                  <details className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
+                    <summary className="text-xs font-medium text-primary cursor-pointer hover:underline font-sans">
                       View Publications ({pubCount})
                     </summary>
                     <div className="mt-2 pl-4 space-y-1">
@@ -301,7 +287,7 @@ export function CampaignPackageSelectionStep({
                         .map((pub) => {
                           const activeItems = pub.inventoryItems?.filter(item => !item.isExcluded) || [];
                           return (
-                            <div key={pub.publicationId} className="text-sm text-muted-foreground">
+                            <div key={pub.publicationId} className="text-xs text-muted-foreground font-sans">
                               • {pub.publicationName} ({activeItems.length} placements)
                             </div>
                           );
@@ -315,22 +301,6 @@ export function CampaignPackageSelectionStep({
         })}
       </RadioGroup>
 
-      {/* Selection Confirmation */}
-      {selectedPackage && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-green-900 mb-1">
-                Package Selected: {selectedPackage.basicInfo.name}
-              </p>
-              <p className="text-sm text-green-800">
-                Click "Next" to review your campaign with this package configuration.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

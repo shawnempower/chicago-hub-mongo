@@ -15,7 +15,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useHubContext } from '@/contexts/HubContext';
 import { useAnalyzeCampaign, useCreateCampaign, useGenerateInsertionOrder } from '@/hooks/useCampaigns';
 import { CampaignAnalysisRequest } from '@/integrations/mongodb/campaignSchema';
-import { ArrowRight, ArrowLeft, Sparkles, CheckCircle2, Eye, Package, Megaphone, LayoutDashboard, Users, UserPlus, DollarSign, Bot, FileText } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles, CheckCircle2, Eye, Package, Megaphone, LayoutDashboard, Users, UserPlus, DollarSign, Bot, FileText, Check } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
 
@@ -25,10 +25,7 @@ import { CampaignObjectivesStep } from '@/components/campaign/CampaignObjectives
 import { CampaignTimelineStep } from '@/components/campaign/CampaignTimelineStep';
 import { CampaignAnalysisStep } from '@/components/campaign/CampaignAnalysisStep';
 import { CampaignPackageSelectionStep } from '@/components/campaign/CampaignPackageSelectionStep';
-import { CampaignCreativeAssetsUploader } from '@/components/campaign/CampaignCreativeAssetsUploader';
-import { CampaignCreativeAssetsStep } from '@/components/campaign/CampaignCreativeAssetsStep';
 import { CampaignReviewStep } from '@/components/campaign/CampaignReviewStep';
-import { extractRequirementsForSelectedInventory, CreativeRequirement } from '@/utils/creativeSpecsExtractor';
 
 interface CampaignFormData {
   // Step 1: Basics
@@ -89,8 +86,7 @@ const getSteps = (inventoryMethod: 'ai' | 'package') => [
     title: inventoryMethod === 'ai' ? 'AI Analysis' : 'Package Selection', 
     description: inventoryMethod === 'ai' ? 'Intelligent inventory selection' : 'Choose pre-built package' 
   },
-  { id: 5, title: 'Creative Assets', description: 'Upload creative assets for each placement' },
-  { id: 6, title: 'Review & Create', description: 'Review and finalize campaign' },
+  { id: 5, title: 'Review & Create', description: 'Review and finalize campaign' },
 ];
 
 export default function CampaignBuilder() {
@@ -107,8 +103,6 @@ export default function CampaignBuilder() {
   const [editedInventory, setEditedInventory] = useState<any>(null);
   const [inventoryEdited, setInventoryEdited] = useState(false);
   const [selectedPackageData, setSelectedPackageData] = useState<any>(null);
-  const [creativeRequirements, setCreativeRequirements] = useState<CreativeRequirement[]>([]);
-  const [uploadedAssets, setUploadedAssets] = useState<Map<string, any>>(new Map());
 
   // Get dynamic steps based on selection method
   const STEPS = getSteps(formData.inventorySelectionMethod || 'package');
@@ -222,7 +216,7 @@ export default function CampaignBuilder() {
     }
 
     if (currentStep === 4 && formData.inventorySelectionMethod === 'package') {
-      // Validate package selection before moving to creative assets
+      // Validate package selection before moving to review
       if (!formData.selectedPackageId || !selectedPackageData) {
         toast({
           title: 'No Package Selected',
@@ -231,56 +225,16 @@ export default function CampaignBuilder() {
         });
         return;
       }
-      
-      // Extract creative requirements from package
-      const packageInventory = selectedPackageData.components?.publications || [];
-      const allInventoryItems: any[] = [];
-      packageInventory.forEach((pub: any) => {
-        (pub.inventoryItems || []).forEach((item: any) => {
-          allInventoryItems.push({
-            ...item,
-            publicationId: pub.publicationId,
-            publicationName: pub.publicationName
-          });
-        });
-      });
-      
-      const requirements = extractRequirementsForSelectedInventory(allInventoryItems);
-      setCreativeRequirements(requirements);
     }
 
-    if (currentStep === 4 && formData.inventorySelectionMethod === 'ai' && result) {
-      // Extract creative requirements from AI analysis result
-      const aiInventory = result.selectedInventory?.publications || [];
-      const allInventoryItems: any[] = [];
-      aiInventory.forEach((pub: any) => {
-        (pub.inventoryItems || []).forEach((item: any) => {
-          allInventoryItems.push({
-            ...item,
-            publicationId: pub.publicationId,
-            publicationName: pub.publicationName
-          });
-        });
+    if (currentStep === 4 && formData.inventorySelectionMethod === 'ai' && !result) {
+      // Validate AI analysis completed before moving to review
+      toast({
+        title: 'Analysis Required',
+        description: 'Please complete the AI analysis before proceeding',
+        variant: 'destructive',
       });
-      
-      const requirements = extractRequirementsForSelectedInventory(allInventoryItems);
-      setCreativeRequirements(requirements);
-    }
-
-    if (currentStep === 5) {
-      // Validate all creative assets are uploaded before moving to review
-      const allUploaded = Array.from(uploadedAssets.values()).every(
-        asset => asset.uploadStatus === 'uploaded'
-      );
-      
-      if (creativeRequirements.length > 0 && !allUploaded) {
-        toast({
-          title: 'Creative Assets Required',
-          description: 'Please upload all creative assets before proceeding to review.',
-          variant: 'destructive',
-        });
-        return;
-      }
+      return;
     }
     
     setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
@@ -556,22 +510,6 @@ export default function CampaignBuilder() {
       };
     }
 
-    // Prepare creative assets mapping for campaign
-    const creativeAssetsByPlacement = new Map();
-    uploadedAssets.forEach((asset, placementId) => {
-      if (asset.uploadStatus === 'uploaded' && asset.assetId) {
-        creativeAssetsByPlacement.set(placementId, {
-          assetId: asset.assetId,
-          fileName: asset.file.name,
-          fileUrl: '', // Will be populated from server response
-          fileType: asset.file.type,
-          fileSize: asset.file.size,
-          uploadedAt: new Date(),
-          uploadedBy: '', // Will be populated from auth
-        });
-      }
-    });
-
     const campaignData = {
       hubId: selectedHubId,
       hubName: selectedHub.basicInfo.name,
@@ -606,10 +544,7 @@ export default function CampaignBuilder() {
       estimatedPerformance,
       algorithm,
       packageId: formData.selectedPackageId, // Link to package if used
-      creativeAssetsByPlacement: Array.from(creativeAssetsByPlacement.entries()).map(([placementId, asset]) => ({
-        placementId,
-        ...asset
-      })),
+      creativeAssetsByPlacement: [],
       status: 'draft' as const,
     };
 
@@ -747,47 +682,97 @@ export default function CampaignBuilder() {
               </div>
 
               {/* Progress Bar */}
-              <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium">
-                    Step {currentStep} of {STEPS.length}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {STEPS[currentStep - 1].title}
-                  </span>
-                </div>
-                <Progress value={progressPercentage} className="h-2" />
-              </div>
-              
-              {/* Step Indicators */}
-              <div className="flex justify-between">
-                {STEPS.map((step) => (
-                  <div
-                    key={step.id}
-                    className={`flex-1 text-center ${
-                      step.id === currentStep
-                        ? 'text-primary font-semibold'
-                        : step.id < currentStep
-                        ? 'text-green-600'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    <div className="text-xs">{step.title}</div>
-                  </div>
-                ))}
+              <Card className="mb-6 bg-white">
+            <CardContent className="pt-6 pb-6">
+              {/* Horizontal Stepper */}
+              <div className="flex items-center justify-between px-4">
+                {STEPS.map((step, index) => {
+                  const isCompleted = step.id < currentStep;
+                  const isCurrent = step.id === currentStep;
+                  const isUpcoming = step.id > currentStep;
+                  
+                  return (
+                    <div key={step.id} className="flex items-center flex-1">
+                      {/* Step Circle and Label */}
+                      <div className="flex flex-col items-center flex-1">
+                        {/* Circle */}
+                        <div className="relative flex items-center justify-center">
+                          {/* Left Connector */}
+                          {index > 0 && (
+                            <div 
+                              className={`absolute right-full w-[60px] h-[2px] ${
+                                isCompleted || isCurrent
+                                  ? 'bg-green-600'
+                                  : 'bg-gray-300'
+                              }`}
+                              style={{ marginRight: '12px' }}
+                            />
+                          )}
+                          
+                          {/* Circle Node */}
+                          <button
+                            onClick={() => setCurrentStep(step.id)}
+                            className={`
+                              w-6 h-6 rounded-full flex items-center justify-center cursor-pointer
+                              transition-all hover:scale-110
+                              ${isCompleted
+                                ? 'bg-green-600 hover:bg-green-700'
+                                : isCurrent
+                                ? 'bg-green-600 hover:bg-green-700'
+                                : 'bg-white border border-gray-300 hover:border-gray-400'
+                              }
+                            `}
+                          >
+                            {isCompleted ? (
+                              <Check className="w-4 h-4 text-white" strokeWidth={2.5} />
+                            ) : (
+                              <span
+                                className={`text-xs font-medium ${
+                                  isCurrent ? 'text-white' : 'text-gray-400'
+                                }`}
+                              >
+                                {step.id}
+                              </span>
+                            )}
+                          </button>
+                          
+                          {/* Right Connector */}
+                          {index < STEPS.length - 1 && (
+                            <div 
+                              className={`absolute left-full w-[60px] h-[2px] ${
+                                isCompleted
+                                  ? 'bg-green-600'
+                                  : 'bg-gray-300'
+                              }`}
+                              style={{ marginLeft: '12px' }}
+                            />
+                          )}
+                        </div>
+                        
+                        {/* Label */}
+                        <button
+                          onClick={() => setCurrentStep(step.id)}
+                          className={`mt-2 text-xs text-center cursor-pointer hover:opacity-80 transition-opacity ${
+                            isCurrent
+                              ? 'font-semibold text-gray-900'
+                              : isCompleted
+                              ? 'font-normal text-gray-900'
+                              : 'font-normal text-gray-400'
+                          }`}
+                        >
+                          {step.title}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
 
               {/* Step Content */}
               <Card>
-            <CardHeader>
-              <CardTitle>{STEPS[currentStep - 1].title}</CardTitle>
-              <CardDescription>{STEPS[currentStep - 1].description}</CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               {currentStep === 1 && (
                 <CampaignBasicsStep
                   formData={formData}
@@ -835,15 +820,6 @@ export default function CampaignBuilder() {
               )}
               
               {currentStep === 5 && (
-                <CampaignCreativeAssetsStep
-                  requirements={creativeRequirements}
-                  uploadedAssets={uploadedAssets}
-                  onAssetsChange={setUploadedAssets}
-                  campaignId={createdCampaignId || undefined}
-                />
-              )}
-
-              {currentStep === 6 && (
                 <CampaignReviewStep
                   formData={formData}
                   result={result}
@@ -851,6 +827,7 @@ export default function CampaignBuilder() {
                   selectedPackageData={selectedPackageData}
                   onGenerateIO={handleGenerateIO}
                   onViewCampaign={handleViewCampaign}
+                  onNavigateToStep={setCurrentStep}
                 />
               )}
             </CardContent>
@@ -861,7 +838,7 @@ export default function CampaignBuilder() {
             <Button
               variant="outline"
               onClick={handleBack}
-              disabled={currentStep === 1 || currentStep === 6}
+              disabled={currentStep === 1 || currentStep === 5}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
@@ -900,26 +877,19 @@ export default function CampaignBuilder() {
               
               {currentStep === 4 && result && createdCampaignId && (
                 <Button onClick={handleNext}>
-                  Upload Creative Assets
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-
-              {currentStep === 5 && (
-                <Button onClick={handleNext}>
                   Review Campaign
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               )}
               
-              {currentStep === 6 && !createdCampaignId && (
+              {currentStep === 5 && !createdCampaignId && (
                 <Button onClick={handleCreate} disabled={creating}>
                   <CheckCircle2 className="mr-2 h-4 w-4" />
                   {creating ? 'Creating Campaign...' : 'Create Campaign'}
                 </Button>
               )}
               
-              {currentStep === 6 && createdCampaignId && (
+              {currentStep === 5 && createdCampaignId && (
                 <>
                   <Button
                     variant="outline"

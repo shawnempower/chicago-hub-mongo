@@ -61,6 +61,9 @@ interface CampaignObjectivesStepProps {
 export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObjectivesStepProps) {
   const [algorithms, setAlgorithms] = useState<Array<{ id: string; name: string; description: string; icon: string }>>([]);
   const [loadingAlgorithms, setLoadingAlgorithms] = useState(true);
+  
+  // Feature flag for AI selection - set to false to disable
+  const AI_SELECTION_ENABLED = false;
 
   useEffect(() => {
     const fetchAlgorithms = async () => {
@@ -95,34 +98,54 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
       {/* Inventory Selection Method - FIRST */}
       <div className="space-y-4 pb-6 border-b-2">
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-lg font-semibold">How would you like to select inventory?</h3>
+          <h3 className="text-base font-semibold font-sans">How would you like to select inventory?</h3>
           <span className="text-red-500">*</span>
         </div>
         
         <RadioGroup
           value={formData.inventorySelectionMethod || 'package'}
-          onValueChange={(value: 'ai' | 'package') => updateFormData({ inventorySelectionMethod: value })}
+          onValueChange={(value: 'ai' | 'package') => {
+            if (!AI_SELECTION_ENABLED && value === 'ai') return;
+            updateFormData({ inventorySelectionMethod: value });
+          }}
           className="space-y-3"
         >
           {/* AI Selection Option */}
           <div
-            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-              (formData.inventorySelectionMethod || 'package') === 'ai'
-                ? 'border-purple-500 bg-purple-50'
-                : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+            className={`p-4 rounded-lg border-2 transition-all ${
+              AI_SELECTION_ENABLED
+                ? (formData.inventorySelectionMethod || 'package') === 'ai'
+                  ? 'border-purple-500 bg-purple-50 cursor-pointer'
+                  : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'
+                : 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
             }`}
-            onClick={() => updateFormData({ inventorySelectionMethod: 'ai', selectedPackageId: undefined })}
+            onClick={() => {
+              if (AI_SELECTION_ENABLED) {
+                updateFormData({ inventorySelectionMethod: 'ai', selectedPackageId: undefined });
+              }
+            }}
           >
             <div className="flex items-start gap-3">
-              <RadioGroupItem value="ai" id="method-ai" className="mt-1" />
+              <RadioGroupItem 
+                value="ai" 
+                id="method-ai" 
+                className="mt-1" 
+                disabled={!AI_SELECTION_ENABLED}
+              />
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="h-5 w-5 text-purple-600" />
-                  <Label htmlFor="method-ai" className="cursor-pointer font-semibold text-base">
+                  <Sparkles className={`h-5 w-5 ${AI_SELECTION_ENABLED ? 'text-purple-600' : 'text-gray-400'}`} />
+                  <Label 
+                    htmlFor="method-ai" 
+                    className={`font-semibold text-sm ${AI_SELECTION_ENABLED ? 'cursor-pointer' : 'cursor-not-allowed text-gray-500'}`}
+                  >
                     AI-Powered Selection
                   </Label>
+                  {!AI_SELECTION_ENABLED && (
+                    <span className="text-xs text-gray-500 font-normal">(Coming Soon)</span>
+                  )}
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className={`text-xs mt-1 ${AI_SELECTION_ENABLED ? 'text-gray-600' : 'text-gray-400'}`}>
                   Let AI intelligently select publications and inventory based on your channels, budget, and goals.
                 </p>
               </div>
@@ -143,11 +166,11 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <PackageIcon className="h-5 w-5 text-green-600" />
-                  <Label htmlFor="method-package" className="cursor-pointer font-semibold text-base">
+                  <Label htmlFor="method-package" className="cursor-pointer font-semibold text-sm">
                     Use Pre-Built Package
                   </Label>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-xs text-gray-600 mt-1">
                   Select from pre-configured packages with proven publication combinations and pricing.
                 </p>
               </div>
@@ -193,7 +216,7 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
 
       {/* Budget */}
       <div className="space-y-4 pt-4 border-t">
-        <h3 className="text-lg font-semibold">Budget</h3>
+        <h3 className="text-base font-semibold font-sans">Budget</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -284,7 +307,7 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
         <div className="space-y-4 pt-4 border-t">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-5 w-5 text-purple-600" />
-            <h3 className="text-lg font-semibold">AI Campaign Strategy</h3>
+            <h3 className="text-base font-semibold font-sans">AI Campaign Strategy</h3>
           </div>
           
           {loadingAlgorithms ? (
@@ -311,14 +334,14 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
                       <div className="text-2xl mt-0.5">{algo.icon}</div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-gray-900">{algo.name}</h4>
+                          <h4 className="font-semibold text-sm text-gray-900 font-sans">{algo.name}</h4>
                           {isSelected && (
                             <span className="px-2 py-0.5 text-xs font-medium bg-purple-600 text-white rounded-full">
                               Selected
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600">{algo.description}</p>
+                        <p className="text-xs text-gray-600 font-sans">{algo.description}</p>
                       </div>
                     </div>
                   </div>
@@ -335,10 +358,10 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
           <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex-1 mr-4">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-blue-900">Include All Outlets (Press Forward)</h3>
+                <h3 className="font-semibold text-sm text-blue-900 font-sans">Include All Outlets (Press Forward)</h3>
                 <Info className="h-4 w-4 text-blue-600" />
               </div>
-              <p className="text-sm text-blue-800">
+              <p className="text-xs text-blue-800 font-sans">
                 Support the entire local news ecosystem by including all available outlets with hub inventory. 
                 This approach prioritizes comprehensive community coverage over traditional efficiency metrics.
               </p>
@@ -351,7 +374,7 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
           
           {!formData.includeAllOutlets && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p className="text-sm text-amber-800">
+              <p className="text-xs text-amber-800 font-sans">
                 <strong>Note:</strong> When this is disabled, the AI will optimize for efficiency and may exclude 
                 smaller outlets. This goes against Press Forward principles but may fit tighter budget constraints.
               </p>

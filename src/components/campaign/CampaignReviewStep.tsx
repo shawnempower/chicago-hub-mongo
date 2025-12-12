@@ -7,7 +7,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Download, Eye, FileText } from 'lucide-react';
+import { CheckCircle2, Download, Eye, FileText, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { CampaignAnalysisResponse } from '@/integrations/mongodb/campaignSchema';
 import { CreativeRequirementsChecklist } from './CreativeRequirementsChecklist';
@@ -32,9 +32,10 @@ interface CampaignReviewStepProps {
   selectedPackageData?: any;
   onGenerateIO?: () => void;
   onViewCampaign?: () => void;
+  onNavigateToStep?: (step: number) => void;
 }
 
-export function CampaignReviewStep({ formData, result, campaignId, selectedPackageData, onGenerateIO, onViewCampaign }: CampaignReviewStepProps) {
+export function CampaignReviewStep({ formData, result, campaignId, selectedPackageData, onGenerateIO, onViewCampaign, onNavigateToStep }: CampaignReviewStepProps) {
   if (!campaignId) {
     // Pre-creation review
     const isPackageBased = formData.inventorySelectionMethod === 'package';
@@ -60,48 +61,89 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
     
     return (
       <div className="space-y-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 mb-2">Ready to Create Campaign</h4>
-          <p className="text-sm text-blue-800">
-            Review the details below and click "Create Campaign" to finalize.
-          </p>
-        </div>
-
         <Card>
           <CardHeader>
-            <CardTitle>Campaign Summary</CardTitle>
+            <CardTitle className="text-base font-semibold font-sans">Campaign Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 text-xs font-sans">
               <div>
-                <p className="text-muted-foreground">Campaign Name</p>
-                <p className="font-semibold">{formData.name}</p>
+                <p className="text-muted-foreground font-sans">Campaign Name</p>
+                {formData.name ? (
+                  <p className="font-semibold font-sans">{formData.name}</p>
+                ) : (
+                  <button 
+                    onClick={() => onNavigateToStep?.(1)}
+                    className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
+                  >
+                    Add campaign name
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
               </div>
               <div>
-                <p className="text-muted-foreground">Advertiser</p>
-                <p className="font-semibold">{formData.advertiserName}</p>
+                <p className="text-muted-foreground font-sans">Advertiser</p>
+                {formData.advertiserName ? (
+                  <p className="font-semibold font-sans">{formData.advertiserName}</p>
+                ) : (
+                  <button 
+                    onClick={() => onNavigateToStep?.(1)}
+                    className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
+                  >
+                    Add advertiser
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
               </div>
               <div>
-                <p className="text-muted-foreground">Primary Goal</p>
-                <p className="font-semibold capitalize">{formData.primaryGoal}</p>
+                <p className="text-muted-foreground font-sans">Primary Goal</p>
+                {formData.primaryGoal ? (
+                  <p className="font-semibold font-sans capitalize">{formData.primaryGoal}</p>
+                ) : (
+                  <button 
+                    onClick={() => onNavigateToStep?.(2)}
+                    className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
+                  >
+                    Add primary goal
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
               </div>
               <div>
-                <p className="text-muted-foreground">Budget</p>
-                <p className="font-semibold">${formData.budget.toLocaleString()}</p>
+                <p className="text-muted-foreground font-sans">Budget</p>
+                {formData.budget > 0 ? (
+                  <p className="font-semibold font-sans">${formData.budget.toLocaleString()}</p>
+                ) : (
+                  <button 
+                    onClick={() => onNavigateToStep?.(2)}
+                    className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
+                  >
+                    Add budget
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
               </div>
               <div>
-                <p className="text-muted-foreground">Timeline</p>
-                <p className="font-semibold">
-                  {formData.startDate && formData.endDate
-                    ? `${format(formData.startDate, 'MMM d, yyyy')} - ${format(formData.endDate, 'MMM d, yyyy')}`
-                    : 'Not set'}
-                </p>
+                <p className="text-muted-foreground font-sans">Timeline</p>
+                {formData.startDate && formData.endDate ? (
+                  <p className="font-semibold font-sans">
+                    {format(formData.startDate, 'MMM d, yyyy')} - {format(formData.endDate, 'MMM d, yyyy')}
+                  </p>
+                ) : (
+                  <button 
+                    onClick={() => onNavigateToStep?.(3)}
+                    className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
+                  >
+                    Add timeline
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
               </div>
               <div>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground font-sans">
                   {isPackageBased ? 'Package' : 'Channels'}
                 </p>
-                <p className="font-semibold">
+                <p className="font-semibold font-sans">
                   {isPackageBased 
                     ? selectedPackageData?.basicInfo?.name || 'Selected' 
                     : `${formData.channels.length} selected`
@@ -114,22 +156,22 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
               <div className="pt-4 border-t">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-xl font-bold text-green-600 font-sans">
                       ${(isPackageBased ? packagePrice : result?.pricing.finalPrice || 0).toLocaleString()}
                     </p>
-                    <p className="text-xs text-muted-foreground">Total Investment</p>
+                    <p className="text-xs text-muted-foreground font-sans">Total Investment</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-blue-600">
+                    <p className="text-xl font-bold text-blue-600 font-sans">
                       {isPackageBased ? totalItems : result?.selectedInventory.totalInventoryItems || 0}
                     </p>
-                    <p className="text-xs text-muted-foreground">Ad Placements</p>
+                    <p className="text-xs text-muted-foreground font-sans">Ad Placements</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-purple-600">
+                    <p className="text-xl font-bold text-purple-600 font-sans">
                       {(isPackageBased ? estimatedReach : result?.estimatedPerformance.reach.min || 0).toLocaleString()}+
                     </p>
-                    <p className="text-xs text-muted-foreground">Est. Reach</p>
+                    <p className="text-xs text-muted-foreground font-sans">Est. Reach</p>
                   </div>
                 </div>
               </div>
