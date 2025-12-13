@@ -45,7 +45,9 @@ const HubCentral = () => {
                 <div className="space-y-1">
                   {navItems.map((item) => {
                     const Icon = item.icon;
-                    const isActive = currentTab === item.id;
+                    // Treat 'order-detail' as part of 'orders' section
+                    const isActive = currentTab === item.id || 
+                      (item.id === 'orders' && currentTab === 'order-detail');
                     
                     return (
                       <button

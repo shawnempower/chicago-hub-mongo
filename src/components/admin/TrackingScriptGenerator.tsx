@@ -243,7 +243,7 @@ export function TrackingScriptGenerator({
   }
   
   return (
-    <Card>
+    <Card className="shadow-none border-0">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -285,7 +285,7 @@ export function TrackingScriptGenerator({
                 value={script._id?.toString() || ''}
                 className="border rounded-lg px-4"
               >
-                <AccordionTrigger className="hover:no-underline">
+                <AccordionTrigger className="hover:no-underline font-sans">
                   <div className="flex items-center gap-3 text-left">
                     {CHANNEL_ICONS[script.channel]}
                     <div>
@@ -508,9 +508,7 @@ export function TrackingScriptGenerator({
                     );
                   })()}
                   
-                  <Separator className="my-4" />
-                  
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mt-3">
                     <div className="text-xs text-muted-foreground">
                       Generated {new Date(script.generatedAt).toLocaleDateString()}
                       {script.creative.clickUrl && (

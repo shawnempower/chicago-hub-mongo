@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { OrderStatusBadge, OrderStatus } from '../orders/OrderStatusBadge';
-import { OrderTimeline } from '../orders/OrderTimeline';
 import { CreativeAssetCard } from '../orders/CreativeAssetCard';
 import { OrderMessaging } from '../orders/OrderMessaging';
 import { OrderPerformanceView } from './OrderPerformanceView';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { 
   ArrowLeft, Check, X, AlertCircle, FileText, AlertTriangle, 
   Loader2, CheckCircle2, BarChart3, Code, Copy, ExternalLink,
@@ -505,7 +505,7 @@ export function PublicationOrderDetail() {
       setPlacementStatuses(prev => ({ ...prev, [placementId]: newStatus }));
 
       if (result.orderConfirmed) {
-        toast({ title: '🎉 Order Confirmed!', description: 'All placements accepted. You can now access scripts and report performance.' });
+        toast({ title: 'Order Confirmed!', description: 'All placements accepted. You can now access scripts and report performance.' });
         // Update order status locally instead of full refresh
         setOrder(prev => prev ? { ...prev, status: 'confirmed' } : prev);
       } else {
@@ -618,7 +618,7 @@ export function PublicationOrderDetail() {
       expectations.push({
         label: 'Est. Impressions',
         value: formatNumber(item.monthlyImpressions || perfMetrics.impressionsPerMonth) + '/mo',
-        icon: <Eye className="h-3.5 w-3.5 text-blue-500" />
+        icon: <Eye className="h-3.5 w-3.5 text-muted-foreground" />
       });
     }
     
@@ -628,14 +628,14 @@ export function PublicationOrderDetail() {
         expectations.push({
           label: 'Page Views',
           value: formatNumber(metrics.monthlyPageViews) + '/mo',
-          icon: <Eye className="h-3.5 w-3.5 text-blue-500" />
+          icon: <Eye className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
       if (metrics.monthlyVisitors) {
         expectations.push({
           label: 'Visitors',
           value: formatNumber(metrics.monthlyVisitors) + '/mo',
-          icon: <Users className="h-3.5 w-3.5 text-green-500" />
+          icon: <Users className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     } else if (channel === 'newsletter') {
@@ -643,14 +643,14 @@ export function PublicationOrderDetail() {
         expectations.push({
           label: 'Subscribers',
           value: formatNumber(metrics.subscribers),
-          icon: <Users className="h-3.5 w-3.5 text-purple-500" />
+          icon: <Users className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
       if (item.openRate) {
         expectations.push({
           label: 'Open Rate',
           value: `${item.openRate}%`,
-          icon: <Target className="h-3.5 w-3.5 text-orange-500" />
+          icon: <Target className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     } else if (channel === 'print') {
@@ -658,7 +658,7 @@ export function PublicationOrderDetail() {
         expectations.push({
           label: 'Circulation',
           value: formatNumber(metrics.circulation),
-          icon: <Newspaper className="h-3.5 w-3.5 text-gray-600" />
+          icon: <Newspaper className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     } else if (channel === 'radio') {
@@ -666,7 +666,7 @@ export function PublicationOrderDetail() {
         expectations.push({
           label: 'Est. Listeners',
           value: formatNumber(metrics.listeners),
-          icon: <Radio className="h-3.5 w-3.5 text-red-500" />
+          icon: <Radio className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     } else if (channel === 'podcast') {
@@ -674,7 +674,7 @@ export function PublicationOrderDetail() {
         expectations.push({
           label: 'Downloads/Listens',
           value: formatNumber(metrics.listeners || perfMetrics.audienceSize) + '/ep',
-          icon: <Headphones className="h-3.5 w-3.5 text-indigo-500" />
+          icon: <Headphones className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     } else if (channel === 'events') {
@@ -682,7 +682,7 @@ export function PublicationOrderDetail() {
         expectations.push({
           label: 'Expected Attendees',
           value: formatNumber(metrics.expectedAttendees || metrics.averageAttendance),
-          icon: <CalendarDays className="h-3.5 w-3.5 text-pink-500" />
+          icon: <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     } else if (channel === 'social_media' || channel === 'social') {
@@ -690,7 +690,7 @@ export function PublicationOrderDetail() {
         expectations.push({
           label: 'Followers',
           value: formatNumber(metrics.followers),
-          icon: <Users className="h-3.5 w-3.5 text-cyan-500" />
+          icon: <Users className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     }
@@ -700,7 +700,7 @@ export function PublicationOrderDetail() {
       expectations.push({
         label: 'Frequency',
         value: `${item.currentFrequency}x`,
-        icon: <RefreshCw className="h-3.5 w-3.5 text-gray-500" />
+        icon: <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
       });
     }
     
@@ -839,7 +839,7 @@ export function PublicationOrderDetail() {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 max-w-lg">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" className="flex items-center gap-1.5">
             <Package className="h-4 w-4" />
             <span className="hidden sm:inline">Overview</span>
@@ -868,13 +868,13 @@ export function PublicationOrderDetail() {
         </TabsList>
 
         {/* OVERVIEW TAB */}
-        <TabsContent value="overview" className="mt-4 space-y-4">
+        <TabsContent value="overview" className="mt-0 space-y-4">
           {/* Key Stats Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card>
+            <Card className="shadow-none">
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-green-600" />
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Payment</span>
                 </div>
                 <p className="text-xl font-bold text-green-600 mt-1">
@@ -882,19 +882,19 @@ export function PublicationOrderDetail() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="shadow-none">
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-2">
-                  <Layers className="h-4 w-4 text-blue-600" />
+                  <Layers className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Placements</span>
                 </div>
                 <p className="text-xl font-bold mt-1">{totalPlacements}</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="shadow-none">
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-purple-600" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Start</span>
                 </div>
                 <p className="text-sm font-bold mt-1">
@@ -904,10 +904,10 @@ export function PublicationOrderDetail() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="shadow-none">
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-red-600" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">End</span>
                 </div>
                 <p className="text-sm font-bold mt-1">
@@ -920,9 +920,9 @@ export function PublicationOrderDetail() {
           </div>
 
           {/* Placement Status Summary */}
-          <Card>
+          <Card className="shadow-none">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Placement Status</CardTitle>
+              <CardTitle className="text-base font-sans">Placement Status</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-5 gap-2 mb-4">
@@ -966,7 +966,6 @@ export function PublicationOrderDetail() {
                   return (
                     <div key={itemPath} className="flex items-center justify-between px-3 py-2 text-sm">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span>{config.icon}</span>
                         <span className="truncate font-medium">{item.itemName || item.sourceName}</span>
                         {item.format?.dimensions && (
                           <span className="text-xs text-muted-foreground flex-shrink-0">
@@ -978,16 +977,16 @@ export function PublicationOrderDetail() {
                         {/* Status indicators */}
                         {config.isDigital ? (
                           <span className={cn("text-xs", hasScript ? "text-green-600" : "text-amber-600")}>
-                            {hasScript ? "✓ Script" : "⏳ Script"}
+                            {hasScript ? "Script" : "Script"}
                           </span>
                         ) : (
                           <span className={cn("text-xs", hasAsset ? "text-green-600" : "text-amber-600")}>
-                            {hasAsset ? "✓ Asset" : "⏳ Asset"}
+                            {hasAsset ? "Asset" : "Asset"}
                           </span>
                         )}
                         {['in_production', 'delivered'].includes(status) && (
                           <span className={cn("text-xs", hasPerf ? "text-green-600" : "text-amber-600")}>
-                            {hasPerf ? "✓ Reported" : "⏳ Report"}
+                            {hasPerf ? "Reported" : "Report"}
                           </span>
                         )}
                         <PlacementStatusBadge status={status} />
@@ -1000,9 +999,9 @@ export function PublicationOrderDetail() {
           </Card>
 
           {/* Action Items / To-Do */}
-          <Card>
+          <Card className="shadow-none">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="text-base font-sans flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 Action Items
               </CardTitle>
@@ -1120,9 +1119,9 @@ export function PublicationOrderDetail() {
 
           {/* Performance Summary (if data exists) */}
           {performanceEntries.length > 0 && (
-            <Card>
+            <Card className="shadow-none">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="text-base font-sans flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Performance Summary
                 </CardTitle>
@@ -1162,26 +1161,13 @@ export function PublicationOrderDetail() {
             </Card>
           )}
 
-          {/* Order Timeline */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Timeline</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <OrderTimeline
-                currentStatus={order.status as OrderStatus}
-                statusHistory={order.statusHistory?.map(h => ({ ...h, timestamp: new Date(h.timestamp) }))}
-              />
-            </CardContent>
-          </Card>
-
           {/* Campaign Info - Collapsible */}
           <Collapsible>
-            <Card>
+            <Card className="shadow-none">
               <CollapsibleTrigger asChild>
                 <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm text-muted-foreground">Campaign Details</CardTitle>
+                    <CardTitle className="text-sm font-sans text-muted-foreground">Campaign Details</CardTitle>
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </CardHeader>
@@ -1219,23 +1205,22 @@ export function PublicationOrderDetail() {
         </TabsContent>
 
         {/* PLACEMENTS TAB (organized by channel type) */}
-        <TabsContent value="placements" className="mt-4 space-y-4">
+        <TabsContent value="placements" className="mt-0 space-y-4">
           {/* Info banner when no scripts - explain auto-generation */}
           {trackingScripts.length === 0 && (
-            <Card className="border-amber-200 bg-amber-50">
+            <Card className="border bg-white shadow-none">
               <CardContent className="py-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                    <AlertCircle className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="font-medium text-amber-900">Awaiting Creative Assets</p>
-                      <p className="text-sm text-amber-700">Tracking scripts will appear automatically when the hub uploads assets for digital placements</p>
+                      <p className="font-medium">Awaiting Creative Assets</p>
+                      <p className="text-sm text-muted-foreground">Tracking scripts will appear automatically when the hub uploads assets for digital placements</p>
                     </div>
                   </div>
                   <Button 
                     onClick={handleRefreshScripts} 
                     variant="outline"
-                    className="border-amber-400 text-amber-700 hover:bg-amber-100"
                     disabled={refreshingScripts}
                     size="sm"
                   >
@@ -1249,18 +1234,18 @@ export function PublicationOrderDetail() {
 
           {/* Quick Actions for Digital - when scripts exist */}
           {trackingScripts.length > 0 && (
-            <Card className="border-blue-200 bg-blue-50">
+            <Card className="border bg-white shadow-none">
               <CardContent className="py-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Code className="h-5 w-5 text-blue-600" />
+                    <Code className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="font-medium text-blue-900">{trackingScripts.length} Tracking Script{trackingScripts.length !== 1 ? 's' : ''} Ready</p>
-                      <p className="text-sm text-blue-700">Copy the code below and paste into your ad server</p>
+                      <p className="font-medium">{trackingScripts.length} Tracking Script{trackingScripts.length !== 1 ? 's' : ''} Ready</p>
+                      <p className="text-sm text-muted-foreground">Copy the code below and paste into your ad server</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={handleCopyAllScripts} variant="outline" className="bg-white" size="sm">
+                    <Button onClick={handleCopyAllScripts} variant="outline" size="sm">
                       <Copy className="h-4 w-4 mr-1" />
                       Copy All
                     </Button>
@@ -1281,7 +1266,6 @@ export function PublicationOrderDetail() {
                     <Button 
                       onClick={handleRefreshScripts} 
                       variant="outline" 
-                      className="bg-white" 
                       size="sm"
                       disabled={refreshingScripts}
                     >
@@ -1351,33 +1335,32 @@ export function PublicationOrderDetail() {
               const isDigital = config.isDigital;
 
               return (
-                <Card key={channel} className={cn("border", config.bgColor)}>
+                <Card key={channel} className="border bg-white shadow-none">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className={cn("text-base flex items-center gap-2", config.color)}>
-                        <span>{config.icon}</span>
+                      <CardTitle className="text-base font-sans flex items-center gap-2">
                         {config.label}
                       </CardTitle>
                       <Badge variant="secondary">{items.length} placement{items.length !== 1 ? 's' : ''}</Badge>
                     </div>
                     
                     {/* Implementation Instructions */}
-                    <div className="mt-3 p-3 bg-white/70 rounded-lg border border-white/50 text-sm">
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg border text-sm">
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-green-600" />
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
                           <div>
                             <p className="text-xs text-muted-foreground">Start Date</p>
-                            <p className="font-medium text-green-700">
+                            <p className="font-medium">
                               {startDate ? startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-red-600" />
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
                           <div>
                             <p className="text-xs text-muted-foreground">End Date</p>
-                            <p className="font-medium text-red-700">
+                            <p className="font-medium">
                               {endDate ? endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'}
                             </p>
                           </div>
@@ -1471,43 +1454,9 @@ export function PublicationOrderDetail() {
                           </div>
 
                           <div className="p-3 space-y-3">
-                            {/* Access gating: scripts/assets only available after acceptance */}
-                            {(() => {
-                              const isPending = placementStatus === 'pending';
-                              const isRejected = placementStatus === 'rejected';
-                              const hasContent = isDigital ? scripts.length > 0 : placementAssets.length > 0;
-                              
-                              // Only show locked state if there's actually content to unlock
-                              if (isPending && hasContent) {
-                                return (
-                                  <div className="bg-gray-50 p-4 rounded-lg border-2 border-dashed border-gray-200">
-                                    <div className="flex items-center justify-center gap-2 text-gray-500">
-                                      <Lock className="h-5 w-5" />
-                                      <div className="text-center">
-                                        <p className="font-medium text-gray-600">Accept to Access</p>
-                                        <p className="text-sm text-gray-500">
-                                          {isDigital 
-                                            ? `${scripts.length} tracking script${scripts.length !== 1 ? 's' : ''} available after acceptance`
-                                            : `${placementAssets.length} asset${placementAssets.length !== 1 ? 's' : ''} available after acceptance`
-                                          }
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              }
-                              
-                              // Don't show anything for rejected placements
-                              if (isRejected) {
-                                return null;
-                              }
-                              
-                              // Show actual content for accepted/in_production/delivered
-                              return null; // Handled below
-                            })()}
                             
-                            {/* Digital: Show Scripts only - after acceptance */}
-                            {isDigital && scripts.length > 0 && ['accepted', 'in_production', 'delivered'].includes(placementStatus) && (
+                            {/* Digital: Show Scripts */}
+                            {isDigital && scripts.length > 0 && (
                               <Accordion type="single" collapsible className="space-y-1">
                                 {scripts.map((script) => (
                                       <AccordionItem 
@@ -1760,15 +1709,15 @@ export function PublicationOrderDetail() {
                             )}
 
                             {/* Digital: No scripts yet - show awaiting message regardless of status */}
-                            {isDigital && scripts.length === 0 && placementStatus !== 'rejected' && (
+                            {isDigital && scripts.length === 0 && (
                               <div className="text-center py-3 text-muted-foreground text-sm bg-gray-50 rounded">
                                 <Code className="h-5 w-5 mx-auto mb-1 opacity-50" />
                                 Scripts will appear when assets are uploaded
                               </div>
                             )}
 
-                            {/* Non-Digital: Show Assets - only after acceptance */}
-                            {!isDigital && placementAssets.length > 0 && ['accepted', 'in_production', 'delivered'].includes(placementStatus) && (
+                            {/* Non-Digital: Show Assets */}
+                            {!isDigital && placementAssets.length > 0 && (
                               <div className="space-y-2">
                                 {placementAssets.map((asset: any) => (
                                   <CreativeAssetCard
@@ -1781,8 +1730,8 @@ export function PublicationOrderDetail() {
                               </div>
                             )}
 
-                            {/* Non-Digital: No assets yet - show awaiting message regardless of status */}
-                            {!isDigital && placementAssets.length === 0 && placementStatus !== 'rejected' && (
+                            {/* Non-Digital: No assets yet - show awaiting message */}
+                            {!isDigital && placementAssets.length === 0 && (
                               <div className="text-center py-3 text-muted-foreground text-sm bg-gray-50 rounded">
                                 <Clock className="h-5 w-5 mx-auto mb-1 opacity-50" />
                                 Awaiting creative assets from hub
@@ -1792,7 +1741,6 @@ export function PublicationOrderDetail() {
                             {/* Execution Instructions for non-digital */}
                             {!isDigital && (
                               <div className="p-2 bg-blue-50/50 rounded border border-blue-100 text-sm">
-                                <span className="font-medium text-blue-800">📋 </span>
                                 <span className="text-blue-700">{getExecutionInstructions(item)}</span>
                               </div>
                             )}
@@ -1882,7 +1830,7 @@ export function PublicationOrderDetail() {
 
           {/* Update Status Actions */}
           {(order.status === 'confirmed' || order.status === 'in_production') && (
-            <Card>
+            <Card className="shadow-none">
               <CardContent className="py-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1911,7 +1859,7 @@ export function PublicationOrderDetail() {
         </TabsContent>
 
         {/* PERFORMANCE TAB */}
-        <TabsContent value="performance" className="mt-4">
+        <TabsContent value="performance" className="mt-0">
           {canShowPerformance ? (
             <OrderPerformanceView
               orderId={order._id?.toString() || ''}
@@ -1923,7 +1871,7 @@ export function PublicationOrderDetail() {
               deliverySummary={order.deliverySummary}
             />
           ) : (
-            <Card>
+            <Card className="shadow-none">
               <CardContent className="py-12 text-center">
                 <BarChart3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <p className="text-muted-foreground">
@@ -1935,7 +1883,7 @@ export function PublicationOrderDetail() {
         </TabsContent>
 
         {/* MESSAGES TAB */}
-        <TabsContent value="messages" className="mt-4">
+        <TabsContent value="messages" className="mt-0">
           <OrderMessaging
             publicationNotes={order.publicationNotes}
             hubNotes={order.hubNotes}

@@ -20,11 +20,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { OrderStatusBadge } from '../orders/OrderStatusBadge';
-import { OrderTimeline } from '../orders/OrderTimeline';
 import { OrderMessaging } from '../orders/OrderMessaging';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { 
-  ArrowLeft, 
   FileText, 
   Loader2, 
   ExternalLink,
@@ -297,22 +296,15 @@ export function HubOrderDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Breadcrumbs and Controls */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-lg font-semibold font-sans">{order.publicationName}</h1>
-            <p className="text-sm text-muted-foreground">
-              Order for: {order.campaignName}
-            </p>
-          </div>
-        </div>
+        <Breadcrumb
+          rootLabel="Orders"
+          rootIcon={FileText}
+          currentLabel={order.publicationName}
+          onBackClick={() => navigate('/hubcentral?tab=orders')}
+        />
         <div className="flex items-center gap-2">
-          <OrderStatusBadge status={order.status as any} />
           <Button variant="outline" size="sm" onClick={handleViewPrint}>
             <FileText className="h-4 w-4 mr-2" />
             View Printable
@@ -341,7 +333,7 @@ export function HubOrderDetail() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-lg">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="details" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
             Order Details
@@ -363,20 +355,30 @@ export function HubOrderDetail() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="details" className="mt-6">
+        <TabsContent value="details" className="mt-0">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Order Summary */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
+              <CardTitle className="text-lg font-sans flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
                 Order Summary
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Order For</p>
+                  <p className="font-medium">{order.campaignName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <div className="mt-1">
+                    <OrderStatusBadge status={order.status as any} />
+                  </div>
+                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Publication</p>
                   <p className="font-medium">{order.publicationName}</p>
@@ -418,7 +420,7 @@ export function HubOrderDetail() {
           {/* Placement Status */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
+              <CardTitle className="text-lg font-sans flex items-center gap-2">
                 <Package className="h-5 w-5" />
                 Placement Status
               </CardTitle>
@@ -507,25 +509,6 @@ export function HubOrderDetail() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Order Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Order Timeline
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <OrderTimeline
-                currentStatus={order.status as any}
-                statusHistory={order.statusHistory?.map(h => ({
-                  ...h,
-                  timestamp: new Date(h.timestamp)
-                }))}
-              />
-            </CardContent>
-          </Card>
-
           {/* Messaging */}
           <OrderMessaging
             publicationNotes={order.publicationNotes}
@@ -542,7 +525,7 @@ export function HubOrderDetail() {
       </div>
         </TabsContent>
 
-        <TabsContent value="trafficking" className="mt-6">
+        <TabsContent value="trafficking" className="mt-0">
           {order._id ? (
             <TrackingScriptGenerator
               campaignId={order.campaignId}
@@ -581,7 +564,7 @@ export function HubOrderDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="performance" className="mt-6">
+        <TabsContent value="performance" className="mt-0">
           {order._id && ['confirmed', 'in_production', 'delivered'].includes(order.status) ? (
             <OrderPerformanceView
               orderId={order._id}
