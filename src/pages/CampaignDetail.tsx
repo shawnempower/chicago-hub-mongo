@@ -333,7 +333,7 @@ export default function CampaignDetail() {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-background">
-          <Header onAssistantClick={() => {}} onSurveyClick={() => {}} showDashboardNav={true} />
+          <Header onSurveyClick={() => {}} showDashboardNav={true} />
           <main className="container mx-auto px-6 py-8">
             <Breadcrumb
               rootLabel="Campaigns"
@@ -358,7 +358,7 @@ export default function CampaignDetail() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-background">
-        <Header onAssistantClick={() => {}} onSurveyClick={() => {}} showDashboardNav={true} />
+        <Header onSurveyClick={() => {}} showDashboardNav={true} />
         
         <main className="container mx-auto px-6 py-8">
           <div className="flex gap-6">

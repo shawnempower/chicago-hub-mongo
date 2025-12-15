@@ -343,6 +343,33 @@ export class S3Service {
       };
     }
   }
+
+  // Generate presigned URL for direct upload with custom S3 key
+  async getPresignedUploadUrl(
+    s3Key: string,
+    contentType: string,
+    expiresIn: number = 3600
+  ): Promise<{ uploadUrl: string; fileUrl: string }> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: s3Key,
+        ContentType: contentType,
+      });
+
+      const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn });
+      
+      // Generate public URL (using CloudFront if available, otherwise direct S3)
+      const fileUrl = this.cloudFrontDomain 
+        ? `https://${this.cloudFrontDomain}/${s3Key}`
+        : `https://${this.bucket}.s3.amazonaws.com/${s3Key}`;
+
+      return { uploadUrl, fileUrl };
+    } catch (error) {
+      console.error('Error generating presigned upload URL:', error);
+      throw error;
+    }
+  }
 }
 
 // Create and export S3 service instance

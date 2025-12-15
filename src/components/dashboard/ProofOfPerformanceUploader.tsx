@@ -37,6 +37,7 @@ import {
   formatFileSize,
   MAX_FILE_SIZE,
 } from '@/integrations/mongodb/proofOfPerformanceSchema';
+import { isDigitalChannel } from '@/config/inventoryChannels';
 
 interface Placement {
   itemPath: string;
@@ -155,41 +156,28 @@ export function ProofOfPerformanceUploader({
     try {
       const token = localStorage.getItem('auth_token');
 
-      // Step 1: Get presigned URL
-      const presignResponse = await fetch(`${API_BASE_URL}/proof-of-performance/presigned-url`, {
+      // Step 1: Upload file through server (avoids CORS issues)
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('orderId', orderId);
+      formData.append('campaignId', campaignId);
+      
+      const uploadResponse = await fetch(`${API_BASE_URL}/proof-of-performance/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          // Don't set Content-Type - browser will set it with boundary for FormData
         },
-        body: JSON.stringify({
-          fileName: selectedFile.name,
-          contentType: selectedFile.type,
-          orderId,
-          campaignId,
-        }),
-      });
-
-      if (!presignResponse.ok) {
-        throw new Error('Failed to get upload URL');
-      }
-
-      const { uploadUrl, fileUrl, s3Key } = await presignResponse.json();
-
-      // Step 2: Upload to S3
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': selectedFile.type,
-        },
-        body: selectedFile,
+        body: formData,
       });
 
       if (!uploadResponse.ok) {
         throw new Error('Failed to upload file');
       }
 
-      // Step 3: Create proof record
+      const { fileUrl, s3Key } = await uploadResponse.json();
+
+      // Step 2: Create proof record
       const placement = placements.find(p => p.itemPath === selectedPlacement);
       const actualPlacement = selectedPlacement === '__order_level__' ? undefined : selectedPlacement;
       
@@ -369,28 +357,33 @@ export function ProofOfPerformanceUploader({
         
         {showOptions && (
           <div className="mt-3 space-y-3 pl-2 border-l-2 border-muted">
-            {/* Placement Selection */}
-            {placements.length > 1 && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Link to Placement</Label>
-                <Select 
-                  value={selectedPlacement || '__order_level__'} 
-                  onValueChange={(v) => setSelectedPlacement(v === '__order_level__' ? '' : v)}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Order-level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__order_level__">Order-level (all placements)</SelectItem>
-                    {placements.map((placement) => (
-                      <SelectItem key={placement.itemPath} value={placement.itemPath || `placement-${placement.itemName}`}>
-                        {placement.itemName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Placement Selection - only show offline channels that need proof */}
+            {(() => {
+              const offlinePlacements = placements.filter(p => !isDigitalChannel(p.channel));
+              if (offlinePlacements.length <= 1) return null;
+              
+              return (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Link to Placement</Label>
+                  <Select 
+                    value={selectedPlacement || '__order_level__'} 
+                    onValueChange={(v) => setSelectedPlacement(v === '__order_level__' ? '' : v)}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Order-level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__order_level__">Order-level (all placements)</SelectItem>
+                      {offlinePlacements.map((placement) => (
+                        <SelectItem key={placement.itemPath} value={placement.itemPath || `placement-${placement.itemName}`}>
+                          <span className="capitalize">{placement.channel}:</span> {placement.itemName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
 
             {/* End Date */}
             <div className="space-y-1.5">

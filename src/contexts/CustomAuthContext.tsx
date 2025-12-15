@@ -9,6 +9,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   companyName?: string;
+  phone?: string;
   isEmailVerified: boolean;
   isAdmin?: boolean; // Keep for backward compatibility
   role?: UserRole; // New role-based system
@@ -35,7 +36,9 @@ interface AuthContextType {
     firstName?: string;
     lastName?: string;
     companyName?: string;
+    phone?: string;
   }) => Promise<{ error: any }>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ error: any }>;
   refreshUser: () => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -138,20 +141,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     firstName?: string;
     lastName?: string;
     companyName?: string;
+    phone?: string;
   }) => {
     try {
-      // This would need to be implemented in the API
-      // For now, just update local state
-      if (user) {
+      const response = await authAPI.updateProfile(updates);
+
+      if (response.error) {
+        return { error: { message: response.error } };
+      }
+
+      // Update local user state with the response
+      if (response.user) {
+        setUser(response.user);
+      } else if (user) {
+        // Fallback: update local state if no user returned
         setUser({
           ...user,
           ...updates
         });
       }
+
       return { error: null };
     } catch (error) {
       console.error('Update profile error:', error);
       return { error: { message: 'Failed to update profile' } };
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      const response = await authAPI.changePassword(currentPassword, newPassword);
+
+      if (!response.success) {
+        return { error: { message: response.error || 'Failed to change password' } };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Change password error:', error);
+      return { error: { message: 'Failed to change password' } };
     }
   };
 
@@ -176,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signOut,
     updateProfile,
+    changePassword,
     refreshUser
   };
 

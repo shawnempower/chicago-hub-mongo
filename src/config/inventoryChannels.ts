@@ -5,6 +5,33 @@
  * Used throughout the app for consistent display and guidance.
  */
 
+/**
+ * Detailed metric definition for self-reporting guidance
+ */
+export interface MetricDefinition {
+  key: string;
+  label: string;
+  description: string;
+  example: string;
+  required: boolean;
+  unit?: string;
+  helpText?: string;
+}
+
+/**
+ * Proof requirement configuration
+ */
+export interface ProofRequirement {
+  required: boolean;
+  options: Array<{
+    type: 'file_upload' | 'attestation' | 'link';
+    label: string;
+    description: string;
+    fileTypes?: string[];
+  }>;
+  attestationFields?: string[];
+}
+
 export interface ChannelConfig {
   id: string;
   label: string;
@@ -18,8 +45,12 @@ export interface ChannelConfig {
     tips: string[];
     proofTypes: string[];
   };
-  // Metrics typically tracked for this channel
+  // Metrics typically tracked for this channel (simple list for backward compat)
   metrics: string[];
+  // Detailed metric definitions with guidance for self-reporting
+  metricDefinitions?: MetricDefinition[];
+  // Proof of performance requirements
+  proofRequirement?: ProofRequirement;
   // Display order (lower = first)
   order: number;
 }
@@ -102,9 +133,55 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
         'Save a tearsheet or scan of the printed ad',
         'Note the issue date and page number',
       ],
-      proofTypes: ['tearsheet', 'screenshot'],
+      proofTypes: ['tearsheet', 'attestation'],
     },
     metrics: ['insertions', 'circulation', 'reach'],
+    metricDefinitions: [
+      {
+        key: 'insertions',
+        label: 'Issues Published',
+        description: 'Number of print issues containing this ad',
+        example: 'If ad ran in 4 weekly issues, enter 4',
+        required: true,
+        unit: 'issues',
+        helpText: 'Count each issue/edition where the ad appeared as one insertion',
+      },
+      {
+        key: 'circulation',
+        label: 'Total Circulation',
+        description: 'Combined print copies distributed across all issues',
+        example: '4 issues × 25,000 copies = 100,000',
+        required: true,
+        unit: 'copies',
+        helpText: 'Multiply your circulation per issue by the number of insertions',
+      },
+      {
+        key: 'reach',
+        label: 'Estimated Readers',
+        description: 'Estimated unique readers (typically 2-3x circulation due to pass-along)',
+        example: '100,000 copies × 2.5 pass-along rate = 250,000 readers',
+        required: false,
+        unit: 'readers',
+        helpText: 'Industry standard is 2-3 readers per printed copy. Use your known pass-along rate if available.',
+      },
+    ],
+    proofRequirement: {
+      required: true,
+      options: [
+        {
+          type: 'file_upload',
+          label: 'Upload Tearsheet',
+          description: 'Scan or photo of the printed ad in the publication',
+          fileTypes: ['image/jpeg', 'image/png', 'application/pdf'],
+        },
+        {
+          type: 'attestation',
+          label: 'Fill Out Attestation',
+          description: 'No scan available? Provide placement details instead',
+        },
+      ],
+      attestationFields: ['publicationDate', 'pageNumber', 'section', 'adSize'],
+    },
     order: 4,
   },
 
@@ -123,9 +200,55 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
         'Record affidavit of performance',
         'Note any make-goods if spots are missed',
       ],
-      proofTypes: ['audio_log', 'affidavit', 'report'],
+      proofTypes: ['affidavit', 'attestation', 'audio_log'],
     },
     metrics: ['spotsAired', 'reach', 'frequency'],
+    metricDefinitions: [
+      {
+        key: 'spotsAired',
+        label: 'Total Spots Aired',
+        description: 'Number of times the ad spot played on air',
+        example: 'If you aired 6 spots per day for 5 days, enter 30',
+        required: true,
+        unit: 'spots',
+        helpText: 'Count each time the spot played as one airing',
+      },
+      {
+        key: 'reach',
+        label: 'Estimated Reach',
+        description: 'Estimated unique listeners who heard the spot',
+        example: 'Morning drive reaches ~50,000 listeners per spot',
+        required: false,
+        unit: 'listeners',
+        helpText: 'Use your station\'s Average Quarter Hour (AQH) ratings if available',
+      },
+      {
+        key: 'frequency',
+        label: 'Average Frequency',
+        description: 'Average number of times each listener heard the spot',
+        example: 'If reach is 50,000 and you aired 30 spots, frequency might be 2-3',
+        required: false,
+        unit: 'times',
+        helpText: 'Calculated as total impressions divided by reach',
+      },
+    ],
+    proofRequirement: {
+      required: true,
+      options: [
+        {
+          type: 'file_upload',
+          label: 'Upload Affidavit',
+          description: 'Station affidavit confirming spots aired',
+          fileTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+        },
+        {
+          type: 'attestation',
+          label: 'Fill Out Attestation',
+          description: 'No affidavit? Provide airing details with dayparts',
+        },
+      ],
+      attestationFields: ['dateRange', 'spotsAired', 'dayparts', 'estimatedReach'],
+    },
     order: 5,
   },
 
@@ -144,9 +267,60 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
         'Save episode links as proof',
         'Record timestamp of ad placement in episode',
       ],
-      proofTypes: ['audio_log', 'analytics_report'],
+      proofTypes: ['analytics_screenshot', 'episode_link', 'attestation'],
     },
     metrics: ['downloads', 'listens', 'completionRate'],
+    metricDefinitions: [
+      {
+        key: 'downloads',
+        label: 'Episode Downloads',
+        description: 'Total downloads for episodes containing the ad',
+        example: 'Episode 45 had 8,500 downloads in the first 30 days',
+        required: true,
+        unit: 'downloads',
+        helpText: 'Use your podcast hosting platform\'s analytics (Apple Podcasts Connect, Spotify for Podcasters, etc.)',
+      },
+      {
+        key: 'listens',
+        label: 'Unique Listeners',
+        description: 'Unique listeners who played the episode',
+        example: 'If downloads are 8,500, unique listeners might be ~6,000',
+        required: false,
+        unit: 'listeners',
+        helpText: 'Some hosting platforms distinguish between downloads and unique listeners',
+      },
+      {
+        key: 'completionRate',
+        label: 'Completion Rate',
+        description: 'Percentage of listeners who heard the full episode (and likely the ad)',
+        example: 'If 70% of listeners completed the episode, enter 70',
+        required: false,
+        unit: '%',
+        helpText: 'Available in some podcast analytics platforms',
+      },
+    ],
+    proofRequirement: {
+      required: false, // Encouraged, not required
+      options: [
+        {
+          type: 'file_upload',
+          label: 'Upload Analytics Screenshot',
+          description: 'Screenshot from your podcast hosting platform showing downloads',
+          fileTypes: ['image/jpeg', 'image/png', 'application/pdf'],
+        },
+        {
+          type: 'link',
+          label: 'Provide Episode Link',
+          description: 'Direct link to the episode (verifiable proof)',
+        },
+        {
+          type: 'attestation',
+          label: 'Attestation Only',
+          description: 'Provide episode details without upload',
+        },
+      ],
+      attestationFields: ['episodeDate', 'episodeName', 'downloads', 'adPosition'],
+    },
     order: 6,
   },
 
@@ -245,3 +419,70 @@ export function getChannelsByType(): { digital: ChannelConfig[]; offline: Channe
     offline: sorted.filter(c => !c.isDigital),
   };
 }
+
+/**
+ * Get metric definitions for a channel
+ * Returns detailed guidance for each metric the channel tracks
+ */
+export function getMetricDefinitions(channelId: string): MetricDefinition[] {
+  const config = getChannelConfig(channelId);
+  return config.metricDefinitions || [];
+}
+
+/**
+ * Get proof requirement for a channel
+ */
+export function getProofRequirement(channelId: string): ProofRequirement | undefined {
+  return getChannelConfig(channelId).proofRequirement;
+}
+
+/**
+ * Check if a channel requires proof of performance
+ */
+export function requiresProof(channelId: string): boolean {
+  const req = getProofRequirement(channelId);
+  return req?.required ?? false;
+}
+
+/**
+ * Radio daypart options
+ * Used for radio attestation forms
+ */
+export const RADIO_DAYPARTS = [
+  { id: 'morning_drive', label: 'Morning Drive', timeRange: '6am-10am', isPremium: true },
+  { id: 'midday', label: 'Midday', timeRange: '10am-3pm', isPremium: false },
+  { id: 'afternoon_drive', label: 'Afternoon Drive', timeRange: '3pm-7pm', isPremium: true },
+  { id: 'evening', label: 'Evening', timeRange: '7pm-12am', isPremium: false },
+  { id: 'overnight', label: 'Overnight', timeRange: '12am-6am', isPremium: false },
+  { id: 'ros', label: 'Run of Schedule (ROS)', timeRange: 'Various', isPremium: false },
+] as const;
+
+export type RadioDaypart = typeof RADIO_DAYPARTS[number]['id'];
+
+/**
+ * Podcast ad position options
+ */
+export const PODCAST_AD_POSITIONS = [
+  { id: 'pre-roll', label: 'Pre-roll', description: 'Beginning of episode, before content' },
+  { id: 'mid-roll', label: 'Mid-roll', description: 'Middle of episode, during content break' },
+  { id: 'post-roll', label: 'Post-roll', description: 'End of episode, after content' },
+] as const;
+
+export type PodcastAdPosition = typeof PODCAST_AD_POSITIONS[number]['id'];
+
+/**
+ * Print section options (common newspaper/magazine sections)
+ */
+export const PRINT_SECTIONS = [
+  'Front Section',
+  'News',
+  'Sports',
+  'Business',
+  'Entertainment',
+  'Lifestyle',
+  'Opinion/Editorial',
+  'Classifieds',
+  'Insert/Circular',
+  'Special Section',
+  'Other',
+] as const;

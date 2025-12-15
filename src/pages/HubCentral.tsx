@@ -32,7 +32,6 @@ const HubCentral = () => {
     <HubRoute>
       <div className="min-h-screen bg-background">
         <Header 
-          onAssistantClick={() => {}} // Assistant is floating widget now
           onSurveyClick={() => setIsSurveyOpen(true)}
           showDashboardNav={true}
         />

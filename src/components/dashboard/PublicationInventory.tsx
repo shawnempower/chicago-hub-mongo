@@ -34,11 +34,12 @@ export const PublicationInventory: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const { toast } = useToast();
 
+  // Load inventory data when publication changes
   useEffect(() => {
     if (selectedPublication) {
       loadInventoryData();
     }
-  }, [selectedPublication]);
+  }, [selectedPublication?.publicationId]);
 
   const loadInventoryData = async () => {
     if (!selectedPublication) return;

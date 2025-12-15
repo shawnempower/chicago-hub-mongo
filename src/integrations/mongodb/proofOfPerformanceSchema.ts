@@ -16,12 +16,45 @@ import { ObjectId } from 'mongodb';
 export type ProofFileType = 
   | 'tearsheet'      // Print ad scans/photos
   | 'affidavit'      // Sworn statements (radio/TV)
+  | 'attestation'    // Publisher's attestation form (no file)
   | 'screenshot'     // Digital/social proof
   | 'audio_log'      // Radio/podcast recordings
   | 'video_clip'     // TV/streaming proof
   | 'report'         // Analytics reports
+  | 'episode_link'   // Podcast episode link
   | 'invoice'        // Billing documentation
   | 'other';
+
+/**
+ * Attestation data for proofs submitted via form (no file upload)
+ * Used when publication doesn't have a tearsheet/affidavit to upload
+ */
+export interface AttestationData {
+  channel: 'print' | 'radio' | 'podcast';
+  
+  // Print-specific fields
+  publicationDate?: string;
+  pageNumber?: string;
+  section?: string;
+  adSize?: string;
+  
+  // Radio-specific fields
+  dateRange?: { start: string; end: string };
+  spotsAired?: number;
+  dayparts?: string[];
+  estimatedReach?: number;
+  
+  // Podcast-specific fields
+  episodeDate?: string;
+  episodeName?: string;
+  episodeUrl?: string;
+  downloads?: number;
+  adPosition?: 'pre-roll' | 'mid-roll' | 'post-roll';
+  
+  // Common fields
+  confirmedAt: Date;
+  confirmedBy: string;
+}
 
 // Verification status
 export type VerificationStatus = 'pending' | 'verified' | 'rejected';
@@ -60,6 +93,9 @@ export interface ProofOfPerformance {
   runDate?: Date;            // When the ad ran (single date)
   runDateEnd?: Date;         // End date for date ranges
   
+  // Attestation data (for 'attestation' fileType - no file upload)
+  attestationData?: AttestationData;
+  
   // Upload metadata
   uploadedBy: string;        // User ID who uploaded
   uploadedAt: Date;
@@ -86,10 +122,12 @@ export type ProofOfPerformanceUpdate = Partial<Omit<ProofOfPerformance, '_id' | 
 export const PROOF_FILE_TYPE_LABELS: Record<ProofFileType, string> = {
   tearsheet: 'Tearsheet',
   affidavit: 'Affidavit',
+  attestation: 'Attestation',
   screenshot: 'Screenshot',
   audio_log: 'Audio Log',
   video_clip: 'Video Clip',
   report: 'Report',
+  episode_link: 'Episode Link',
   invoice: 'Invoice',
   other: 'Other',
 };
@@ -100,10 +138,12 @@ export const PROOF_FILE_TYPE_LABELS: Record<ProofFileType, string> = {
 export const PROOF_FILE_TYPE_DESCRIPTIONS: Record<ProofFileType, string> = {
   tearsheet: 'Scan or photo of printed advertisement',
   affidavit: 'Sworn statement confirming ad aired (radio/TV)',
+  attestation: 'Publisher attestation confirming ad ran (form submission)',
   screenshot: 'Screenshot of digital or social media placement',
   audio_log: 'Audio recording of radio or podcast ad',
   video_clip: 'Video clip of TV or streaming ad',
   report: 'Analytics or performance report',
+  episode_link: 'Direct link to podcast episode',
   invoice: 'Billing documentation',
   other: 'Other documentation',
 };
@@ -114,11 +154,11 @@ export const PROOF_FILE_TYPE_DESCRIPTIONS: Record<ProofFileType, string> = {
 export function getRecommendedFileTypes(channel?: string): ProofFileType[] {
   switch (channel) {
     case 'print':
-      return ['tearsheet', 'invoice', 'report'];
+      return ['tearsheet', 'attestation', 'report'];
     case 'radio':
-      return ['affidavit', 'audio_log', 'invoice'];
+      return ['affidavit', 'attestation', 'audio_log'];
     case 'podcast':
-      return ['audio_log', 'screenshot', 'report'];
+      return ['screenshot', 'episode_link', 'attestation', 'report'];
     case 'events':
       return ['screenshot', 'report', 'invoice'];
     case 'social':
@@ -129,7 +169,7 @@ export function getRecommendedFileTypes(channel?: string): ProofFileType[] {
     case 'streaming':
       return ['video_clip', 'screenshot', 'report'];
     default:
-      return ['tearsheet', 'affidavit', 'screenshot', 'audio_log', 'video_clip', 'report', 'invoice', 'other'];
+      return ['tearsheet', 'affidavit', 'attestation', 'screenshot', 'audio_log', 'video_clip', 'report', 'episode_link', 'invoice', 'other'];
   }
 }
 
@@ -178,21 +218,39 @@ export function validateProofOfPerformance(proof: Partial<ProofOfPerformance>): 
   if (!proof.publicationId) errors.push('publicationId is required');
   if (!proof.publicationName) errors.push('publicationName is required');
   if (!proof.fileType) errors.push('fileType is required');
-  if (!proof.fileName) errors.push('fileName is required');
-  if (!proof.fileUrl) errors.push('fileUrl is required');
-  if (!proof.s3Key) errors.push('s3Key is required');
-  if (!proof.fileSize) errors.push('fileSize is required');
-  if (!proof.mimeType) errors.push('mimeType is required');
   if (!proof.uploadedBy) errors.push('uploadedBy is required');
   
-  // Validate file size
-  if (proof.fileSize && proof.fileSize > MAX_FILE_SIZE) {
-    errors.push(`File size exceeds maximum allowed (${MAX_FILE_SIZE / 1024 / 1024}MB)`);
+  // Attestation proofs don't require file-related fields
+  const isAttestation = proof.fileType === 'attestation';
+  const isEpisodeLink = proof.fileType === 'episode_link';
+  
+  if (!isAttestation && !isEpisodeLink) {
+    // File upload proofs require these fields
+    if (!proof.fileName) errors.push('fileName is required');
+    if (!proof.fileUrl) errors.push('fileUrl is required');
+    if (!proof.s3Key) errors.push('s3Key is required');
+    if (!proof.fileSize) errors.push('fileSize is required');
+    if (!proof.mimeType) errors.push('mimeType is required');
+    
+    // Validate file size
+    if (proof.fileSize && proof.fileSize > MAX_FILE_SIZE) {
+      errors.push(`File size exceeds maximum allowed (${MAX_FILE_SIZE / 1024 / 1024}MB)`);
+    }
+    
+    // Validate MIME type
+    if (proof.mimeType && !ALLOWED_MIME_TYPES.includes(proof.mimeType)) {
+      errors.push(`File type ${proof.mimeType} is not allowed`);
+    }
   }
   
-  // Validate MIME type
-  if (proof.mimeType && !ALLOWED_MIME_TYPES.includes(proof.mimeType)) {
-    errors.push(`File type ${proof.mimeType} is not allowed`);
+  // Attestation proofs require attestation data
+  if (isAttestation && !proof.attestationData) {
+    errors.push('attestationData is required for attestation proofs');
+  }
+  
+  // Episode link proofs require a URL in description or attestation data
+  if (isEpisodeLink && !proof.attestationData?.episodeUrl && !proof.description) {
+    errors.push('episodeUrl is required for episode link proofs');
   }
   
   // Validate date range

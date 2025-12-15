@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/CustomAuthContext';
-import { profilesApi } from '@/api/profiles';
+import { userProfilesApi } from '@/api/userProfiles';
 
 export const useAdminAuth = () => {
   const { user } = useAuth();
@@ -24,7 +24,7 @@ export const useAdminAuth = () => {
         }
 
         // If not in user object, check user profile
-        const profile = await profilesApi.getProfile();
+        const profile = await userProfilesApi.getProfile();
         const isAdminUser = profile?.isAdmin || false;
         
         // Fallback to email check for backward compatibility

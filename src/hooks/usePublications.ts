@@ -14,8 +14,7 @@ import {
   deletePublication, 
   importPublications,
   getPublicationCategories,
-  getPublicationTypes,
-  getPublicationsAsMediaEntities
+  getPublicationTypes
 } from '@/api/publications';
 
 // Simplified frontend interface for display purposes
@@ -206,15 +205,6 @@ export const usePublications = (filters?: UsePublicationsFilters) => {
     }
   };
 
-  // Legacy compatibility - return as MediaEntity format
-  const getAsMediaEntities = async () => {
-    try {
-      return await getPublicationsAsMediaEntities(filters);
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to get publications as media entities');
-    }
-  };
-
   return {
     publications,
     categories,
@@ -225,8 +215,7 @@ export const usePublications = (filters?: UsePublicationsFilters) => {
     createPublication: createNewPublication,
     updatePublication: updateExistingPublication,
     deletePublication: deleteExistingPublication,
-    importPublications: importManyPublications,
-    getAsMediaEntities
+    importPublications: importManyPublications
   };
 };
 
@@ -261,185 +250,6 @@ export const usePublication = (id?: string) => {
     error,
     refetch: () => id ? fetchPublication(id) : null
   };
-};
-
-// Import the conversion function from useMediaEntities
-const convertMediaEntity = (dbEntity: any) => ({
-  id: dbEntity._id?.toString() || dbEntity.id,
-  name: dbEntity.name,
-  type: dbEntity.type,
-  tagline: dbEntity.tagline,
-  description: dbEntity.description,
-  website: dbEntity.website,
-  category: dbEntity.category,
-  categoryTag: dbEntity.categoryTag,
-  logo: dbEntity.logo,
-  logoColor: dbEntity.logoColor,
-  brief: dbEntity.brief,
-  reach: dbEntity.reach,
-  audience: dbEntity.audience,
-  strengths: dbEntity.strengths || [],
-  advertising: dbEntity.advertising || [],
-  contactInfo: dbEntity.contactInfo,
-  businessInfo: dbEntity.businessInfo,
-  audienceMetrics: dbEntity.audienceMetrics,
-  socialMedia: dbEntity.socialMedia,
-  editorialInfo: dbEntity.editorialInfo,
-  technicalSpecs: dbEntity.technicalSpecs,
-  isActive: dbEntity.isActive,
-  sortOrder: dbEntity.sortOrder,
-});
-
-// New simplified hook for frontend components that need MediaEntity-like interface
-export const usePublicationsAsMediaEntities = (filters?: { category?: string; type?: string; includeInactive?: boolean }) => {
-  const [mediaEntities, setMediaEntities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchPublicationsAsMediaEntities = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Map frontend filters to publications API filters
-        const publicationFilters = {
-          contentType: filters?.category && filters.category !== 'all' ? filters.category : undefined,
-          publicationType: filters?.type && filters.type !== 'all' ? filters.type : undefined,
-          // Don't filter by verification status by default - show all publications
-          // verificationStatus: filters?.includeInactive ? undefined : 'verified'
-        };
-
-        // Call the API directly and convert the response
-        const publications = await getPublications(publicationFilters);
-        
-        const convertedEntities = publications.map(pub => ({
-          id: pub._id,
-          _id: pub._id,
-          legacyId: pub.publicationId,
-          name: pub.basicInfo.publicationName,
-          type: pub.basicInfo.publicationType || 'other',
-          tagline: pub.basicInfo.publicationType,
-          description: pub.editorialInfo?.contentFocus?.join(', ') || pub.competitiveInfo?.uniqueValueProposition || 'Chicago media publication',
-          website: pub.basicInfo.websiteUrl,
-          category: pub.basicInfo.contentType || 'mixed',
-          categoryTag: pub.basicInfo.contentType?.toLowerCase().replace(/\s+/g, '-') || 'mixed',
-          logo: pub.basicInfo.publicationName.substring(0, 3).toUpperCase(),
-          logoColor: '#1E40AF',
-          brief: pub.competitiveInfo?.uniqueValueProposition || `${pub.basicInfo.geographicCoverage || 'Local'} ${pub.basicInfo.contentType || 'publication'}`,
-          reach: pub.audienceDemographics?.totalAudience?.toString() || 'Chicago area',
-          audience: pub.audienceDemographics?.targetMarkets?.join(', ') || 'General audience',
-          strengths: pub.competitiveInfo?.keyDifferentiators || [],
-          advertising: pub.crossChannelPackages?.map(pkg => pkg.name || pkg.packageName || 'Package') || [],
-          isActive: pub.metadata?.verificationStatus !== 'outdated',
-          sortOrder: 0,
-          createdAt: new Date(pub.metadata?.createdAt || Date.now()),
-          updatedAt: new Date(pub.metadata?.lastUpdated || Date.now())
-        }));
-
-        setMediaEntities(convertedEntities);
-
-      } catch (err) {
-        console.error('Error fetching publications as media entities:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setMediaEntities([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPublicationsAsMediaEntities();
-  }, [filters?.category, filters?.type, filters?.includeInactive]);
-
-  return { mediaEntities, loading, error };
-};
-
-// Hook for categories compatible with MediaEntity interface
-export const usePublicationCategories = () => {
-  const [categories, setCategories] = useState<Array<{ id: string; name: string; count?: number }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch(`${API_BASE_URL}/publications/categories`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch categories');
-        }
-
-        const data = await response.json();
-        const formattedCategories = data.map((category: any) => ({
-          id: category.id,
-          name: category.name,
-          count: category.count
-        }));
-        
-        setCategories([
-          { id: 'all', name: 'All Categories' },
-          ...formattedCategories
-        ]);
-      } catch (err) {
-        console.error('Error fetching categories:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setCategories([{ id: 'all', name: 'All Categories' }]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  return { categories, loading, error };
-};
-
-// Hook for types compatible with MediaEntity interface
-export const usePublicationTypes = () => {
-  const [types, setTypes] = useState<Array<{ id: string; name: string; count?: number }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchTypes = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch(`${API_BASE_URL}/publications/types`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch types');
-        }
-
-        const data = await response.json();
-        const formattedTypes = data.map((type: any) => ({
-          id: type.id,
-          name: type.name,
-          count: type.count
-        }));
-        
-        setTypes([
-          { id: 'all', name: 'All Types' },
-          ...formattedTypes
-        ]);
-      } catch (err) {
-        console.error('Error fetching types:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setTypes([{ id: 'all', name: 'All Types' }]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTypes();
-  }, []);
-
-  return { types, loading, error };
 };
 
 // Enhanced hook that returns full PublicationFrontend objects for admin management

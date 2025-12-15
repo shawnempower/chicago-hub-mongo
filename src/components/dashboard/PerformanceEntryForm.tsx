@@ -3,9 +3,10 @@
  * 
  * Compact, channel-specific form for publications to manually enter performance data.
  * Auto-fills known information from the order and placement context.
+ * Includes contextual help and guidance for offline channels.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +15,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, Loader2, Save, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { CalendarIcon, Loader2, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/config/api';
@@ -25,6 +26,12 @@ import {
   getChannelMetricFields,
   METRIC_LABELS,
 } from '@/integrations/mongodb/performanceEntrySchema';
+import { 
+  getMetricDefinitions, 
+  isDigitalChannel,
+  getChannelConfig,
+} from '@/config/inventoryChannels';
+import { MetricExplainer, ChannelMetricsGuide, QuickReferenceCard } from './MetricExplainer';
 
 interface Placement {
   itemPath: string;
@@ -282,6 +289,11 @@ export function PerformanceEntryForm({
         {/* Channel-Specific Metrics */}
         {selectedPlacement && (
           <div className="space-y-3 pt-2">
+            {/* Quick Reference Card for offline channels */}
+            {!isDigitalChannel(selectedPlacement.channel) && (
+              <QuickReferenceCard channel={selectedPlacement.channel} />
+            )}
+
             <div className="flex items-center justify-between">
               <Label className="font-medium">Enter Metrics</Label>
               {getChannelHint(selectedPlacement.channel) && (
@@ -292,24 +304,45 @@ export function PerformanceEntryForm({
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              {relevantFields.map((field) => (
-                <div key={field} className="space-y-1">
-                  <Label htmlFor={field} className="text-xs text-muted-foreground">
-                    {METRIC_LABELS[field]}
-                  </Label>
-                  <Input
-                    id={field}
-                    type="number"
-                    min="0"
-                    step={field === 'ctr' || field === 'completionRate' || field === 'viewability' ? '0.01' : '1'}
-                    placeholder="0"
-                    className="h-9"
-                    value={metrics[field] ?? ''}
-                    onChange={(e) => handleMetricChange(field, e.target.value)}
-                  />
-                </div>
-              ))}
+              {relevantFields.map((field) => {
+                const metricDefs = getMetricDefinitions(selectedPlacement.channel);
+                const metricDef = metricDefs.find(d => d.key === field);
+                const isRequired = metricDef?.required ?? false;
+                
+                return (
+                  <div key={field} className="space-y-1">
+                    <div className="flex items-center gap-1">
+                      <Label htmlFor={field} className="text-xs text-muted-foreground">
+                        {metricDef?.label || METRIC_LABELS[field]}
+                        {isRequired && <span className="text-red-500 ml-0.5">*</span>}
+                      </Label>
+                      {metricDef && (
+                        <MetricExplainer 
+                          metricKey={field} 
+                          channel={selectedPlacement.channel} 
+                          variant="tooltip"
+                        />
+                      )}
+                    </div>
+                    <Input
+                      id={field}
+                      type="number"
+                      min="0"
+                      step={field === 'ctr' || field === 'completionRate' || field === 'viewability' ? '0.01' : '1'}
+                      placeholder={metricDef?.unit ? `0 ${metricDef.unit}` : '0'}
+                      className="h-9"
+                      value={metrics[field] ?? ''}
+                      onChange={(e) => handleMetricChange(field, e.target.value)}
+                    />
+                  </div>
+                );
+              })}
             </div>
+
+            {/* Expandable help guide for offline channels */}
+            {!isDigitalChannel(selectedPlacement.channel) && (
+              <ChannelMetricsGuide channel={selectedPlacement.channel} />
+            )}
           </div>
         )}
 

@@ -9,6 +9,7 @@ export interface AuthResponse {
     firstName?: string;
     lastName?: string;
     companyName?: string;
+    phone?: string;
     isEmailVerified: boolean;
     isAdmin?: boolean;
     lastLoginAt?: string;
@@ -16,6 +17,13 @@ export interface AuthResponse {
   };
   token?: string;
   error?: string;
+}
+
+export interface UpdateProfileData {
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
+  phone?: string;
 }
 
 export interface SignUpData {
@@ -210,6 +218,66 @@ class AuthAPI {
       return { success: true };
     } catch (error) {
       console.error('Email verification error:', error);
+      return { success: false, error: 'Network error occurred' };
+    }
+  }
+
+  async updateProfile(data: UpdateProfileData): Promise<AuthResponse> {
+    try {
+      const token = localStorage.getItem('auth_token');
+      
+      if (!token) {
+        return { error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${this.baseUrl}/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        return { error: result.error || 'Failed to update profile' };
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return { error: 'Network error occurred' };
+    }
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const token = localStorage.getItem('auth_token');
+      
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${this.baseUrl}/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        return { success: false, error: result.error || 'Failed to change password' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Change password error:', error);
       return { success: false, error: 'Network error occurred' };
     }
   }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/CustomAuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useConfetti } from '@/hooks/useConfetti';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Mail, Info, ArrowLeft } from 'lucide-react';
+import { Mail, Info } from 'lucide-react';
 import { authAPI } from '@/api/auth';
 import empowerLogo from '@/assets/empower-logo.png';
 import sideloginImage from '@/assets/sidelogin.png';
@@ -92,25 +92,14 @@ export default function Auth() {
     <div className="min-h-screen flex">
       {/* Left Side - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center px-8 py-12 bg-background relative">
-        {/* Return Button - Top Left */}
-        <Link 
-          to="/" 
-          className="absolute top-8 left-8 text-orange-500 hover:text-orange-600 font-semibold inline-flex items-center gap-2 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Return
-        </Link>
-
         <div className="w-full max-w-md space-y-8">
           {/* Logo */}
           <div>
-            <Link to="/" className="inline-block hover:opacity-80 transition-opacity">
-              <img 
-                src={empowerLogo} 
-                alt="Chicago Media Hub" 
-                className="h-8 w-auto"
-              />
-            </Link>
+            <img 
+              src={empowerLogo} 
+              alt="Chicago Media Hub" 
+              className="h-8 w-auto"
+            />
           </div>
 
           {/* Sign in heading */}

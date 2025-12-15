@@ -33,7 +33,6 @@ import type { PublicationAdServer, PublicationESP } from '@/integrations/mongodb
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from '@/hooks/use-toast';
 import { PublicationInsertionOrderDocument } from '@/integrations/mongodb/insertionOrderSchema';
 import { TrackingScript } from '@/integrations/mongodb/trackingScriptSchema';
@@ -589,7 +588,11 @@ export function PublicationOrderDetail() {
   
   // Channel types are now grouped dynamically in the Scripts tab
   
-  const canShowPerformance = ['confirmed', 'in_production', 'delivered'].includes(order.status);
+  // Allow performance tab if order is confirmed+ OR if any placement is in_production/delivered
+  const hasActivePlacements = Object.values(placementStatuses).some(
+    status => ['in_production', 'delivered'].includes(status)
+  );
+  const canShowPerformance = ['confirmed', 'in_production', 'delivered'].includes(order.status) || hasActivePlacements;
   const needsReview = order.status === 'sent';
 
   // Placements data for performance view
@@ -707,134 +710,132 @@ export function PublicationOrderDetail() {
     return expectations;
   };
 
+  // Determine the primary status/action needed
+  const getPrimaryStatus = () => {
+    if (needsReview) return 'review';
+    if (order.assetStatus?.pendingUpload && !order.assetStatus?.allAssetsReady) return 'assets_pending';
+    
+    const startDate = campaignData?.timeline?.startDate ? new Date(campaignData.timeline.startDate) : null;
+    const endDate = campaignData?.timeline?.endDate ? new Date(campaignData.timeline.endDate) : null;
+    const now = new Date();
+    
+    if (endDate && now > endDate) return 'ended';
+    if (startDate && endDate && now >= startDate && now <= endDate) return 'live';
+    if (startDate && now < startDate) {
+      const daysUntil = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysUntil <= 7) return 'starting_soon';
+    }
+    return 'normal';
+  };
+  
+  const primaryStatus = getPrimaryStatus();
+  
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard?tab=orders')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h2 className="text-xl font-bold">{order.campaignName}</h2>
-            <p className="text-sm text-muted-foreground">{order.publicationName}</p>
-          </div>
-        </div>
-        <OrderStatusBadge status={order.status as OrderStatus} />
-      </div>
-
-      {/* Campaign Flight Date Alerts */}
-      <CampaignFlightDateAlert
-        startDate={campaignData?.timeline?.startDate}
-        endDate={campaignData?.timeline?.endDate}
-        orderStatus={order.status}
-      />
-
-      {/* Assets Pending Banner - Show when assets are still being prepared */}
-      {order.assetStatus?.pendingUpload && !order.assetStatus?.allAssetsReady && (
-        <Card className="border-amber-300 bg-amber-50">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-amber-600 animate-pulse" />
-                <div>
-                  <p className="font-medium text-amber-900">Creative Assets Being Prepared</p>
-                  <p className="text-sm text-amber-700">
-                    The hub is preparing creative assets for this campaign. You'll be notified when they're ready.
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <Progress 
-                  value={(order.assetStatus.placementsWithAssets / order.assetStatus.totalPlacements) * 100} 
-                  className="h-2 w-32" 
-                />
-                <span className="text-xs text-amber-600">
-                  {order.assetStatus.placementsWithAssets} of {order.assetStatus.totalPlacements} ready
-                </span>
-              </div>
-            </div>
-            
-            {/* Show which specific assets are missing */}
-            {freshAssets.filter(a => !a.hasAsset).length > 0 && (
-              <div className="mt-3 pt-3 border-t border-amber-200">
-                <p className="text-xs font-medium text-amber-800 mb-2">
-                  Awaiting assets for:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {freshAssets
-                    .filter(a => !a.hasAsset)
-                    .map(missing => (
-                      <div 
-                        key={missing.placementId} 
-                        className="flex items-center gap-1.5 text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full"
-                      >
-                        <AlertCircle className="h-3 w-3" />
-                        <span className="font-medium">{missing.placementName}</span>
-                        {missing.dimensions && (
-                          <span className="text-amber-600">({missing.dimensions})</span>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Assets Ready Banner - Show when assets just became ready */}
-      {order.assetStatus?.allAssetsReady && order.assetStatus?.assetsReadyAt && (
-        <Card className="border-green-300 bg-green-50">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-medium text-green-900">All Creative Assets Ready</p>
-                  <p className="text-sm text-green-700">
-                    {order.assetStatus.totalPlacements} asset{order.assetStatus.totalPlacements !== 1 ? 's' : ''} available for download
-                  </p>
-                </div>
-              </div>
-              <Button size="sm" onClick={() => setActiveTab('placements')} className="bg-green-600 hover:bg-green-700">
-                <Download className="h-4 w-4 mr-2" />
-                View Assets
+      {/* Compact Header Card */}
+      <Card className="shadow-sm">
+        <CardContent className="py-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => navigate('/dashboard?tab=orders')}>
+                <ArrowLeft className="h-4 w-4" />
               </Button>
+              <div>
+                <h2 className="text-lg font-bold leading-tight">{order.campaignName}</h2>
+                <p className="text-sm text-muted-foreground">{order.publicationName}</p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="flex items-center gap-3">
+              <div className="text-right text-sm">
+                <p className="font-semibold text-green-600">${publication?.publicationTotal?.toFixed(2) || '0.00'}</p>
+                <p className="text-xs text-muted-foreground">
+                  {campaignData?.timeline?.startDate && campaignData?.timeline?.endDate 
+                    ? `${new Date(campaignData.timeline.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(campaignData.timeline.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                    : 'Dates TBD'}
+                </p>
+              </div>
+              <OrderStatusBadge status={order.status as OrderStatus} />
+            </div>
+          </div>
+          
+          {/* Inline placement summary */}
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t text-sm">
+            <span className="text-muted-foreground">{totalPlacements} placement{totalPlacements !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-2">
+              {acceptedCount > 0 && <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">{acceptedCount} accepted</Badge>}
+              {inProductionCount > 0 && <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">{inProductionCount} live</Badge>}
+              {deliveredCount > 0 && <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">{deliveredCount} delivered</Badge>}
+              {pendingCount > 0 && <Badge variant="outline" className="bg-amber-50 text-amber-700 text-xs">{pendingCount} pending</Badge>}
+              {rejectedCount > 0 && <Badge variant="outline" className="bg-red-50 text-red-700 text-xs">{rejectedCount} rejected</Badge>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Review Banner for "sent" orders */}
-      {needsReview && (
-        <Card className="border-blue-300 bg-blue-50">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="font-medium text-blue-900">Review Required</p>
-                  <p className="text-sm text-blue-700">
-                    Accept or reject {pendingCount} placement{pendingCount !== 1 ? 's' : ''} to confirm this order
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
-                  {acceptedCount > 0 && <Badge className="bg-green-100 text-green-800">{acceptedCount} accepted</Badge>}
-                  {rejectedCount > 0 && <Badge className="bg-red-100 text-red-800">{rejectedCount} rejected</Badge>}
-                  {pendingCount > 0 && <Badge variant="outline">{pendingCount} pending</Badge>}
-                </div>
-                <Button size="sm" onClick={() => setActiveTab('placements')}>
-                  Review Placements
-                </Button>
-              </div>
-            </div>
-            <Progress value={(acceptedCount / totalPlacements) * 100} className="h-2 mt-3" />
-          </CardContent>
-        </Card>
+      {/* Smart Status Banner - Shows ONE priority message */}
+      {primaryStatus === 'review' && (
+        <Alert className="border-blue-300 bg-blue-50">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="text-blue-900">Action Required: Review Placements</AlertTitle>
+          <AlertDescription className="text-blue-700 flex items-center justify-between">
+            <span>Accept or reject {pendingCount} placement{pendingCount !== 1 ? 's' : ''} to confirm this order.</span>
+            <Button size="sm" variant="outline" className="ml-4" onClick={() => setActiveTab('placements')}>
+              Review Now
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {primaryStatus === 'assets_pending' && (
+        <Alert className="border-amber-300 bg-amber-50">
+          <Clock className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-900">Awaiting Creative Assets</AlertTitle>
+          <AlertDescription className="text-amber-700">
+            {order.assetStatus?.placementsWithAssets || 0} of {order.assetStatus?.totalPlacements || 0} assets ready. You'll be notified when all are available.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {primaryStatus === 'starting_soon' && (
+        <Alert className="border-blue-300 bg-blue-50">
+          <Timer className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="text-blue-900">Campaign Starting Soon</AlertTitle>
+          <AlertDescription className="text-blue-700">
+            Starts {campaignData?.timeline?.startDate 
+              ? new Date(campaignData.timeline.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+              : 'soon'}. Ensure tracking is set up.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {primaryStatus === 'live' && (
+        <Alert className="border-green-300 bg-green-50">
+          <PlayCircle className="h-4 w-4 text-green-600" />
+          <AlertTitle className="text-green-900">Campaign is Live</AlertTitle>
+          <AlertDescription className="text-green-700">
+            {(() => {
+              const endDate = campaignData?.timeline?.endDate ? new Date(campaignData.timeline.endDate) : null;
+              if (endDate) {
+                const daysLeft = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                return `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining.`;
+              }
+              return 'Campaign is currently running.';
+            })()}
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {primaryStatus === 'ended' && order.status !== 'delivered' && (
+        <Alert className="border-amber-300 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-900">Campaign Ended</AlertTitle>
+          <AlertDescription className="text-amber-700 flex items-center justify-between">
+            <span>Please submit final performance reports and mark as delivered.</span>
+            <Button size="sm" variant="outline" className="ml-4" onClick={() => setActiveTab('performance')}>
+              Report Results
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Main Tabs */}
@@ -869,339 +870,260 @@ export function PublicationOrderDetail() {
 
         {/* OVERVIEW TAB */}
         <TabsContent value="overview" className="mt-0 space-y-4">
-          {/* Key Stats Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="shadow-none">
-              <CardContent className="pt-4 pb-3">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Payment</span>
-                </div>
-                <p className="text-xl font-bold text-green-600 mt-1">
-                  ${publication?.publicationTotal?.toFixed(2) || '0.00'}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-none">
-              <CardContent className="pt-4 pb-3">
-                <div className="flex items-center gap-2">
-                  <Layers className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Placements</span>
-                </div>
-                <p className="text-xl font-bold mt-1">{totalPlacements}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-none">
-              <CardContent className="pt-4 pb-3">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Start</span>
-                </div>
-                <p className="text-sm font-bold mt-1">
-                  {campaignData?.timeline?.startDate 
-                    ? new Date(campaignData.timeline.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                    : '—'}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-none">
-              <CardContent className="pt-4 pb-3">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">End</span>
-                </div>
-                <p className="text-sm font-bold mt-1">
-                  {campaignData?.timeline?.endDate 
-                    ? new Date(campaignData.timeline.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                    : '—'}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Placement Status Summary */}
-          <Card className="shadow-none">
+          {/* What's Next - Priority Action */}
+          <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-sans">Placement Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-5 gap-2 mb-4">
-                <div className={cn("text-center p-2 rounded-lg", pendingCount > 0 ? "bg-amber-50 border border-amber-200" : "bg-gray-50")}>
-                  <p className="text-lg font-bold text-amber-700">{pendingCount}</p>
-                  <p className="text-xs text-amber-600">Pending</p>
-                </div>
-                <div className={cn("text-center p-2 rounded-lg", acceptedCount > 0 ? "bg-green-50 border border-green-200" : "bg-gray-50")}>
-                  <p className="text-lg font-bold text-green-700">{acceptedCount}</p>
-                  <p className="text-xs text-green-600">Accepted</p>
-                </div>
-                <div className={cn("text-center p-2 rounded-lg", inProductionCount > 0 ? "bg-blue-50 border border-blue-200" : "bg-gray-50")}>
-                  <p className="text-lg font-bold text-blue-700">{inProductionCount}</p>
-                  <p className="text-xs text-blue-600">Live</p>
-                </div>
-                <div className={cn("text-center p-2 rounded-lg", deliveredCount > 0 ? "bg-purple-50 border border-purple-200" : "bg-gray-50")}>
-                  <p className="text-lg font-bold text-purple-700">{deliveredCount}</p>
-                  <p className="text-xs text-purple-600">Delivered</p>
-                </div>
-                <div className={cn("text-center p-2 rounded-lg", rejectedCount > 0 ? "bg-red-50 border border-red-200" : "bg-gray-50")}>
-                  <p className="text-lg font-bold text-red-700">{rejectedCount}</p>
-                  <p className="text-xs text-red-600">Rejected</p>
-                </div>
-              </div>
-              
-              {/* Line Item Status List */}
-              <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
-                {inventoryItems.map((item: any, idx: number) => {
-                  const itemPath = item.itemPath || item.sourcePath || `placement-${idx}`;
-                  const status = placementStatuses[itemPath] || 'pending';
-                  const config = getChannelConfig(item.channel);
-                  const hasScript = config.isDigital && trackingScripts.some(s => {
-                    const dimStr = typeof item.format?.dimensions === 'string' ? item.format.dimensions : 
-                                   typeof item.format?.size === 'string' ? item.format.size : '';
-                    const dims = dimStr ? dimStr.split(/x/i).map((d: string) => parseInt(d?.trim())) : null;
-                    return dims && dims.length === 2 && s.creative.width === dims[0] && s.creative.height === dims[1];
-                  });
-                  const hasAsset = !config.isDigital && freshAssets.some(a => a.placementId === itemPath && a.hasAsset);
-                  const hasPerf = performanceEntries.some(e => e.itemPath === itemPath);
-                  
-                  return (
-                    <div key={itemPath} className="flex items-center justify-between px-3 py-2 text-sm">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="truncate font-medium">{item.itemName || item.sourceName}</span>
-                        {item.format?.dimensions && (
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            ({parseDimensions(item.format.dimensions).join(', ')})
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {/* Status indicators */}
-                        {config.isDigital ? (
-                          <span className={cn("text-xs", hasScript ? "text-green-600" : "text-amber-600")}>
-                            {hasScript ? "Script" : "Script"}
-                          </span>
-                        ) : (
-                          <span className={cn("text-xs", hasAsset ? "text-green-600" : "text-amber-600")}>
-                            {hasAsset ? "Asset" : "Asset"}
-                          </span>
-                        )}
-                        {['in_production', 'delivered'].includes(status) && (
-                          <span className={cn("text-xs", hasPerf ? "text-green-600" : "text-amber-600")}>
-                            {hasPerf ? "Reported" : "Report"}
-                          </span>
-                        )}
-                        <PlacementStatusBadge status={status} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Action Items / To-Do */}
-          <Card className="shadow-none">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-sans flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Action Items
+              <CardTitle className="text-base flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                What's Next
               </CardTitle>
             </CardHeader>
             <CardContent>
               {(() => {
-                const actions: Array<{ priority: 'high' | 'medium' | 'low'; text: string; action?: () => void; actionLabel?: string }> = [];
-                
-                // High priority actions
+                // Determine the single most important next action
                 if (pendingCount > 0) {
-                  actions.push({
-                    priority: 'high',
-                    text: `Review and accept ${pendingCount} pending placement${pendingCount !== 1 ? 's' : ''}`,
-                    action: () => setActiveTab('placements'),
-                    actionLabel: 'Review'
-                  });
+                  return (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Eye className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-blue-900">Review {pendingCount} Placement{pendingCount !== 1 ? 's' : ''}</p>
+                          <p className="text-sm text-blue-700">Accept or reject to confirm this order</p>
+                        </div>
+                      </div>
+                      <Button onClick={() => setActiveTab('placements')}>
+                        Review Now
+                      </Button>
+                    </div>
+                  );
                 }
                 
-                // Check for missing scripts/assets
-                const digitalWithoutScripts = inventoryItems.filter((item: any) => {
-                  const config = getChannelConfig(item.channel);
-                  if (!config.isDigital) return false;
-                  const dimStr = typeof item.format?.dimensions === 'string' ? item.format.dimensions : 
-                                 typeof item.format?.size === 'string' ? item.format.size : '';
-                  const dims = dimStr ? dimStr.split(/x/i).map((d: string) => parseInt(d?.trim())) : null;
-                  return !trackingScripts.some(s => dims && dims.length === 2 && s.creative.width === dims[0] && s.creative.height === dims[1]);
-                });
-                if (digitalWithoutScripts.length > 0 && ['confirmed', 'in_production'].includes(order.status)) {
-                  actions.push({
-                    priority: 'medium',
-                    text: `${digitalWithoutScripts.length} digital placement${digitalWithoutScripts.length !== 1 ? 's' : ''} awaiting tracking scripts from hub`,
-                  });
+                if (acceptedCount > 0 && inProductionCount === 0 && deliveredCount === 0) {
+                  return (
+                    <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                          <PlayCircle className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-amber-900">Ready to Go Live</p>
+                          <p className="text-sm text-amber-700">Mark placements as "In Production" when ads start running</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" onClick={() => setActiveTab('placements')}>
+                        View Placements
+                      </Button>
+                    </div>
+                  );
                 }
                 
-                // Check for placements ready to go live
-                if (acceptedCount > 0) {
-                  actions.push({
-                    priority: 'medium',
-                    text: `${acceptedCount} placement${acceptedCount !== 1 ? 's' : ''} accepted - mark as live when running`,
-                    action: () => setActiveTab('placements'),
-                    actionLabel: 'View'
-                  });
-                }
-                
-                // Check for performance reporting needed
                 const liveWithoutPerf = inventoryItems.filter((item: any, idx: number) => {
                   const itemPath = item.itemPath || item.sourcePath || `placement-${idx}`;
                   const status = placementStatuses[itemPath];
-                  return ['in_production', 'delivered'].includes(status) && 
+                  const config = getChannelConfig(item.channel);
+                  return !config.isDigital && ['in_production', 'delivered'].includes(status) && 
                     !performanceEntries.some(e => e.itemPath === itemPath);
                 });
+                
                 if (liveWithoutPerf.length > 0) {
-                  actions.push({
-                    priority: 'medium',
-                    text: `Report performance for ${liveWithoutPerf.length} live placement${liveWithoutPerf.length !== 1 ? 's' : ''}`,
-                    action: () => setActiveTab('performance'),
-                    actionLabel: 'Report'
-                  });
-                }
-                
-                // Check for proofs needed
-                const needsProof = ['in_production', 'delivered'].includes(order.status) && proofs.length === 0;
-                if (needsProof) {
-                  actions.push({
-                    priority: 'low',
-                    text: 'Upload proof of performance documentation',
-                    action: () => setActiveTab('performance'),
-                    actionLabel: 'Upload'
-                  });
-                }
-                
-                // No actions - all good!
-                if (actions.length === 0) {
                   return (
-                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      <span className="text-green-700 font-medium">All caught up! No pending actions.</span>
+                    <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                          <BarChart3 className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-purple-900">Report Your Results</p>
+                          <p className="text-sm text-purple-700">{liveWithoutPerf.length} placement{liveWithoutPerf.length !== 1 ? 's' : ''} need performance data</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" onClick={() => setActiveTab('performance')}>
+                        Report Results
+                      </Button>
+                    </div>
+                  );
+                }
+                
+                if (inProductionCount > 0 || deliveredCount > 0) {
+                  return (
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-green-900">You're All Set!</p>
+                          <p className="text-sm text-green-700">Campaign is running smoothly</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" onClick={() => setActiveTab('performance')}>
+                        View Performance
+                      </Button>
                     </div>
                   );
                 }
                 
                 return (
-                  <div className="space-y-2">
-                    {actions.map((action, idx) => (
-                      <div 
-                        key={idx} 
-                        className={cn(
-                          "flex items-center justify-between p-2 rounded-lg border",
-                          action.priority === 'high' ? "bg-red-50 border-red-200" :
-                          action.priority === 'medium' ? "bg-amber-50 border-amber-200" :
-                          "bg-blue-50 border-blue-200"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            "w-2 h-2 rounded-full",
-                            action.priority === 'high' ? "bg-red-500" :
-                            action.priority === 'medium' ? "bg-amber-500" :
-                            "bg-blue-500"
-                          )} />
-                          <span className="text-sm">{action.text}</span>
-                        </div>
-                        {action.action && (
-                          <Button size="sm" variant="ghost" className="h-7" onClick={action.action}>
-                            {action.actionLabel}
-                          </Button>
-                        )}
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Clock className="h-5 w-5 text-gray-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Waiting for Campaign Setup</p>
+                      <p className="text-sm text-muted-foreground">The hub is preparing this order</p>
+                    </div>
                   </div>
                 );
               })()}
             </CardContent>
           </Card>
 
+          {/* Placements Quick View */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  Placements
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setActiveTab('placements')}>
+                  View All
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {inventoryItems.slice(0, 5).map((item: any, idx: number) => {
+                  const itemPath = item.itemPath || item.sourcePath || `placement-${idx}`;
+                  const status = placementStatuses[itemPath] || 'pending';
+                  const config = getChannelConfig(item.channel);
+                  
+                  return (
+                    <div key={itemPath} className="flex items-center justify-between py-2 border-b last:border-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {config.icon === 'newspaper' && <Newspaper className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                        {config.icon === 'radio' && <Radio className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                        {config.icon === 'headphones' && <Headphones className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                        {!['newspaper', 'radio', 'headphones'].includes(config.icon || '') && <Layers className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                        <span className="truncate text-sm">{item.itemName || item.sourceName}</span>
+                      </div>
+                      <PlacementStatusBadge status={status} />
+                    </div>
+                  );
+                })}
+                {inventoryItems.length > 5 && (
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    + {inventoryItems.length - 5} more placements
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Performance Summary (if data exists) */}
           {performanceEntries.length > 0 && (
-            <Card className="shadow-none">
+            <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-sans flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Performance Summary
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Performance
+                  </CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('performance')}>
+                    View Details
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">
-                      {performanceEntries.reduce((sum, e) => sum + (e.metrics?.impressions || 0), 0).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Impressions</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">
-                      {performanceEntries.reduce((sum, e) => sum + (e.metrics?.clicks || 0), 0).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Clicks</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">{performanceEntries.length}</p>
-                    <p className="text-xs text-muted-foreground">Entries</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">{proofs.length}</p>
-                    <p className="text-xs text-muted-foreground">Proofs</p>
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full mt-3"
-                  onClick={() => setActiveTab('performance')}
-                >
-                  View Full Performance
-                </Button>
+                {(() => {
+                  // Compute channel-aware totals
+                  const totals = performanceEntries.reduce((acc, e) => ({
+                    impressions: acc.impressions + (e.metrics?.impressions || 0),
+                    clicks: acc.clicks + (e.metrics?.clicks || 0),
+                    insertions: acc.insertions + (e.metrics?.insertions || 0),
+                    circulation: acc.circulation + (e.metrics?.circulation || 0),
+                    spotsAired: acc.spotsAired + (e.metrics?.spotsAired || 0),
+                    downloads: acc.downloads + (e.metrics?.downloads || 0),
+                  }), { impressions: 0, clicks: 0, insertions: 0, circulation: 0, spotsAired: 0, downloads: 0 });
+                  
+                  const hasDigital = totals.impressions > 0;
+                  const hasPrint = totals.insertions > 0;
+                  const hasRadio = totals.spotsAired > 0;
+                  const hasPodcast = totals.downloads > 0;
+                  
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{performanceEntries.length}</p>
+                        <p className="text-xs text-muted-foreground">Reports</p>
+                      </div>
+                      {hasDigital && (
+                        <div className="text-center">
+                          <p className="text-2xl font-bold">{totals.impressions.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">Impressions</p>
+                        </div>
+                      )}
+                      {hasPrint && (
+                        <div className="text-center">
+                          <p className="text-2xl font-bold">{totals.insertions}</p>
+                          <p className="text-xs text-muted-foreground">Issues</p>
+                        </div>
+                      )}
+                      {hasRadio && (
+                        <div className="text-center">
+                          <p className="text-2xl font-bold">{totals.spotsAired}</p>
+                          <p className="text-xs text-muted-foreground">Spots</p>
+                        </div>
+                      )}
+                      {hasPodcast && (
+                        <div className="text-center">
+                          <p className="text-2xl font-bold">{totals.downloads.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">Downloads</p>
+                        </div>
+                      )}
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{proofs.length}</p>
+                        <p className="text-xs text-muted-foreground">Proofs</p>
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           )}
 
-          {/* Campaign Info - Collapsible */}
-          <Collapsible>
-            <Card className="shadow-none">
-              <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-sans text-muted-foreground">Campaign Details</CardTitle>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </CardHeader>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Campaign</p>
-                      <p className="font-medium">{order.campaignName}</p>
-                    </div>
+          {/* Campaign Info - Simple */}
+          {(campaignData?.objectives?.primaryGoal || campaignData?.objectives?.targetAudience) && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-muted-foreground">Campaign Info</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {campaignData?.timeline?.durationWeeks && (
                     <div>
                       <p className="text-muted-foreground">Duration</p>
-                      <p className="font-medium">
-                        {campaignData?.timeline?.durationWeeks || '—'} weeks
-                      </p>
+                      <p className="font-medium">{campaignData.timeline.durationWeeks} weeks</p>
                     </div>
-                    {campaignData?.objectives?.primaryGoal && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Primary Goal</p>
-                        <p className="font-medium capitalize">{campaignData.objectives.primaryGoal.replace(/_/g, ' ')}</p>
-                      </div>
-                    )}
-                    {campaignData?.objectives?.targetAudience && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Target Audience</p>
-                        <p className="font-medium">{campaignData.objectives.targetAudience}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </CollapsibleContent>
+                  )}
+                  {campaignData?.objectives?.primaryGoal && (
+                    <div>
+                      <p className="text-muted-foreground">Goal</p>
+                      <p className="font-medium capitalize">{campaignData.objectives.primaryGoal.replace(/_/g, ' ')}</p>
+                    </div>
+                  )}
+                  {campaignData?.objectives?.targetAudience && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Target Audience</p>
+                      <p className="font-medium">{campaignData.objectives.targetAudience}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
             </Card>
-          </Collapsible>
+          )}
         </TabsContent>
 
         {/* PLACEMENTS TAB (organized by channel type) */}
@@ -1790,17 +1712,30 @@ export function PublicationOrderDetail() {
                                 </>
                               )}
 
-                              {/* Accepted: Mark In Production */}
-                              {placementStatus === 'accepted' && (
-                                <Button
-                                  onClick={() => handlePlacementAction(itemPath, 'in_production')}
-                                  disabled={updating}
-                                  className="bg-blue-600 hover:bg-blue-700 h-7 text-xs px-3"
-                                  size="sm"
-                                >
-                                  <Loader2 className="h-3 w-3 mr-1" /> Mark Live
-                                </Button>
-                              )}
+                              {/* Accepted: Mark In Production - only if has script (digital) or asset (offline) */}
+                              {placementStatus === 'accepted' && (() => {
+                                const hasRequiredAsset = isDigital ? scripts.length > 0 : placementAssets.length > 0;
+                                const missingText = isDigital ? 'Needs tracking script' : 'Needs creative asset';
+                                
+                                if (!hasRequiredAsset) {
+                                  return (
+                                    <span className="flex items-center gap-1 text-xs text-amber-600">
+                                      <AlertCircle className="h-3.5 w-3.5" /> {missingText}
+                                    </span>
+                                  );
+                                }
+                                
+                                return (
+                                  <Button
+                                    onClick={() => handlePlacementAction(itemPath, 'in_production')}
+                                    disabled={updating}
+                                    className="bg-blue-600 hover:bg-blue-700 h-7 text-xs px-3"
+                                    size="sm"
+                                  >
+                                    <PlayCircle className="h-3 w-3 mr-1" /> Mark Live
+                                  </Button>
+                                );
+                              })()}
 
                               {/* In Production: Mark Delivered + Report */}
                               {placementStatus === 'in_production' && (
@@ -2137,129 +2072,6 @@ function getExecutionInstructions(item: any): string {
   return `Run ${freq}× per month as scheduled`;
 }
 
-// Campaign Flight Date Alert Component
-interface CampaignFlightDateAlertProps {
-  startDate?: string | Date;
-  endDate?: string | Date;
-  orderStatus: string;
-}
-
-function CampaignFlightDateAlert({ startDate, endDate, orderStatus }: CampaignFlightDateAlertProps) {
-  // Don't show alerts for draft or cancelled orders
-  if (['draft', 'cancelled'].includes(orderStatus)) {
-    return null;
-  }
-
-  const now = new Date();
-  const start = startDate ? new Date(startDate) : null;
-  const end = endDate ? new Date(endDate) : null;
-  
-  // Calculate days until/since dates
-  const daysUntilStart = start ? Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
-  const daysUntilEnd = end ? Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
-  
-  // Determine campaign state
-  const hasNotStarted = start && now < start;
-  const hasEnded = end && now > end;
-  const isActive = start && end && now >= start && now <= end;
-  
-  // Format dates for display
-  const formatDate = (date: Date) => date.toLocaleDateString('en-US', { 
-    weekday: 'short', 
-    month: 'short', 
-    day: 'numeric',
-    year: 'numeric'
-  });
-
-  // Pre-launch: Campaign starting soon (within 7 days)
-  if (hasNotStarted && daysUntilStart !== null && daysUntilStart <= 7 && daysUntilStart > 0) {
-    return (
-      <Alert className="bg-blue-50 border-blue-200">
-        <Timer className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-900">Campaign starts in {daysUntilStart} day{daysUntilStart !== 1 ? 's' : ''}</AlertTitle>
-        <AlertDescription className="text-blue-700">
-          Make sure all tracking tags are trafficked and tested before {start && formatDate(start)}.
-          {orderStatus === 'sent' && ' Please review and accept placements first.'}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  // Pre-launch: Campaign starting today
-  if (hasNotStarted && daysUntilStart === 0) {
-    return (
-      <Alert className="bg-blue-50 border-blue-200">
-        <PlayCircle className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-900">Campaign starts today!</AlertTitle>
-        <AlertDescription className="text-blue-700">
-          Verify all tracking tags are live and firing correctly.
-          {orderStatus === 'sent' && ' ⚠️ Placements still need to be accepted!'}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  // Active: Campaign is live and running well
-  if (isActive && daysUntilEnd !== null && daysUntilEnd > 3) {
-    return (
-      <Alert className="bg-green-50 border-green-200">
-        <PlayCircle className="h-4 w-4 text-green-600" />
-        <AlertTitle className="text-green-900">Campaign is live</AlertTitle>
-        <AlertDescription className="text-green-700">
-          {daysUntilEnd} day{daysUntilEnd !== 1 ? 's' : ''} remaining until {end && formatDate(end)}.
-          {['sent', 'confirmed'].includes(orderStatus) && ' Mark placements as "In Production" when ads are running.'}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  // Active but ending soon: Campaign ending within 3 days
-  if (isActive && daysUntilEnd !== null && daysUntilEnd <= 3 && daysUntilEnd > 0) {
-    return (
-      <Alert className="bg-amber-50 border-amber-200">
-        <AlertTriangle className="h-4 w-4 text-amber-600" />
-        <AlertTitle className="text-amber-900">Campaign ending soon!</AlertTitle>
-        <AlertDescription className="text-amber-700">
-          Only {daysUntilEnd} day{daysUntilEnd !== 1 ? 's' : ''} remaining until {end && formatDate(end)}.
-          Ensure all performance data is reported before the campaign ends.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  // Active: Campaign ends today
-  if (isActive && daysUntilEnd === 0) {
-    return (
-      <Alert className="bg-amber-50 border-amber-200">
-        <AlertTriangle className="h-4 w-4 text-amber-600" />
-        <AlertTitle className="text-amber-900">Campaign ends today!</AlertTitle>
-        <AlertDescription className="text-amber-700">
-          This is the last day of the campaign. Report final performance numbers and upload proof of performance.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  // Expired: Campaign has ended
-  if (hasEnded) {
-    const daysSinceEnd = end ? Math.floor((now.getTime() - end.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-    return (
-      <Alert className="bg-gray-50 border-gray-200">
-        <XCircle className="h-4 w-4 text-gray-500" />
-        <AlertTitle className="text-gray-700">Campaign ended</AlertTitle>
-        <AlertDescription className="text-gray-600">
-          Campaign ended {daysSinceEnd === 0 ? 'today' : `${daysSinceEnd} day${daysSinceEnd !== 1 ? 's' : ''} ago`} on {end && formatDate(end)}.
-          {orderStatus !== 'delivered' && ' Please submit final performance reports and mark placements as delivered.'}
-          {orderStatus === 'delivered' && ' All performance data should now be finalized.'}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  // No alert needed (campaign is more than 7 days away, or no dates set)
-  return null;
-}
-
 // Workflow progress component for each placement
 interface PlacementWorkflowProps {
   placementId: string;
@@ -2305,8 +2117,9 @@ function PlacementWorkflow({
       id: 'live',
       label: 'Go Live',
       done: ['in_production', 'delivered'].includes(placementStatus),
-      icon: Loader2,
-      action: placementStatus === 'accepted' ? onMarkInProduction : undefined,
+      icon: PlayCircle,
+      // Only allow marking live if placement is accepted AND has required assets/scripts
+      action: placementStatus === 'accepted' && (isDigital ? hasScripts : hasAssets) ? onMarkInProduction : undefined,
       actionLabel: 'Mark Live',
     },
     {

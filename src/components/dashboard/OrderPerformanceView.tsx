@@ -3,9 +3,10 @@
  * 
  * Displays delivery progress, performance history, and pacing for an order.
  * Used by publications to track their delivery against campaign goals.
+ * Provides quick entry options for offline channels.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,32 +19,38 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 import { 
-  TrendingUp, 
-  TrendingDown, 
-  Minus, 
-  Plus, 
   FileText, 
-  Image, 
   Download,
   Loader2,
   AlertCircle,
   CheckCircle2,
   Clock,
   BarChart3,
-  Eye
+  Zap,
+  Newspaper,
+  Radio,
+  Mic,
+  ChevronDown,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/config/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { PerformanceEntryForm } from './PerformanceEntryForm';
-import { ProofOfPerformanceUploader } from './ProofOfPerformanceUploader';
-import { PACING_STATUS_COLORS, PACING_STATUS_LABELS, PacingStatus } from '@/integrations/mongodb/dailyAggregateSchema';
-import { METRIC_LABELS, PerformanceEntry } from '@/integrations/mongodb/performanceEntrySchema';
+import { ReportResultsForm } from './ReportResultsForm';
+import { PACING_STATUS_LABELS, PacingStatus } from '@/integrations/mongodb/dailyAggregateSchema';
+import { PerformanceEntry } from '@/integrations/mongodb/performanceEntrySchema';
 import { PROOF_FILE_TYPE_LABELS, ProofOfPerformance, formatFileSize } from '@/integrations/mongodb/proofOfPerformanceSchema';
+import { isDigitalChannel, getChannelConfig } from '@/config/inventoryChannels';
 
 interface OrderPerformanceViewProps {
   orderId: string;
@@ -86,9 +93,24 @@ export function OrderPerformanceView({
   const [entries, setEntries] = useState<PerformanceEntry[]>([]);
   const [proofs, setProofs] = useState<ProofOfPerformance[]>([]);
   const [summary, setSummary] = useState<any>(null);
-  const [showAddEntry, setShowAddEntry] = useState(false);
-  const [showAddProof, setShowAddProof] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<PerformanceEntry | null>(null);
+  const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [quickEntryPlacement, setQuickEntryPlacement] = useState<typeof placements[0] | null>(null);
+
+  // Identify offline placements that would benefit from quick entry
+  const offlinePlacements = useMemo(() => {
+    return placements.filter(p => !isDigitalChannel(p.channel));
+  }, [placements]);
+
+  const hasOfflinePlacements = offlinePlacements.length > 0;
+
+  const getPlacementIcon = (channel: string) => {
+    switch (channel) {
+      case 'print': return <Newspaper className="w-4 h-4" />;
+      case 'radio': return <Radio className="w-4 h-4" />;
+      case 'podcast': return <Mic className="w-4 h-4" />;
+      default: return <FileText className="w-4 h-4" />;
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -196,57 +218,43 @@ export function OrderPerformanceView({
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Dialog open={showAddEntry} onOpenChange={setShowAddEntry}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Performance
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Report Performance</DialogTitle>
-                  </DialogHeader>
-                  <PerformanceEntryForm
-                    orderId={orderId}
-                    campaignId={campaignId}
-                    publicationId={publicationId}
-                    publicationName={publicationName}
-                    placements={placements}
-                    onSuccess={() => {
-                      setShowAddEntry(false);
-                      fetchData();
-                    }}
-                    onCancel={() => setShowAddEntry(false)}
-                  />
-                </DialogContent>
-              </Dialog>
-              
-              <Dialog open={showAddProof} onOpenChange={setShowAddProof}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Upload Proof
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Upload Proof</DialogTitle>
-                  </DialogHeader>
-                  <ProofOfPerformanceUploader
-                    orderId={orderId}
-                    campaignId={campaignId}
-                    publicationId={publicationId}
-                    publicationName={publicationName}
-                    placements={placements}
-                    onSuccess={() => {
-                      setShowAddProof(false);
-                      fetchData();
-                    }}
-                    onCancel={() => setShowAddProof(false)}
-                  />
-                </DialogContent>
-              </Dialog>
+              {/* Report Results for Offline Channels */}
+              {hasOfflinePlacements && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                      <Zap className="w-4 h-4 mr-2" />
+                      Report Results
+                      <ChevronDown className="w-3 h-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel>What are you reporting?</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {offlinePlacements.map((placement) => {
+                      const config = getChannelConfig(placement.channel);
+                      return (
+                        <DropdownMenuItem
+                          key={placement.itemPath}
+                          onClick={() => {
+                            setQuickEntryPlacement(placement);
+                            setShowQuickEntry(true);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            {getPlacementIcon(placement.channel)}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{placement.itemName}</p>
+                              <p className="text-xs text-muted-foreground capitalize">{config.label}</p>
+                            </div>
+                          </div>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -303,28 +311,103 @@ export function OrderPerformanceView({
             </div>
           )}
 
-          {/* Summary Stats */}
-          {summary && (
+          {/* Summary Stats - computed from entries */}
+          {entries.length > 0 && (
             <>
               <Separator />
-              <div className="grid grid-cols-4 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{summary.totals?.impressions?.toLocaleString() || 0}</p>
-                  <p className="text-xs text-muted-foreground">Impressions</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{summary.totals?.clicks?.toLocaleString() || 0}</p>
-                  <p className="text-xs text-muted-foreground">Clicks</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{summary.totals?.ctr?.toFixed(2) || '0.00'}%</p>
-                  <p className="text-xs text-muted-foreground">CTR</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{summary.totals?.entries || 0}</p>
-                  <p className="text-xs text-muted-foreground">Entries</p>
-                </div>
-              </div>
+              {(() => {
+                // Compute totals from entries
+                const totals = entries.reduce((acc, entry) => {
+                  const m = entry.metrics;
+                  return {
+                    impressions: acc.impressions + (m.impressions || 0),
+                    clicks: acc.clicks + (m.clicks || 0),
+                    insertions: acc.insertions + (m.insertions || 0),
+                    circulation: acc.circulation + (m.circulation || 0),
+                    spotsAired: acc.spotsAired + (m.spotsAired || 0),
+                    estimatedReach: acc.estimatedReach + (m.estimatedReach || 0),
+                    downloads: acc.downloads + (m.downloads || 0),
+                  };
+                }, { impressions: 0, clicks: 0, insertions: 0, circulation: 0, spotsAired: 0, estimatedReach: 0, downloads: 0 });
+                
+                // Determine which stats to show based on what has data
+                const hasDigital = totals.impressions > 0 || totals.clicks > 0;
+                const hasPrint = totals.insertions > 0 || totals.circulation > 0;
+                const hasRadio = totals.spotsAired > 0 || totals.estimatedReach > 0;
+                const hasPodcast = totals.downloads > 0;
+                
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {/* Always show entries count */}
+                    <div className="text-center">
+                      <p className="text-2xl font-bold">{entries.length}</p>
+                      <p className="text-xs text-muted-foreground">Reports</p>
+                    </div>
+                    
+                    {/* Digital stats */}
+                    {hasDigital && (
+                      <>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold">{totals.impressions.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">Impressions</p>
+                        </div>
+                        {totals.clicks > 0 && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">{totals.clicks.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">Clicks</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Print stats */}
+                    {hasPrint && (
+                      <>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold">{totals.insertions}</p>
+                          <p className="text-xs text-muted-foreground">Issues</p>
+                        </div>
+                        {totals.circulation > 0 && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">{totals.circulation.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">Circulation</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Radio stats */}
+                    {hasRadio && (
+                      <>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold">{totals.spotsAired}</p>
+                          <p className="text-xs text-muted-foreground">Spots Aired</p>
+                        </div>
+                        {totals.estimatedReach > 0 && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">~{totals.estimatedReach.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">Est. Reach</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Podcast stats */}
+                    {hasPodcast && (
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{totals.downloads.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">Downloads</p>
+                      </div>
+                    )}
+                    
+                    {/* Proofs count */}
+                    <div className="text-center">
+                      <p className="text-2xl font-bold">{proofs.length}</p>
+                      <p className="text-xs text-muted-foreground">Proofs</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </>
           )}
         </CardContent>
@@ -348,15 +431,20 @@ export function OrderPerformanceView({
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <BarChart3 className="w-12 h-12 mb-4 opacity-50" />
                   <p>No performance entries yet</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => setShowAddEntry(true)}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add First Entry
-                  </Button>
+                  {hasOfflinePlacements && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                      onClick={() => {
+                        setQuickEntryPlacement(offlinePlacements[0]);
+                        setShowQuickEntry(true);
+                      }}
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      Report Results
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Table>
@@ -365,65 +453,83 @@ export function OrderPerformanceView({
                       <TableHead>Date</TableHead>
                       <TableHead>Placement</TableHead>
                       <TableHead>Channel</TableHead>
-                      <TableHead className="text-right">Impressions</TableHead>
-                      <TableHead className="text-right">Clicks</TableHead>
-                      <TableHead className="text-right">Units</TableHead>
+                      <TableHead>Reported Metrics</TableHead>
                       <TableHead>Notes</TableHead>
-                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {entries.map((entry) => (
-                      <TableRow key={entry._id?.toString()}>
-                        <TableCell>
-                          <div className="text-sm">
-                            {format(new Date(entry.dateStart), 'MMM d, yyyy')}
-                            {entry.dateEnd && (
-                              <> - {format(new Date(entry.dateEnd), 'MMM d')}</>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-w-[200px] truncate" title={entry.itemName}>
-                            {entry.itemName}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {entry.channel}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {entry.metrics.impressions?.toLocaleString() || '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {entry.metrics.clicks?.toLocaleString() || '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {(entry.metrics.insertions || 
-                            entry.metrics.spotsAired || 
-                            entry.metrics.posts || 
-                            entry.metrics.downloads)?.toLocaleString() || '-'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-w-[150px] truncate text-muted-foreground text-xs" title={entry.notes}>
-                            {entry.notes || '-'}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingEntry(entry);
-                              setShowAddEntry(true);
-                            }}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {entries.map((entry) => {
+                      // Build channel-appropriate metrics display
+                      const getMetricsDisplay = () => {
+                        const metrics = entry.metrics;
+                        const parts: string[] = [];
+                        
+                        // Digital metrics
+                        if (metrics.impressions) parts.push(`${metrics.impressions.toLocaleString()} impressions`);
+                        if (metrics.clicks) parts.push(`${metrics.clicks.toLocaleString()} clicks`);
+                        if (metrics.ctr) parts.push(`${metrics.ctr.toFixed(2)}% CTR`);
+                        
+                        // Print metrics
+                        if (metrics.insertions) parts.push(`${metrics.insertions} issue${metrics.insertions > 1 ? 's' : ''}`);
+                        if (metrics.circulation) parts.push(`${metrics.circulation.toLocaleString()} circulation`);
+                        if (metrics.readers) parts.push(`${metrics.readers.toLocaleString()} readers`);
+                        
+                        // Radio metrics
+                        if (metrics.spotsAired) parts.push(`${metrics.spotsAired} spot${metrics.spotsAired > 1 ? 's' : ''} aired`);
+                        if (metrics.frequency) parts.push(`${metrics.frequency}x frequency`);
+                        if (metrics.estimatedReach) parts.push(`~${metrics.estimatedReach.toLocaleString()} reach`);
+                        
+                        // Podcast metrics
+                        if (metrics.downloads) parts.push(`${metrics.downloads.toLocaleString()} downloads`);
+                        if (metrics.listens) parts.push(`${metrics.listens.toLocaleString()} listens`);
+                        if (metrics.completionRate) parts.push(`${metrics.completionRate}% completion`);
+                        
+                        // Social metrics
+                        if (metrics.posts) parts.push(`${metrics.posts} post${metrics.posts > 1 ? 's' : ''}`);
+                        if (metrics.engagement) parts.push(`${metrics.engagement.toLocaleString()} engagements`);
+                        
+                        return parts.length > 0 ? parts : ['No metrics reported'];
+                      };
+                      
+                      const metricsDisplay = getMetricsDisplay();
+                      
+                      return (
+                        <TableRow key={entry._id?.toString()}>
+                          <TableCell>
+                            <div className="text-sm">
+                              {format(new Date(entry.dateStart), 'MMM d, yyyy')}
+                              {entry.dateEnd && (
+                                <> - {format(new Date(entry.dateEnd), 'MMM d')}</>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-[200px] truncate" title={entry.itemName}>
+                              {entry.itemName}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {entry.channel}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-0.5">
+                              {metricsDisplay.map((metric, idx) => (
+                                <div key={idx} className="text-sm">
+                                  {metric}
+                                </div>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-[150px] truncate text-muted-foreground text-xs" title={entry.notes}>
+                              {entry.notes || '-'}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -438,15 +544,20 @@ export function OrderPerformanceView({
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <FileText className="w-12 h-12 mb-4 opacity-50" />
                   <p>No proofs uploaded yet</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => setShowAddProof(true)}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Upload First Proof
-                  </Button>
+                  {hasOfflinePlacements && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                      onClick={() => {
+                        setQuickEntryPlacement(offlinePlacements[0]);
+                        setShowQuickEntry(true);
+                      }}
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      Report Results
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Table>
@@ -526,25 +637,34 @@ export function OrderPerformanceView({
         </TabsContent>
       </Tabs>
 
-      {/* Edit Entry Dialog */}
-      {editingEntry && (
-        <Dialog open={!!editingEntry} onOpenChange={() => setEditingEntry(null)}>
-          <DialogContent className="max-w-md">
+      {/* Report Results Dialog */}
+      {quickEntryPlacement && (
+        <Dialog open={showQuickEntry} onOpenChange={(open) => {
+          setShowQuickEntry(open);
+          if (!open) setQuickEntryPlacement(null);
+        }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit Entry</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-amber-500" />
+                Report Results
+              </DialogTitle>
             </DialogHeader>
-            <PerformanceEntryForm
+            <ReportResultsForm
               orderId={orderId}
               campaignId={campaignId}
               publicationId={publicationId}
               publicationName={publicationName}
-              placements={placements}
-              existingEntry={editingEntry}
+              placement={quickEntryPlacement}
               onSuccess={() => {
-                setEditingEntry(null);
+                setShowQuickEntry(false);
+                setQuickEntryPlacement(null);
                 fetchData();
               }}
-              onCancel={() => setEditingEntry(null)}
+              onCancel={() => {
+                setShowQuickEntry(false);
+                setQuickEntryPlacement(null);
+              }}
             />
           </DialogContent>
         </Dialog>

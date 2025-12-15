@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Package, Building2, MessageCircle, FileText, Search, Heart } from "lucide-react";
+import { FileText, Search } from "lucide-react";
 
 interface EmptyStateProps {
   title: string;
@@ -57,40 +57,10 @@ export function EmptyState({ title, description, icon: Icon, action, secondary }
 
 // Predefined empty states for common scenarios
 export const EmptyStates = {
-  SavedPackages: () => (
-    <EmptyState
-      title="No saved packages yet"
-      description="Start exploring our curated advertising packages and save the ones that match your goals."
-      icon={Package}
-      action={{ label: "Browse Packages", href: "/packages" }}
-      secondary={{ label: "Get Recommendations", onClick: () => window.dispatchEvent(new CustomEvent('openAssistant')) }}
-    />
-  ),
-
-  SavedOutlets: () => (
-    <EmptyState
-      title="No saved media partners yet"
-      description="Discover Chicago's top media outlets and save your favorites for easy access."
-      icon={Building2}
-      action={{ label: "Explore Partners", href: "/partners" }}
-      secondary={{ label: "Ask Assistant", onClick: () => window.dispatchEvent(new CustomEvent('openAssistant')) }}
-    />
-  ),
-
-  ConversationHistory: () => (
-    <EmptyState
-      title="No conversations yet"
-      description="Start chatting with our AI assistant to get personalized media recommendations and expert advice."
-      icon={MessageCircle}
-      action={{ label: "Start Conversation", onClick: () => window.dispatchEvent(new CustomEvent('openAssistant')) }}
-      secondary={{ label: "View Quick Tips", href: "/dashboard?tab=overview" }}
-    />
-  ),
-
   BrandDocuments: () => (
     <EmptyState
       title="No brand documents uploaded"
-      description="Upload your logos, brand guidelines, or campaign examples to get more personalized recommendations."
+      description="Upload your logos, brand guidelines, or campaign examples to help manage your media presence."
       icon={FileText}
       action={{ label: "Upload Documents", href: "/dashboard?tab=profile" }}
     />
@@ -99,20 +69,18 @@ export const EmptyStates = {
   SearchResults: ({ searchQuery }: { searchQuery?: string }) => (
     <EmptyState
       title="No results found"
-      description={searchQuery ? `No packages found matching "${searchQuery}". Try adjusting your search terms or filters.` : "No packages match your current filters. Try broadening your search criteria."}
+      description={searchQuery ? `No items found matching "${searchQuery}". Try adjusting your search terms or filters.` : "No items match your current filters. Try broadening your search criteria."}
       icon={Search}
       action={{ label: "Clear Filters", onClick: () => window.location.reload() }}
-      secondary={{ label: "Browse All", href: "/packages" }}
     />
   ),
 
   UserProfile: () => (
     <EmptyState
       title="Complete your profile"
-      description="Tell us about your business to unlock personalized recommendations and better AI assistance."
+      description="Update your account information to improve your experience."
       icon={FileText}
-      action={{ label: "Complete Profile", href: "/dashboard?tab=profile" }}
-      secondary={{ label: "Skip for Now", href: "/packages" }}
+      action={{ label: "Complete Profile", href: "/profile" }}
     />
   )
 };

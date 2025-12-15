@@ -8,6 +8,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   companyName?: string;
+  phone?: string;
   isEmailVerified: boolean;
   emailVerificationToken?: string;
   passwordResetToken?: string;

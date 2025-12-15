@@ -24,6 +24,7 @@ export interface AuthUser {
   firstName?: string;
   lastName?: string;
   companyName?: string;
+  phone?: string;
   isEmailVerified: boolean;
   isAdmin?: boolean; // Keep for backward compatibility
   role?: UserRole; // New role-based system
@@ -92,6 +93,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         companyName: user.companyName,
+        phone: user.phone,
         isEmailVerified: user.isEmailVerified,
         isAdmin, // Keep for backward compatibility
         role: userPermissions?.role || user.role || (isAdmin ? 'admin' : 'standard'),
@@ -108,6 +110,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         companyName: user.companyName,
+        phone: user.phone,
         isEmailVerified: user.isEmailVerified,
         isAdmin: false,
         role: 'standard',
@@ -448,13 +451,20 @@ export class AuthService {
   }
 
   // Update user profile
-  async updateProfile(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'companyName'>>): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+  async updateProfile(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName' | 'companyName' | 'phone'>>): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
     try {
+      // Filter out undefined values
+      const cleanUpdates: Record<string, any> = {};
+      if (updates.firstName !== undefined) cleanUpdates.firstName = updates.firstName;
+      if (updates.lastName !== undefined) cleanUpdates.lastName = updates.lastName;
+      if (updates.companyName !== undefined) cleanUpdates.companyName = updates.companyName;
+      if (updates.phone !== undefined) cleanUpdates.phone = updates.phone;
+
       const result = await this.usersCollection.updateOne(
         { _id: new ObjectId(userId) },
         {
           $set: {
-            ...updates,
+            ...cleanUpdates,
             updatedAt: new Date()
           }
         }
@@ -468,6 +478,48 @@ export class AuthService {
       return { success: true, user: updatedUser || undefined };
     } catch (error) {
       return { success: false, error: 'Failed to update profile' };
+    }
+  }
+
+  // Change password (requires current password verification)
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get user with password hash
+      const user = await this.usersCollection.findOne({ _id: new ObjectId(userId) });
+      
+      if (!user) {
+        return { success: false, error: 'User not found' };
+      }
+
+      // Verify current password
+      const isValidPassword = await this.verifyPassword(currentPassword, user.passwordHash);
+      if (!isValidPassword) {
+        return { success: false, error: 'Current password is incorrect' };
+      }
+
+      // Validate new password
+      if (newPassword.length < 6) {
+        return { success: false, error: 'New password must be at least 6 characters long' };
+      }
+
+      // Hash new password
+      const newPasswordHash = await this.hashPassword(newPassword);
+
+      // Update password
+      await this.usersCollection.updateOne(
+        { _id: new ObjectId(userId) },
+        {
+          $set: {
+            passwordHash: newPasswordHash,
+            updatedAt: new Date()
+          }
+        }
+      );
+
+      return { success: true };
+    } catch (error) {
+      logger.error('Error changing password:', error);
+      return { success: false, error: 'Failed to change password' };
     }
   }
 }

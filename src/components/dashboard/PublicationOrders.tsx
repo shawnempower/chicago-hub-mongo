@@ -49,12 +49,12 @@ export function PublicationOrders() {
     { value: 'delivered', label: 'Delivered' },
   ] as const;
 
-  // Fetch orders
+  // Fetch orders when publication changes
   useEffect(() => {
     if (selectedPublication) {
       fetchOrders();
     }
-  }, [selectedPublication]);
+  }, [selectedPublication?.publicationId]);
 
   useEffect(() => {
     if (statusPopoverOpen) {

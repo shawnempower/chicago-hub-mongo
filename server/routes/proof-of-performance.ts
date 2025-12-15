@@ -6,6 +6,7 @@
 
 import { Router, Request, Response } from 'express';
 import { ObjectId } from 'mongodb';
+import multer from 'multer';
 import { authenticateToken } from '../middleware/authenticate';
 import { getDatabase } from '../../src/integrations/mongodb/client';
 import { COLLECTIONS } from '../../src/integrations/mongodb/schemas';
@@ -18,9 +19,36 @@ import {
   VerificationStatus,
   MAX_FILE_SIZE
 } from '../../src/integrations/mongodb/proofOfPerformanceSchema';
-import { s3Service } from '../s3Service';
+import { fileStorage } from '../storage/fileStorage';
 
 const router = Router();
+
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: MAX_FILE_SIZE // Use schema's max file size (50MB)
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images, PDFs for tearsheets/proofs
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'audio/mpeg',
+      'audio/wav',
+      'audio/mp4',
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type ${file.mimetype} not allowed for proof of performance`));
+    }
+  }
+});
 
 // All routes require authentication
 router.use(authenticateToken);
@@ -248,38 +276,49 @@ router.post('/', async (req: any, res: Response) => {
 });
 
 /**
- * POST /api/proof-of-performance/presigned-url
- * Get a presigned URL for direct S3 upload
+ * POST /api/proof-of-performance/upload
+ * Upload a proof file through the server (avoids CORS issues)
  */
-router.post('/presigned-url', async (req: any, res: Response) => {
+router.post('/upload', upload.single('file'), async (req: any, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
-    const { fileName, contentType, orderId, campaignId } = req.body;
-    
-    if (!fileName || !contentType) {
-      return res.status(400).json({ error: 'fileName and contentType are required' });
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
     }
     
-    // Generate unique S3 key
-    const timestamp = Date.now();
-    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const s3Key = `proof-of-performance/${campaignId || 'unknown'}/${orderId || 'unknown'}/${timestamp}_${sanitizedFileName}`;
+    const { orderId, campaignId } = req.body;
     
-    // Get presigned URL
-    const { uploadUrl, fileUrl } = await s3Service.getPresignedUploadUrl(s3Key, contentType);
+    // Upload file to storage (uses S3 via fileStorage)
+    const uploadResult = await fileStorage.uploadFile(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+      { 
+        category: 'proof-of-performance',
+        subPath: `${campaignId || 'unknown'}/${orderId || 'unknown'}`
+      }
+    );
     
-    res.json({ 
-      uploadUrl, 
-      fileUrl,
-      s3Key 
+    if (!uploadResult.success) {
+      return res.status(400).json({ error: uploadResult.error });
+    }
+    
+    res.json({
+      success: true,
+      fileName: uploadResult.originalFileName,
+      fileUrl: uploadResult.fileUrl,
+      s3Key: uploadResult.storagePath,
+      fileSize: uploadResult.fileSize,
+      mimeType: uploadResult.fileType,
     });
   } catch (error) {
-    console.error('Error generating presigned URL:', error);
-    res.status(500).json({ error: 'Failed to generate upload URL' });
+    console.error('Error uploading proof file:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
   }
 });
 

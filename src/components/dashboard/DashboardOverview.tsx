@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { calculateRevenue } from '@/utils/pricingCalculations';
 import { PublicationDataQuality, calculateDataQuality } from '@/components/admin/PublicationDataQuality';
+import { PublicationActionCenter } from './PublicationActionCenter';
 import { useMemo, useRef, useState, useEffect } from "react";
 import { getPublicationActivities, UserInteraction } from '@/api/activities';
 import { formatDistanceToNow } from 'date-fns';
@@ -581,6 +582,19 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Action Center - What do you need to do? */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-sans text-base">
+            <Calendar className="h-5 w-5" />
+            Your Action Items
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PublicationActionCenter limit={5} compact />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}

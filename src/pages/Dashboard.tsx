@@ -17,7 +17,7 @@ import { usePublication } from "@/contexts/PublicationContext";
 import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
-  User, 
+  Newspaper, 
   Package, 
   Settings, 
   Store, 
@@ -40,7 +40,7 @@ export default function Dashboard() {
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'profile', label: 'Publication', icon: Newspaper },
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'orders', label: 'Orders', icon: FileText },
@@ -85,7 +85,6 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header 
-        onAssistantClick={() => {}} // Assistant is now a floating widget
         onSurveyClick={() => setIsSurveyOpen(true)} 
         showDashboardNav={true}
       />

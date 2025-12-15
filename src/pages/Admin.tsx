@@ -11,7 +11,6 @@ const Admin = () => {
     <AdminRoute>
       <div className="min-h-screen bg-background">
         <Header 
-          onAssistantClick={() => {}} // Assistant is now a floating widget
           onSurveyClick={() => setIsSurveyOpen(true)}
           showDashboardNav={false}
         />

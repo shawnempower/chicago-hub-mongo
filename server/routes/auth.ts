@@ -214,13 +214,14 @@ router.get('/profile', authenticateToken, async (req: any, res: Response) => {
 // Update profile
 router.put('/profile', authenticateToken, async (req: any, res: Response) => {
   try {
-    const { firstName, lastName, companyName } = req.body;
+    const { firstName, lastName, companyName, phone } = req.body;
     const userId = req.user.id;
 
     const result = await authService.updateProfile(userId, {
       firstName,
       lastName,
-      companyName
+      companyName,
+      phone
     });
 
     if (result.error) {
@@ -230,6 +231,33 @@ router.put('/profile', authenticateToken, async (req: any, res: Response) => {
     res.json({ user: result.user });
   } catch (error) {
     console.error('Profile update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Change password (requires current password verification)
+router.post('/change-password', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+    }
+
+    const result = await authService.changePassword(userId, currentPassword, newPassword);
+
+    if (result.error) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -101,11 +101,12 @@ export const PublicationStorefront: React.FC = () => {
   // Check if subdomain is configured (either was already configured or just successfully configured)
   const subdomainConfigured = subdomainStatus?.success === true;
 
+  // Load storefront config when publication changes
   useEffect(() => {
     if (selectedPublication) {
       loadStorefrontConfig();
     }
-  }, [selectedPublication]);
+  }, [selectedPublication?.publicationId]);
 
   const loadStorefrontConfig = async () => {
     if (!selectedPublication?.publicationId) return;

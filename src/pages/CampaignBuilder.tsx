@@ -626,7 +626,6 @@ export default function CampaignBuilder() {
     <ProtectedRoute>
       <div className="min-h-screen bg-background">
         <Header 
-          onAssistantClick={() => {}}
           onSurveyClick={() => {}}
           showDashboardNav={true}
         />

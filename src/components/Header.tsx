@@ -10,12 +10,11 @@ import { HubSelector } from "@/components/HubSelector";
 import { NotificationBell } from "@/components/NotificationBell";
 
 interface HeaderProps {
-  onAssistantClick: () => void;
   onSurveyClick: () => void;
   showDashboardNav?: boolean;
 }
 
-export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = false }: HeaderProps) {
+export function Header({ onSurveyClick, showDashboardNav = false }: HeaderProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -37,7 +36,7 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
     <header className="sticky top-0 z-40 backdrop-blur-[20px] border-b border-border" style={{ backgroundColor: 'hsl(42 30% 95% / 0.3)' }}>
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-8">
-          <Link to="/" className="hover:opacity-80 transition-opacity">
+          <Link to="/dashboard" className="hover:opacity-80 transition-opacity">
             <img 
               src={empowerLogo} 
               alt="Chicago Media Hub" 
@@ -100,7 +99,7 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
               )}
             </div>
           ) : (
-            /* Regular navigation for landing page */
+            /* Navigation when not in dashboard mode */
             <nav className="hidden md:flex items-center space-x-6 text-sm">
               {user && (
                 <Link 
@@ -114,26 +113,6 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
                   Dashboard
                 </Link>
               )}
-              <Link 
-                to="/partners" 
-                className={`transition-colors ${
-                  location.pathname === '/partners' 
-                    ? 'text-primary font-medium' 
-                    : 'text-muted-foreground hover:text-primary'
-                }`}
-              >
-                Media Partners
-              </Link>
-              <Link 
-                to="/packages" 
-                className={`transition-colors ${
-                  location.pathname === '/packages' 
-                    ? 'text-primary font-medium' 
-                    : 'text-muted-foreground hover:text-primary'
-                }`}
-              >
-                Ad Packages
-              </Link>
             </nav>
           )}
         </div>
@@ -169,10 +148,7 @@ export function Header({ onAssistantClick, onSurveyClick, showDashboardNav = fal
                   <Link to="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/dashboard?tab=profile">Profile Settings</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/dashboard?tab=saved">Saved Items</Link>
+                  <Link to="/profile">Account Settings</Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem asChild>

@@ -67,7 +67,7 @@ export const PublicationKnowledgeBase: React.FC = () => {
     } else {
       setFiles([]);
     }
-  }, [selectedPublication]);
+  }, [selectedPublication?._id]);
 
   const loadFiles = async () => {
     if (!selectedPublication?._id) return;

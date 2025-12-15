@@ -43,11 +43,12 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
   // Track which durations are in custom mode (by ad identifier)
   const [customDurationMode, setCustomDurationMode] = useState<Record<string, boolean>>({});
 
+  // Reset form data when publication changes
   useEffect(() => {
     if (selectedPublication) {
       setFormData(selectedPublication);
     }
-  }, [selectedPublication]);
+  }, [selectedPublication?.publicationId]);
 
   if (!selectedPublication) {
     return (

@@ -3,18 +3,19 @@
  * 
  * Displays campaign-level metrics, pacing, and breakdowns by publication/channel.
  * Used by hub admins to monitor overall campaign delivery.
+ * Separates digital (tracked) vs offline (self-reported) metrics for clarity.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -23,21 +24,24 @@ import {
   Eye, 
   Loader2,
   CalendarIcon,
-  Download,
   RefreshCw,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Wifi,
+  WifiOff,
+  Newspaper,
+  Radio,
+  Mic,
 } from 'lucide-react';
-import { format, subDays, differenceInDays } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { API_BASE_URL } from '@/config/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { 
   PacingStatus, 
   PACING_STATUS_LABELS, 
-  PACING_STATUS_COLORS,
-  getDateRange
 } from '@/integrations/mongodb/dailyAggregateSchema';
+import { isDigitalChannel, getChannelConfig } from '@/config/inventoryChannels';
 
 interface CampaignPerformanceDashboardProps {
   campaignId: string;
@@ -194,6 +198,68 @@ export function CampaignPerformanceDashboard({
     return colors[channel] || 'bg-gray-500';
   };
 
+  // Separate channels into digital (tracked) and offline (self-reported)
+  const { digitalChannels, offlineChannels, digitalTotals, offlineTotals } = useMemo(() => {
+    if (!summary) {
+      return { 
+        digitalChannels: [], 
+        offlineChannels: [], 
+        digitalTotals: { impressions: 0, clicks: 0, ctr: 0 },
+        offlineTotals: { insertions: 0, spotsAired: 0, downloads: 0, reach: 0, circulation: 0 }
+      };
+    }
+
+    const digital = summary.byChannel.filter(c => isDigitalChannel(c.channel));
+    const offline = summary.byChannel.filter(c => !isDigitalChannel(c.channel));
+
+    const digitalTotals = {
+      impressions: digital.reduce((sum, c) => sum + c.impressions, 0),
+      clicks: digital.reduce((sum, c) => sum + c.clicks, 0),
+      ctr: 0,
+    };
+    digitalTotals.ctr = digitalTotals.impressions > 0 
+      ? (digitalTotals.clicks / digitalTotals.impressions) * 100 
+      : 0;
+
+    const offlineTotals = {
+      insertions: summary.totals.insertions || 0,
+      spotsAired: summary.totals.spotsAired || 0,
+      downloads: summary.totals.downloads || 0,
+      reach: offline.reduce((sum, c) => sum + c.reach, 0),
+      circulation: offline.reduce((sum, c) => sum + c.units, 0),
+    };
+
+    return { digitalChannels: digital, offlineChannels: offline, digitalTotals, offlineTotals };
+  }, [summary]);
+
+  const getChannelIcon = (channel: string) => {
+    switch (channel) {
+      case 'print': return <Newspaper className="w-3.5 h-3.5" />;
+      case 'radio': return <Radio className="w-3.5 h-3.5" />;
+      case 'podcast': return <Mic className="w-3.5 h-3.5" />;
+      default: return null;
+    }
+  };
+
+  const getDataSourceBadge = (channel: string) => {
+    const isDigital = isDigitalChannel(channel);
+    return (
+      <Badge 
+        variant="outline" 
+        className={cn(
+          "text-[10px] ml-2",
+          isDigital ? "border-blue-300 text-blue-600" : "border-amber-300 text-amber-600"
+        )}
+      >
+        {isDigital ? (
+          <><Wifi className="w-2.5 h-2.5 mr-1" />Tracked</>
+        ) : (
+          <><WifiOff className="w-2.5 h-2.5 mr-1" />Self-Reported</>
+        )}
+      </Badge>
+    );
+  };
+
   if (loading) {
     return (
       <Card>
@@ -235,13 +301,117 @@ export function CampaignPerformanceDashboard({
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Performance by Data Source */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Digital Channels (Tracked) */}
+        <Card className="border-blue-200 bg-blue-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wifi className="w-4 h-4 text-blue-600" />
+              Digital Channels
+              <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-600">Tracked</Badge>
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Automatically tracked via pixels/scripts
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Impressions</p>
+                <p className="text-xl font-bold">{digitalTotals.impressions.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Clicks</p>
+                <p className="text-xl font-bold">{digitalTotals.clicks.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">CTR</p>
+                <p className="text-xl font-bold">{digitalTotals.ctr.toFixed(2)}%</p>
+              </div>
+            </div>
+            {digitalChannels.length > 0 && (
+              <div className="mt-3 pt-3 border-t">
+                <p className="text-xs text-muted-foreground mb-2">Channels:</p>
+                <div className="flex flex-wrap gap-1">
+                  {digitalChannels.map(c => (
+                    <Badge key={c.channel} variant="secondary" className="text-xs capitalize">
+                      {getChannelConfig(c.channel).icon} {c.channel}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Offline Channels (Self-Reported) */}
+        <Card className="border-amber-200 bg-amber-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <WifiOff className="w-4 h-4 text-amber-600" />
+              Offline Channels
+              <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600">Self-Reported</Badge>
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Reported by publications with proof
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              {offlineTotals.insertions > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Print Insertions</p>
+                  <p className="text-xl font-bold">{offlineTotals.insertions.toLocaleString()}</p>
+                </div>
+              )}
+              {offlineTotals.spotsAired > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Radio Spots</p>
+                  <p className="text-xl font-bold">{offlineTotals.spotsAired.toLocaleString()}</p>
+                </div>
+              )}
+              {offlineTotals.downloads > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Podcast Downloads</p>
+                  <p className="text-xl font-bold">{offlineTotals.downloads.toLocaleString()}</p>
+                </div>
+              )}
+              {offlineTotals.reach > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Est. Reach</p>
+                  <p className="text-xl font-bold">{offlineTotals.reach.toLocaleString()}</p>
+                </div>
+              )}
+              {offlineTotals.insertions === 0 && offlineTotals.spotsAired === 0 && offlineTotals.downloads === 0 && (
+                <div className="col-span-3 text-center py-2 text-muted-foreground text-sm">
+                  No offline data reported yet
+                </div>
+              )}
+            </div>
+            {offlineChannels.length > 0 && (
+              <div className="mt-3 pt-3 border-t">
+                <p className="text-xs text-muted-foreground mb-2">Channels:</p>
+                <div className="flex flex-wrap gap-1">
+                  {offlineChannels.map(c => (
+                    <Badge key={c.channel} variant="secondary" className="text-xs capitalize">
+                      {getChannelConfig(c.channel).icon} {c.channel}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Combined Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Impressions</p>
+                <p className="text-sm text-muted-foreground">Total Impressions</p>
                 <p className="text-2xl font-bold">{summary.totals.impressions.toLocaleString()}</p>
               </div>
               <Eye className="w-8 h-8 text-muted-foreground opacity-50" />
@@ -253,7 +423,7 @@ export function CampaignPerformanceDashboard({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Clicks</p>
+                <p className="text-sm text-muted-foreground">Total Clicks</p>
                 <p className="text-2xl font-bold">{summary.totals.clicks.toLocaleString()}</p>
               </div>
               <MousePointerClick className="w-8 h-8 text-muted-foreground opacity-50" />
@@ -265,7 +435,7 @@ export function CampaignPerformanceDashboard({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">CTR</p>
+                <p className="text-sm text-muted-foreground">Overall CTR</p>
                 <p className="text-2xl font-bold">{summary.totals.ctr?.toFixed(2) || '0.00'}%</p>
               </div>
               <TrendingUp className="w-8 h-8 text-muted-foreground opacity-50" />
@@ -357,32 +527,37 @@ export function CampaignPerformanceDashboard({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {summary.byChannel.map((channel) => (
-                      <TableRow key={channel.channel}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className={cn("w-3 h-3 rounded-full", getChannelColor(channel.channel))} />
-                            <span className="capitalize font-medium">{channel.channel}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">{channel.entries}</TableCell>
-                        <TableCell className="text-right font-mono">
-                          {channel.impressions.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {channel.clicks.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {channel.ctr?.toFixed(2) || '0.00'}%
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {channel.reach.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {channel.units.toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {summary.byChannel.map((channel) => {
+                      const config = getChannelConfig(channel.channel);
+                      const isDigital = isDigitalChannel(channel.channel);
+                      return (
+                        <TableRow key={channel.channel}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className={cn("w-3 h-3 rounded-full", getChannelColor(channel.channel))} />
+                              <span className="capitalize font-medium">{channel.channel}</span>
+                              {getDataSourceBadge(channel.channel)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">{channel.entries}</TableCell>
+                          <TableCell className="text-right font-mono">
+                            {channel.impressions.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {channel.clicks.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {channel.ctr?.toFixed(2) || '0.00'}%
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {channel.reach.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {channel.units.toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}

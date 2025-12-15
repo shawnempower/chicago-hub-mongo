@@ -15,7 +15,7 @@ const getAuthHeaders = (): HeadersInit => {
   };
 };
 
-export const profilesApi = {
+export const userProfilesApi = {
   // Get user profile
   async getProfile(): Promise<UserProfile | null> {
     try {
@@ -57,4 +57,3 @@ export const profilesApi = {
     }
   },
 };
-
