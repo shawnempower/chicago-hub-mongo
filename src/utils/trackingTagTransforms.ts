@@ -31,6 +31,12 @@ export const AD_SERVER_MACROS: Record<PublicationAdServer, {
     cacheBuster: '[timestamp]',
     instructions: 'Paste this tag into a Custom HTML ad in Broadstreet. Click tracking is handled automatically.'
   },
+  adbutler: {
+    name: 'AdButler',
+    clickMacro: '[TRACKING_LINK]',
+    cacheBuster: '[RANDOM]',
+    instructions: 'Paste this tag into a Third-Party / Custom HTML zone in AdButler. Click tracking uses the [TRACKING_LINK] macro.'
+  },
   direct: {
     name: 'Direct / No Ad Server',
     clickMacro: '', // No wrapper needed
@@ -306,6 +312,7 @@ export function getAdServerOptions(): Array<{ value: PublicationAdServer; label:
   return [
     { value: 'gam', label: 'Google Ad Manager (GAM)' },
     { value: 'broadstreet', label: 'Broadstreet' },
+    { value: 'adbutler', label: 'AdButler' },
     { value: 'direct', label: 'Direct / No Ad Server' }
   ];
 }

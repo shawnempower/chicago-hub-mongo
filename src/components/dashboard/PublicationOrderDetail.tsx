@@ -1612,19 +1612,19 @@ export function PublicationOrderDetail() {
                                             
                                             // Web/Display: Show configured platform first, then others
                                             // Order tabs so configured platform is first
-                                            const tabOrder: PublicationAdServer[] = configuredAdServer === 'gam' 
-                                              ? ['gam', 'broadstreet', 'direct']
-                                              : configuredAdServer === 'broadstreet'
-                                                ? ['broadstreet', 'gam', 'direct']
-                                                : ['direct', 'gam', 'broadstreet'];
+                                            const allServers: PublicationAdServer[] = ['gam', 'broadstreet', 'adbutler', 'direct'];
+                                            const tabOrder: PublicationAdServer[] = [
+                                              configuredAdServer,
+                                              ...allServers.filter(s => s !== configuredAdServer)
+                                            ];
                                             
                                             return (
                                               <Tabs defaultValue={configuredAdServer} className="w-full">
-                                                <TabsList className="grid w-full grid-cols-3 h-8">
+                                                <TabsList className="grid w-full grid-cols-4 h-8">
                                                   {tabOrder.map(server => (
                                                     <TabsTrigger key={server} value={server} className="text-xs">
                                                       {server === configuredAdServer && <Check className="h-3 w-3 mr-1" />}
-                                                      {server === 'gam' ? 'GAM' : server === 'broadstreet' ? 'Broadstreet' : 'Direct'}
+                                                      {server === 'gam' ? 'GAM' : server === 'broadstreet' ? 'Broadstreet' : server === 'adbutler' ? 'AdButler' : 'Direct'}
                                                     </TabsTrigger>
                                                   ))}
                                                 </TabsList>
@@ -1666,6 +1666,26 @@ export function PublicationOrderDetail() {
                                                   <p className="text-xs text-muted-foreground mt-1">
                                                     {configuredAdServer === 'broadstreet' && '✓ Your configured platform. '}
                                                     Uses {'{{click}}'} and [timestamp] macros.
+                                                  </p>
+                                                </TabsContent>
+
+                                                <TabsContent value="adbutler" className="mt-2">
+                                                  <div className="relative">
+                                                    <pre className="p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto max-h-32">
+                                                      <code>{transformForAdServer(script.tags.fullTag, 'adbutler', script.creative.clickUrl)}</code>
+                                                    </pre>
+                                                    <Button
+                                                      size="sm"
+                                                      variant="ghost"
+                                                      className="absolute top-1 right-1 h-6 px-2 bg-gray-800 hover:bg-gray-700 text-gray-300"
+                                                      onClick={() => handleCopyScript(transformForAdServer(script.tags.fullTag, 'adbutler', script.creative.clickUrl), `${script._id}-adbutler`)}
+                                                    >
+                                                      {copiedScriptId === `${script._id}-adbutler` ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                                                    </Button>
+                                                  </div>
+                                                  <p className="text-xs text-muted-foreground mt-1">
+                                                    {configuredAdServer === 'adbutler' && '✓ Your configured platform. '}
+                                                    Uses [TRACKING_LINK] and [RANDOM] macros.
                                                   </p>
                                                 </TabsContent>
 

@@ -411,9 +411,10 @@ export function TrackingScriptGenerator({
                     // Web/Display: Show Ad Server format tabs
                     return (
                       <Tabs defaultValue="gam" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4">
+                        <TabsList className="grid w-full grid-cols-5">
                           <TabsTrigger value="gam">GAM</TabsTrigger>
                           <TabsTrigger value="broadstreet">Broadstreet</TabsTrigger>
+                          <TabsTrigger value="adbutler">AdButler</TabsTrigger>
                           <TabsTrigger value="direct">Direct</TabsTrigger>
                           <TabsTrigger value="urls">URLs</TabsTrigger>
                         </TabsList>
@@ -453,6 +454,25 @@ export function TrackingScriptGenerator({
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
                             For Broadstreet. Uses {'{{click}}'} and [timestamp] macros.
+                          </p>
+                        </TabsContent>
+                        
+                        <TabsContent value="adbutler" className="mt-4">
+                          <div className="relative">
+                            <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
+                              <code>{transformForAdServer(script.tags.fullTag, 'adbutler', script.creative.clickUrl)}</code>
+                            </pre>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="absolute top-2 right-2"
+                              onClick={() => handleCopy(transformForAdServer(script.tags.fullTag, 'adbutler', script.creative.clickUrl), `${script._id}-adbutler`)}
+                            >
+                              {copiedId === `${script._id}-adbutler` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            For AdButler. Uses [TRACKING_LINK] and [RANDOM] macros.
                           </p>
                         </TabsContent>
                         

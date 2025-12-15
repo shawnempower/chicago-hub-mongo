@@ -26,7 +26,7 @@ export type AccessScope = 'all' | 'hub_level' | 'group_level' | 'individual';
 
 // ===== AD DELIVERY SETTINGS TYPES =====
 // Ad server options for web/display inventory
-export type PublicationAdServer = 'gam' | 'broadstreet' | 'direct';
+export type PublicationAdServer = 'gam' | 'broadstreet' | 'adbutler' | 'direct';
 
 // Email Service Provider options for newsletter inventory
 export type PublicationESP = 
