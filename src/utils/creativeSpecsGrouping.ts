@@ -62,11 +62,15 @@ export interface GroupedCreativeRequirement {
  */
 function generateSpecKey(req: CreativeRequirement): string {
   const channelLower = (req.channel || 'general').toLowerCase();
-  const isWebsite = channelLower === 'website';
   const isAudio = channelLower === 'radio' || channelLower === 'podcast';
   
+  // Combine website and newsletter into "digital_display" since they use the same image assets
+  // when dimensions match (e.g., 300x250 banner works for both website and newsletter)
+  const isDigitalDisplay = channelLower === 'website' || channelLower === 'newsletter';
+  const normalizedChannel = isDigitalDisplay ? 'digital_display' : (req.channel || 'general');
+  
   const parts: string[] = [
-    req.channel || 'general',
+    normalizedChannel,
   ];
   
   // Audio channels: group by duration (15s, 30s, 60s are different creatives)
@@ -89,9 +93,9 @@ function generateSpecKey(req: CreativeRequirement): string {
     parts.push(`dim:${dims}`);
   }
   
-  // For website inventory, dimensions + channel is sufficient for grouping
+  // For digital display (website/newsletter), dimensions is sufficient for grouping
   // Other specs (format, color space) are flexible
-  if (!isWebsite) {
+  if (!isDigitalDisplay) {
     // For non-website (print, etc.), include all specs for strict matching
     
     // File formats

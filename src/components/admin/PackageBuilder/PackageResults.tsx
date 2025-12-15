@@ -51,6 +51,7 @@ interface PackageResultsProps {
   onExportCSV: () => void;
   onUpdatePublications: (publications: HubPackagePublication[]) => void;
   onRefresh?: () => Promise<void>;
+  onFindNewPublications?: (currentPublicationIds: (string | number)[]) => Promise<{ publications: HubPackagePublication[]; count: number; message: string; debug?: { totalInHub: number; alreadyInPackage: number; newBeforeGeoFilter?: number; geographyFilter?: string[] } }>;
   loading?: boolean;
   initialPackageName?: string;
 }
@@ -64,6 +65,7 @@ export function PackageResults({
   onExportCSV,
   onUpdatePublications,
   onRefresh,
+  onFindNewPublications,
   loading,
   initialPackageName = ''
 }: PackageResultsProps) {
@@ -76,6 +78,10 @@ export function PackageResults({
   const [generatingIO, setGeneratingIO] = useState(false);
   const [showRefreshDialog, setShowRefreshDialog] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showNewPubsDialog, setShowNewPubsDialog] = useState(false);
+  const [findingNewPubs, setFindingNewPubs] = useState(false);
+  const [newPublications, setNewPublications] = useState<HubPackagePublication[]>([]);
+  const [selectedNewPubs, setSelectedNewPubs] = useState<Set<string>>(new Set());
   
   // Store original publications to track removed items
   const [originalPublications] = useState<HubPackagePublication[]>(() => 
@@ -168,6 +174,91 @@ export function PackageResults({
       setRefreshing(false);
       setShowRefreshDialog(false);
     }
+  };
+
+  // Handle finding new publications
+  const handleFindNewPublications = async () => {
+    if (!onFindNewPublications) return;
+    
+    setFindingNewPubs(true);
+    try {
+      // Pass the CURRENT publication IDs (from local state, not stale closure)
+      const currentPublicationIds = publications.map(p => p.publicationId);
+      const result = await onFindNewPublications(currentPublicationIds);
+      setNewPublications(result.publications);
+      // Select all by default
+      setSelectedNewPubs(new Set(result.publications.map(p => p.publicationId)));
+      
+      if (result.publications.length === 0) {
+        // Show the message from the API with debug info
+        const debugInfo = result.debug 
+          ? ` (Hub has ${result.debug.totalInHub} publications, ${result.debug.alreadyInPackage} already in package)`
+          : '';
+        toast({
+          title: 'No New Publications',
+          description: (result.message || 'All publications in the hub are already in this package.') + debugInfo,
+        });
+      } else {
+        setShowNewPubsDialog(true);
+      }
+    } catch (error) {
+      console.error('Error finding new publications:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to find new publications',
+        variant: 'destructive'
+      });
+    } finally {
+      setFindingNewPubs(false);
+    }
+  };
+
+  // Handle adding selected new publications to the package
+  const handleAddNewPublications = () => {
+    console.log('[Add New Pubs] Selected IDs:', Array.from(selectedNewPubs));
+    console.log('[Add New Pubs] New publications:', newPublications.map(p => ({ id: p.publicationId, type: typeof p.publicationId, name: p.publicationName })));
+    
+    // Convert to strings for comparison since publicationId might be number or string
+    const selectedIdsAsStrings = new Set(Array.from(selectedNewPubs).map(id => String(id)));
+    const pubsToAdd = newPublications.filter(p => selectedIdsAsStrings.has(String(p.publicationId)));
+    
+    console.log('[Add New Pubs] Pubs to add:', pubsToAdd.length, pubsToAdd.map(p => p.publicationName));
+    
+    if (pubsToAdd.length === 0) {
+      toast({
+        title: 'No Publications Selected',
+        description: 'Please select at least one publication to add.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Merge new publications with existing ones
+    const updatedPublications = [...publications, ...pubsToAdd];
+    console.log('[Add New Pubs] Total publications after merge:', updatedPublications.length);
+    onUpdatePublications(updatedPublications);
+    
+    toast({
+      title: 'Publications Added',
+      description: `Added ${pubsToAdd.length} new publication(s) to the package.`,
+    });
+    
+    setShowNewPubsDialog(false);
+    setNewPublications([]);
+    setSelectedNewPubs(new Set());
+  };
+
+  // Toggle selection of a new publication
+  const toggleNewPubSelection = (publicationId: string) => {
+    setSelectedNewPubs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(publicationId)) {
+        newSet.delete(publicationId);
+      } else {
+        newSet.add(publicationId);
+      }
+      return newSet;
+    });
   };
 
   // Toggle channel expansion
@@ -779,6 +870,22 @@ export function PackageResults({
                 </Button>
               )}
               
+              {onFindNewPublications && (
+                <Button
+                  onClick={handleFindNewPublications}
+                  variant="outline"
+                  size="sm"
+                  disabled={loading || findingNewPubs}
+                  title="Add new publications from the hub"
+                >
+                  {findingNewPubs ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              
               <Button
                 onClick={handleGenerateInsertionOrder}
                 variant="outline"
@@ -1190,6 +1297,95 @@ export function PackageResults({
                 </>
               )}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add New Publications Dialog */}
+      <AlertDialog open={showNewPubsDialog} onOpenChange={setShowNewPubsDialog}>
+        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add New Publications</AlertDialogTitle>
+            <AlertDialogDescription>
+              {newPublications.length > 0 
+                ? `Found ${newPublications.length} new publication(s) that can be added to this package. Select which ones to add:`
+                : 'No new publications found in the hub that match your package filters.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {newPublications.length > 0 && (
+            <div className="flex-1 overflow-y-auto py-4 space-y-2">
+              {/* Select All / None */}
+              <div className="flex gap-2 mb-3 pb-3 border-b">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedNewPubs(new Set(newPublications.map(p => p.publicationId)))}
+                >
+                  Select All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedNewPubs(new Set())}
+                >
+                  Select None
+                </Button>
+                <span className="ml-auto text-sm text-muted-foreground self-center">
+                  {selectedNewPubs.size} of {newPublications.length} selected
+                </span>
+              </div>
+              
+              {/* Publication List */}
+              {newPublications.map((pub) => (
+                <div
+                  key={pub.publicationId}
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                    selectedNewPubs.has(pub.publicationId)
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => toggleNewPubSelection(pub.publicationId)}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedNewPubs.has(pub.publicationId)}
+                      onChange={() => toggleNewPubSelection(pub.publicationId)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium">{pub.publicationName}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {pub.inventoryItems?.length || 0} inventory items • 
+                        ${(pub.publicationTotal || 0).toLocaleString()}/month
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {[...new Set(pub.inventoryItems?.map(item => item.channel) || [])].map(channel => (
+                          <Badge key={channel} variant="secondary" className="text-xs">
+                            {channel}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            {newPublications.length > 0 && (
+              <AlertDialogAction
+                onClick={handleAddNewPublications}
+                disabled={selectedNewPubs.size === 0}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add {selectedNewPubs.size} Publication{selectedNewPubs.size !== 1 ? 's' : ''}
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

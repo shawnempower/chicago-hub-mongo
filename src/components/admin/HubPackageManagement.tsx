@@ -1010,6 +1010,27 @@ export const HubPackageManagement = () => {
             setLoading(false);
           }
         }}
+        onFindNewPublications={async (currentPublicationIds) => {
+          // Find new publications in the hub that aren't in the current package
+          // currentPublicationIds is passed from PackageResults with the CURRENT state
+          
+          const response = await fetch(`${API_BASE_URL}/admin/builder/new-publications`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              hubId: selectedHubId,
+              currentPublicationIds,
+              filters: builderFilters
+            })
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to find new publications');
+          }
+
+          return await response.json();
+        }}
         onUpdatePublications={(publications) => {
           // Recalculate all summary stats
           const monthlyCost = publications.reduce((sum, pub) => sum + (pub.publicationTotal || 0), 0);

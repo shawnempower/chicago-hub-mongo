@@ -8,36 +8,30 @@ interface OrderStatusBadgeProps {
   className?: string;
 }
 
-const statusConfig: Record<OrderStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string }> = {
+const statusConfig: Record<OrderStatus, { label: string; className: string }> = {
   draft: {
     label: 'Draft',
-    variant: 'outline',
-    color: 'text-gray-600'
+    className: 'bg-gray-100 text-gray-700 border-gray-200'
   },
   sent: {
     label: 'Sent',
-    variant: 'secondary',
-    color: 'text-blue-600'
+    className: 'bg-blue-100 text-blue-700 border-blue-200'
   },
   confirmed: {
     label: 'Confirmed',
-    variant: 'default',
-    color: 'text-green-600'
+    className: 'bg-green-100 text-green-700 border-green-200'
   },
   rejected: {
     label: 'Rejected',
-    variant: 'destructive',
-    color: 'text-red-600'
+    className: 'bg-red-100 text-red-700 border-red-200'
   },
   in_production: {
     label: 'In Production',
-    variant: 'default',
-    color: 'text-purple-600'
+    className: 'bg-purple-100 text-purple-700 border-purple-200'
   },
   delivered: {
     label: 'Delivered',
-    variant: 'default',
-    color: 'text-emerald-600'
+    className: 'bg-emerald-100 text-emerald-700 border-emerald-200'
   }
 };
 
@@ -45,7 +39,7 @@ export function OrderStatusBadge({ status, className = '' }: OrderStatusBadgePro
   const config = statusConfig[status];
 
   return (
-    <Badge variant={config.variant} className={`${config.color} ${className}`}>
+    <Badge variant="outline" className={`${config.className} ${className}`}>
       {config.label}
     </Badge>
   );

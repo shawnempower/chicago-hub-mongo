@@ -165,7 +165,7 @@ export function LineItemsTable({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            {Math.round(((item as any).monthlyImpressions * frequency) / 100).toLocaleString()} impressions/mo
+            {Math.round((((item as any).monthlyImpressions || 0) * frequency) / 100).toLocaleString()} impressions/mo
           </p>
         </div>
       );
@@ -230,7 +230,7 @@ export function LineItemsTable({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-gray-700">
-                    ${totalCost.toLocaleString()}/mo
+                    ${(totalCost || 0).toLocaleString()}/mo
                   </span>
                   <Button
                     type="button"
@@ -255,9 +255,9 @@ export function LineItemsTable({
             if (!isExpanded) return null;
             
             const frequency = item.currentFrequency || item.quantity || 1;
-            const unitPrice = item.itemPricing?.hubPrice || 0;
+            const unitPrice = Number(item.itemPricing?.hubPrice) || 0;
             const pricingModel = item.itemPricing?.pricingModel || 'flat';
-            const monthlyCost = calculateItemCost(item, frequency);
+            const monthlyCost = Number(calculateItemCost(item, frequency)) || 0;
             
             const isExcluded = item.isExcluded || false;
             
@@ -299,11 +299,11 @@ export function LineItemsTable({
                     {item.format && Object.keys(item.format).length > 0 && (
                       <div className="flex items-center gap-3 flex-wrap text-xs">
                         {Object.entries(item.format)
-                          .filter(([key, value]) => value)
+                          .filter(([key, value]) => value && typeof value !== 'object')
                           .map(([key, value], idx) => (
                             <span key={idx} className="flex items-center gap-1">
                               <span className="text-gray-400 font-light">{camelToTitleCase(key)}</span>
-                              <span className="text-gray-700 font-normal">{value}</span>
+                              <span className="text-gray-700 font-normal">{String(value)}</span>
                             </span>
                           ))}
                       </div>
@@ -318,7 +318,7 @@ export function LineItemsTable({
                       {getPricingModelLabel(pricingModel)}
                     </Badge>
                     <span className="text-xs text-muted-foreground font-normal">
-                      ${unitPrice.toFixed(2)} / unit
+                      ${(unitPrice || 0).toFixed(2)} / unit
                     </span>
                   </div>
                 </td>
@@ -338,7 +338,7 @@ export function LineItemsTable({
                 {/* Monthly Cost */}
                 <td className="px-4 py-3 text-right w-32">
                   <div className="text-sm font-medium">
-                    ${monthlyCost.toLocaleString()}
+                    ${(monthlyCost || 0).toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground font-normal">
                     /month

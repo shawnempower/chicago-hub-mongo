@@ -10,11 +10,11 @@ import { HubSelector } from "@/components/HubSelector";
 import { NotificationBell } from "@/components/NotificationBell";
 
 interface HeaderProps {
-  onSurveyClick: () => void;
+  onSurveyClick?: () => void;
   showDashboardNav?: boolean;
 }
 
-export function Header({ onSurveyClick, showDashboardNav = false }: HeaderProps) {
+export function Header({ showDashboardNav = false }: HeaderProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -118,16 +118,6 @@ export function Header({ onSurveyClick, showDashboardNav = false }: HeaderProps)
         </div>
         
         <div className="flex items-center space-x-4">
-          {!showDashboardNav && (
-            <Button 
-              variant="outline" 
-              onClick={onSurveyClick}
-              className="hidden sm:inline-flex"
-            >
-              Apply to Network
-            </Button>
-          )}
-          
           {/* Notification Bell - only show for logged in users */}
           {user && <NotificationBell />}
           

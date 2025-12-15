@@ -199,7 +199,132 @@ export class InsertionOrderService {
         .sort({ generatedAt: -1 })
         .toArray();
 
-      return orders as PublicationInsertionOrderWithCampaign[];
+      // Enrich orders with campaign data (selectedInventory, timeline, etc.)
+      if (orders.length === 0) {
+        return [];
+      }
+
+      // Get unique campaign IDs and fetch campaigns
+      const campaignIds = [...new Set(orders.map(o => o.campaignId))];
+      const campaigns = await this.campaignsCollection
+        .find({ campaignId: { $in: campaignIds } })
+        .toArray();
+      
+      const campaignMap = new Map<string, any>();
+      campaigns.forEach(c => campaignMap.set(c.campaignId, c));
+
+      // Get all creative assets for these campaigns to calculate fresh asset status
+      const creativeAssetsCollection = getDatabase().collection(COLLECTIONS.CREATIVE_ASSETS);
+      const allCampaignAssets = await creativeAssetsCollection.find({
+        'associations.campaignId': { $in: campaignIds },
+        deletedAt: { $exists: false }
+      }).toArray();
+
+      // Group assets by campaign
+      const assetsByCampaign = new Map<string, any[]>();
+      allCampaignAssets.forEach((asset: any) => {
+        const cid = asset.associations?.campaignId;
+        if (cid) {
+          if (!assetsByCampaign.has(cid)) {
+            assetsByCampaign.set(cid, []);
+          }
+          assetsByCampaign.get(cid)!.push(asset);
+        }
+      });
+
+      // Enrich each order with campaign data and fresh asset status
+      return orders.map(order => {
+        const campaign = campaignMap.get(order.campaignId);
+        const campaignAssets = assetsByCampaign.get(order.campaignId) || [];
+        
+        // Calculate fresh asset status by checking each placement
+        const pub = campaign?.selectedInventory?.publications?.find(
+          (p: any) => String(p.publicationId) === String(order.publicationId)
+        );
+        const inventoryItems = pub?.inventoryItems || [];
+        const totalPlacements = inventoryItems.length;
+        
+        // Helper to normalize channel for matching (website/newsletter are both digital_display)
+        const normalizeChannel = (ch: string) => {
+          const lower = (ch || 'general').toLowerCase();
+          return (lower === 'website' || lower === 'newsletter') ? 'digital_display' : lower;
+        };
+        
+        let placementsWithAssets = 0;
+        for (const item of inventoryItems) {
+          const itemChannel = item.channel || 'general';
+          const itemChannelNorm = normalizeChannel(itemChannel);
+          const itemDimensions = item.format?.dimensions || item.dimensions;
+          const itemSpecGroupId = item.specGroupId;
+          
+          // Check if asset exists using multiple matching strategies
+          const hasAsset = campaignAssets.some((asset: any) => {
+            const assetSpecGroupId = asset.metadata?.specGroupId;
+            const assetChannel = asset.specifications?.channel || asset.metadata?.channel || 'general';
+            const assetChannelNorm = normalizeChannel(assetChannel);
+            const assetDimensions = asset.metadata?.detectedDimensions || 
+                                   asset.specifications?.dimensions || 
+                                   asset.metadata?.dimensions;
+            
+            // Strategy 1: Direct specGroupId match
+            if (assetSpecGroupId && itemSpecGroupId) {
+              if (assetSpecGroupId === itemSpecGroupId) return true;
+            }
+            
+            // Strategy 2: Match by normalized channel + dimensions 
+            // (website and newsletter are treated as same channel for matching)
+            if (assetChannelNorm === itemChannelNorm) {
+              const normItemDims = String(itemDimensions || '').toLowerCase().replace(/\s/g, '');
+              const normAssetDims = String(assetDimensions || '').toLowerCase().replace(/\s/g, '');
+              if (normItemDims && normAssetDims && normItemDims === normAssetDims) return true;
+            }
+            
+            // Strategy 3: Partial specGroupId match with normalized channel
+            if (assetSpecGroupId) {
+              const assetParts = assetSpecGroupId.split('::');
+              const assetSpecChannel = normalizeChannel(assetParts[0] || '');
+              const assetSpecDims = assetParts.find((p: string) => p.startsWith('dim:'))?.replace('dim:', '');
+              
+              const normItemDims = String(itemDimensions || 'default').toLowerCase().replace(/\s/g, '');
+              const normAssetDims = String(assetSpecDims || '').toLowerCase().replace(/\s/g, '');
+              
+              if (assetSpecChannel === itemChannelNorm && normItemDims === normAssetDims) return true;
+            }
+            
+            return false;
+          });
+          
+          if (hasAsset) {
+            placementsWithAssets++;
+          }
+        }
+        
+        const allAssetsReady = placementsWithAssets >= totalPlacements && totalPlacements > 0;
+        
+        // Create fresh asset status
+        const freshAssetStatus = {
+          totalPlacements,
+          placementsWithAssets,
+          allAssetsReady,
+          pendingUpload: totalPlacements > 0 && !allAssetsReady,
+          assetsReadyAt: allAssetsReady ? (order.assetStatus?.assetsReadyAt || new Date()) : undefined,
+          lastAssetUpdateAt: order.assetStatus?.lastAssetUpdateAt
+        };
+        
+        return {
+          ...order,
+          campaignStartDate: campaign?.timeline?.startDate,
+          campaignEndDate: campaign?.timeline?.endDate,
+          // Include campaignData with selectedInventory for Action Center
+          campaignData: campaign ? {
+            name: campaign.basicInfo?.name || campaign.name,
+            timeline: campaign.timeline,
+            selectedInventory: campaign.selectedInventory
+          } : undefined,
+          // Fresh asset status (overrides stale stored value)
+          assetStatus: freshAssetStatus
+        } as PublicationInsertionOrderWithCampaign;
+      });
     } catch (error) {
       console.error('Error fetching publication orders:', error);
       throw error;
@@ -312,21 +437,63 @@ export class InsertionOrderService {
         
         // Calculate fresh asset status based on current assets
         const campaignAssets = assetsByCampaign.get(order.campaignId) || [];
-        const assetReferences = order.assetReferences || [];
-        const totalPlacements = assetReferences.length || pub?.inventoryItems?.length || 0;
+        const inventoryItems = pub?.inventoryItems || [];
+        const totalPlacements = inventoryItems.length;
+        
+        // Helper to normalize channel for matching (website/newsletter are both digital_display)
+        const normalizeChannel = (ch: string) => {
+          const lower = (ch || 'general').toLowerCase();
+          return (lower === 'website' || lower === 'newsletter') ? 'digital_display' : lower;
+        };
         
         let placementsWithAssets = 0;
-        if (assetReferences.length > 0) {
-          // Match assets to placements by specGroupId
-          for (const ref of assetReferences) {
-            const hasAsset = campaignAssets.some((asset: any) => 
-              asset.metadata?.specGroupId === ref.specGroupId
-            );
-            if (hasAsset) placementsWithAssets++;
+        for (const item of inventoryItems) {
+          const itemChannel = item.channel || 'general';
+          const itemChannelNorm = normalizeChannel(itemChannel);
+          const itemDimensions = item.format?.dimensions || item.dimensions;
+          const itemSpecGroupId = item.specGroupId;
+          
+          // Check if asset exists using multiple matching strategies
+          const hasAsset = campaignAssets.some((asset: any) => {
+            const assetSpecGroupId = asset.metadata?.specGroupId;
+            const assetChannel = asset.specifications?.channel || asset.metadata?.channel || 'general';
+            const assetChannelNorm = normalizeChannel(assetChannel);
+            const assetDimensions = asset.metadata?.detectedDimensions || 
+                                   asset.specifications?.dimensions || 
+                                   asset.metadata?.dimensions;
+            
+            // Strategy 1: Direct specGroupId match
+            if (assetSpecGroupId && itemSpecGroupId) {
+              if (assetSpecGroupId === itemSpecGroupId) return true;
+            }
+            
+            // Strategy 2: Match by normalized channel + dimensions
+            if (assetChannelNorm === itemChannelNorm) {
+              const normItemDims = String(itemDimensions || '').toLowerCase().replace(/\s/g, '');
+              const normAssetDims = String(assetDimensions || '').toLowerCase().replace(/\s/g, '');
+              if (normItemDims && normAssetDims && normItemDims === normAssetDims) {
+                return true;
+              }
+            }
+            
+            // Strategy 3: Partial specGroupId match with normalized channel
+            if (assetSpecGroupId) {
+              const assetParts = assetSpecGroupId.split('::');
+              const assetSpecChannel = normalizeChannel(assetParts[0] || '');
+              const assetSpecDims = assetParts.find((p: string) => p.startsWith('dim:'))?.replace('dim:', '');
+              
+              const normItemDims = String(itemDimensions || 'default').toLowerCase().replace(/\s/g, '');
+              const normAssetDims = String(assetSpecDims || '').toLowerCase().replace(/\s/g, '');
+              
+              if (assetSpecChannel === itemChannelNorm && normItemDims === normAssetDims) return true;
+            }
+            
+            return false;
+          });
+          
+          if (hasAsset) {
+            placementsWithAssets++;
           }
-        } else {
-          // Fallback: count total campaign assets as uploaded
-          placementsWithAssets = assetCountMap.get(order.campaignId) || 0;
         }
         
         const allAssetsReady = placementsWithAssets >= totalPlacements && totalPlacements > 0;

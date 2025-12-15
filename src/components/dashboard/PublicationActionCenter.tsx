@@ -44,6 +44,7 @@ type ActionType =
   | 'overdue_report'      // Campaign ended, no results reported
   | 'missing_proof'       // Results submitted but no proof
   | 'needs_acceptance'    // New order waiting for response
+  | 'ready_to_go_live'    // Accepted but not yet marked live
   | 'starting_soon'       // Campaign starts in next 7 days
   | 'ending_soon'         // Campaign ends in next 7 days
   | 'in_progress'         // Currently running
@@ -199,9 +200,9 @@ export function PublicationActionCenter({
       
       const perf = performanceData[orderId] || { entries: [], proofs: [] };
       
-      // Get placements for this order
+      // Get placements for this order - compare as strings to handle type mismatches
       const publication = order.campaignData?.selectedInventory?.publications?.find(
-        p => p.publicationId === order.publicationId
+        p => String(p.publicationId) === String(order.publicationId)
       );
       const placements = publication?.inventoryItems || [];
       
@@ -230,14 +231,76 @@ export function PublicationActionCenter({
         const channel = placement.channel || 'other';
         const isDigital = isDigitalChannel(channel);
         
-        // Skip digital channels - they're tracked automatically
-        if (isDigital) continue;
-        
         const placementStatus = order.placementStatuses?.[itemPath] || 'pending';
         const hasEntry = perf.entries.some((e: any) => e.itemPath === itemPath);
         const hasProof = perf.proofs.some((p: any) => p.itemPath === itemPath || !p.itemPath);
         
-        // Only check placements that are in_production or delivered
+        // Check for accepted placements that should be taken live
+        if (placementStatus === 'accepted') {
+          const isStarted = startDate && isPast(startDate);
+          const startsWithin7Days = startDate && isFuture(startDate) && differenceInDays(startDate, now) <= 7;
+          
+          // Urgent if campaign already started
+          if (isStarted) {
+            items.push({
+              id: `golive-${orderId}-${itemPath}`,
+              type: 'ready_to_go_live',
+              priority: 'urgent',
+              title: `Mark "${placementName}" as live`,
+              subtitle: `${campaignName} • Campaign has started`,
+              campaignId: order.campaignId,
+              campaignName,
+              publicationId: order.publicationId,
+              placementId: itemPath,
+              placementName,
+              channel,
+              actionLabel: 'Go Live',
+              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+            });
+          } else if (startsWithin7Days) {
+            // Soon if starting within 7 days
+            items.push({
+              id: `golive-${orderId}-${itemPath}`,
+              type: 'ready_to_go_live',
+              priority: 'soon',
+              title: `Ready: "${placementName}"`,
+              subtitle: `${campaignName} • Starts ${format(startDate!, 'MMM d')} - mark live when ready`,
+              campaignId: order.campaignId,
+              campaignName,
+              publicationId: order.publicationId,
+              placementId: itemPath,
+              placementName,
+              channel,
+              dueDate: startDate!,
+              actionLabel: 'View',
+              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+            });
+          } else {
+            // Info priority for accepted placements with no imminent start date
+            items.push({
+              id: `golive-${orderId}-${itemPath}`,
+              type: 'ready_to_go_live',
+              priority: 'info',
+              title: `Accepted: "${placementName}"`,
+              subtitle: `${campaignName}${startDate ? ` • Starts ${format(startDate, 'MMM d')}` : ''} - ready to go live`,
+              campaignId: order.campaignId,
+              campaignName,
+              publicationId: order.publicationId,
+              placementId: itemPath,
+              placementName,
+              channel,
+              dueDate: startDate || undefined,
+              actionLabel: 'View',
+              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+            });
+          }
+          continue;
+        }
+        
+        // Skip digital channels for reporting - they're tracked automatically
+        if (isDigital) continue;
+        
+        // Only check placements that are in_production or delivered for reporting
         if (!['in_production', 'delivered'].includes(placementStatus)) continue;
 
         // Check if overdue (campaign ended, no report)
@@ -354,8 +417,9 @@ export function PublicationActionCenter({
   const groupedItems = useMemo(() => {
     const urgent = actionItems.filter(i => i.priority === 'urgent');
     const soon = actionItems.filter(i => i.priority === 'soon');
+    const info = actionItems.filter(i => i.priority === 'info');
     const done = actionItems.filter(i => i.priority === 'done');
-    return { urgent, soon, done };
+    return { urgent, soon, info, done };
   }, [actionItems]);
 
   const handleAction = (item: ActionItem) => {
@@ -379,6 +443,7 @@ export function PublicationActionCenter({
       case 'overdue_report': return <AlertCircle className="w-4 h-4" />;
       case 'missing_proof': return <FileText className="w-4 h-4" />;
       case 'needs_acceptance': return <Inbox className="w-4 h-4" />;
+      case 'ready_to_go_live': return <PlayCircle className="w-4 h-4" />;
       case 'starting_soon': return <PlayCircle className="w-4 h-4" />;
       case 'ending_soon': return <Clock className="w-4 h-4" />;
       case 'completed': return <CheckCircle2 className="w-4 h-4" />;
@@ -398,15 +463,20 @@ export function PublicationActionCenter({
         icon: 'text-amber-600',
         badge: 'bg-amber-100 text-amber-700 border-0',
       };
+      case 'info': return {
+        bg: 'bg-blue-50 border-blue-200',
+        icon: 'text-blue-600',
+        badge: 'bg-blue-100 text-blue-700 border-0',
+      };
       case 'done': return {
         bg: 'bg-green-50 border-green-200',
         icon: 'text-green-600',
         badge: 'bg-green-100 text-green-700 border-0',
       };
       default: return {
-        bg: 'bg-blue-50 border-blue-200',
-        icon: 'text-blue-600',
-        badge: 'bg-blue-100 text-blue-700 border-0',
+        bg: 'bg-gray-50 border-gray-200',
+        icon: 'text-gray-600',
+        badge: 'bg-gray-100 text-gray-700 border-0',
       };
     }
   };
@@ -449,6 +519,7 @@ export function PublicationActionCenter({
               {urgentCount} item{urgentCount !== 1 ? 's' : ''} need{urgentCount === 1 ? 's' : ''} your attention
             </p>
             <p className="text-sm text-red-600">
+              {groupedItems.urgent.some(i => i.type === 'ready_to_go_live') && 'Placements to go live • '}
               {groupedItems.urgent.some(i => i.type === 'overdue_report') && 'Overdue reports • '}
               {groupedItems.urgent.some(i => i.type === 'missing_proof') && 'Missing proofs • '}
               {groupedItems.urgent.some(i => i.type === 'needs_acceptance') && 'Orders to review'}
@@ -489,6 +560,29 @@ export function PublicationActionCenter({
           </h3>
           <div className="space-y-2">
             {groupedItems.soon.map((item) => (
+              <ActionItemCard
+                key={item.id}
+                item={item}
+                onAction={() => handleAction(item)}
+                getChannelIcon={getChannelIcon}
+                getTypeIcon={getTypeIcon}
+                getPriorityStyles={getPriorityStyles}
+                compact={compact}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Ready to Go Live (info priority) */}
+      {groupedItems.info.length > 0 && !compact && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+            <PlayCircle className="w-4 h-4" />
+            Ready to Go Live ({groupedItems.info.length})
+          </h3>
+          <div className="space-y-2">
+            {groupedItems.info.map((item) => (
               <ActionItemCard
                 key={item.id}
                 item={item}

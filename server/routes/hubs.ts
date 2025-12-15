@@ -161,8 +161,8 @@ router.post('/:hubId/publications/bulk', authenticateToken, async (req: any, res
       return res.status(400).json({ error: 'Publication IDs array is required' });
     }
     
-    const result = await HubsService.addPublicationsToHub(hubId, publicationIds);
-    res.json(result);
+    const modifiedCount = await HubsService.bulkAssignPublicationsToHub(publicationIds, hubId);
+    res.json({ success: true, modifiedCount });
   } catch (error) {
     console.error('Error adding publications to hub:', error);
     res.status(500).json({ error: 'Failed to add publications to hub' });
