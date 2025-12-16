@@ -9,7 +9,6 @@ import {
   getStandardFrequency,
   validateFrequency,
   applyFrequencyStrategy,
-  calculateMonthlyCost,
   calculateTotalPackageCost
 } from '@/utils/frequencyEngine';
 import { calculateItemCost } from '@/utils/inventoryPricing';
@@ -651,19 +650,17 @@ export class PackageBuilderService {
 
       // Add one item per channel if budget allows
       for (const [channel, channelItems] of itemsByChannel) {
-        // Sort by price
+        // Sort by price - use calculateItemCost for proper CPM/impression-based pricing
         const sortedItems = channelItems.sort((a, b) => {
-          const priceA = (a.itemPricing?.hubPrice || 0) * (a.currentFrequency || 1);
-          const priceB = (b.itemPricing?.hubPrice || 0) * (b.currentFrequency || 1);
+          const priceA = calculateItemCost(a, a.currentFrequency || 1);
+          const priceB = calculateItemCost(b, b.currentFrequency || 1);
           return priceA - priceB;
         });
 
         // Take the cheapest item from this channel
         const item = sortedItems[0];
-        const itemCost = calculateMonthlyCost(
-          item.itemPricing?.hubPrice || 0,
-          item.currentFrequency || 1
-        );
+        // Use calculateItemCost for proper CPM/impression-based pricing
+        const itemCost = calculateItemCost(item, item.currentFrequency || 1);
 
         if (currentCost + itemCost <= targetBudget) {
           selectedItems.push(item);
@@ -734,11 +731,9 @@ export class PackageBuilderService {
       const items = this.extractInventoryFromPublication(pub, channels, frequencyStrategy);
       
       if (items.length > 0) {
+        // Use calculateItemCost for proper CPM/impression-based pricing
         const pubCost = items.reduce((sum, item) => {
-          return sum + calculateMonthlyCost(
-            item.itemPricing?.hubPrice || 0,
-            item.currentFrequency || 1
-          );
+          return sum + calculateItemCost(item, item.currentFrequency || 1);
         }, 0);
 
         packagePublications.push({
@@ -777,9 +772,10 @@ export class PackageBuilderService {
     
     for (const item of items) {
       const existing = channelItems.get(item.channel);
-      const itemCost = (item.itemPricing?.hubPrice || 0) * (item.currentFrequency || 1);
+      // Use calculateItemCost for proper CPM/impression-based pricing
+      const itemCost = calculateItemCost(item, item.currentFrequency || 1);
       const existingCost = existing 
-        ? (existing.itemPricing?.hubPrice || 0) * (existing.currentFrequency || 1)
+        ? calculateItemCost(existing, existing.currentFrequency || 1)
         : Infinity;
       
       if (itemCost < existingCost) {
@@ -788,10 +784,8 @@ export class PackageBuilderService {
     }
 
     return Array.from(channelItems.values()).reduce((sum, item) => {
-      return sum + calculateMonthlyCost(
-        item.itemPricing?.hubPrice || 0,
-        item.currentFrequency || 1
-      );
+      // Use calculateItemCost for proper CPM/impression-based pricing
+      return sum + calculateItemCost(item, item.currentFrequency || 1);
     }, 0);
   }
 

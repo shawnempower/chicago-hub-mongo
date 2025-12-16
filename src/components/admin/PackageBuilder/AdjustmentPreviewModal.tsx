@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingDown, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
-import { applyFrequencyStrategy, calculateMonthlyCost } from '@/utils/frequencyEngine';
+import { applyFrequencyStrategy } from '@/utils/frequencyEngine';
+import { calculateItemCost } from '@/utils/inventoryPricing';
 
 interface AdjustmentPreviewModalProps {
   open: boolean;
@@ -46,9 +47,11 @@ export function AdjustmentPreviewModal({
         const publicationType = item.publicationFrequencyType || 'custom';
         const toFreq = applyFrequencyStrategy(fromFreq, publicationType, strategy);
         
-        const unitPrice = item.itemPricing?.hubPrice || 0;
-        const fromCost = calculateMonthlyCost(unitPrice, fromFreq);
-        const toCost = calculateMonthlyCost(unitPrice, toFreq);
+        // Use calculateItemCost for proper CPM/impression-based pricing
+        const fromCost = calculateItemCost(item, fromFreq);
+        // Create a temporary item with new frequency for cost calculation
+        const toItem = { ...item, currentFrequency: toFreq };
+        const toCost = calculateItemCost(toItem, toFreq);
         
         beforeCost += fromCost;
         afterCost += toCost;
@@ -72,11 +75,9 @@ export function AdjustmentPreviewModal({
         };
       });
       
+      // Use calculateItemCost for proper CPM/impression-based pricing
       const newTotal = updatedItems.reduce((sum, item) => {
-        return sum + calculateMonthlyCost(
-          item.itemPricing?.hubPrice || 0,
-          item.currentFrequency || item.quantity || 1
-        );
+        return sum + calculateItemCost(item, item.currentFrequency || item.quantity || 1);
       }, 0);
       
       return {

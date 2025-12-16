@@ -123,9 +123,13 @@ export function LineItemsTable({
         { value: 30, label: '30 spots/mo' },
         { value: 22, label: '22 spots/mo' },
         { value: 17, label: '17 spots/mo' },
+        { value: 15, label: '15 spots/mo' },
         { value: 13, label: '13 spots/mo' },
         { value: 9, label: '9 spots/mo' },
+        { value: 7, label: '7 spots/mo' },
+        { value: 5, label: '5 spots/mo' },
         { value: 4, label: '4 spots/mo' },
+        { value: 3, label: '3 spots/mo' },
         { value: 2, label: '2 spots/mo' },
         { value: 1, label: '1 spot/mo' }
       ];
@@ -158,14 +162,30 @@ export function LineItemsTable({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="25">25% of impressions</SelectItem>
-              <SelectItem value="50">50% of impressions</SelectItem>
-              <SelectItem value="75">75% of impressions</SelectItem>
-              <SelectItem value="100">100% of impressions</SelectItem>
+              <SelectItem value="5">5%</SelectItem>
+              <SelectItem value="10">10%</SelectItem>
+              <SelectItem value="15">15%</SelectItem>
+              <SelectItem value="20">20%</SelectItem>
+              <SelectItem value="25">25%</SelectItem>
+              <SelectItem value="30">30%</SelectItem>
+              <SelectItem value="35">35%</SelectItem>
+              <SelectItem value="40">40%</SelectItem>
+              <SelectItem value="45">45%</SelectItem>
+              <SelectItem value="50">50%</SelectItem>
+              <SelectItem value="55">55%</SelectItem>
+              <SelectItem value="60">60%</SelectItem>
+              <SelectItem value="65">65%</SelectItem>
+              <SelectItem value="70">70%</SelectItem>
+              <SelectItem value="75">75%</SelectItem>
+              <SelectItem value="80">80%</SelectItem>
+              <SelectItem value="85">85%</SelectItem>
+              <SelectItem value="90">90%</SelectItem>
+              <SelectItem value="95">95%</SelectItem>
+              <SelectItem value="100">100%</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            {Math.round((((item as any).monthlyImpressions || 0) * frequency) / 100).toLocaleString()} impressions/mo
+            ({Math.round((((item as any).monthlyImpressions || 0) * frequency) / 100).toLocaleString()} of {((item as any).monthlyImpressions || 0).toLocaleString()} impressions/mo)
           </p>
         </div>
       );

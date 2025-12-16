@@ -92,23 +92,19 @@ export function formatInsertionOrderAudience(
   
   const occurrencesPerMonth = performanceMetrics?.occurrencesPerMonth;
   
-  // CPM pricing - show impressions
+  // CPM pricing - show TOTAL impressions (audience size)
   if (pricingModel === 'cpm' && monthlyImpressions) {
-    const purchasedImpressions = Math.round((monthlyImpressions * frequency) / 100);
-    return `${purchasedImpressions.toLocaleString()} impressions/month`;
+    return `${monthlyImpressions.toLocaleString()} impressions/month`;
   }
   
-  // CPV pricing - show views
+  // CPV pricing - show TOTAL views (audience size)
   if (pricingModel === 'cpv' && monthlyImpressions) {
-    const purchasedViews = Math.round((monthlyImpressions * frequency) / 100);
-    return `${purchasedViews.toLocaleString()} views/month`;
+    return `${monthlyImpressions.toLocaleString()} views/month`;
   }
   
-  // CPC pricing - show estimated clicks
+  // CPC pricing - show TOTAL impressions (audience size)
   if (pricingModel === 'cpc' && monthlyImpressions) {
-    const purchasedImpressions = Math.round((monthlyImpressions * frequency) / 100);
-    const estimatedClicks = Math.round(purchasedImpressions * 0.01); // 1% CTR estimate
-    return `~${estimatedClicks.toLocaleString()} clicks/month`;
+    return `${monthlyImpressions.toLocaleString()} impressions/month`;
   }
   
   // Per send/newsletter - show audience size
@@ -118,13 +114,17 @@ export function formatInsertionOrderAudience(
   
   // Per spot/ad - show occurrences or audience
   if ((pricingModel === 'per_spot' || pricingModel === 'per_ad')) {
+    // Use channel-appropriate terms
+    const audienceLabel = getAudienceLabel(item.channel);
+    const unitLabel = item.channel === 'radio' || item.channel === 'podcast' ? 'spots' : 'insertions';
+    
     if (audienceSize) {
-      return `${audienceSize.toLocaleString()} listeners/viewers × ${frequency} spots`;
+      return `${audienceSize.toLocaleString()} ${audienceLabel} × ${frequency} ${unitLabel}`;
     }
     if (occurrencesPerMonth) {
-      return `${frequency} spots/month`;
+      return `${frequency} ${unitLabel}/month`;
     }
-    return `${frequency}× placements/month`;
+    return `${frequency}× ${unitLabel}/month`;
   }
   
   // Per post/story/episode - show audience
@@ -166,7 +166,7 @@ export function formatInsertionOrderAudience(
 function getAudienceLabel(channel: string): string {
   const labels: Record<string, string> = {
     'website': 'monthly visitors',
-    'print': 'circulation',
+    'print': 'readers',
     'newsletter': 'subscribers',
     'email': 'subscribers',
     'social': 'followers',

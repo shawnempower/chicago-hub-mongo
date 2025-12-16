@@ -25,6 +25,8 @@ import {
 import { BuilderFilters, packageBuilderService, PublicationData } from '@/services/packageBuilderService';
 import { useHubContext } from '@/contexts/HubContext';
 import { formatPrice } from '@/utils/pricingCalculations';
+import { calculateItemCost } from '@/utils/inventoryPricing';
+import { HubPackageInventoryItem } from '@/integrations/mongodb/hubPackageSchema';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 
 interface PackageBuilderProps {
@@ -54,7 +56,7 @@ const GEOGRAPHY_OPTIONS = [
   { id: 'Downtown', label: 'Downtown' }
 ];
 
-// Inventory item for display - ONLY uses hub pricing
+// Inventory item for display - extends HubPackageInventoryItem for proper pricing
 interface InventoryDisplay {
   channel: string;
   itemName: string;
@@ -63,6 +65,13 @@ interface InventoryDisplay {
   specifications?: Record<string, unknown>;
   frequency?: number;
   isExcluded?: boolean; // Excluded from package but not deleted
+  // Additional fields needed for proper CPM/impression-based pricing
+  itemPricing?: {
+    hubPrice: number;
+    pricingModel?: string;
+  };
+  monthlyImpressions?: number;
+  currentFrequency?: number;
 }
 
 // Publication with inventory for display
@@ -148,13 +157,17 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                             hubPrice: item.itemPricing?.hubPrice || 0, // Hub pricing only
                             format: item.format || {},
                             frequency: item.currentFrequency || 1,
-                            isExcluded: item.isExcluded || false
+                            isExcluded: item.isExcluded || false,
+                            // Include pricing details for proper CPM calculations
+                            itemPricing: item.itemPricing,
+                            monthlyImpressions: item.monthlyImpressions,
+                            currentFrequency: item.currentFrequency || 1
                           }));
 
                           const totalPrice = inventory
                             .filter(item => !item.isExcluded) // Exclude items marked as excluded
                             .reduce((sum, item) => 
-                              sum + ((item.hubPrice || 0) * (item.frequency || 1)), 0
+                              sum + calculateItemCost(item as HubPackageInventoryItem, item.frequency || 1), 0
                             );
 
           return {
@@ -284,7 +297,7 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
     const pubTotal = (p.inventory || [])
       .filter(item => !item.isExcluded)
       .reduce((itemSum, item) => 
-        itemSum + ((item.hubPrice || 0) * (item.frequency || 1)), 0
+        itemSum + calculateItemCost(item as HubPackageInventoryItem, item.frequency || 1), 0
       );
     return sum + pubTotal;
   }, 0);
@@ -522,7 +535,7 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                                   const channelTotal = items
                                     .filter(item => !item.isExcluded) // Exclude items marked as excluded
                                     .reduce((sum, item) => 
-                                      sum + (item.hubPrice * (item.frequency || 1)), 0
+                                      sum + calculateItemCost(item as HubPackageInventoryItem, item.frequency || 1), 0
                                     );
                                   
                                   // Group items by source (e.g., newsletter name, radio show name)
@@ -581,7 +594,7 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                                           const sourceTotal = sourceItems
                                             .filter(item => !item.isExcluded) // Exclude items marked as excluded
                                             .reduce((sum, item) => 
-                                              sum + (item.hubPrice * (item.frequency || 1)), 0
+                                              sum + calculateItemCost(item as HubPackageInventoryItem, item.frequency || 1), 0
                                             );
                                           
                                           return (

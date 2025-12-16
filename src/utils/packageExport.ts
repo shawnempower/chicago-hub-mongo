@@ -1,4 +1,5 @@
 import { HubPackage, HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
+import { calculateItemCost } from './inventoryPricing';
 
 /**
  * Package Export Utilities
@@ -49,7 +50,8 @@ export function generatePackageCSV(
       
       const frequency = item.currentFrequency || item.quantity || 1;
       const unitPrice = item.itemPricing?.hubPrice || 0;
-      const monthlyCost = unitPrice * frequency;
+      // Use calculateItemCost for proper CPM/impression-based pricing
+      const monthlyCost = calculateItemCost(item, frequency);
       
       totalCost += monthlyCost;
       channelTotals[item.channel] = (channelTotals[item.channel] || 0) + monthlyCost;
@@ -154,8 +156,8 @@ export function generatePackageSummary(
 
     for (const item of pub.inventoryItems) {
       const frequency = item.currentFrequency || item.quantity || 1;
-      const unitPrice = item.itemPricing?.hubPrice || 0;
-      const itemCost = unitPrice * frequency;
+      // Use calculateItemCost for proper CPM/impression-based pricing
+      const itemCost = calculateItemCost(item, frequency);
 
       allChannels.add(item.channel);
       monthlyCost += itemCost;
@@ -240,7 +242,8 @@ export function generateInsertionOrder(packageData: HubPackage): string {
     for (const item of pub.inventoryItems) {
       const frequency = item.currentFrequency || item.quantity || 1;
       const unitPrice = item.itemPricing?.hubPrice || 0;
-      const monthlyCost = unitPrice * frequency;
+      // Use calculateItemCost for proper CPM/impression-based pricing
+      const monthlyCost = calculateItemCost(item, frequency);
 
       rows.push(`  - ${item.itemName}`);
       rows.push(`    Channel: ${item.channel}`);

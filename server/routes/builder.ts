@@ -833,7 +833,8 @@ router.get('/packages/:id/export-csv', authenticateToken, async (req: any, res: 
         
         const frequency = item.currentFrequency || item.quantity || 1;
         const unitPrice = item.itemPricing?.hubPrice || 0;
-        const monthlyCost = unitPrice * frequency;
+        // Use calculateItemCost for proper CPM/impression-based pricing
+        const monthlyCost = calculateItemCost(item, frequency);
         totalCost += monthlyCost;
         
         channelTotals[item.channel] = (channelTotals[item.channel] || 0) + monthlyCost;
