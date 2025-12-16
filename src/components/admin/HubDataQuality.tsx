@@ -81,7 +81,8 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
       };
 
       // Helper to analyze an inventory item
-      const analyzeInventoryItem = (item: any, channel: string, pubName: string) => {
+      // channelFrequency is the parent channel's frequency (e.g., "weekly", "daily")
+      const analyzeInventoryItem = (item: any, channel: string, pubName: string, channelFrequency?: string) => {
         const issues: DataQualityIssue[] = [];
         const itemName = formatItemName(item.name || item.adFormat || 'Unnamed', channel);
         totalItems++;
@@ -139,6 +140,8 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
         }
 
         // Issue 4: Occurrence-based without occurrencesPerMonth
+        // For Radio/Podcast: Always require occurrencesPerMonth (spotsPerShow varies per ad)
+        // For other channels: Accept channelFrequency as fallback (1 ad = 1 occurrence per issue/send)
         const occurrenceModels = ['per_send', 'per_ad', 'per_spot', 'per_post', 'per_episode', 'per_story'];
         if (
           pricingModel && 
@@ -147,15 +150,20 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
           if (!item.performanceMetrics?.occurrencesPerMonth) {
             const isCritical = channel === 'Radio' || channel === 'Podcast';
             
-            issues.push({
-              severity: isCritical ? 'critical' : 'warning',
-              type: isCritical ? 'Missing Performance Metrics' : 'Missing Frequency Data',
-              count: 1,
-              description: isCritical 
-                ? 'occurrencesPerMonth is required - cannot calculate revenue without it'
-                : 'occurrencesPerMonth needed for accurate revenue calculation',
-              items: [itemName]
-            });
+            // For other channels, channelFrequency is a valid fallback since 1 ad = 1 occurrence
+            const hasFrequencyFallback = !isCritical && channelFrequency;
+            
+            if (!hasFrequencyFallback) {
+              issues.push({
+                severity: isCritical ? 'critical' : 'warning',
+                type: isCritical ? 'Missing Performance Metrics' : 'Missing Frequency Data',
+                count: 1,
+                description: isCritical 
+                  ? 'occurrencesPerMonth is required - cannot calculate revenue without it'
+                  : 'occurrencesPerMonth needed for accurate revenue calculation',
+                items: [itemName]
+              });
+            }
           }
         }
 
@@ -496,7 +504,7 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
       if (pub.distributionChannels?.newsletters) {
         pub.distributionChannels.newsletters.forEach((newsletter: any) => {
           newsletter.advertisingOpportunities?.forEach((ad: any) => {
-            const issues = analyzeInventoryItem(ad, 'Newsletter', pubName);
+            const issues = analyzeInventoryItem(ad, 'Newsletter', pubName, newsletter.frequency);
             allIssues.push(...issues);
           });
         });
@@ -510,35 +518,41 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
         
         printArray.forEach((print: any) => {
           print.advertisingOpportunities?.forEach((ad: any) => {
-            const issues = analyzeInventoryItem(ad, 'Print', pubName);
+            // Use print frequency or publication-level fallback
+            const printFrequency = print.frequency || pub.printFrequency;
+            const issues = analyzeInventoryItem(ad, 'Print', pubName, printFrequency);
             allIssues.push(...issues);
           });
         });
       }
 
       // Analyze podcasts
+      // Note: Podcast remains critical because adsPerEpisode can vary per ad
       if (pub.distributionChannels?.podcasts) {
         pub.distributionChannels.podcasts.forEach((podcast: any) => {
           podcast.advertisingOpportunities?.forEach((ad: any) => {
-            const issues = analyzeInventoryItem(ad, 'Podcast', pubName);
+            // Passed but won't be used as fallback since Podcast is marked critical
+            const issues = analyzeInventoryItem(ad, 'Podcast', pubName, podcast.frequency);
             allIssues.push(...issues);
           });
         });
       }
 
       // Analyze radio stations
+      // Note: Radio remains critical because spotsPerShow can vary per ad
       if (pub.distributionChannels?.radioStations) {
         pub.distributionChannels.radioStations.forEach((radio: any) => {
           if (radio.shows && radio.shows.length > 0) {
             radio.shows.forEach((show: any) => {
               show.advertisingOpportunities?.forEach((ad: any) => {
-                const issues = analyzeInventoryItem(ad, 'Radio', pubName);
+                // Passed but won't be used as fallback since Radio is marked critical
+                const issues = analyzeInventoryItem(ad, 'Radio', pubName, show.frequency);
                 allIssues.push(...issues);
               });
             });
           } else if (radio.advertisingOpportunities) {
             radio.advertisingOpportunities.forEach((ad: any) => {
-              const issues = analyzeInventoryItem(ad, 'Radio', pubName);
+              const issues = analyzeInventoryItem(ad, 'Radio', pubName, radio.frequency);
               allIssues.push(...issues);
             });
           }
@@ -591,17 +605,19 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
           
           // Check individual streaming ads
           stream.advertisingOpportunities?.forEach((ad: any) => {
-            const issues = analyzeInventoryItem(ad, 'Streaming', pubName);
+            const issues = analyzeInventoryItem(ad, 'Streaming', pubName, stream.frequency);
             allIssues.push(...issues);
           });
         });
       }
 
       // Analyze social media
+      // Social media typically doesn't have a channel-level frequency
       if (pub.distributionChannels?.socialMedia) {
         pub.distributionChannels.socialMedia.forEach((social: any) => {
           social.advertisingOpportunities?.forEach((ad: any) => {
-            const issues = analyzeInventoryItem(ad, 'Social Media', pubName);
+            // May not exist, ad-level frequency is more common for social
+            const issues = analyzeInventoryItem(ad, 'Social Media', pubName, social.frequency);
             allIssues.push(...issues);
           });
         });
@@ -611,7 +627,7 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
       if (pub.distributionChannels?.events) {
         pub.distributionChannels.events.forEach((event: any) => {
           event.advertisingOpportunities?.forEach((ad: any) => {
-            const issues = analyzeInventoryItem(ad, 'Events', pubName);
+            const issues = analyzeInventoryItem(ad, 'Events', pubName, event.frequency);
             allIssues.push(...issues);
           });
         });

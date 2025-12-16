@@ -74,11 +74,14 @@ function isStandardFormat(dim: string): boolean {
 
 /**
  * Analyzes a single inventory item for data quality issues
+ * @param channelFrequency - Optional frequency string from parent channel (e.g., "weekly", "daily")
+ *                           Used as fallback for occurrence-based pricing when occurrencesPerMonth is not set
  */
 function analyzeInventoryItem(
   item: any,
   channel: string,
-  itemName: string
+  itemName: string,
+  channelFrequency?: string
 ): DataQualityIssue[] {
   const issues: DataQualityIssue[] = [];
   
@@ -131,6 +134,8 @@ function analyzeInventoryItem(
   }
 
   // Issue 4: Occurrence-based without occurrencesPerMonth
+  // For Radio/Podcast: Always require occurrencesPerMonth (spotsPerShow varies per ad)
+  // For other channels: Accept channelFrequency as fallback (1 ad = 1 occurrence per issue/send)
   const occurrenceModels = ['per_send', 'per_ad', 'per_spot', 'per_post', 'per_episode', 'per_story'];
   if (
     defaultPricing.pricingModel && 
@@ -138,18 +143,23 @@ function analyzeInventoryItem(
   ) {
     if (!item.performanceMetrics?.occurrencesPerMonth) {
       // For radio (per_spot) and podcasts (per_episode), missing occurrences is CRITICAL
-      // because show frequency doesn't equal ad occurrences
+      // because show frequency doesn't equal ad occurrences (spotsPerShow multiplier needed)
       const isCritical = channel === 'Radio' || channel === 'Podcast';
       
-      issues.push({
-        severity: isCritical ? 'critical' : 'warning',
-        type: isCritical ? 'Missing Performance Metrics' : 'Missing Frequency Data',
-        count: 1,
-        description: isCritical 
-          ? 'occurrencesPerMonth is required - cannot calculate revenue without it'
-          : 'occurrencesPerMonth needed for accurate revenue calculation',
-        items: [itemName]
-      });
+      // For other channels, channelFrequency is a valid fallback since 1 ad = 1 occurrence
+      const hasFrequencyFallback = !isCritical && channelFrequency;
+      
+      if (!hasFrequencyFallback) {
+        issues.push({
+          severity: isCritical ? 'critical' : 'warning',
+          type: isCritical ? 'Missing Performance Metrics' : 'Missing Frequency Data',
+          count: 1,
+          description: isCritical 
+            ? 'occurrencesPerMonth is required - cannot calculate revenue without it'
+            : 'occurrencesPerMonth needed for accurate revenue calculation',
+          items: [itemName]
+        });
+      }
     }
   }
 
@@ -573,12 +583,13 @@ export function calculateDataQuality(publication: Publication | any): DataQualit
   let completeItems = 0;
 
   // Helper to check all items in a channel
-  const checkChannel = (items: any[], channel: string, getItemName: (item: any) => string) => {
+  // channelFrequency is the parent channel's frequency (e.g., newsletter.frequency, print.frequency)
+  const checkChannel = (items: any[], channel: string, getItemName: (item: any) => string, channelFrequency?: string) => {
     items?.forEach(item => {
       const itemName = getItemName(item);
       totalItems++;
       
-      const itemIssues = analyzeInventoryItem(item, channel, itemName);
+      const itemIssues = analyzeInventoryItem(item, channel, itemName, channelFrequency);
       
       if (itemIssues.length === 0) {
         completeItems++;
@@ -604,7 +615,8 @@ export function calculateDataQuality(publication: Publication | any): DataQualit
     checkChannel(
       newsletter.advertisingOpportunities || [],
       'Newsletter',
-      (item) => `[Newsletter] ${newsletter.name} - ${item.name || 'Unnamed'}`
+      (item) => `[Newsletter] ${newsletter.name} - ${item.name || 'Unnamed'}`,
+      newsletter.frequency
     );
   });
 
@@ -617,25 +629,30 @@ export function calculateDataQuality(publication: Publication | any): DataQualit
     checkChannel(
       print.advertisingOpportunities || [],
       'Print',
-      (item) => `[Print] ${print.name || 'Print'} - ${item.name || 'Unnamed'}`
+      (item) => `[Print] ${print.name || 'Print'} - ${item.name || 'Unnamed'}`,
+      print.frequency || publication.printFrequency  // Use print frequency or publication-level fallback
     );
   });
 
   // Check Podcasts
+  // Note: Podcast remains critical because adsPerEpisode can vary per ad
   channels.podcasts?.forEach(podcast => {
     checkChannel(
       podcast.advertisingOpportunities || [],
       'Podcast',
-      (item) => `[Podcast] ${podcast.name} - ${item.name || 'Unnamed'}`
+      (item) => `[Podcast] ${podcast.name} - ${item.name || 'Unnamed'}`,
+      podcast.frequency  // Passed but won't be used as fallback since Podcast is marked critical
     );
   });
 
   // Check Social Media
+  // Social media typically doesn't have a channel-level frequency, so no fallback
   channels.socialMedia?.forEach(profile => {
     checkChannel(
       profile.advertisingOpportunities || [],
       'Social Media',
-      (item) => `[Social] ${profile.platform} - ${item.name || 'Unnamed'}`
+      (item) => `[Social] ${profile.platform} - ${item.name || 'Unnamed'}`,
+      profile.frequency  // May not exist, ad-level frequency is more common
     );
   });
 
@@ -707,25 +724,29 @@ export function calculateDataQuality(publication: Publication | any): DataQualit
     checkChannel(
       stream.advertisingOpportunities || [],
       'Streaming',
-      (item) => `[Streaming] ${streamName} - ${item.name || 'Unnamed'}`
+      (item) => `[Streaming] ${streamName} - ${item.name || 'Unnamed'}`,
+      stream.frequency
     );
   });
 
   // Check Radio
+  // Note: Radio remains critical because spotsPerShow can vary per ad
   channels.radioStations?.forEach(station => {
     if (station.shows && station.shows.length > 0) {
       station.shows.forEach(show => {
         checkChannel(
           show.advertisingOpportunities || [],
           'Radio',
-          (item) => `[Radio] ${station.callSign} - ${show.name} - ${item.name || 'Unnamed'}`
+          (item) => `[Radio] ${station.callSign} - ${show.name} - ${item.name || 'Unnamed'}`,
+          show.frequency  // Passed but won't be used as fallback since Radio is marked critical
         );
       });
     } else {
       checkChannel(
         station.advertisingOpportunities || [],
         'Radio',
-        (item) => `[Radio] ${station.callSign} - ${item.name || 'Unnamed'}`
+        (item) => `[Radio] ${station.callSign} - ${item.name || 'Unnamed'}`,
+        station.frequency
       );
     }
   });
@@ -735,7 +756,8 @@ export function calculateDataQuality(publication: Publication | any): DataQualit
     checkChannel(
       event.advertisingOpportunities || [],
       'Events',
-      (item) => `[Event] ${event.name} - ${item.level || 'Unnamed'}`
+      (item) => `[Event] ${event.name} - ${item.level || 'Unnamed'}`,
+      event.frequency
     );
   });
 
