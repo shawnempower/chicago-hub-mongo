@@ -1,5 +1,6 @@
 import { getDatabase } from './client';
 import { ObjectId, Filter, UpdateFilter } from 'mongodb';
+import { syncAllPerformanceMetrics } from '@/utils/performanceMetricsSync';
 import {
   AdPackage,
   AdvertisingInventory,
@@ -1284,6 +1285,14 @@ export class PublicationsService {
       // Handle metadata updates carefully to avoid field conflicts
       // Remove immutable fields that MongoDB won't allow us to update
       const { metadata, _id, createdAt, updatedAt, ...otherUpdates } = updates;
+      
+      // Sync performanceMetrics when distributionChannels is updated
+      // This ensures audienceSize and impressionsPerMonth stay in sync with
+      // channel-level metrics (circulation, subscribers, listeners, etc.)
+      if (otherUpdates.distributionChannels) {
+        otherUpdates.distributionChannels = syncAllPerformanceMetrics(otherUpdates.distributionChannels);
+      }
+      
       const updateData = {
         ...otherUpdates,
         ...(metadata && {
