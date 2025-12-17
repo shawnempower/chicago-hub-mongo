@@ -20,10 +20,32 @@ import {
   FileText,
   FileSpreadsheet,
   Activity,
-  RefreshCw
+  RefreshCw,
+  CheckCircle,
+  Clock,
+  FileCheck,
+  Archive,
+  MoreVertical
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useHubContext } from '@/contexts/HubContext';
 import { HealthBadge } from '@/components/ui/health-badge';
 import { PackageHealthModal } from './PackageHealthModal';
@@ -69,6 +91,11 @@ export const HubPackageManagement = () => {
   const [healthModalOpen, setHealthModalOpen] = useState(false);
   const [selectedPackageForHealth, setSelectedPackageForHealth] = useState<HubPackage | null>(null);
   const [showActivityLog, setShowActivityLog] = useState(false);
+  
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [packageToDelete, setPackageToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   
   // Store hubId locally to preserve it across component states and context changes
   const [localHubId, setLocalHubId] = useState<string | null>(null);
@@ -116,11 +143,19 @@ export const HubPackageManagement = () => {
     fetchPackages();
   }, [fetchPackages]);
 
-  const handleDelete = async (id: string, packageName: string) => {
-    if (!confirm(`Are you sure you want to delete "${packageName}"?`)) return;
+  // Open delete confirmation dialog
+  const confirmDelete = (id: string, packageName: string) => {
+    setPackageToDelete({ id, name: packageName });
+    setDeleteDialogOpen(true);
+  };
 
+  // Actually perform the deletion
+  const handleDelete = async () => {
+    if (!packageToDelete) return;
+
+    setDeleting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/hub-packages/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/hub-packages/${packageToDelete.id}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -128,8 +163,8 @@ export const HubPackageManagement = () => {
       if (!response.ok) throw new Error('Failed to delete package');
 
       toast({
-        title: 'Success',
-        description: 'Package deleted successfully'
+        title: 'Package Deleted',
+        description: `"${packageToDelete.name}" has been deleted successfully`
       });
       fetchPackages();
     } catch (error) {
@@ -139,6 +174,10 @@ export const HubPackageManagement = () => {
         description: 'Failed to delete package',
         variant: 'destructive'
       });
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setPackageToDelete(null);
     }
   };
 
@@ -223,7 +262,7 @@ export const HubPackageManagement = () => {
     }
   };
 
-  const handleSave = async (packageName: string) => {
+  const handleSave = async (packageName: string, approvalStatus: 'draft' | 'pending_review' | 'approved' | 'archived' = 'draft') => {
     if (!builderResult || !builderFilters || !selectedHubId) {
       console.error('Missing required data:', { builderResult: !!builderResult, builderFilters: !!builderFilters, selectedHubId });
       toast({
@@ -236,7 +275,7 @@ export const HubPackageManagement = () => {
 
     setLoading(true);
     try {
-      console.log('Saving package:', { packageName, isEditing: !!(editingPackage && editingPackage._id) });
+      console.log('Saving package:', { packageName, approvalStatus, isEditing: !!(editingPackage && editingPackage._id) });
       
       // If editing, update existing package
       if (editingPackage && editingPackage._id) {
@@ -263,6 +302,7 @@ export const HubPackageManagement = () => {
           },
           metadata: {
             ...editingPackage.metadata,
+            approvalStatus,
             builderInfo: {
               ...editingPackage.metadata?.builderInfo,
               lastBuilderEdit: new Date().toISOString()
@@ -385,7 +425,7 @@ export const HubPackageManagement = () => {
         },
         metadata: {
           createdBy: 'current-user',
-          approvalStatus: 'approved' as const,
+          approvalStatus: approvalStatus,
           version: 1,
           builderInfo: {
             creationMethod: 'builder' as const,
@@ -784,6 +824,55 @@ export const HubPackageManagement = () => {
     }
   };
 
+  // Handle quick approval status change from package card
+  const handleApprovalStatusChange = async (pkg: HubPackage, newStatus: 'draft' | 'pending_review' | 'approved' | 'archived') => {
+    if (!pkg._id) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/hub-packages/${pkg._id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          metadata: {
+            ...pkg.metadata,
+            approvalStatus: newStatus
+          }
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to update approval status');
+
+      toast({
+        title: 'Status Updated',
+        description: `Package status changed to ${newStatus.replace('_', ' ')}`
+      });
+      fetchPackages();
+    } catch (error) {
+      console.error('Error updating approval status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update approval status',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Get approval status display info
+  const getApprovalStatusInfo = (status?: string) => {
+    switch (status) {
+      case 'approved':
+        return { label: 'Approved', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-300' };
+      case 'pending_review':
+        return { label: 'Pending', icon: Clock, color: 'text-amber-600', bgColor: 'bg-amber-50', borderColor: 'border-amber-300' };
+      case 'draft':
+        return { label: 'Draft', icon: FileCheck, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-300' };
+      case 'archived':
+        return { label: 'Archived', icon: Archive, color: 'text-gray-500', bgColor: 'bg-gray-50', borderColor: 'border-gray-300' };
+      default:
+        return { label: 'No Status', icon: FileCheck, color: 'text-gray-400', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' };
+    }
+  };
+
   const handleEdit = (pkg: HubPackage) => {
     try {
       // Ensure publications data exists
@@ -908,6 +997,21 @@ export const HubPackageManagement = () => {
         budget={builderFilters.budget}
         duration={builderFilters.duration}
         initialPackageName={editingPackage?.basicInfo.name}
+        initialApprovalStatus={editingPackage?.metadata?.approvalStatus || 'draft'}
+        isEditingExistingPackage={!!editingPackage?._id}
+        onDelete={editingPackage?._id ? async () => {
+          const response = await fetch(`${API_BASE_URL}/admin/hub-packages/${editingPackage._id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+          });
+          if (!response.ok) throw new Error('Failed to delete package');
+          // Return to list and refresh
+          setViewState('list');
+          setBuilderResult(null);
+          setBuilderFilters(null);
+          setEditingPackage(null);
+          fetchPackages();
+        } : undefined}
         onBack={() => {
           if (editingPackage) {
             // If editing, go back to list
@@ -1305,7 +1409,7 @@ export const HubPackageManagement = () => {
                         className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(pkg._id?.toString() || '', pkg.basicInfo.name);
+                          confirmDelete(pkg._id?.toString() || '', pkg.basicInfo.name);
                         }}
                         title="Delete"
                       >
@@ -1344,14 +1448,64 @@ export const HubPackageManagement = () => {
                     </div>
                   </div>
 
-                  {/* Active Badge - Bottom Left */}
+                  {/* Status Badges - Bottom */}
                   <div className="flex justify-between items-center pt-2">
-                    <div>
+                    <div className="flex items-center gap-2">
+                      {/* Active/Inactive Badge */}
                       {pkg.availability.isActive ? (
                         <Badge className="text-xs bg-green-50 text-green-600 border border-green-300">Active</Badge>
                       ) : (
                         <Badge variant="outline" className="text-xs">Inactive</Badge>
                       )}
+                      
+                      {/* Approval Status with Dropdown */}
+                      {(() => {
+                        const statusInfo = getApprovalStatusInfo(pkg.metadata?.approvalStatus);
+                        const StatusIcon = statusInfo.icon;
+                        return (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Badge 
+                                className={`text-xs cursor-pointer hover:opacity-80 ${statusInfo.bgColor} ${statusInfo.color} border ${statusInfo.borderColor}`}
+                              >
+                                <StatusIcon className="h-3 w-3 mr-1" />
+                                {statusInfo.label}
+                              </Badge>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem 
+                                onClick={() => handleApprovalStatusChange(pkg, 'draft')}
+                                className={pkg.metadata?.approvalStatus === 'draft' ? 'bg-blue-50' : ''}
+                              >
+                                <FileCheck className="h-4 w-4 mr-2 text-blue-600" />
+                                Draft
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleApprovalStatusChange(pkg, 'pending_review')}
+                                className={pkg.metadata?.approvalStatus === 'pending_review' ? 'bg-amber-50' : ''}
+                              >
+                                <Clock className="h-4 w-4 mr-2 text-amber-600" />
+                                Pending Review
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleApprovalStatusChange(pkg, 'approved')}
+                                className={pkg.metadata?.approvalStatus === 'approved' ? 'bg-green-50' : ''}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                                Approved
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleApprovalStatusChange(pkg, 'archived')}
+                                className={pkg.metadata?.approvalStatus === 'archived' ? 'bg-gray-50' : ''}
+                              >
+                                <Archive className="h-4 w-4 mr-2 text-gray-500" />
+                                Archived
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        );
+                      })()}
                     </div>
                     <Button
                       variant="ghost"
@@ -1392,6 +1546,46 @@ export const HubPackageManagement = () => {
         activityTypes={['package_create', 'package_update', 'package_delete', 'package_refresh']}
         hubId={selectedHubId}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">Delete Package?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Are you sure you want to delete <strong>"{packageToDelete?.name}"</strong>?
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded p-3">
+                <p className="text-red-800 text-sm">
+                  <strong>Warning:</strong> This action cannot be undone. The package and all its 
+                  configuration will be permanently removed.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Package
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

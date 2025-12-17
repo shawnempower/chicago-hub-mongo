@@ -65,10 +65,13 @@ export function CampaignPackageSelectionStep({
           approvalStatus: p.metadata?.approvalStatus
         })));
         
-        // Filter to only show active and approved packages
+        // Filter to only show active packages
+        // Note: If approvalStatus is not set but isActive is true, still show the package
         const activePackages = allPackages.filter((pkg: HubPackage) => 
           pkg.availability?.isActive && 
-          (pkg.metadata?.approvalStatus === 'approved' || pkg.metadata?.approvalStatus === 'draft')
+          (!pkg.metadata?.approvalStatus || 
+           pkg.metadata?.approvalStatus === 'approved' || 
+           pkg.metadata?.approvalStatus === 'draft')
         );
         
         console.log('Filtered active packages:', activePackages.length);

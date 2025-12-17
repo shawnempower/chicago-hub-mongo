@@ -19,41 +19,52 @@ import {
   Download,
   Save,
   Package as PackageIcon,
-  FileText,
   Loader2,
   ChevronDown,
   ChevronUp,
-  ChevronLeft,
   Trash2,
   X,
   Plus,
   Edit,
-  RefreshCw
+  RefreshCw,
+  CheckCircle,
+  Clock,
+  FileCheck,
+  Archive
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
 import { BuilderResult } from '@/services/packageBuilderService';
 import { LineItemsTable } from './LineItemsTable';
 import { calculateItemCost, calculatePublicationTotal } from '@/utils/inventoryPricing';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
-import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
-import { downloadPackageInsertionOrder } from '@/utils/packageExport';
-import { formatInsertionOrderQuantity, formatInsertionOrderAudienceWithBadge } from '@/utils/insertionOrderFormatting';
 import { ReachSummary } from './ReachSummary';
 import { calculatePackageReach } from '@/utils/reachCalculations';
+
+type ApprovalStatus = 'draft' | 'pending_review' | 'approved' | 'archived';
 
 interface PackageResultsProps {
   result: BuilderResult;
   budget?: number;
   duration: number;
   onBack: () => void;
-  onSave: (packageName: string) => Promise<void>;
+  onSave: (packageName: string, approvalStatus: ApprovalStatus) => Promise<void>;
   onExportCSV: () => void;
   onUpdatePublications: (publications: HubPackagePublication[]) => void;
   onRefresh?: () => Promise<void>;
   onFindNewPublications?: (currentPublicationIds: (string | number)[]) => Promise<{ publications: HubPackagePublication[]; count: number; message: string; debug?: { totalInHub: number; alreadyInPackage: number; newBeforeGeoFilter?: number; geographyFilter?: string[] } }>;
+  onDelete?: () => Promise<void>;
   loading?: boolean;
   initialPackageName?: string;
+  initialApprovalStatus?: ApprovalStatus;
+  isEditingExistingPackage?: boolean;
 }
 
 export function PackageResults({
@@ -66,22 +77,27 @@ export function PackageResults({
   onUpdatePublications,
   onRefresh,
   onFindNewPublications,
+  onDelete,
   loading,
-  initialPackageName = ''
+  initialPackageName = '',
+  initialApprovalStatus = 'draft',
+  isEditingExistingPackage = false
 }: PackageResultsProps) {
   const { toast } = useToast();
   const [packageName, setPackageName] = useState(initialPackageName);
+  const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>(initialApprovalStatus);
   const [expandedChannels, setExpandedChannels] = useState<Set<string>>(new Set());
   const [expandedOutlets, setExpandedOutlets] = useState<Set<number>>(new Set());
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempPackageName, setTempPackageName] = useState(initialPackageName);
-  const [generatingIO, setGeneratingIO] = useState(false);
   const [showRefreshDialog, setShowRefreshDialog] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showNewPubsDialog, setShowNewPubsDialog] = useState(false);
   const [findingNewPubs, setFindingNewPubs] = useState(false);
   const [newPublications, setNewPublications] = useState<HubPackagePublication[]>([]);
   const [selectedNewPubs, setSelectedNewPubs] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Store original publications to track removed items
   const [originalPublications] = useState<HubPackagePublication[]>(() => 
@@ -149,7 +165,47 @@ export function PackageResults({
       alert('Please enter a package name');
       return;
     }
-    await onSave(packageName.trim());
+    await onSave(packageName.trim(), approvalStatus);
+  };
+
+  // Get approval status display info
+  const getApprovalStatusInfo = (status: ApprovalStatus) => {
+    switch (status) {
+      case 'approved':
+        return { label: 'Approved', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' };
+      case 'pending_review':
+        return { label: 'Pending Review', icon: Clock, color: 'text-amber-600', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' };
+      case 'draft':
+        return { label: 'Draft', icon: FileCheck, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' };
+      case 'archived':
+        return { label: 'Archived', icon: Archive, color: 'text-gray-500', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' };
+      default:
+        return { label: 'Draft', icon: FileCheck, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' };
+    }
+  };
+
+  // Handle delete
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    
+    setDeleting(true);
+    try {
+      await onDelete();
+      toast({
+        title: 'Package Deleted',
+        description: 'The package has been deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting package:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete package',
+        variant: 'destructive'
+      });
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
   };
 
   // Handle refresh
@@ -382,229 +438,6 @@ export function PackageResults({
     });
 
     onUpdatePublications(updatedPublications);
-  };
-
-  // Handle generate insertion order
-  const handleGenerateInsertionOrder = () => {
-    if (!packageName.trim()) {
-      toast({
-        title: 'Package Name Required',
-        description: 'Please enter a package name before generating an insertion order.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    setGeneratingIO(true);
-    try {
-      // Generate insertion order HTML with current reach data
-      const summaryWithCurrentReach = {
-        ...summary,
-        totalMonthlyImpressions: currentReach.totalMonthlyImpressions,
-        totalMonthlyExposures: currentReach.totalMonthlyExposures,
-        estimatedTotalReach: currentReach.estimatedTotalReach,
-        estimatedUniqueReach: currentReach.estimatedUniqueReach,
-        channelAudiences: currentReach.channelAudiences,
-        reachCalculationMethod: currentReach.calculationMethod,
-        reachOverlapFactor: currentReach.overlapFactor
-      };
-      const html = generateInsertionOrderHTML(packageName, publications, summaryWithCurrentReach, duration);
-      
-      // Download the file
-      downloadPackageInsertionOrder(html, 'html', packageName);
-      
-      toast({
-        title: 'Success',
-        description: 'Insertion order generated and downloaded successfully',
-      });
-    } catch (error) {
-      console.error('Error generating insertion order:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to generate insertion order',
-        variant: 'destructive'
-      });
-    } finally {
-      setGeneratingIO(false);
-    }
-  };
-
-  // Generate insertion order HTML
-  const generateInsertionOrderHTML = (
-    name: string, 
-    pubs: HubPackagePublication[], 
-    summaryData: any, 
-    durationMonths: number
-  ): string => {
-    const formatCurrency = (amount: number) => 
-      `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    
-    const formatDate = (date: Date) => 
-      date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-    const totalPublications = pubs.length;
-    const totalInventoryItems = pubs.reduce((sum, pub) => 
-      sum + (pub.inventoryItems?.filter(item => !item.isExcluded).length || 0), 0);
-
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Insertion Order - ${name}</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
-        .container { background: white; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
-        .header h1 { color: #1e40af; margin: 0 0 10px 0; font-size: 28px; }
-        .section { margin-bottom: 30px; }
-        .section h2 { color: #1e40af; font-size: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; }
-        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
-        .info-item { padding: 12px; background: #f8fafc; border-left: 3px solid #2563eb; }
-        .info-label { font-weight: 600; color: #475569; font-size: 12px; text-transform: uppercase; }
-        .info-value { color: #1e293b; font-size: 14px; margin-top: 4px; }
-        .placeholder { border-bottom: 1px solid #cbd5e1; min-width: 200px; display: inline-block; padding: 2px 4px; }
-        .publication-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #f9fafb; }
-        .publication-header { display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
-        .publication-name { font-size: 18px; font-weight: 700; color: #1e293b; }
-        .publication-total { font-size: 18px; font-weight: 700; color: #059669; }
-        .inventory-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .inventory-table th { background: #f1f5f9; padding: 10px; text-align: left; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; }
-        .inventory-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-        .channel-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
-        .channel-website { background: #dbeafe; color: #1e40af; }
-        .channel-print { background: #f3e8ff; color: #6b21a8; }
-        .channel-newsletter { background: #fef3c7; color: #92400e; }
-        .pricing-summary { background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin-top: 20px; }
-        .pricing-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 16px; }
-        .pricing-row.total { border-top: 2px solid #10b981; margin-top: 10px; padding-top: 15px; font-size: 20px; font-weight: 700; color: #065f46; }
-        .terms-list { list-style: none; padding: 0; }
-        .terms-list li { padding: 8px 0 8px 24px; position: relative; }
-        .terms-list li:before { content: "•"; position: absolute; left: 8px; color: #2563eb; font-weight: bold; }
-        .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center; color: #64748b; font-size: 14px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Media Insertion Order</h1>
-            <div style="color: #64748b; font-size: 14px; font-weight: 600;">Package: ${name}</div>
-        </div>
-        <div class="section">
-            <h2>Included Publications & Inventory</h2>
-            <p style="color: #64748b; margin-bottom: 20px;">${totalPublications} publications • ${totalInventoryItems} ad placements</p>
-            ${pubs.map(pub => `
-                <div class="publication-card">
-                    <div class="publication-header">
-                        <div class="publication-name">${pub.publicationName}</div>
-                        <div class="publication-total">${formatCurrency(pub.publicationTotal)}</div>
-                    </div>
-                    <table class="inventory-table">
-                        <thead><tr><th>Channel</th><th>Ad Placement</th><th>Quantity</th><th>Audience Estimate</th><th>Item Cost</th><th>Total</th></tr></thead>
-                        <tbody>
-                            ${pub.inventoryItems.filter(item => !item.isExcluded).map(item => {
-                                const hubPrice = item.itemPricing?.hubPrice || 0;
-                                const freq = item.currentFrequency || item.quantity || 1;
-                                
-                                // Calculate line total
-                                const lineTotal = calculateItemCost(item, freq, 1);
-                                
-                                // Use standardized formatting functions
-                                const quantityDisplay = formatInsertionOrderQuantity(item);
-                                const audienceDisplay = formatInsertionOrderAudienceWithBadge(
-                                  item, 
-                                  (item as any).performanceMetrics,
-                                  (item as any).audienceMetrics
-                                );
-                                
-                                return `
-                                <tr>
-                                    <td><span class="channel-badge channel-${item.channel}">${item.channel}</span></td>
-                                    <td>${item.itemName}</td>
-                                    <td>${quantityDisplay}</td>
-                                    <td style="font-size: 12px; color: #64748b;">${audienceDisplay}</td>
-                                    <td style="text-align: right;">${formatCurrency(hubPrice)}</td>
-                                    <td style="text-align: right;"><strong>${formatCurrency(lineTotal)}</strong></td>
-                                </tr>
-                            `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `).join('')}
-        </div>
-        <div class="section">
-            <h2>Investment Summary</h2>
-            <div class="pricing-summary">
-                <div class="pricing-row"><span>Monthly Total:</span><span><strong>${formatCurrency(summaryData.monthlyCost)}</strong></span></div>
-                <div class="pricing-row"><span>Campaign Duration:</span><span><strong>${durationMonths} months</strong></span></div>
-                <div class="pricing-row total"><span>Total Package Investment:</span><span>${formatCurrency(summaryData.totalCost)}</span></div>
-            </div>
-        </div>
-        ${summaryData.estimatedUniqueReach || summaryData.totalMonthlyExposures || summaryData.totalMonthlyImpressions ? `
-        <div class="section">
-            <h2>Estimated Reach & Frequency</h2>
-            ${summaryData.estimatedUniqueReach ? `
-                <div class="pricing-row">
-                    <span>Unique Monthly Reach:</span>
-                    <span><strong>~${summaryData.estimatedUniqueReach.toLocaleString()} people</strong></span>
-                </div>
-                <div style="font-size: 11px; color: #64748b; margin: 5px 0 15px 0; font-style: italic;">
-                    Estimated number of unique individuals reached
-                </div>
-            ` : ''}
-            ${summaryData.totalMonthlyExposures ? `
-                <div class="pricing-row">
-                    <span>Total Monthly Exposures:</span>
-                    <span><strong>${summaryData.totalMonthlyExposures.toLocaleString()}</strong></span>
-                </div>
-                <div style="font-size: 11px; color: #64748b; margin: 5px 0 5px 0; font-style: italic;">
-                    Total touchpoints including frequency (same person may see message multiple times)
-                </div>
-                ${summaryData.estimatedUniqueReach && summaryData.totalMonthlyExposures > summaryData.estimatedUniqueReach ? `
-                    <div class="pricing-row" style="margin-top: 5px; margin-bottom: 15px;">
-                        <span style="font-size: 12px; color: #64748b;">Average Frequency:</span>
-                        <span style="font-size: 12px;"><strong>${(summaryData.totalMonthlyExposures / summaryData.estimatedUniqueReach).toFixed(1)}x</strong> per person</span>
-                    </div>
-                ` : '<div style="margin-bottom: 15px;"></div>'}
-            ` : ''}
-            ${summaryData.totalMonthlyImpressions ? `
-                <div class="pricing-row">
-                    <span>Total Monthly Impressions:</span>
-                    <span><strong>${summaryData.totalMonthlyImpressions.toLocaleString()}</strong></span>
-                </div>
-                <div style="font-size: 11px; color: #64748b; margin: 5px 0 15px 0; font-style: italic;">
-                    Impression-based metrics from CPM/CPV inventory
-                </div>
-            ` : ''}
-            ${summaryData.estimatedUniqueReach && summaryData.estimatedTotalReach ? `
-                <div style="font-size: 11px; color: #64748b; margin-top: 15px; padding: 10px; background: #f8fafc; border-left: 3px solid #2563eb;">
-                    <strong>Methodology:</strong> 
-                    ${summaryData.totalOutlets === 1 ? 
-                        `Single publication across ${summaryData.totalChannels} channel${summaryData.totalChannels > 1 ? 's' : ''}. ` :
-                        `${summaryData.totalOutlets} publications across ${summaryData.totalChannels} channel${summaryData.totalChannels > 1 ? 's' : ''}. `
-                    }
-                    Unique reach assumes ${Math.round((1 - (summaryData.reachOverlapFactor || 0.70)) * 100)}% audience overlap across channels 
-                    (Total audience: ${summaryData.estimatedTotalReach?.toLocaleString()}).
-                </div>
-            ` : ''}
-        </div>
-        ` : ''}
-        <div class="section">
-            <h2>Terms & Conditions</h2>
-            <ul class="terms-list">
-                <li>Lead Time: 10 business days</li>
-                <li>Material Deadline: 5 business days before campaign start</li>
-                <li>Payment terms: Net 30 days from invoice date</li>
-                <li>All pricing reflects Hub discounted rates</li>
-            </ul>
-        </div>
-        <div class="footer">
-            <p>Generated on ${formatDate(new Date())}</p>
-            <p>Chicago Hub • Supporting Local Journalism • Press Forward Initiative</p>
-        </div>
-    </div>
-</body>
-</html>`;
   };
 
   // Helper: Get base path without tier suffix (e.g., "path[0]-tier1" -> "path[0]")
@@ -845,14 +678,18 @@ export function PackageResults({
                 <Download className="h-4 w-4" />
               </Button>
               
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={loading}
-                title="Delete Package"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {isEditingExistingPackage && onDelete && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={loading || deleting}
+                  title="Delete Package"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
               
               {onRefresh && (
                 <Button
@@ -886,25 +723,53 @@ export function PackageResults({
                 </Button>
               )}
               
-              <Button
-                onClick={handleGenerateInsertionOrder}
-                variant="outline"
-                size="sm"
-                disabled={loading || generatingIO}
+              {/* Approval Status Selector */}
+              <Select
+                value={approvalStatus}
+                onValueChange={(value: ApprovalStatus) => setApprovalStatus(value)}
               >
-                {generatingIO ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Generate Order
-                  </>
-                )}
-              </Button>
-              
+                <SelectTrigger className="w-[160px] h-9">
+                  <SelectValue>
+                    {(() => {
+                      const info = getApprovalStatusInfo(approvalStatus);
+                      const Icon = info.icon;
+                      return (
+                        <div className="flex items-center gap-2">
+                          <Icon className={`h-4 w-4 ${info.color}`} />
+                          <span>{info.label}</span>
+                        </div>
+                      );
+                    })()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">
+                    <div className="flex items-center gap-2">
+                      <FileCheck className="h-4 w-4 text-blue-600" />
+                      <span>Draft</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="pending_review">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-amber-600" />
+                      <span>Pending Review</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="approved">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span>Approved</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="archived">
+                    <div className="flex items-center gap-2">
+                      <Archive className="h-4 w-4 text-gray-500" />
+                      <span>Archived</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
               <Button
                 onClick={handleSave}
                 disabled={loading || !packageName.trim()}
@@ -1294,6 +1159,46 @@ export function PackageResults({
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Refresh Package
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">Delete Package?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Are you sure you want to delete <strong>"{packageName || 'this package'}"</strong>?
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded p-3">
+                <p className="text-red-800 text-sm">
+                  <strong>Warning:</strong> This action cannot be undone. The package and all its 
+                  configuration will be permanently removed.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Package
                 </>
               )}
             </AlertDialogAction>
