@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -283,60 +284,52 @@ export function CampaignPerformanceDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Header with Campaign Info */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">{summary.campaignName || campaignName || 'Campaign Performance'}</h2>
-          <p className="text-muted-foreground">
-            {summary.dateRange.start && format(new Date(summary.dateRange.start), 'MMM d, yyyy')} - 
-            {summary.dateRange.end && format(new Date(summary.dateRange.end), 'MMM d, yyyy')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {summary.pacing && getPacingBadge(summary.pacing.status)}
-          <Button variant="outline" size="sm" onClick={fetchData}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
       {/* Performance by Data Source */}
+      <TooltipProvider delayDuration={200}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Digital Channels (Tracked) */}
-        <Card className="border-blue-200 bg-blue-50/30">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Wifi className="w-4 h-4 text-blue-600" />
-              Digital Channels
-              <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-600">Tracked</Badge>
+            <CardTitle className="text-base flex items-center justify-between gap-2 font-sans">
+              <div className="flex items-center gap-2">
+                <Wifi className="w-4 h-4 text-blue-600" />
+                Digital Channels
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex cursor-help">
+                    <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-600 py-0 px-2">Tracked</Badge>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Automatically tracked via pixels/scripts</p>
+                </TooltipContent>
+              </Tooltip>
             </CardTitle>
-            <CardDescription className="text-xs">
-              Automatically tracked via pixels/scripts
-            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <div className="mx-6 border-t"></div>
+          <CardContent className="pt-4">
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <p className="text-xs text-muted-foreground">Impressions</p>
-                <p className="text-xl font-bold">{digitalTotals.impressions.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground font-sans">Impressions</p>
+                <p className="text-xl font-bold font-sans">{digitalTotals.impressions.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Clicks</p>
-                <p className="text-xl font-bold">{digitalTotals.clicks.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground font-sans">Clicks</p>
+                <p className="text-xl font-bold font-sans">{digitalTotals.clicks.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">CTR</p>
-                <p className="text-xl font-bold">{digitalTotals.ctr.toFixed(2)}%</p>
+                <p className="text-xs text-muted-foreground font-sans">CTR</p>
+                <p className="text-xl font-bold font-sans">{digitalTotals.ctr.toFixed(2)}%</p>
               </div>
             </div>
             {digitalChannels.length > 0 && (
               <div className="mt-3 pt-3 border-t">
-                <p className="text-xs text-muted-foreground mb-2">Channels:</p>
+                <p className="text-xs text-muted-foreground mb-2 font-sans">Channels:</p>
                 <div className="flex flex-wrap gap-1">
                   {digitalChannels.map(c => (
                     <Badge key={c.channel} variant="secondary" className="text-xs capitalize">
-                      {getChannelConfig(c.channel).icon} {c.channel}
+                      {c.channel}
                     </Badge>
                   ))}
                 </div>
@@ -346,41 +339,50 @@ export function CampaignPerformanceDashboard({
         </Card>
 
         {/* Offline Channels (Self-Reported) */}
-        <Card className="border-amber-200 bg-amber-50/30">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <WifiOff className="w-4 h-4 text-amber-600" />
-              Offline Channels
-              <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600">Self-Reported</Badge>
+            <CardTitle className="text-base flex items-center justify-between gap-2 font-sans">
+              <div className="flex items-center gap-2">
+                <WifiOff className="w-4 h-4 text-amber-600" />
+                Offline Channels
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex cursor-help">
+                    <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600 py-0 px-2">Self-Reported</Badge>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Reported by publications with proof</p>
+                </TooltipContent>
+              </Tooltip>
             </CardTitle>
-            <CardDescription className="text-xs">
-              Reported by publications with proof
-            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <div className="mx-6 border-t"></div>
+          <CardContent className="pt-4">
             <div className="grid grid-cols-3 gap-4">
               {offlineTotals.insertions > 0 && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Print Insertions</p>
-                  <p className="text-xl font-bold">{offlineTotals.insertions.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground font-sans">Print Insertions</p>
+                  <p className="text-xl font-bold font-sans">{offlineTotals.insertions.toLocaleString()}</p>
                 </div>
               )}
               {offlineTotals.spotsAired > 0 && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Radio Spots</p>
-                  <p className="text-xl font-bold">{offlineTotals.spotsAired.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground font-sans">Radio Spots</p>
+                  <p className="text-xl font-bold font-sans">{offlineTotals.spotsAired.toLocaleString()}</p>
                 </div>
               )}
               {offlineTotals.downloads > 0 && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Podcast Downloads</p>
-                  <p className="text-xl font-bold">{offlineTotals.downloads.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground font-sans">Podcast Downloads</p>
+                  <p className="text-xl font-bold font-sans">{offlineTotals.downloads.toLocaleString()}</p>
                 </div>
               )}
               {offlineTotals.reach > 0 && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Est. Reach</p>
-                  <p className="text-xl font-bold">{offlineTotals.reach.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground font-sans">Est. Reach</p>
+                  <p className="text-xl font-bold font-sans">{offlineTotals.reach.toLocaleString()}</p>
                 </div>
               )}
               {offlineTotals.insertions === 0 && offlineTotals.spotsAired === 0 && offlineTotals.downloads === 0 && (
@@ -391,11 +393,11 @@ export function CampaignPerformanceDashboard({
             </div>
             {offlineChannels.length > 0 && (
               <div className="mt-3 pt-3 border-t">
-                <p className="text-xs text-muted-foreground mb-2">Channels:</p>
+                <p className="text-xs text-muted-foreground mb-2 font-sans">Channels:</p>
                 <div className="flex flex-wrap gap-1">
                   {offlineChannels.map(c => (
                     <Badge key={c.channel} variant="secondary" className="text-xs capitalize">
-                      {getChannelConfig(c.channel).icon} {c.channel}
+                      {c.channel}
                     </Badge>
                   ))}
                 </div>
@@ -404,6 +406,7 @@ export function CampaignPerformanceDashboard({
           </CardContent>
         </Card>
       </div>
+      </TooltipProvider>
 
       {/* Combined Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -456,7 +459,11 @@ export function CampaignPerformanceDashboard({
         </Card>
       </div>
 
-      {/* Pacing Progress */}
+      {/* TODO: Campaign Pacing - For Future Implementation
+          This component compares campaign timeline progress vs delivery completion.
+          Currently hidden until the logic and UX can be improved.
+      
+      {/* Pacing Progress *\/}
       {summary.pacing && (
         <Card>
           <CardHeader>
@@ -474,7 +481,7 @@ export function CampaignPerformanceDashboard({
               </div>
               <div className="relative">
                 <Progress value={summary.pacing.percentComplete} className="h-4" />
-                {/* Expected marker */}
+                {/* Expected marker *\/}
                 <div 
                   className="absolute top-0 w-0.5 h-4 bg-gray-800"
                   style={{ left: `${Math.min(summary.pacing.expectedPercent, 100)}%` }}
@@ -496,6 +503,7 @@ export function CampaignPerformanceDashboard({
           </CardContent>
         </Card>
       )}
+      */}
 
       {/* Tabs for Breakdowns */}
       <Tabs defaultValue="channels">
@@ -507,10 +515,7 @@ export function CampaignPerformanceDashboard({
 
         <TabsContent value="channels" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Channel Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               {summary.byChannel.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No channel data available</p>
               ) : (
@@ -567,10 +572,7 @@ export function CampaignPerformanceDashboard({
 
         <TabsContent value="publications" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Publication Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               {summary.byPublication.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No publication data available</p>
               ) : (
@@ -616,33 +618,7 @@ export function CampaignPerformanceDashboard({
 
         <TabsContent value="daily" className="mt-4">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Daily Performance</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <CalendarIcon className="w-4 h-4 mr-2" />
-                        {dateFrom && format(dateFrom, 'MMM d')} - {dateTo && format(dateTo, 'MMM d')}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar
-                        mode="range"
-                        selected={{ from: dateFrom, to: dateTo }}
-                        onSelect={(range) => {
-                          setDateFrom(range?.from);
-                          setDateTo(range?.to);
-                        }}
-                        numberOfMonths={2}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               {dailyData.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No daily data available</p>
               ) : (
