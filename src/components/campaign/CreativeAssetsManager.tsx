@@ -1295,6 +1295,9 @@ export function CreativeAssetsManager({
     for (let i = 0; i < pendingAssets.length; i++) {
       const [specGroupId, asset] = pendingAssets[i];
       
+      // Get the spec group to retrieve full placement details including channel
+      const specGroup = groupedSpecs.find(g => g.specGroupId === specGroupId);
+      
       try {
         const formData = new FormData();
         formData.append('file', asset.file!);
@@ -1307,6 +1310,18 @@ export function CreativeAssetsManager({
           fileExtension: asset.detectedSpecs?.fileExtension,
           fileSize: asset.detectedSpecs?.fileSize,
         }));
+        
+        // Send direct placement links for publication order lookup
+        // This enables simple lookup instead of fuzzy specGroupId matching
+        if (specGroup?.placements && specGroup.placements.length > 0) {
+          const placements = specGroup.placements.map(p => ({
+            publicationId: p.publicationId,
+            placementId: p.placementId,
+            placementName: p.placementName,
+            channel: specGroup.channel
+          }));
+          formData.append('placements', JSON.stringify(placements));
+        }
         
         // Include digital ad properties if available
         if (asset.clickUrl || asset.altText || asset.headline || asset.body || asset.ctaText) {

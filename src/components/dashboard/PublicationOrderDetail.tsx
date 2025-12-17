@@ -8,6 +8,8 @@ import { Progress } from '@/components/ui/progress';
 import { OrderStatusBadge, OrderStatus } from '../orders/OrderStatusBadge';
 import { CreativeAssetCard } from '../orders/CreativeAssetCard';
 import { OrderMessaging } from '../orders/OrderMessaging';
+import { PlacementTraffickingCard, extractTraffickingInfo } from '../orders';
+import { PlacementStatusBadge } from '../orders/PlacementStatusBadge';
 import { OrderPerformanceView } from './OrderPerformanceView';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { 
@@ -38,6 +40,7 @@ import { PublicationInsertionOrderDocument } from '@/integrations/mongodb/insert
 import { TrackingScript } from '@/integrations/mongodb/trackingScriptSchema';
 import { API_BASE_URL } from '@/config/api';
 import { getChannelConfig, isDigitalChannel } from '@/config/inventoryChannels';
+import { calculateItemCost } from '@/utils/inventoryPricing';
 import { cn } from '@/lib/utils';
 
 interface OrderDetailData extends PublicationInsertionOrderDocument {}
@@ -609,39 +612,78 @@ export function PublicationOrderDetail() {
     return num.toLocaleString();
   };
 
+  // Helper function to format currency
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  // Calculate campaign duration in months
+  const getDurationMonths = () => {
+    const startDate = campaignData?.timeline?.startDate ? new Date(campaignData.timeline.startDate) : null;
+    const endDate = campaignData?.timeline?.endDate ? new Date(campaignData.timeline.endDate) : null;
+    if (!startDate || !endDate) return 1;
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return Math.max(1, Math.ceil(diffDays / 30));
+  };
+
   // Helper function to get delivery expectations for a placement
-  const getDeliveryExpectations = (item: any): Array<{ label: string; value: string; icon: React.ReactNode }> => {
-    const expectations: Array<{ label: string; value: string; icon: React.ReactNode }> = [];
+  // Returns channel-specific trafficking info with earnings
+  const getDeliveryExpectations = (item: any): Array<{ label: string; value: string; icon: React.ReactNode; highlight?: boolean }> => {
+    const expectations: Array<{ label: string; value: string; icon: React.ReactNode; highlight?: boolean }> = [];
     const channel = (item.channel || '').toLowerCase();
     const metrics = item.audienceMetrics || {};
     const perfMetrics = item.performanceMetrics || {};
+    const frequency = item.currentFrequency || item.quantity || 1;
     
-    // Monthly impressions (for digital)
-    if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
+    // Calculate earnings using existing utility
+    const durationMonths = getDurationMonths();
+    const earnings = calculateItemCost(item, frequency, durationMonths);
+    
+    // Add earnings first (most important for publications)
+    if (earnings > 0) {
       expectations.push({
-        label: 'Est. Impressions',
-        value: formatNumber(item.monthlyImpressions || perfMetrics.impressionsPerMonth) + '/mo',
-        icon: <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+        label: 'Earn',
+        value: formatCurrency(earnings),
+        icon: <DollarSign className="h-3.5 w-3.5 text-green-600" />,
+        highlight: true
       });
     }
     
-    // Channel-specific metrics
+    // Channel-specific UNIT OF DELIVERY (primary trafficking info)
     if (channel === 'website') {
-      if (metrics.monthlyPageViews) {
+      // Website: Impressions are the unit
+      if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
+        const totalImpressions = (item.monthlyImpressions || perfMetrics.impressionsPerMonth) * durationMonths;
         expectations.push({
-          label: 'Page Views',
-          value: formatNumber(metrics.monthlyPageViews) + '/mo',
-          icon: <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+          label: 'Deliver',
+          value: `${formatNumber(totalImpressions)} impressions`,
+          icon: <Eye className="h-3.5 w-3.5 text-blue-600" />,
+          highlight: true
         });
       }
+      // Context
       if (metrics.monthlyVisitors) {
         expectations.push({
-          label: 'Visitors',
-          value: formatNumber(metrics.monthlyVisitors) + '/mo',
+          label: 'Audience',
+          value: formatNumber(metrics.monthlyVisitors) + ' visitors/mo',
           icon: <Users className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     } else if (channel === 'newsletter') {
+      // Newsletter: Sends are the unit
+      expectations.push({
+        label: 'Sends',
+        value: `${frequency} newsletter${frequency > 1 ? 's' : ''}`,
+        icon: <Eye className="h-3.5 w-3.5 text-blue-600" />,
+        highlight: true
+      });
+      // Context
       if (metrics.subscribers) {
         expectations.push({
           label: 'Subscribers',
@@ -657,38 +699,101 @@ export function PublicationOrderDetail() {
         });
       }
     } else if (channel === 'print') {
+      // Print: Insertions are the unit
+      expectations.push({
+        label: 'Insertions',
+        value: `${frequency} issue${frequency > 1 ? 's' : ''}`,
+        icon: <Newspaper className="h-3.5 w-3.5 text-blue-600" />,
+        highlight: true
+      });
+      // Context
       if (metrics.circulation) {
         expectations.push({
           label: 'Circulation',
-          value: formatNumber(metrics.circulation),
+          value: formatNumber(metrics.circulation) + '/issue',
           icon: <Newspaper className="h-3.5 w-3.5 text-muted-foreground" />
+        });
+        // Total reach estimate
+        const totalCirculation = metrics.circulation * frequency;
+        expectations.push({
+          label: 'Total Reach',
+          value: `~${formatNumber(totalCirculation * 2.5)} readers`,
+          icon: <Users className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     } else if (channel === 'radio') {
+      // Radio: Spots are the unit
+      expectations.push({
+        label: 'Spots',
+        value: `${frequency} airing${frequency > 1 ? 's' : ''}`,
+        icon: <Radio className="h-3.5 w-3.5 text-blue-600" />,
+        highlight: true
+      });
+      // Context
       if (metrics.listeners) {
         expectations.push({
           label: 'Est. Listeners',
-          value: formatNumber(metrics.listeners),
+          value: formatNumber(metrics.listeners) + '/spot',
           icon: <Radio className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     } else if (channel === 'podcast') {
+      // Podcast: Episodes are the unit
+      expectations.push({
+        label: 'Episodes',
+        value: `${frequency} episode${frequency > 1 ? 's' : ''}`,
+        icon: <Headphones className="h-3.5 w-3.5 text-blue-600" />,
+        highlight: true
+      });
+      // Context
       if (metrics.listeners || perfMetrics.audienceSize) {
         expectations.push({
-          label: 'Downloads/Listens',
+          label: 'Downloads',
           value: formatNumber(metrics.listeners || perfMetrics.audienceSize) + '/ep',
           icon: <Headphones className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
+    } else if (channel === 'streaming') {
+      // Streaming: Views are the unit
+      if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
+        expectations.push({
+          label: 'Deliver',
+          value: `${formatNumber(item.monthlyImpressions || perfMetrics.impressionsPerMonth)} views`,
+          icon: <Eye className="h-3.5 w-3.5 text-blue-600" />,
+          highlight: true
+        });
+      }
+      // Context
+      if (metrics.subscribers) {
+        expectations.push({
+          label: 'Subscribers',
+          value: formatNumber(metrics.subscribers),
+          icon: <Users className="h-3.5 w-3.5 text-muted-foreground" />
+        });
+      }
     } else if (channel === 'events') {
+      // Events: Deliverables (show as 1 event)
+      expectations.push({
+        label: 'Event',
+        value: `${frequency} sponsorship${frequency > 1 ? 's' : ''}`,
+        icon: <CalendarDays className="h-3.5 w-3.5 text-blue-600" />,
+        highlight: true
+      });
       if (metrics.expectedAttendees || metrics.averageAttendance) {
         expectations.push({
-          label: 'Expected Attendees',
+          label: 'Attendance',
           value: formatNumber(metrics.expectedAttendees || metrics.averageAttendance),
           icon: <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
     } else if (channel === 'social_media' || channel === 'social') {
+      // Social: Posts are the unit
+      expectations.push({
+        label: 'Posts',
+        value: `${frequency} post${frequency > 1 ? 's' : ''}`,
+        icon: <Eye className="h-3.5 w-3.5 text-blue-600" />,
+        highlight: true
+      });
       if (metrics.followers) {
         expectations.push({
           label: 'Followers',
@@ -696,15 +801,16 @@ export function PublicationOrderDetail() {
           icon: <Users className="h-3.5 w-3.5 text-muted-foreground" />
         });
       }
-    }
-    
-    // Frequency/occurrences
-    if (item.currentFrequency) {
-      expectations.push({
-        label: 'Frequency',
-        value: `${item.currentFrequency}x`,
-        icon: <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
-      });
+    } else {
+      // Generic/other
+      if (frequency > 1) {
+        expectations.push({
+          label: 'Quantity',
+          value: `${frequency}x`,
+          icon: <RefreshCw className="h-3.5 w-3.5 text-blue-600" />,
+          highlight: true
+        });
+      }
     }
     
     return expectations;
@@ -1354,14 +1460,26 @@ export function PublicationOrderDetail() {
                               <PlacementStatusBadge status={placementStatus} />
                             </div>
                             
-                            {/* Delivery Expectations */}
+                            {/* Delivery Expectations with Earnings */}
                             {deliveryExpectations.length > 0 && (
-                              <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
+                              <div className="flex flex-wrap items-center gap-3 mt-2 text-xs">
                                 {deliveryExpectations.map((exp, i) => (
-                                  <div key={i} className="flex items-center gap-1">
+                                  <div 
+                                    key={i} 
+                                    className={cn(
+                                      "flex items-center gap-1",
+                                      (exp as any).highlight 
+                                        ? "bg-gray-100 px-2 py-1 rounded-md font-medium" 
+                                        : "text-muted-foreground"
+                                    )}
+                                  >
                                     {exp.icon}
-                                    <span className="text-gray-600">{exp.label}:</span>
-                                    <span className="font-medium text-gray-900">{exp.value}</span>
+                                    <span className={(exp as any).highlight ? "text-gray-700" : "text-gray-600"}>
+                                      {exp.label}:
+                                    </span>
+                                    <span className={(exp as any).highlight ? "text-gray-900 font-semibold" : "font-medium text-gray-900"}>
+                                      {exp.value}
+                                    </span>
                                   </div>
                                 ))}
                               </div>
@@ -1369,6 +1487,13 @@ export function PublicationOrderDetail() {
                           </div>
 
                           <div className="p-3 space-y-3">
+                            
+                            {/* Website: Note about grouped impressions */}
+                            {channel === 'website' && scripts.length > 1 && (
+                              <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded px-2 py-1">
+                                <strong>Note:</strong> Distribute impressions across sizes as needed. Use the scripts below to traffic each ad size.
+                              </p>
+                            )}
                             
                             {/* Digital: Show Scripts */}
                             {isDigital && scripts.length > 0 && (
@@ -2027,21 +2152,7 @@ function parseDimensions(dimStr: string | undefined): string[] {
   return [dimStr];
 }
 
-// Helper component for placement status
-function PlacementStatusBadge({ status }: { status: string }) {
-  switch (status) {
-    case 'accepted':
-      return <Badge className="bg-green-50 text-green-700 border border-green-200 pointer-events-none"><Check className="h-3 w-3 mr-1" /> Accepted</Badge>;
-    case 'in_production':
-      return <Badge className="bg-blue-50 text-blue-700 border border-blue-200 pointer-events-none"><Loader2 className="h-3 w-3 mr-1" /> In Production</Badge>;
-    case 'delivered':
-      return <Badge className="bg-purple-50 text-purple-700 border border-purple-200 pointer-events-none"><CheckCircle2 className="h-3 w-3 mr-1" /> Delivered</Badge>;
-    case 'rejected':
-      return <Badge className="bg-red-50 text-red-700 border border-red-200 pointer-events-none"><X className="h-3 w-3 mr-1" /> Rejected</Badge>;
-    default:
-      return <Badge className="bg-yellow-50 text-yellow-700 border border-yellow-200 pointer-events-none"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
-  }
-}
+// PlacementStatusBadge is now imported from '../orders/PlacementStatusBadge'
 
 // Helper function for execution instructions
 function getExecutionInstructions(item: any): string {

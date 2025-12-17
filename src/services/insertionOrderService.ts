@@ -244,51 +244,26 @@ export class InsertionOrderService {
         const inventoryItems = pub?.inventoryItems || [];
         const totalPlacements = inventoryItems.length;
         
-        // Helper to normalize channel for matching (website/newsletter are both digital_display)
-        const normalizeChannel = (ch: string) => {
-          const lower = (ch || 'general').toLowerCase();
-          return (lower === 'website' || lower === 'newsletter') ? 'digital_display' : lower;
-        };
-        
         let placementsWithAssets = 0;
         for (const item of inventoryItems) {
-          const itemChannel = item.channel || 'general';
-          const itemChannelNorm = normalizeChannel(itemChannel);
-          const itemDimensions = item.format?.dimensions || item.dimensions;
-          const itemSpecGroupId = item.specGroupId;
-          
-          // Check if asset exists using multiple matching strategies
+          const itemPlacementId = item.itemPath || item.sourcePath;
+
+          // Simple direct placement lookup - check if any asset has this placement linked
           const hasAsset = campaignAssets.some((asset: any) => {
-            const assetSpecGroupId = asset.metadata?.specGroupId;
-            const assetChannel = asset.specifications?.channel || asset.metadata?.channel || 'general';
-            const assetChannelNorm = normalizeChannel(assetChannel);
-            const assetDimensions = asset.metadata?.detectedDimensions || 
-                                   asset.specifications?.dimensions || 
-                                   asset.metadata?.dimensions;
-            
-            // Strategy 1: Direct specGroupId match
-            if (assetSpecGroupId && itemSpecGroupId) {
-              if (assetSpecGroupId === itemSpecGroupId) return true;
+            // Primary: Direct placement link (new approach)
+            const assetPlacements = asset.associations?.placements;
+            if (assetPlacements && Array.isArray(assetPlacements)) {
+              return assetPlacements.some((p: any) => 
+                p.placementId === itemPlacementId ||
+                (p.publicationId === order.publicationId && p.placementId === itemPlacementId)
+              );
             }
             
-            // Strategy 2: Match by normalized channel + dimensions 
-            // (website and newsletter are treated as same channel for matching)
-            if (assetChannelNorm === itemChannelNorm) {
-              const normItemDims = String(itemDimensions || '').toLowerCase().replace(/\s/g, '');
-              const normAssetDims = String(assetDimensions || '').toLowerCase().replace(/\s/g, '');
-              if (normItemDims && normAssetDims && normItemDims === normAssetDims) return true;
-            }
-            
-            // Strategy 3: Partial specGroupId match with normalized channel
-            if (assetSpecGroupId) {
-              const assetParts = assetSpecGroupId.split('::');
-              const assetSpecChannel = normalizeChannel(assetParts[0] || '');
-              const assetSpecDims = assetParts.find((p: string) => p.startsWith('dim:'))?.replace('dim:', '');
-              
-              const normItemDims = String(itemDimensions || 'default').toLowerCase().replace(/\s/g, '');
-              const normAssetDims = String(assetSpecDims || '').toLowerCase().replace(/\s/g, '');
-              
-              if (assetSpecChannel === itemChannelNorm && normItemDims === normAssetDims) return true;
+            // Fallback: Legacy specGroupId match for older assets
+            const assetSpecGroupId = asset.associations?.specGroupId || asset.metadata?.specGroupId;
+            const itemSpecGroupId = item.specGroupId;
+            if (assetSpecGroupId && itemSpecGroupId && assetSpecGroupId === itemSpecGroupId) {
+              return true;
             }
             
             return false;
@@ -440,52 +415,26 @@ export class InsertionOrderService {
         const inventoryItems = pub?.inventoryItems || [];
         const totalPlacements = inventoryItems.length;
         
-        // Helper to normalize channel for matching (website/newsletter are both digital_display)
-        const normalizeChannel = (ch: string) => {
-          const lower = (ch || 'general').toLowerCase();
-          return (lower === 'website' || lower === 'newsletter') ? 'digital_display' : lower;
-        };
-        
         let placementsWithAssets = 0;
         for (const item of inventoryItems) {
-          const itemChannel = item.channel || 'general';
-          const itemChannelNorm = normalizeChannel(itemChannel);
-          const itemDimensions = item.format?.dimensions || item.dimensions;
-          const itemSpecGroupId = item.specGroupId;
-          
-          // Check if asset exists using multiple matching strategies
+          const itemPlacementId = item.itemPath || item.sourcePath;
+
+          // Simple direct placement lookup - check if any asset has this placement linked
           const hasAsset = campaignAssets.some((asset: any) => {
-            const assetSpecGroupId = asset.metadata?.specGroupId;
-            const assetChannel = asset.specifications?.channel || asset.metadata?.channel || 'general';
-            const assetChannelNorm = normalizeChannel(assetChannel);
-            const assetDimensions = asset.metadata?.detectedDimensions || 
-                                   asset.specifications?.dimensions || 
-                                   asset.metadata?.dimensions;
-            
-            // Strategy 1: Direct specGroupId match
-            if (assetSpecGroupId && itemSpecGroupId) {
-              if (assetSpecGroupId === itemSpecGroupId) return true;
+            // Primary: Direct placement link (new approach)
+            const assetPlacements = asset.associations?.placements;
+            if (assetPlacements && Array.isArray(assetPlacements)) {
+              return assetPlacements.some((p: any) => 
+                p.placementId === itemPlacementId ||
+                (p.publicationId === order.publicationId && p.placementId === itemPlacementId)
+              );
             }
             
-            // Strategy 2: Match by normalized channel + dimensions
-            if (assetChannelNorm === itemChannelNorm) {
-              const normItemDims = String(itemDimensions || '').toLowerCase().replace(/\s/g, '');
-              const normAssetDims = String(assetDimensions || '').toLowerCase().replace(/\s/g, '');
-              if (normItemDims && normAssetDims && normItemDims === normAssetDims) {
-                return true;
-              }
-            }
-            
-            // Strategy 3: Partial specGroupId match with normalized channel
-            if (assetSpecGroupId) {
-              const assetParts = assetSpecGroupId.split('::');
-              const assetSpecChannel = normalizeChannel(assetParts[0] || '');
-              const assetSpecDims = assetParts.find((p: string) => p.startsWith('dim:'))?.replace('dim:', '');
-              
-              const normItemDims = String(itemDimensions || 'default').toLowerCase().replace(/\s/g, '');
-              const normAssetDims = String(assetSpecDims || '').toLowerCase().replace(/\s/g, '');
-              
-              if (assetSpecChannel === itemChannelNorm && normItemDims === normAssetDims) return true;
+            // Fallback: Legacy specGroupId match for older assets
+            const assetSpecGroupId = asset.associations?.specGroupId || asset.metadata?.specGroupId;
+            const itemSpecGroupId = item.specGroupId;
+            if (assetSpecGroupId && itemSpecGroupId && assetSpecGroupId === itemSpecGroupId) {
+              return true;
             }
             
             return false;
@@ -813,14 +762,24 @@ export class InsertionOrderService {
           // Generate specGroupId for this placement if not already set
           const specGroupId = item.specGroupId || `${itemChannel}::dim:${itemDimensions || 'default'}`;
           
-          // Check if asset exists for this placement
+          // Simple direct placement lookup - check if any asset has this placement linked
           const hasAsset = campaignAssets.some((asset: any) => {
-            if (asset.metadata?.specGroupId) {
-              return asset.metadata.specGroupId === specGroupId || asset.metadata.specGroupId === item.specGroupId;
+            // Primary: Direct placement link (new approach)
+            const assetPlacements = asset.associations?.placements;
+            if (assetPlacements && Array.isArray(assetPlacements)) {
+              return assetPlacements.some((p: any) => 
+                p.placementId === placementId ||
+                (p.publicationId === pub.publicationId && p.placementId === placementId)
+              );
             }
-            const assetChannel = asset.specifications?.channel || 'general';
-            const assetDimensions = asset.metadata?.detectedDimensions || asset.specifications?.dimensions;
-            return assetChannel === itemChannel && assetDimensions === itemDimensions;
+            
+            // Fallback: Legacy specGroupId match for older assets
+            const assetSpecGroupId = asset.associations?.specGroupId || asset.metadata?.specGroupId;
+            if (assetSpecGroupId && (assetSpecGroupId === specGroupId || assetSpecGroupId === item.specGroupId)) {
+              return true;
+            }
+            
+            return false;
           });
           
           // Create asset reference (always, even if no asset exists yet)
@@ -1304,10 +1263,26 @@ export class InsertionOrderService {
       const references = order.assetReferences || [];
       
       for (const ref of references) {
-        // Find current asset by specGroupId
-        const currentAsset = campaignAssets.find((a: any) => 
-          a.metadata?.specGroupId === ref.specGroupId
-        );
+        // Simple direct placement lookup - check if any asset has this placement linked
+        const currentAsset = campaignAssets.find((a: any) => {
+          // Primary: Direct placement link (new approach)
+          const assetPlacements = a.associations?.placements;
+          if (assetPlacements && Array.isArray(assetPlacements)) {
+            const match = assetPlacements.some((p: any) => 
+              p.placementId === ref.placementId ||
+              (p.publicationId === parseInt(publicationId) && p.placementId === ref.placementId)
+            );
+            if (match) return true;
+          }
+          
+          // Fallback: Legacy specGroupId match for older assets
+          const assetSpecGroupId = a.associations?.specGroupId || a.metadata?.specGroupId;
+          if (assetSpecGroupId && assetSpecGroupId === ref.specGroupId) {
+            return true;
+          }
+          
+          return false;
+        });
 
         const hasAsset = !!currentAsset;
         if (hasAsset) placementsWithAssets++;

@@ -48,8 +48,17 @@ export interface CreativeAsset {
     campaignId?: string; // If associated with a campaign
     packageId?: string; // If associated with a package
     insertionOrderId?: string; // If associated with a specific insertion order
-    publicationId?: number; // If for a specific publication
-    placementId?: string; // Specific placement/inventory item
+    publicationId?: number; // If for a specific publication (legacy, use placements array)
+    placementId?: string; // Specific placement/inventory item (legacy, use placements array)
+    // Direct placement links - enables simple lookup from publication orders
+    placements?: Array<{
+      publicationId: number;
+      placementId: string;      // e.g., "distributionChannels.print[0].advertisingOpportunities[0]"
+      placementName: string;
+      channel: string;
+    }>;
+    // Reference to spec group for display/grouping purposes
+    specGroupId?: string;
   };
   
   // Specifications from publication's inventory requirements

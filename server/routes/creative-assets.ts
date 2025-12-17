@@ -84,6 +84,18 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
       suggestedStandardId,
       specGroupId
     } = req.body;
+    
+    // Parse placements array if provided (direct placement links for publication order lookup)
+    let placements;
+    if (req.body.placements) {
+      try {
+        placements = typeof req.body.placements === 'string'
+          ? JSON.parse(req.body.placements)
+          : req.body.placements;
+      } catch (e) {
+        console.warn('Failed to parse placements:', e);
+      }
+    }
 
     // Parse specifications if provided as string
     let parsedSpecs;
@@ -192,7 +204,10 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
         insertionOrderId,
         publicationId: publicationId ? parseInt(publicationId) : (parsedSpecs?.publicationId ? parseInt(parsedSpecs.publicationId) : undefined),
         placementId,
-        channel: parsedSpecs?.channel
+        channel: parsedSpecs?.channel,
+        // Direct placement links for publication order lookup
+        placements: placements || undefined,
+        specGroupId: specGroupId || undefined
       },
       // Store specifications with the asset
       specifications: parsedSpecs ? {
