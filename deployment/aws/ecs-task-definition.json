@@ -29,6 +29,18 @@
         {
           "name": "FRONTEND_URL",
           "value": "https://main.dbn59dj42j2z3.amplifyapp.com"
+        },
+        {
+          "name": "TRACKING_CDN_URL",
+          "value": "https://dxafls8akrlrp.cloudfront.net"
+        },
+        {
+          "name": "AWS_CLOUDFRONT_DOMAIN_AD_ASSETS",
+          "value": "dzr71npsexxrt.cloudfront.net"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-2"
         }
       ],
       "secrets": [
@@ -111,6 +123,10 @@
         {
           "name": "ANTHROPIC_API_KEY",
           "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/anthropic-api-key"
+        },
+        {
+          "name": "EMAIL_NOTIFICATIONS_ENABLED",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/email-notifications-enabled"
         }
       ],
       "logConfiguration": {
