@@ -824,6 +824,18 @@ export function CampaignCreativeAssetsUploader({
       formData.append('specifications', JSON.stringify(specifications));
       formData.append('specGroupId', specGroup.specGroupId);
       
+      // Attach placements as top-level field for tracking script generation
+      // This tells the backend which specific placements this asset is for
+      if (specGroup.placements && specGroup.placements.length > 0) {
+        const placementsForBackend = specGroup.placements.map(p => ({
+          publicationId: p.publicationId,
+          placementId: p.placementId || p.itemPath,  // itemPath is the unique placement identifier
+          placementName: p.placementName,
+          channel: specGroup.channel
+        }));
+        formData.append('placements', JSON.stringify(placementsForBackend));
+      }
+      
       // Attach detected specs
       if (detectedSpecs) {
         formData.append('detectedSpecs', JSON.stringify({

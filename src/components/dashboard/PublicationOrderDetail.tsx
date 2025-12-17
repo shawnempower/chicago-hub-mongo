@@ -16,9 +16,9 @@ import {
   ArrowLeft, Check, X, AlertCircle, FileText, AlertTriangle, 
   Loader2, CheckCircle2, BarChart3, Code, Copy, ExternalLink,
   Calendar, DollarSign, Layers, MessageSquare, Download,
-  ChevronDown, ChevronUp, Clock, Package, RefreshCw,
+  ChevronDown, ChevronUp, ChevronRight, Clock, Package, RefreshCw,
   Eye, Users, Newspaper, Radio, Headphones, CalendarDays, Target,
-  Lock, XCircle, PlayCircle, Timer, Megaphone
+  Lock, XCircle, PlayCircle, Timer, Megaphone, MoreVertical
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
@@ -35,6 +35,13 @@ import type { PublicationAdServer, PublicationESP } from '@/integrations/mongodb
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
 import { PublicationInsertionOrderDocument } from '@/integrations/mongodb/insertionOrderSchema';
 import { TrackingScript } from '@/integrations/mongodb/trackingScriptSchema';
@@ -1270,20 +1277,6 @@ export function PublicationOrderDetail() {
                       <Copy className="h-4 w-4 mr-1" />
                       Copy All
                     </Button>
-                    <Button onClick={handleDownloadAllScripts} variant="outline" className="bg-white" size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      Download
-                    </Button>
-                    <Button 
-                      onClick={() => trackingScripts.length > 0 && handleTestScript(trackingScripts[0])} 
-                      variant="outline" 
-                      className="bg-white" 
-                      size="sm"
-                      disabled={trackingScripts.length === 0}
-                    >
-                      <Target className="h-4 w-4 mr-1" />
-                      Test Tags
-                    </Button>
                     <Button 
                       onClick={handleRefreshScripts} 
                       variant="outline" 
@@ -1293,34 +1286,26 @@ export function PublicationOrderDetail() {
                       <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
                       {refreshingScripts ? 'Refreshing...' : 'Refresh'}
                     </Button>
-                  </div>
-                </div>
-                
-                {/* Scripts organized by size */}
-                <div className="mt-4 pt-4 border-t border-blue-200">
-                  <p className="text-xs font-medium text-blue-800 mb-2">By Ad Size:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(() => {
-                      // Group scripts by size
-                      const sizeGroups: Record<string, typeof trackingScripts> = {};
-                      trackingScripts.forEach(script => {
-                        const size = script.creative.width && script.creative.height 
-                          ? `${script.creative.width}x${script.creative.height}` 
-                          : 'Auto';
-                        if (!sizeGroups[size]) sizeGroups[size] = [];
-                        sizeGroups[size].push(script);
-                      });
-                      
-                      return Object.entries(sizeGroups).map(([size, scripts]) => (
-                        <Badge 
-                          key={size}
-                          variant="secondary" 
-                          className="bg-white text-blue-800 border border-blue-300 hover:bg-blue-100 cursor-default"
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleDownloadAllScripts}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download All Scripts
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => trackingScripts.length > 0 && handleTestScript(trackingScripts[0])}
+                          disabled={trackingScripts.length === 0}
                         >
-                          {size} ({scripts.length})
-                        </Badge>
-                      ));
-                    })()}
+                          <Target className="h-4 w-4 mr-2" />
+                          Test Tags
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>
@@ -1392,7 +1377,8 @@ export function PublicationOrderDetail() {
                       <p className="text-sm text-muted-foreground">{config.instructions.howTo}</p>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-3 pt-2">
+                  <CardContent className="pt-2">
+                    <Accordion type="multiple" className="space-y-2">
                     {items.map((item: any) => {
                       const itemPath = item.itemPath || item.sourcePath || `placement-${item._idx}`;
                       const placementStatus = placementStatuses[itemPath] || 'pending';
@@ -1404,33 +1390,10 @@ export function PublicationOrderDetail() {
                       const dimParts = placementDimensions ? placementDimensions.split(/x/i).map((d: string) => parseInt(d?.trim())) : [];
                       const [placementWidth, placementHeight] = dimParts.length === 2 ? dimParts : [0, 0];
                       
-                      // Filter scripts for this placement
-                      const channelScripts = isDigital ? trackingScripts.filter(s => {
-                        // Match channels - 'display' is used for website ads
-                        const channelMatch = s.channel === channel ||
-                          (channel === 'website' && s.channel === 'display') ||
-                          (channel === 'newsletter' && ['newsletter_image', 'newsletter_text'].includes(s.channel)) ||
-                          (channel === 'streaming' && s.channel === 'streaming');
-                        return channelMatch;
-                      }) : [];
-
-                      // Try to match by dimensions first
-                      let matchedScripts = channelScripts;
-                      if (placementWidth && placementHeight) {
-                        const dimensionMatched = channelScripts.filter(s => 
-                          s.creative.width === placementWidth && s.creative.height === placementHeight
-                        );
-                        // Only use dimension filtering if we found matches
-                        if (dimensionMatched.length > 0) {
-                          matchedScripts = dimensionMatched;
-                        }
-                        // Otherwise show all scripts for this channel (better than showing nothing)
-                      }
-
-                      // Deduplicate by creativeId (in case of duplicate scripts)
-                      const scripts = matchedScripts.filter((script, index, self) =>
-                        index === self.findIndex(s => s.creativeId === script.creativeId)
-                      );
+                      // Filter scripts for this placement - match by itemPath only
+                      const scripts = isDigital ? trackingScripts.filter(s => 
+                        s.itemPath === itemPath
+                      ) : [];
                       // Show assets for ALL placements (digital and non-digital)
                       const placementAssets = freshAssets
                         .filter(fa => fa.placementId === itemPath && fa.hasAsset && fa.asset)
@@ -1438,55 +1401,72 @@ export function PublicationOrderDetail() {
 
                       // Get delivery expectations for this placement
                       const deliveryExpectations = getDeliveryExpectations(item);
+                      
+                      // Get earnings for collapsed header
+                      const earningsExp = deliveryExpectations.find(e => e.label === 'Earn');
 
                       return (
-                        <div key={itemPath} className={cn(
-                          "border rounded-lg overflow-hidden bg-white",
-                          placementStatus === 'rejected' && "border-red-300 bg-red-50/50"
-                        )}>
-                          {/* Placement Header */}
-                          <div className="px-4 py-2 bg-white/80 border-b">
-                            <div className="flex items-center justify-between">
+                        <AccordionItem 
+                          key={itemPath} 
+                          value={itemPath}
+                          className={cn(
+                            "border rounded-lg overflow-hidden bg-white",
+                            placementStatus === 'rejected' && "border-red-300 bg-red-50/50"
+                          )}
+                        >
+                          {/* Collapsed Header - shows key info at a glance */}
+                          <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-gray-50/50 [&[data-state=open]>svg]:rotate-90">
+                            <div className="flex items-center justify-between w-full pr-2">
                               <div className="flex items-center gap-2 flex-wrap">
+                                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
                                 <span className="font-medium">{item.itemName || item.sourceName}</span>
                                 {item.format?.dimensions && (
-                                  <div className="flex flex-wrap gap-1">
-                                    {parseDimensions(item.format.dimensions).map((dim, i) => (
-                                      <Badge key={i} variant="outline" className="text-xs">{dim}</Badge>
-                                    ))}
-                                  </div>
+                                  <Badge variant="outline" className="text-xs">
+                                    {parseDimensions(item.format.dimensions)[0]}
+                                    {parseDimensions(item.format.dimensions).length > 1 && ` +${parseDimensions(item.format.dimensions).length - 1}`}
+                                  </Badge>
                                 )}
                               </div>
-                              <PlacementStatusBadge status={placementStatus} />
+                              <div className="flex items-center gap-3">
+                                {earningsExp && (
+                                  <span className="text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded">
+                                    {earningsExp.value}
+                                  </span>
+                                )}
+                                <PlacementStatusBadge status={placementStatus} />
+                              </div>
                             </div>
-                            
-                            {/* Delivery Expectations with Earnings */}
+                          </AccordionTrigger>
+                          
+                          <AccordionContent>
+                            {/* Full Delivery Expectations */}
                             {deliveryExpectations.length > 0 && (
-                              <div className="flex flex-wrap items-center gap-3 mt-2 text-xs">
-                                {deliveryExpectations.map((exp, i) => (
-                                  <div 
-                                    key={i} 
-                                    className={cn(
-                                      "flex items-center gap-1",
-                                      (exp as any).highlight 
-                                        ? "bg-gray-100 px-2 py-1 rounded-md font-medium" 
-                                        : "text-muted-foreground"
-                                    )}
-                                  >
-                                    {exp.icon}
-                                    <span className={(exp as any).highlight ? "text-gray-700" : "text-gray-600"}>
-                                      {exp.label}:
-                                    </span>
-                                    <span className={(exp as any).highlight ? "text-gray-900 font-semibold" : "font-medium text-gray-900"}>
-                                      {exp.value}
-                                    </span>
-                                  </div>
-                                ))}
+                              <div className="px-4 pb-3 pt-1 border-b bg-gray-50/50">
+                                <div className="flex flex-wrap items-center gap-3 text-xs">
+                                  {deliveryExpectations.map((exp, i) => (
+                                    <div 
+                                      key={i} 
+                                      className={cn(
+                                        "flex items-center gap-1",
+                                        (exp as any).highlight 
+                                          ? "bg-white px-2 py-1 rounded-md font-medium border" 
+                                          : "text-muted-foreground"
+                                      )}
+                                    >
+                                      {exp.icon}
+                                      <span className={(exp as any).highlight ? "text-gray-700" : "text-gray-600"}>
+                                        {exp.label}:
+                                      </span>
+                                      <span className={(exp as any).highlight ? "text-gray-900 font-semibold" : "font-medium text-gray-900"}>
+                                        {exp.value}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
-                          </div>
 
-                          <div className="p-3 space-y-3">
+                            <div className="p-3 space-y-3">
                             
                             {/* Website: Note about grouped impressions */}
                             {channel === 'website' && scripts.length > 1 && (
@@ -1892,9 +1872,11 @@ export function PublicationOrderDetail() {
                               )}
                             </div>
                           </div>
-                        </div>
+                          </AccordionContent>
+                        </AccordionItem>
                       );
                     })}
+                    </Accordion>
                   </CardContent>
                 </Card>
               );

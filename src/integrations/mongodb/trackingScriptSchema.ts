@@ -72,6 +72,10 @@ export interface TrackingScript {
   publicationCode?: string;    // DEPRECATED - kept for backward compatibility, no longer used in URLs
   publicationName: string;     // Denormalized for display
   
+  // Placement assignment - which specific inventory item this script is for
+  itemPath?: string;           // e.g., "distributionChannels.website.advertisingOpportunities[1]"
+  placementName?: string;      // Denormalized for display, e.g., "Interior Page Placement"
+  
   // Channel type
   channel: TrackingChannel;
   

@@ -199,8 +199,9 @@ export async function generateScriptsForOrder(
       };
     }
 
-    // Generate scripts for each creative
+    // Generate scripts for each creative - respecting placement assignments
     const scriptsToInsert: any[] = [];
+    const orderId = order._id?.toString() || '';
 
     for (const creative of digitalCreatives) {
       const fileName = creative.originalFilename || creative.metadata?.originalFileName || 'Creative';
@@ -222,31 +223,12 @@ export async function generateScriptsForOrder(
       }
       
       const sizeStr = `${width}x${height}`;
-      
-      // Determine channel: First check asset associations, then match to order placements by dimensions
-      let channel = (creative.associations?.channel || creative.specifications?.channel || '').toLowerCase();
-      
-      // If no channel on asset, try to match to order's assetReferences by dimensions
-      if (!channel && order.assetReferences) {
-        const matchedRef = order.assetReferences.find((ref: any) => {
-          const refDims = Array.isArray(ref.dimensions) ? ref.dimensions : [ref.dimensions];
-          return refDims.some((d: string) => d === sizeStr);
-        });
-        if (matchedRef) {
-          channel = (matchedRef.channel || '').toLowerCase();
-          console.log(`[TrackingScript] Matched ${sizeStr} to placement "${matchedRef.placementName}" with channel "${channel}"`);
-        }
-      }
-      
-      // Default to website if still no channel
-      if (!channel) {
-        channel = 'website';
-      }
+      const creativeId = creative.assetId || creative._id?.toString() || '';
       
       // Validate and get click URL - warn if missing
       const clickUrl = creative.digitalAdProperties?.clickUrl;
       if (!clickUrl) {
-        console.warn(`[TrackingScript] WARNING: No click URL provided for creative ${creative.assetId || creative._id}. Using placeholder - ads will not redirect to landing page!`);
+        console.warn(`[TrackingScript] WARNING: No click URL provided for creative ${creativeId}. Using placeholder - ads will not redirect to landing page!`);
       }
       const finalClickUrl = clickUrl || `https://advertiser.example.com/landing`;
       
@@ -255,98 +237,137 @@ export async function generateScriptsForOrder(
       const headline = creative.digitalAdProperties?.headline;
       const body = creative.digitalAdProperties?.body;
       const ctaText = creative.digitalAdProperties?.ctaText;
-      const creativeId = creative.assetId || creative._id?.toString() || '';
-
-      // Determine tracking channel type
-      let trackingChannel: TrackingChannel = 'website';
-      if (channel.includes('newsletter')) {
-        trackingChannel = headline || body ? 'newsletter_text' : 'newsletter_image';
-      } else if (channel.includes('streaming')) {
-        trackingChannel = 'streaming';
-      }
-
-      const channelCode = CHANNEL_TYPE_CODES[trackingChannel] || 'd';
-      const channelUrlCode = CHANNEL_URL_CODES[trackingChannel] || 'website';
-      const orderId = order._id?.toString() || '';
       
-      // Determine if this is a newsletter channel (needs email ID tracking)
-      const isNewsletter = trackingChannel.includes('newsletter');
-
-      // Build tracking URLs with full attribution parameters
-      const urls = {
-        impressionPixel: buildTrackingUrl(TRACKING_CDN_BASE_URL, TRACKING_PIXEL_PATH, 'display', {
-          orderId,
-          campaignId,
-          publicationId,  // Using only publicationId (removed redundant publicationCode)
-          channel: channelUrlCode,
-          creativeId,
-          size: sizeStr,
-          itemPath: 'tracking-display',
-          emailId: isNewsletter ? 'EMAIL_ID' : undefined  // Placeholder for ESP merge tag
-        }),
-        clickTracker: buildTrackingUrl(TRACKING_CDN_BASE_URL, TRACKING_PIXEL_PATH, 'click', {
-          orderId,
-          campaignId,
-          publicationId,  // Using only publicationId
-          channel: channelUrlCode,
-          creativeId,
-          redirectUrl: finalClickUrl,  // CRITICAL: Include landing page URL for redirect
-          emailId: isNewsletter ? 'EMAIL_ID' : undefined
-        }),
-        creativeUrl: imageUrl || `${TRACKING_CDN_BASE_URL}/a/${creativeId}.jpg`
-      };
-
-      // Build creative info for tag generation
-      const creativeInfo = {
-        name: fileName || `${advertiserName} - ${sizeStr}`,
-        clickUrl: finalClickUrl,
-        imageUrl: urls.creativeUrl,
-        width,
-        height,
-        altText,
-        headline,
-        body,
-        ctaText
-      };
-
-      // Generate HTML tags based on channel
-      // Note: function signature is (creative, urls, advertiserName, campaignName, [size])
-      let fullTag = '';
-      let simplifiedTag: string | undefined;
-
-      if (trackingChannel === 'newsletter_text') {
-        fullTag = generateNewsletterTextTag(creativeInfo, urls, advertiserName, campaignName);
-      } else if (trackingChannel === 'newsletter_image') {
-        fullTag = generateNewsletterImageTag(creativeInfo, urls, advertiserName, campaignName);
-        simplifiedTag = generateNewsletterImageSimplifiedTag(urls, advertiserName, campaignName);
-      } else {
-        fullTag = generateDisplayAdTag(creativeInfo, urls, advertiserName, campaignName, sizeStr);
+      // Get placement assignments from creative for THIS publication
+      const assetPlacements = creative.associations?.placements || [];
+      const relevantPlacements = assetPlacements.filter((p: any) => p.publicationId === publicationId);
+      
+      // No placements for this publication = no scripts
+      if (relevantPlacements.length === 0) {
+        console.log(`[TrackingScript] Skipping ${fileName} - no placement assignments for pub ${publicationId}`);
+        continue;
       }
+      
+      for (const placement of relevantPlacements) {
+        const itemPath = placement.placementId || null;
+        const placementNameFromAsset = placement.placementName || null;
+        
+        // Determine channel: First from placement, then asset associations, then match by dimensions
+        let channel = (placement.channel || creative.associations?.channel || creative.specifications?.channel || '').toLowerCase();
+        
+        // If no channel, try to match to order's assetReferences by dimensions
+        if (!channel && order.assetReferences) {
+          const matchedRef = order.assetReferences.find((ref: any) => {
+            const refDims = Array.isArray(ref.dimensions) ? ref.dimensions : [ref.dimensions];
+            return refDims.some((d: string) => d === sizeStr);
+          });
+          if (matchedRef) {
+            channel = (matchedRef.channel || '').toLowerCase();
+            console.log(`[TrackingScript] Matched ${sizeStr} to placement "${matchedRef.placementName}" with channel "${channel}"`);
+          }
+        }
+        
+        // Default to website if still no channel
+        if (!channel) {
+          channel = 'website';
+        }
 
-      // Create script document
-      const script = {
-        campaignId,
-        creativeId,
-        publicationId,
-        publicationName,
-        channel: trackingChannel,
-        creative: creativeInfo,
-        urls,
-        tags: {
-          fullTag,
-          simplifiedTag,
-          comments: `<!-- ${advertiserName} | ${campaignName} | ${trackingChannel} | ${publicationName} -->`
-        },
-        espCompatibility: 'full' as const,
-        generatedAt: new Date(),
-        generatedBy: 'system',
-        status: 'active' as const,
-        impressionCount: 0,
-        clickCount: 0
-      };
+        // Determine tracking channel type
+        let trackingChannel: TrackingChannel = 'website';
+        if (channel.includes('newsletter')) {
+          trackingChannel = headline || body ? 'newsletter_text' : 'newsletter_image';
+        } else if (channel.includes('streaming')) {
+          trackingChannel = 'streaming';
+        }
 
-      scriptsToInsert.push(script);
-    }
+        const channelCode = CHANNEL_TYPE_CODES[trackingChannel] || 'd';
+        const channelUrlCode = CHANNEL_URL_CODES[trackingChannel] || 'website';
+        
+        // Determine if this is a newsletter channel (needs email ID tracking)
+        const isNewsletter = trackingChannel.includes('newsletter');
+
+        // Build tracking URLs with full attribution parameters
+        const urls = {
+          impressionPixel: buildTrackingUrl(TRACKING_CDN_BASE_URL, TRACKING_PIXEL_PATH, 'display', {
+            orderId,
+            campaignId,
+            publicationId,
+            channel: channelUrlCode,
+            creativeId,
+            size: sizeStr,
+            itemPath: itemPath || 'tracking-display',
+            emailId: isNewsletter ? 'EMAIL_ID' : undefined
+          }),
+          clickTracker: buildTrackingUrl(TRACKING_CDN_BASE_URL, TRACKING_PIXEL_PATH, 'click', {
+            orderId,
+            campaignId,
+            publicationId,
+            channel: channelUrlCode,
+            creativeId,
+            redirectUrl: finalClickUrl,
+            emailId: isNewsletter ? 'EMAIL_ID' : undefined
+          }),
+          creativeUrl: imageUrl || `${TRACKING_CDN_BASE_URL}/a/${creativeId}.jpg`
+        };
+
+        // Build creative info for tag generation
+        const creativeInfo = {
+          name: fileName || `${advertiserName} - ${sizeStr}`,
+          clickUrl: finalClickUrl,
+          imageUrl: urls.creativeUrl,
+          width,
+          height,
+          altText,
+          headline,
+          body,
+          ctaText
+        };
+
+        // Generate HTML tags based on channel
+        let fullTag = '';
+        let simplifiedTag: string | undefined;
+
+        if (trackingChannel === 'newsletter_text') {
+          fullTag = generateNewsletterTextTag(creativeInfo, urls, advertiserName, campaignName);
+        } else if (trackingChannel === 'newsletter_image') {
+          fullTag = generateNewsletterImageTag(creativeInfo, urls, advertiserName, campaignName);
+          simplifiedTag = generateNewsletterImageSimplifiedTag(urls, advertiserName, campaignName);
+        } else {
+          fullTag = generateDisplayAdTag(creativeInfo, urls, advertiserName, campaignName, sizeStr);
+        }
+
+        // Create script document with placement assignment
+        const script: any = {
+          campaignId,
+          creativeId,
+          publicationId,
+          publicationName,
+          channel: trackingChannel,
+          creative: creativeInfo,
+          urls,
+          tags: {
+            fullTag,
+            simplifiedTag,
+            comments: `<!-- ${advertiserName} | ${campaignName} | ${trackingChannel} | ${publicationName}${placementNameFromAsset ? ` | ${placementNameFromAsset}` : ''} -->`
+          },
+          espCompatibility: 'full' as const,
+          generatedAt: new Date(),
+          generatedBy: 'system',
+          status: 'active' as const,
+          impressionCount: 0,
+          clickCount: 0
+        };
+        
+        // Add placement info if available
+        if (itemPath) {
+          script.itemPath = itemPath;
+          script.placementName = placementNameFromAsset;
+          console.log(`[TrackingScript] Script assigned to placement: ${itemPath} (${placementNameFromAsset})`);
+        }
+
+        scriptsToInsert.push(script);
+      } // end placement loop
+    } // end creative loop
 
     // Insert scripts
     if (scriptsToInsert.length > 0) {
@@ -484,30 +505,63 @@ export async function generateScriptsForAsset(
     const creativeId = asset.assetId || asset._id?.toString() || '';
     const sizeStr = `${width}x${height}`;
 
-    // Generate one script per order
+    // Generate scripts - one per placement assignment on the asset
     const scriptsToInsert: any[] = [];
+    
+    // Get placement assignments from asset
+    const assetPlacements = asset.associations?.placements || [];
+    
+    // If asset has specific placement assignments, only generate for those
+    // Otherwise, generate for all orders (legacy behavior)
+    const hasPlacementAssignments = assetPlacements.length > 0;
+    
+    if (hasPlacementAssignments) {
+      console.log(`[TrackingScripts] Asset has ${assetPlacements.length} placement assignments`);
+    }
 
     for (const order of orders) {
       const publicationId = order.publicationId;
       const publicationName = order.publicationName || 'Publication';
       const pubCode = publicationName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
       const orderId = order._id?.toString() || '';
-
-      // Check if a script already exists for this asset + order combination
-      const existingScript = await scriptsCollection.findOne({
-        campaignId,
-        publicationId,
-        creativeId,
-        deletedAt: { $exists: false }
-      });
-
-      if (existingScript) {
-        console.log(`Script already exists for asset ${creativeId} / publication ${publicationId}`);
+      
+      // If asset has placement assignments, only process if this publication is in the list
+      const relevantPlacements = hasPlacementAssignments 
+        ? assetPlacements.filter((p: any) => p.publicationId === publicationId)
+        : [{ publicationId, placementId: null, placementName: null, channel: null }]; // Legacy: one script per order
+      
+      if (hasPlacementAssignments && relevantPlacements.length === 0) {
+        console.log(`[TrackingScripts] Skipping publication ${publicationId} - not in asset's placement assignments`);
         continue;
       }
+      
+      // Generate a script for each placement assignment (or one script if no assignments)
+      for (const placement of relevantPlacements) {
+        const itemPath = placement.placementId || null;
+        const placementNameFromAsset = placement.placementName || null;
 
-      // Determine channel: First check asset associations, then match to order placements by dimensions
-      let channel = assetChannel;
+        // Check if a script already exists for this asset + order + placement combination
+        const existingQuery: any = {
+          campaignId,
+          publicationId,
+          creativeId,
+          deletedAt: { $exists: false }
+        };
+        
+        // Include itemPath in uniqueness check if we have placement assignments
+        if (itemPath) {
+          existingQuery.itemPath = itemPath;
+        }
+        
+        const existingScript = await scriptsCollection.findOne(existingQuery);
+
+        if (existingScript) {
+          console.log(`Script already exists for asset ${creativeId} / publication ${publicationId}${itemPath ? ` / placement ${itemPath}` : ''}`);
+          continue;
+        }
+
+        // Determine channel: First from placement assignment, then asset associations, then match by dimensions
+        let channel = placement.channel?.toLowerCase() || assetChannel;
       
       // If no channel on asset, try to match to order's assetReferences by dimensions
       if (!channel && order.assetReferences) {
@@ -581,39 +635,47 @@ export async function generateScriptsForAsset(
       let fullTag = '';
       let simplifiedTag: string | undefined;
 
-      if (trackingChannel === 'newsletter_text') {
-        fullTag = generateNewsletterTextTag(creativeInfo, urls, advertiserName, campaignName);
-      } else if (trackingChannel === 'newsletter_image') {
-        fullTag = generateNewsletterImageTag(creativeInfo, urls, advertiserName, campaignName);
-        simplifiedTag = generateNewsletterImageSimplifiedTag(urls, advertiserName, campaignName);
-      } else {
-        fullTag = generateDisplayAdTag(creativeInfo, urls, advertiserName, campaignName, sizeStr);
-      }
+        if (trackingChannel === 'newsletter_text') {
+          fullTag = generateNewsletterTextTag(creativeInfo, urls, advertiserName, campaignName);
+        } else if (trackingChannel === 'newsletter_image') {
+          fullTag = generateNewsletterImageTag(creativeInfo, urls, advertiserName, campaignName);
+          simplifiedTag = generateNewsletterImageSimplifiedTag(urls, advertiserName, campaignName);
+        } else {
+          fullTag = generateDisplayAdTag(creativeInfo, urls, advertiserName, campaignName, sizeStr);
+        }
 
-      // Create script document
-      const script = {
-        campaignId,
-        creativeId,
-        publicationId,
-        publicationName,
-        channel: trackingChannel,
-        creative: creativeInfo,
-        urls,
-        tags: {
-          fullTag,
-          simplifiedTag,
-          comments: `<!-- ${advertiserName} | ${campaignName} | ${trackingChannel} | ${publicationName} -->`
-        },
-        espCompatibility: 'full' as const,
-        generatedAt: new Date(),
-        generatedBy: 'system',
-        status: 'active' as const,
-        impressionCount: 0,
-        clickCount: 0
-      };
+        // Create script document with placement assignment
+        const script: any = {
+          campaignId,
+          creativeId,
+          publicationId,
+          publicationName,
+          channel: trackingChannel,
+          creative: creativeInfo,
+          urls,
+          tags: {
+            fullTag,
+            simplifiedTag,
+            comments: `<!-- ${advertiserName} | ${campaignName} | ${trackingChannel} | ${publicationName}${placementNameFromAsset ? ` | ${placementNameFromAsset}` : ''} -->`
+          },
+          espCompatibility: 'full' as const,
+          generatedAt: new Date(),
+          generatedBy: 'system',
+          status: 'active' as const,
+          impressionCount: 0,
+          clickCount: 0
+        };
+        
+        // Add placement info if available
+        if (itemPath) {
+          script.itemPath = itemPath;
+          script.placementName = placementNameFromAsset;
+          console.log(`[TrackingScripts] Script assigned to placement: ${itemPath} (${placementNameFromAsset})`);
+        }
 
-      scriptsToInsert.push(script);
-    }
+        scriptsToInsert.push(script);
+      } // end placement loop
+    } // end order loop
 
     // Insert scripts
     if (scriptsToInsert.length > 0) {
