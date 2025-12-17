@@ -557,46 +557,46 @@ export default function CampaignDetail() {
 
                 {/* Key Metrics */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-green-600" />
-                    <div>
+                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <DollarSign className="h-4 w-4 text-gray-400" />
                       <p className="text-sm text-muted-foreground font-sans">Investment</p>
-                      <p className="text-lg font-bold font-sans">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</p>
                     </div>
+                    <p className="text-lg font-bold font-sans">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</p>
                   </div>
 
-                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
-                    <Building2 className="h-5 w-5 text-purple-600" />
-                    <div>
+                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Building2 className="h-4 w-4 text-gray-400" />
                       <p className="text-sm text-muted-foreground font-sans">Publications</p>
-                      <p className="text-lg font-bold font-sans">{campaign.selectedInventory?.totalPublications || campaign.selectedInventory?.publications?.length || 0}</p>
                     </div>
+                    <p className="text-lg font-bold font-sans">{campaign.selectedInventory?.totalPublications || campaign.selectedInventory?.publications?.length || 0}</p>
                   </div>
 
-                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
-                    <Package className="h-5 w-5 text-indigo-600" />
-                    <div>
+                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Package className="h-4 w-4 text-gray-400" />
                       <p className="text-sm text-muted-foreground font-sans">Placements</p>
-                      <p className="text-lg font-bold font-sans">{campaign.selectedInventory?.totalInventoryItems || 0}</p>
                     </div>
+                    <p className="text-lg font-bold font-sans">{campaign.selectedInventory?.totalInventoryItems || 0}</p>
                   </div>
 
-                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
-                    <Target className="h-5 w-5 text-blue-600" />
-                    <div>
+                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Target className="h-4 w-4 text-gray-400" />
                       <p className="text-sm text-muted-foreground font-sans">Est. Reach</p>
-                      <p className="text-lg font-bold font-sans">
-                        {campaign.estimatedPerformance?.reach?.min?.toLocaleString() || 'N/A'}+
-                      </p>
                     </div>
+                    <p className="text-lg font-bold font-sans">
+                      {campaign.estimatedPerformance?.reach?.min?.toLocaleString() || 'N/A'}+
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
-                    <Calendar className="h-5 w-5 text-amber-600" />
-                    <div>
+                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Calendar className="h-4 w-4 text-gray-400" />
                       <p className="text-sm text-muted-foreground font-sans">Duration</p>
-                      <p className="text-lg font-bold font-sans">{campaign.timeline.durationMonths} months</p>
                     </div>
+                    <p className="text-lg font-bold font-sans">{campaign.timeline.durationMonths} months</p>
                   </div>
                 </div>
               </div>

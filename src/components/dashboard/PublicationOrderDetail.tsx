@@ -16,7 +16,7 @@ import {
   Calendar, DollarSign, Layers, MessageSquare, Download,
   ChevronDown, ChevronUp, Clock, Package, RefreshCw,
   Eye, Users, Newspaper, Radio, Headphones, CalendarDays, Target,
-  Lock, XCircle, PlayCircle, Timer
+  Lock, XCircle, PlayCircle, Timer, Megaphone
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
@@ -732,18 +732,23 @@ export function PublicationOrderDetail() {
   
   return (
     <div className="space-y-4">
+      {/* Breadcrumbs */}
+      <div className="mb-2">
+        <Breadcrumb
+          rootLabel="Campaigns"
+          rootIcon={Megaphone}
+          currentLabel={order.campaignName}
+          onBackClick={() => navigate('/dashboard?tab=orders')}
+        />
+      </div>
+
       {/* Compact Header Card */}
       <Card className="shadow-sm">
         <CardContent className="py-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => navigate('/dashboard?tab=orders')}>
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div>
-                <h2 className="text-lg font-bold leading-tight">{order.campaignName}</h2>
-                <p className="text-sm text-muted-foreground">{order.publicationName}</p>
-              </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold font-sans leading-tight">{order.campaignName}</h2>
+              <p className="text-sm font-sans text-muted-foreground">{order.publicationName}</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right text-sm">
@@ -765,7 +770,7 @@ export function PublicationOrderDetail() {
               {acceptedCount > 0 && <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">{acceptedCount} accepted</Badge>}
               {inProductionCount > 0 && <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">{inProductionCount} live</Badge>}
               {deliveredCount > 0 && <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">{deliveredCount} delivered</Badge>}
-              {pendingCount > 0 && <Badge variant="outline" className="bg-amber-50 text-amber-700 text-xs">{pendingCount} pending</Badge>}
+              {pendingCount > 0 && <Badge variant="outline" className="bg-yellow-50 text-yellow-700 text-xs">{pendingCount} pending</Badge>}
               {rejectedCount > 0 && <Badge variant="outline" className="bg-red-50 text-red-700 text-xs">{rejectedCount} rejected</Badge>}
             </div>
           </div>
@@ -773,18 +778,6 @@ export function PublicationOrderDetail() {
       </Card>
 
       {/* Smart Status Banner - Shows ONE priority message */}
-      {primaryStatus === 'review' && (
-        <Alert className="border-blue-300 bg-blue-50">
-          <AlertCircle className="h-4 w-4 text-blue-600" />
-          <AlertTitle className="text-blue-900">Action Required: Review Placements</AlertTitle>
-          <AlertDescription className="text-blue-700 flex items-center justify-between">
-            <span>Accept or reject {pendingCount} placement{pendingCount !== 1 ? 's' : ''} to confirm this order.</span>
-            <Button size="sm" variant="outline" className="ml-4" onClick={() => setActiveTab('placements')}>
-              Review Now
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
       
       {primaryStatus === 'assets_pending' && (
         <Alert className="border-amber-300 bg-amber-50">
@@ -873,7 +866,7 @@ export function PublicationOrderDetail() {
           {/* What's Next - Priority Action */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="text-base font-sans flex items-center gap-2">
                 <Target className="h-4 w-4" />
                 What's Next
               </CardTitle>
@@ -984,7 +977,7 @@ export function PublicationOrderDetail() {
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="text-base font-sans flex items-center gap-2">
                   <Layers className="h-4 w-4" />
                   Placements
                 </CardTitle>
@@ -1098,7 +1091,7 @@ export function PublicationOrderDetail() {
           {(campaignData?.objectives?.primaryGoal || campaignData?.objectives?.targetAudience) && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base text-muted-foreground">Campaign Info</CardTitle>
+                <CardTitle className="text-base font-sans text-muted-foreground">Campaign Info</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -2038,15 +2031,15 @@ function parseDimensions(dimStr: string | undefined): string[] {
 function PlacementStatusBadge({ status }: { status: string }) {
   switch (status) {
     case 'accepted':
-      return <Badge className="bg-green-100 text-green-800 border-0"><Check className="h-3 w-3 mr-1" /> Accepted</Badge>;
+      return <Badge className="bg-green-50 text-green-700 border border-green-200 pointer-events-none"><Check className="h-3 w-3 mr-1" /> Accepted</Badge>;
     case 'in_production':
-      return <Badge className="bg-blue-100 text-blue-800 border-0"><Loader2 className="h-3 w-3 mr-1" /> In Production</Badge>;
+      return <Badge className="bg-blue-50 text-blue-700 border border-blue-200 pointer-events-none"><Loader2 className="h-3 w-3 mr-1" /> In Production</Badge>;
     case 'delivered':
-      return <Badge className="bg-purple-100 text-purple-800 border-0"><CheckCircle2 className="h-3 w-3 mr-1" /> Delivered</Badge>;
+      return <Badge className="bg-purple-50 text-purple-700 border border-purple-200 pointer-events-none"><CheckCircle2 className="h-3 w-3 mr-1" /> Delivered</Badge>;
     case 'rejected':
-      return <Badge className="bg-red-100 text-red-800 border-0"><X className="h-3 w-3 mr-1" /> Rejected</Badge>;
+      return <Badge className="bg-red-50 text-red-700 border border-red-200 pointer-events-none"><X className="h-3 w-3 mr-1" /> Rejected</Badge>;
     default:
-      return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
+      return <Badge className="bg-yellow-50 text-yellow-700 border border-yellow-200 pointer-events-none"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
   }
 }
 

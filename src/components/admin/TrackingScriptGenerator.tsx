@@ -247,13 +247,10 @@ export function TrackingScriptGenerator({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base font-sans">
               <FileCode className="h-5 w-5" />
               Tracking Scripts
             </CardTitle>
-            <CardDescription>
-              Tracking tags for {publicationName} - auto-generated when assets are uploaded
-            </CardDescription>
           </div>
           <div className="flex items-center gap-2">
             {espCompatibility && (
@@ -286,9 +283,9 @@ export function TrackingScriptGenerator({
                 className="border rounded-lg px-4"
               >
                 <AccordionTrigger className="hover:no-underline font-sans">
-                  <div className="flex items-center gap-3 text-left">
+                  <div className="flex items-center gap-3 text-left w-full">
                     {CHANNEL_ICONS[script.channel]}
-                    <div>
+                    <div className="flex items-baseline gap-3 flex-1">
                       <p className="font-medium">{script.creative.name}</p>
                       <p className="text-sm text-muted-foreground">
                         {CHANNEL_LABELS[script.channel]}
@@ -318,7 +315,7 @@ export function TrackingScriptGenerator({
                             <TabsTrigger value="urls">URLs</TabsTrigger>
                           </TabsList>
                           
-                          <TabsContent value="base" className="mt-4">
+                          <TabsContent value="base" className="mt-0">
                             <div className="relative">
                               <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
                                 <code>{script.tags.fullTag}</code>
@@ -337,7 +334,7 @@ export function TrackingScriptGenerator({
                             </p>
                           </TabsContent>
                           
-                          <TabsContent value="mailchimp" className="mt-4">
+                          <TabsContent value="mailchimp" className="mt-0">
                             <div className="relative">
                               <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
                                 <code>{transformForESP(script.tags.fullTag, 'mailchimp')}</code>
@@ -356,7 +353,7 @@ export function TrackingScriptGenerator({
                             </p>
                           </TabsContent>
                           
-                          <TabsContent value="constant_contact" className="mt-4">
+                          <TabsContent value="constant_contact" className="mt-0">
                             <div className="relative">
                               <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
                                 <code>{transformForESP(script.tags.fullTag, 'constant_contact')}</code>
@@ -375,7 +372,7 @@ export function TrackingScriptGenerator({
                             </p>
                           </TabsContent>
                           
-                          <TabsContent value="urls" className="mt-4 space-y-3">
+                          <TabsContent value="urls" className="mt-0 space-y-3">
                             <div>
                               <Label className="text-xs">Impression Pixel</Label>
                               <div className="flex gap-2 mt-1">
@@ -419,7 +416,7 @@ export function TrackingScriptGenerator({
                           <TabsTrigger value="urls">URLs</TabsTrigger>
                         </TabsList>
                         
-                        <TabsContent value="gam" className="mt-4">
+                        <TabsContent value="gam" className="mt-0">
                           <div className="relative">
                             <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
                               <code>{transformForAdServer(script.tags.fullTag, 'gam', script.creative.clickUrl)}</code>
@@ -438,7 +435,7 @@ export function TrackingScriptGenerator({
                           </p>
                         </TabsContent>
                         
-                        <TabsContent value="broadstreet" className="mt-4">
+                        <TabsContent value="broadstreet" className="mt-0">
                           <div className="relative">
                             <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
                               <code>{transformForAdServer(script.tags.fullTag, 'broadstreet', script.creative.clickUrl)}</code>
@@ -457,7 +454,7 @@ export function TrackingScriptGenerator({
                           </p>
                         </TabsContent>
                         
-                        <TabsContent value="adbutler" className="mt-4">
+                        <TabsContent value="adbutler" className="mt-0">
                           <div className="relative">
                             <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm">
                               <code>{transformForAdServer(script.tags.fullTag, 'adbutler', script.creative.clickUrl)}</code>
@@ -476,7 +473,7 @@ export function TrackingScriptGenerator({
                           </p>
                         </TabsContent>
                         
-                        <TabsContent value="direct" className="mt-4">
+                        <TabsContent value="direct" className="mt-0">
                           <div className="relative">
                             <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm whitespace-pre-wrap">
                               <code>{transformForAdServer(script.tags.fullTag, 'direct', script.creative.clickUrl)}</code>
@@ -495,7 +492,7 @@ export function TrackingScriptGenerator({
                           </p>
                         </TabsContent>
                         
-                        <TabsContent value="urls" className="mt-4 space-y-3">
+                        <TabsContent value="urls" className="mt-0 space-y-3">
                           <div>
                             <Label className="text-xs">Impression Pixel</Label>
                             <div className="flex gap-2 mt-1">
