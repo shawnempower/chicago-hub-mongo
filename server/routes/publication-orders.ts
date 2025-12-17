@@ -809,9 +809,15 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
             if (emailService) {
               const user = await getDatabase().collection(COLLECTIONS.USERS).findOne({ _id: perm.userId });
               if (user?.email) {
-                // Use generic notification email
-                // Could add a sendMessageNotificationEmail method to emailService later
-                console.log(`📧 Would send message notification email to ${user.email}`);
+                await emailService.sendMessageNotificationEmail({
+                  recipientEmail: user.email,
+                  recipientName: user.firstName,
+                  senderName,
+                  campaignName: order.campaignName,
+                  publicationName: order.publicationName,
+                  messagePreview: content.trim().slice(0, 100),
+                  orderUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?tab=order-detail&campaignId=${campaignId}&publicationId=${publicationId}`
+                });
               }
             }
           }
@@ -847,6 +853,24 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
               hubId: order.hubId,
               messagePreview: content.trim()
             });
+            
+            // Send email notification to hub admins
+            if (emailService) {
+              const { ObjectId } = await import('mongodb');
+              const userIdObj = typeof recipientUserId === 'string' ? new ObjectId(recipientUserId) : recipientUserId;
+              const user = await db.collection(COLLECTIONS.USERS).findOne({ _id: userIdObj });
+              if (user?.email) {
+                await emailService.sendMessageNotificationEmail({
+                  recipientEmail: user.email,
+                  recipientName: user.firstName,
+                  senderName,
+                  campaignName: order.campaignName,
+                  publicationName: order.publicationName,
+                  messagePreview: content.trim().slice(0, 100),
+                  orderUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?tab=order-detail&campaignId=${campaignId}&publicationId=${publicationId}`
+                });
+              }
+            }
           }
         }
       }

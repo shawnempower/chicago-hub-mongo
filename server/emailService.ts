@@ -122,6 +122,17 @@ interface PlacementRejectedEmailData {
   campaignUrl: string;
 }
 
+interface MessageNotificationEmailData {
+  recipientEmail: string;
+  recipientName?: string;
+  senderName: string;
+  campaignName: string;
+  publicationName: string;
+  messagePreview?: string;
+  orderUrl: string;
+  hubName?: string;
+}
+
 export class EmailService {
   private mg: any;
   private config: EmailConfig;
@@ -1166,6 +1177,82 @@ export class EmailService {
     return await this.sendEmail({
       to: data.recipientEmail,
       subject: `❌ Placement Rejected: ${data.placementName} - ${data.campaignName}`,
+      html
+    });
+  }
+
+  // Message notification email (for order conversations)
+  async sendMessageNotificationEmail(data: MessageNotificationEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Check if notification emails are enabled
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send message notification email to ${data.recipientEmail} for campaign "${data.campaignName}"`);
+      return { success: true, skipped: true };
+    }
+
+    const infoBoxContent = `
+      <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">📰 Publication:</strong> ${data.publicationName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">👤 From:</strong> ${data.senderName}
+      </p>
+    `;
+
+    const messagePreviewHtml = data.messagePreview ? `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+        <tr>
+          <td style="background-color: ${this.BRAND_COLORS.cream}; border: 1px solid ${this.BRAND_COLORS.border}; border-radius: 6px; padding: 16px;">
+            <p style="margin: 0; font-style: italic; color: ${this.BRAND_COLORS.navy}; font-size: 15px; line-height: 1.5;">
+              "${data.messagePreview}${data.messagePreview.length >= 100 ? '...' : ''}"
+            </p>
+          </td>
+        </tr>
+      </table>
+    ` : '';
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        You have a new message from <strong>${data.senderName}</strong> regarding <strong>"${data.campaignName}"</strong>.
+      </p>
+      
+      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.orange)}
+      
+      ${messagePreviewHtml}
+      
+      <p style="margin: 0 0 16px 0;">
+        Click the button below to view the full conversation and reply:
+      </p>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('View Conversation', data.orderUrl, this.BRAND_COLORS.orange)}
+      </div>
+      
+      <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${data.orderUrl}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${data.orderUrl}</a>
+      </p>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>${data.hubName || 'The Chicago Hub Team'}</strong>
+      </p>
+    `;
+
+    const html = this.generateEmailTemplate({
+      title: 'New Message',
+      preheader: `${data.senderName} sent you a message about ${data.campaignName}`,
+      content,
+      headerColor: this.BRAND_COLORS.navy,
+      headerIcon: '💬',
+      recipientEmail: data.recipientEmail
+    });
+
+    return await this.sendEmail({
+      to: data.recipientEmail,
+      subject: `💬 New Message: ${data.campaignName}`,
       html
     });
   }
