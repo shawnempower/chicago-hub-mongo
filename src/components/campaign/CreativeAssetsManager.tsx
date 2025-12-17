@@ -2017,7 +2017,33 @@ export function CreativeAssetsManager({
                                   );
                                 }
                                 
-                                return sortedChannels.map(channel => (
+                                return sortedChannels.map(channel => {
+                                  // Sort specs within each channel
+                                  // For print: sort by width then height
+                                  // For others: sort by dimension string or placement count
+                                  const sortedSpecs = [...byChannel[channel]].sort((a, b) => {
+                                    if (channel === 'print') {
+                                      // Extract numbers from dimension strings for print
+                                      const extractNums = (dims: string | string[] | undefined): { w: number; h: number } => {
+                                        const dimStr = Array.isArray(dims) ? dims[0] : dims;
+                                        if (!dimStr) return { w: 999, h: 999 };
+                                        const nums = dimStr.match(/\d+\.?\d*/g);
+                                        if (nums && nums.length >= 2) {
+                                          return { w: parseFloat(nums[0]), h: parseFloat(nums[1]) };
+                                        }
+                                        return { w: 999, h: 999 };
+                                      };
+                                      const aD = extractNums(a.dimensions);
+                                      const bD = extractNums(b.dimensions);
+                                      // Sort by width, then height
+                                      if (aD.w !== bD.w) return aD.w - bD.w;
+                                      if (aD.h !== bD.h) return aD.h - bD.h;
+                                    }
+                                    // Default: sort by placement count (most placements first)
+                                    return b.placementCount - a.placementCount;
+                                  });
+                                  
+                                  return (
                                   <div key={channel}>
                                     {/* Only show channel header when viewing all channels */}
                                     {activeChannel === 'all' && (
@@ -2025,7 +2051,7 @@ export function CreativeAssetsManager({
                                         {channel} ({byChannel[channel].length})
                                       </div>
                                     )}
-                                    {byChannel[channel].map((spec) => (
+                                    {sortedSpecs.map((spec) => (
                                       <SelectItem key={spec.specGroupId} value={spec.specGroupId}>
                                         {/* Show audio-specific format for radio/podcast */}
                                         {(spec.channel === 'radio' || spec.channel === 'podcast')
@@ -2039,7 +2065,7 @@ export function CreativeAssetsManager({
                                       </SelectItem>
                                     ))}
                                   </div>
-                                ));
+                                )});
                               })()}
                             </SelectContent>
                           </Select>

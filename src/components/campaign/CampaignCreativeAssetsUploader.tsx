@@ -68,9 +68,14 @@ import {
 } from '@/utils/zipProcessor';
 import {
   getWebsiteStandards,
+  getPrintStandards,
+  getAllStandards,
   findStandardByDimensions,
   InventoryTypeStandard,
-  validateAgainstStandard
+  validateAgainstStandard,
+  isPrintDimensions,
+  printDimensionsMatch,
+  parsePrintDimensions
 } from '@/config/inventoryStandards';
 import { API_BASE_URL } from '@/config/api';
 
@@ -358,32 +363,64 @@ export function CampaignCreativeAssetsUploader({
         // Detect file specifications
         const detectedSpecs = await detectFileSpecs(fileData.file);
         
-        // Match to inventory standards (not spec groups)
+        // Match to inventory standards OR directly to spec groups (for print)
         let suggestedStandard: InventoryTypeStandard | null = null;
         let matchConfidence = 0;
+        let matchedSpecGroups: typeof groupedSpecs = [];
         
         if (detectedSpecs.dimensions) {
-          suggestedStandard = findStandardByDimensions(detectedSpecs.dimensions.formatted);
+          const detectedDims = detectedSpecs.dimensions.formatted;
+          const isPrint = isPrintDimensions(detectedDims);
           
-          if (suggestedStandard) {
-            // Validate against standard
-            const validation = validateAgainstStandard({
-              dimensions: detectedSpecs.dimensions.formatted,
-              fileFormat: detectedSpecs.fileExtension,
-              fileSize: detectedSpecs.fileSize,
-              colorSpace: detectedSpecs.colorSpace
-            }, suggestedStandard);
+          console.log(`[File Match] ${fileData.file.name}: dimensions=${detectedDims}, isPrint=${isPrint}`);
+          
+          if (isPrint) {
+            // For print files, match directly against spec groups with print dimensions
+            // Print standards don't have specific dimensions, they're publication-specific
+            matchedSpecGroups = groupedSpecs.filter(group => {
+              if (group.channel?.toLowerCase() !== 'print') return false;
+              if (!group.dimensions) return false;
+              
+              const groupDims = Array.isArray(group.dimensions) 
+                ? group.dimensions[0] 
+                : group.dimensions;
+              
+              // Check if dimensions match (within tolerance for print)
+              const match = printDimensionsMatch(detectedDims, groupDims);
+              if (match) {
+                console.log(`[File Match] ✅ Print match: ${detectedDims} ≈ ${groupDims}`);
+              }
+              return match;
+            });
             
-            if (validation.valid) {
-              matchConfidence = 100;
-            } else if (validation.errors.length === 0 && validation.warnings.length === 0) {
-              matchConfidence = 95;
-            } else if (validation.errors.length === 0) {
-              matchConfidence = 85;
-            } else if (validation.errors.length <= 1) {
-              matchConfidence = 70;
-            } else {
-              matchConfidence = 60;
+            if (matchedSpecGroups.length > 0) {
+              matchConfidence = 90; // High confidence for dimension match
+              console.log(`[File Match] Found ${matchedSpecGroups.length} matching print spec groups`);
+            }
+          } else {
+            // For web/digital, use the standard matching
+            suggestedStandard = findStandardByDimensions(detectedDims);
+            
+            if (suggestedStandard) {
+              // Validate against standard
+              const validation = validateAgainstStandard({
+                dimensions: detectedDims,
+                fileFormat: detectedSpecs.fileExtension,
+                fileSize: detectedSpecs.fileSize,
+                colorSpace: detectedSpecs.colorSpace
+              }, suggestedStandard);
+              
+              if (validation.valid) {
+                matchConfidence = 100;
+              } else if (validation.errors.length === 0 && validation.warnings.length === 0) {
+                matchConfidence = 95;
+              } else if (validation.errors.length === 0) {
+                matchConfidence = 85;
+              } else if (validation.errors.length <= 1) {
+                matchConfidence = 70;
+              } else {
+                matchConfidence = 60;
+              }
             }
           }
         }
@@ -394,11 +431,41 @@ export function CampaignCreativeAssetsUploader({
           detectedSpecs,
           suggestedStandard: suggestedStandard || undefined,
           matchConfidence,
-          isAnalyzing: false
-        });
+          isAnalyzing: false,
+          // Store matched print spec groups for use in dropdown
+          matchedSpecGroups: matchedSpecGroups.length > 0 ? matchedSpecGroups : undefined
+        } as any);
         
         // Auto-assign if good match (accumulate in newAssets map)
-        if (suggestedStandard && matchConfidence >= 50) {
+        if (matchedSpecGroups.length > 0 && matchConfidence >= 50) {
+          // Print file - assign to matched spec groups directly
+          console.log(`✅ Auto-assigning print file ${fileData.file.name} to ${matchedSpecGroups.length} spec groups (${matchConfidence}%)`);
+          
+          matchedSpecGroups.forEach(specGroup => {
+            newAssets.set(specGroup.specGroupId, {
+              specGroupId: specGroup.specGroupId,
+              file: fileData.file,
+              previewUrl: newPending.get(fileId)?.previewUrl,
+              uploadStatus: 'pending',
+              uploadedUrl: (newPending.get(fileId) as any)?.uploadedUrl,
+              detectedSpecs: {
+                dimensions: detectedSpecs.dimensions,
+                colorSpace: detectedSpecs.colorSpace,
+                estimatedDPI: detectedSpecs.estimatedDPI
+              },
+              appliesTo: specGroup.placements.map(p => ({
+                placementId: p.placementId,
+                publicationId: p.publicationId,
+                publicationName: p.publicationName
+              }))
+            });
+          });
+          
+          // Remove from pending since it's now assigned
+          newPending.delete(fileId);
+          
+        } else if (suggestedStandard && matchConfidence >= 50) {
+          // Web/digital file - use standard-based matching
           console.log(`✅ Auto-assigning ${fileData.file.name} → ${suggestedStandard.name} (${matchConfidence}%)`);
           
           // Find matching spec groups
@@ -499,7 +566,46 @@ export function CampaignCreativeAssetsUploader({
         }
         
         // Auto-assign if good match (accumulate in newAssets map)
-        if (processedFile.suggestedStandard && processedFile.matchConfidence >= 50) {
+        // Check if this is a print file (PDF with inch dimensions)
+        const detectedDims = processedFile.detectedSpecs?.dimensions?.formatted;
+        const isPrint = detectedDims && isPrintDimensions(detectedDims);
+        
+        if (isPrint && detectedDims) {
+          // Print file - match directly against spec groups
+          const matchingPrintGroups = groupedSpecs.filter(group => {
+            if (group.channel?.toLowerCase() !== 'print') return false;
+            if (!group.dimensions) return false;
+            
+            const groupDims = Array.isArray(group.dimensions) 
+              ? group.dimensions[0] 
+              : group.dimensions;
+            
+            return printDimensionsMatch(detectedDims, groupDims);
+          });
+          
+          if (matchingPrintGroups.length > 0) {
+            console.log(`✅ ZIP: Auto-assigning print file ${processedFile.file.name} to ${matchingPrintGroups.length} spec groups`);
+            
+            matchingPrintGroups.forEach(specGroup => {
+              newAssets.set(specGroup.specGroupId, {
+                specGroupId: specGroup.specGroupId,
+                file: processedFile.file,
+                previewUrl: previewUrl,
+                uploadStatus: 'pending',
+                detectedSpecs: processedFile.detectedSpecs,
+                appliesTo: specGroup.placements.map(p => ({
+                  placementId: p.placementId,
+                  publicationId: p.publicationId,
+                  publicationName: p.publicationName
+                }))
+              });
+            });
+            
+            // Remove from pending since it's now assigned
+            newPending.delete(fileId);
+          }
+        } else if (processedFile.suggestedStandard && processedFile.matchConfidence >= 50) {
+          // Web/digital file - use standard-based matching
           // Find matching spec groups
           const standardDims = typeof processedFile.suggestedStandard.defaultSpecs.dimensions === 'string'
             ? processedFile.suggestedStandard.defaultSpecs.dimensions
@@ -1553,30 +1659,169 @@ export function CampaignCreativeAssetsUploader({
                           </div>
                         ) : (
                           <div className="mt-3">
-                            <label className="text-xs font-medium text-gray-700 mb-1 block">
-                              Assign to specification:
-                              {suggestedStandard && matchConfidence && (
-                                <span className="ml-2 text-blue-600 font-normal">
-                                  (✨ Suggested: {suggestedStandard.name} - {matchConfidence}% match)
-                                </span>
-                              )}
-                            </label>
-                            <Select 
-                              onValueChange={(value) => handleAssignToSpec(fileId, value)}
-                              defaultValue={suggestedStandard?.id}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder={suggestedStandard?.name || "Select specification..."} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getWebsiteStandards().map((standard) => (
-                                  <SelectItem key={standard.id} value={standard.id}>
-                                    {standard.name}
-                                    {standard.id === suggestedStandard?.id && " ✨"}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            {(() => {
+                              // Determine if this is a print file
+                              const isPrint = detectedSpecs?.dimensions?.formatted && 
+                                isPrintDimensions(detectedSpecs.dimensions.formatted);
+                              const matchedPrintGroups = (pendingFiles.get(fileId) as any)?.matchedSpecGroups || [];
+                              
+                              // Get available print spec groups from campaign requirements
+                              const availablePrintGroups = groupedSpecs.filter(g => 
+                                g.channel?.toLowerCase() === 'print' && g.dimensions
+                              );
+                              
+                              return (
+                                <>
+                                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                                    Assign to specification:
+                                    {isPrint && matchedPrintGroups.length > 0 && matchConfidence && (
+                                      <span className="ml-2 text-green-600 font-normal">
+                                        (✨ Auto-matched {matchedPrintGroups.length} print placement{matchedPrintGroups.length > 1 ? 's' : ''} - {matchConfidence}%)
+                                      </span>
+                                    )}
+                                    {!isPrint && suggestedStandard && matchConfidence && (
+                                      <span className="ml-2 text-blue-600 font-normal">
+                                        (✨ Suggested: {suggestedStandard.name} - {matchConfidence}% match)
+                                      </span>
+                                    )}
+                                    {isPrint && matchedPrintGroups.length === 0 && availablePrintGroups.length > 0 && (
+                                      <span className="ml-2 text-orange-600 font-normal">
+                                        (⚠️ No exact match - select manually)
+                                      </span>
+                                    )}
+                                  </label>
+                                  
+                                  {isPrint ? (
+                                    // Print file - show spec groups (campaign placements)
+                                    <Select 
+                                      onValueChange={(value) => {
+                                        // For print, assign directly to spec group
+                                        const specGroup = groupedSpecs.find(g => g.specGroupId === value);
+                                        if (specGroup) {
+                                          const pending = pendingFiles.get(fileId);
+                                          if (!pending) return;
+                                          
+                                          const newAssets = new Map(uploadedAssets);
+                                          newAssets.set(specGroup.specGroupId, {
+                                            specGroupId: specGroup.specGroupId,
+                                            file: pending.file,
+                                            previewUrl: pending.previewUrl,
+                                            uploadStatus: 'pending',
+                                            uploadedUrl: (pending as any).uploadedUrl,
+                                            detectedSpecs: pending.detectedSpecs,
+                                            appliesTo: specGroup.placements.map(p => ({
+                                              placementId: p.placementId,
+                                              publicationId: p.publicationId,
+                                              publicationName: p.publicationName
+                                            }))
+                                          });
+                                          onAssetsChange(newAssets);
+                                          
+                                          // Remove from pending
+                                          const newPending = new Map(pendingFiles);
+                                          newPending.delete(fileId);
+                                          setPendingFiles(newPending);
+                                          
+                                          toast({
+                                            title: 'Asset Assigned',
+                                            description: `${pending.file.name} assigned to ${specGroup.placements.length} print placement(s)`,
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select print placement..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {availablePrintGroups.length > 0 ? (
+                                          // SORT_V2: Sort by width then height
+                                          (() => {
+                                            // Helper to extract numbers from dimension string
+                                            const extractDims = (dimStr: string | undefined): { w: number; h: number } => {
+                                              if (!dimStr) return { w: 999, h: 999 };
+                                              // Extract all numbers (including decimals) from the string
+                                              const nums = dimStr.match(/\d+\.?\d*/g);
+                                              if (nums && nums.length >= 2) {
+                                                return { w: parseFloat(nums[0]), h: parseFloat(nums[1]) };
+                                              }
+                                              return { w: 999, h: 999 };
+                                            };
+                                            
+                                            const sorted = [...availablePrintGroups].sort((a, b) => {
+                                              const aIsMatch = matchedPrintGroups.some((mg: any) => mg.specGroupId === a.specGroupId);
+                                              const bIsMatch = matchedPrintGroups.some((mg: any) => mg.specGroupId === b.specGroupId);
+                                              
+                                              // Matches first
+                                              if (aIsMatch && !bIsMatch) return -1;
+                                              if (!aIsMatch && bIsMatch) return 1;
+                                              
+                                              // Get dimensions
+                                              const aDims = Array.isArray(a.dimensions) ? a.dimensions[0] : a.dimensions;
+                                              const bDims = Array.isArray(b.dimensions) ? b.dimensions[0] : b.dimensions;
+                                              const aD = extractDims(aDims);
+                                              const bD = extractDims(bDims);
+                                              
+                                              // Sort by width first
+                                              if (aD.w !== bD.w) return aD.w - bD.w;
+                                              
+                                              // Then by height
+                                              if (aD.h !== bD.h) return aD.h - bD.h;
+                                              
+                                              // Then by placement count
+                                              return b.placementCount - a.placementCount;
+                                            });
+                                            
+                                            console.log('🖨️ PRINT DROPDOWN SORT:', sorted.map(g => {
+                                              const dims = Array.isArray(g.dimensions) ? g.dimensions[0] : g.dimensions;
+                                              const d = extractDims(dims);
+                                              return `${dims} → w=${d.w}, h=${d.h}`;
+                                            }));
+                                            
+                                            return sorted;
+                                          })()
+                                            .map((group) => {
+                                              const dims = Array.isArray(group.dimensions) 
+                                                ? group.dimensions[0] 
+                                                : group.dimensions;
+                                              const isMatch = matchedPrintGroups.some(
+                                                (mg: any) => mg.specGroupId === group.specGroupId
+                                              );
+                                              return (
+                                                <SelectItem key={group.specGroupId} value={group.specGroupId}>
+                                                  {dims} • {group.placementCount} placement{group.placementCount > 1 ? 's' : ''}
+                                                  {isMatch && " ✨ Match"}
+                                                </SelectItem>
+                                              );
+                                            })
+                                        ) : (
+                                          <SelectItem value="none" disabled>
+                                            No print placements in this campaign
+                                          </SelectItem>
+                                        )}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    // Web/digital file - show standards
+                                    <Select 
+                                      onValueChange={(value) => handleAssignToSpec(fileId, value)}
+                                      defaultValue={suggestedStandard?.id}
+                                    >
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder={suggestedStandard?.name || "Select specification..."} />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {getWebsiteStandards().map((standard) => (
+                                          <SelectItem key={standard.id} value={standard.id}>
+                                            {standard.name}
+                                            {standard.id === suggestedStandard?.id && " ✨"}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         )}
 

@@ -1232,13 +1232,106 @@ export function getIABStandards(): InventoryTypeStandard[] {
 
 /**
  * Find standard by dimensions
- * Note: For print, dimensions are publication-specific, so this primarily works for website
+ * 
+ * For website: Matches exact pixel dimensions (e.g., "300x250")
+ * For print: Dimensions are publication-specific, so this primarily matches format-based standards
+ * 
+ * @param dimensions - The dimensions string (e.g., "300x250" for web, '10" x 12.5"' for print)
+ * @param channel - Optional channel type. If not provided, will auto-detect from dimension format.
  */
-export function findStandardByDimensions(dimensions: string, channel: InventoryChannel = 'website'): InventoryTypeStandard | null {
-  const standards = getStandardsByChannel(channel);
+export function findStandardByDimensions(dimensions: string, channel?: InventoryChannel): InventoryTypeStandard | null {
+  // Auto-detect channel from dimension format if not provided
+  const isPrintDimension = dimensions.includes('"') || dimensions.includes('inch') || 
+    /\d+(\.\d+)?\s*['"]?\s*[xX×]\s*\d+(\.\d+)?\s*['"]?\s*(inches?|in)?/.test(dimensions);
+  
+  const effectiveChannel = channel || (isPrintDimension ? 'print' : 'website');
+  const standards = getStandardsByChannel(effectiveChannel);
+  
+  // For print, dimensions are publication-specific, so we match by format
+  if (effectiveChannel === 'print') {
+    // Print dimensions don't match standards directly - return null
+    // Print matching happens at the spec group level, not standard level
+    return null;
+  }
+  
   return standards.find(
     s => s.defaultSpecs.dimensions === dimensions
   ) || null;
+}
+
+/**
+ * Check if a dimension string represents print (inch) dimensions
+ */
+export function isPrintDimensions(dimensions: string): boolean {
+  if (!dimensions) return false;
+  
+  // Check for inch indicators: quotes, "inch", "in"
+  // Also check for decimal dimensions which are common in print (e.g., "10.5 x 12.625")
+  return dimensions.includes('"') || 
+    dimensions.toLowerCase().includes('inch') ||
+    /^\d+(\.\d+)?\s*['"]\s*[xX×]\s*\d+(\.\d+)?\s*['"]\s*$/.test(dimensions) ||
+    /\d+\.\d+\s*[xX×]\s*\d+(\.\d+)?/.test(dimensions);
+}
+
+/**
+ * Parse print dimensions (inches) from a string
+ * Returns width and height in inches, or null if not valid print dimensions
+ * 
+ * Handles formats like:
+ * - '10" x 12.5"'
+ * - '10.5" x 13.5"'
+ * - "10 x 12.5"
+ * - "10x12.5"
+ * - "10 W x 12 H"
+ */
+export function parsePrintDimensions(dimensions: string): { width: number; height: number } | null {
+  if (!dimensions) return null;
+  
+  // Remove quotes, W/H indicators, and normalize
+  let cleaned = dimensions
+    .replace(/["'""'']/g, '') // Remove all quote types
+    .replace(/\s*[WwHh]\s*/g, ' ') // Remove W/H indicators
+    .replace(/inches?|in\b/gi, '') // Remove "inch" text
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+  
+  // Match patterns like "10 x 12.5" or "10x12.5" or "10.5 x 13.5"
+  const match = cleaned.match(/^(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)$/);
+  if (match) {
+    return {
+      width: parseFloat(match[1]),
+      height: parseFloat(match[2])
+    };
+  }
+  
+  // Fallback: try to extract any two numbers separated by 'x'
+  const numbers = cleaned.match(/(\d+(?:\.\d+)?)/g);
+  if (numbers && numbers.length >= 2) {
+    return {
+      width: parseFloat(numbers[0]),
+      height: parseFloat(numbers[1])
+    };
+  }
+  
+  return null;
+}
+
+/**
+ * Check if two print dimensions match within tolerance
+ * @param dims1 - First dimensions string
+ * @param dims2 - Second dimensions string  
+ * @param tolerance - Percentage tolerance (default 5% for print)
+ */
+export function printDimensionsMatch(dims1: string, dims2: string, tolerance: number = 0.05): boolean {
+  const parsed1 = parsePrintDimensions(dims1);
+  const parsed2 = parsePrintDimensions(dims2);
+  
+  if (!parsed1 || !parsed2) return false;
+  
+  const widthDiff = Math.abs(parsed1.width - parsed2.width) / Math.max(parsed1.width, parsed2.width);
+  const heightDiff = Math.abs(parsed1.height - parsed2.height) / Math.max(parsed1.height, parsed2.height);
+  
+  return widthDiff <= tolerance && heightDiff <= tolerance;
 }
 
 /**
