@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { storefrontConfigurationsService, userProfilesService } from '../../src/integrations/mongodb/allServices';
 import { authenticateToken } from '../middleware/authenticate';
 import { StorefrontImageService } from '../storefrontImageService';
+import { subdomainService } from '../subdomainService';
 import multer from 'multer';
 import { s3Service } from '../s3Service';
 
@@ -167,6 +168,66 @@ router.post('/:publicationId/publish', authenticateToken, async (req: any, res: 
   } catch (error) {
     console.error('Error publishing storefront configuration:', error);
     res.status(500).json({ error: 'Failed to publish storefront configuration' });
+  }
+});
+
+// Setup subdomain for storefront (Route53 + CloudFront)
+router.post('/:publicationId/setup-subdomain', authenticateToken, async (req: any, res: Response) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    const { publicationId } = req.params;
+    const { isDraft } = req.query;
+    
+    // Get the storefront configuration to find the subdomain
+    const config = await storefrontConfigurationsService.getByPublicationId(
+      publicationId, 
+      isDraft === 'true'
+    );
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Storefront configuration not found' });
+    }
+    
+    if (!config.subdomain) {
+      return res.status(400).json({ error: 'No subdomain configured for this storefront' });
+    }
+    
+    // Check if subdomain service is available
+    const subdomainSvc = subdomainService();
+    if (!subdomainSvc) {
+      console.warn('⚠️  Subdomain service not available - missing AWS configuration');
+      return res.status(503).json({ 
+        error: 'Subdomain service unavailable. Please check AWS configuration.',
+        success: false,
+        fullDomain: `${config.subdomain}.localmedia.store`,
+        alreadyConfigured: false
+      });
+    }
+    
+    // Setup the subdomain in Route53 and CloudFront
+    console.log(`🔧 Setting up subdomain for publication ${publicationId}: ${config.subdomain}`);
+    const result = await subdomainSvc.setupSubdomain(config.subdomain);
+    
+    if (result.success) {
+      console.log(`✅ Subdomain setup complete: ${result.fullDomain}`);
+    } else {
+      console.error(`❌ Subdomain setup failed: ${result.error}`);
+    }
+    
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error setting up subdomain:', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to setup subdomain',
+      success: false,
+      fullDomain: '',
+      alreadyConfigured: false
+    });
   }
 });
 
