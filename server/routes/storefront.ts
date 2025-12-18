@@ -183,7 +183,7 @@ router.post('/:publicationId/setup-subdomain', authenticateToken, async (req: an
     const { publicationId } = req.params;
     const { isDraft } = req.query;
     
-    // Get the storefront configuration to find the subdomain
+    // Get the storefront configuration to find the websiteUrl
     const config = await storefrontConfigurationsService.getByPublicationId(
       publicationId, 
       isDraft === 'true'
@@ -193,8 +193,37 @@ router.post('/:publicationId/setup-subdomain', authenticateToken, async (req: an
       return res.status(404).json({ error: 'Storefront configuration not found' });
     }
     
-    if (!config.subdomain) {
-      return res.status(400).json({ error: 'No subdomain configured for this storefront' });
+    if (!config.websiteUrl) {
+      return res.status(400).json({ error: 'No website URL configured for this storefront' });
+    }
+    
+    // Extract subdomain from websiteUrl (e.g., "wct.localmedia.store" or "https://wct.localmedia.store")
+    let websiteUrl = config.websiteUrl.trim().toLowerCase();
+    // Remove protocol if present
+    websiteUrl = websiteUrl.replace(/^https?:\/\//, '');
+    // Remove trailing slash
+    websiteUrl = websiteUrl.replace(/\/+$/, '');
+    
+    // Validate it's a localmedia.store subdomain
+    if (!websiteUrl.endsWith('.localmedia.store')) {
+      return res.status(400).json({ 
+        error: 'Website URL must be a subdomain of localmedia.store',
+        success: false,
+        fullDomain: websiteUrl,
+        alreadyConfigured: false
+      });
+    }
+    
+    // Extract the subdomain part (everything before .localmedia.store)
+    const subdomain = websiteUrl.replace('.localmedia.store', '');
+    
+    if (!subdomain || subdomain === 'localmedia' || subdomain.includes('.')) {
+      return res.status(400).json({ 
+        error: 'Invalid subdomain format',
+        success: false,
+        fullDomain: websiteUrl,
+        alreadyConfigured: false
+      });
     }
     
     // Check if subdomain service is available
@@ -204,14 +233,14 @@ router.post('/:publicationId/setup-subdomain', authenticateToken, async (req: an
       return res.status(503).json({ 
         error: 'Subdomain service unavailable. Please check AWS configuration.',
         success: false,
-        fullDomain: `${config.subdomain}.localmedia.store`,
+        fullDomain: `${subdomain}.localmedia.store`,
         alreadyConfigured: false
       });
     }
     
     // Setup the subdomain in Route53 and CloudFront
-    console.log(`🔧 Setting up subdomain for publication ${publicationId}: ${config.subdomain}`);
-    const result = await subdomainSvc.setupSubdomain(config.subdomain);
+    console.log(`🔧 Setting up subdomain for publication ${publicationId}: ${subdomain}`);
+    const result = await subdomainSvc.setupSubdomain(subdomain);
     
     if (result.success) {
       console.log(`✅ Subdomain setup complete: ${result.fullDomain}`);
