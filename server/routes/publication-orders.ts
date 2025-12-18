@@ -219,6 +219,7 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
         extractedRequirements.forEach((req: any) => {
           const reqChannel = req.channel || 'general';
           const reqDimensions = req.dimensions;
+          const reqPlacementId = req.placementId || req.itemPath;
           
           // Generate spec key for matching
           const reqSpecKey = reqDimensions ? 
@@ -227,9 +228,44 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
           
           // Find matching assets
           const matchingAssets = campaignAssets.filter((asset: any) => {
-            // Primary: Match by spec group ID
-            if (asset.metadata?.specGroupId) {
-              return asset.metadata.specGroupId === reqSpecKey;
+            // Primary: Match by direct placement link (handles _dim suffix)
+            const assetPlacements = asset.associations?.placements;
+            if (assetPlacements && Array.isArray(assetPlacements)) {
+              const placementMatch = assetPlacements.some((p: any) => {
+                // Check for exact match
+                if (p.placementId === reqPlacementId) return true;
+                // Check for expanded dimension match (asset has _dim0, _dim1, etc suffix)
+                // The requirement already has _dim suffix from extractRequirementsForSelectedInventory
+                // So check both directions
+                if (p.placementId && reqPlacementId) {
+                  // Asset has _dim suffix, requirement is base path
+                  const baseReqPath = reqPlacementId.replace(/_dim\d+$/, '');
+                  if (p.placementId.startsWith(baseReqPath + '_dim')) return true;
+                  if (p.placementId === baseReqPath) return true;
+                  // Requirement has _dim suffix, check exact match
+                  if (p.placementId === reqPlacementId) return true;
+                }
+                // Also check with publication context
+                if (p.publicationId === parseInt(publicationId)) {
+                  if (p.placementId === reqPlacementId) return true;
+                  const baseReqPath = reqPlacementId.replace(/_dim\d+$/, '');
+                  if (p.placementId && p.placementId.startsWith(baseReqPath + '_dim')) return true;
+                  if (p.placementId === baseReqPath) return true;
+                }
+                return false;
+              });
+              if (placementMatch) return true;
+            }
+            
+            // Secondary: Match by spec group ID (handles channel type differences)
+            if (asset.associations?.specGroupId || asset.metadata?.specGroupId) {
+              const assetSpecGroupId = asset.associations?.specGroupId || asset.metadata?.specGroupId;
+              // Check exact match or if dimensions part matches
+              if (assetSpecGroupId === reqSpecKey) return true;
+              // Also match if just the dimensions part matches (handles digital_display vs website)
+              const assetDimPart = assetSpecGroupId?.split('::dim:')[1];
+              const reqDimPart = reqSpecKey?.split('::dim:')[1];
+              if (assetDimPart && reqDimPart && assetDimPart === reqDimPart) return true;
             }
             
             // Fallback: Match by channel and dimensions
