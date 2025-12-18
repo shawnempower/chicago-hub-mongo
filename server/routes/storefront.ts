@@ -163,7 +163,10 @@ router.post('/:publicationId/publish', authenticateToken, async (req: any, res: 
     }
     
     const { publicationId } = req.params;
+    console.log(`📤 Publishing storefront for publication: ${publicationId}`);
+    
     const config = await storefrontConfigurationsService.publish(publicationId, req.user.id);
+    console.log(`📤 Publish result - websiteUrl: ${config?.websiteUrl || 'NOT SET'}`);
     
     // Automatically setup subdomain if websiteUrl is configured
     let subdomainSetupResult = null;
@@ -172,12 +175,16 @@ router.post('/:publicationId/publish', authenticateToken, async (req: any, res: 
         // Extract subdomain from websiteUrl
         let websiteUrl = config.websiteUrl.trim().toLowerCase();
         websiteUrl = websiteUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+        console.log(`📤 Parsed websiteUrl: ${websiteUrl}`);
         
         if (websiteUrl.endsWith('.localmedia.store')) {
           const subdomain = websiteUrl.replace('.localmedia.store', '');
+          console.log(`📤 Extracted subdomain: ${subdomain}`);
           
           if (subdomain && subdomain !== 'localmedia' && !subdomain.includes('.')) {
             const subdomainSvc = subdomainService();
+            console.log(`📤 Subdomain service available: ${!!subdomainSvc}`);
+            
             if (subdomainSvc) {
               console.log(`🔧 Auto-configuring subdomain on publish: ${subdomain}`);
               subdomainSetupResult = await subdomainSvc.setupSubdomain(subdomain);
@@ -189,12 +196,18 @@ router.post('/:publicationId/publish', authenticateToken, async (req: any, res: 
             } else {
               console.warn('⚠️ Subdomain service not available for auto-config');
             }
+          } else {
+            console.log(`📤 Invalid subdomain format: "${subdomain}"`);
           }
+        } else {
+          console.log(`📤 URL doesn't end with .localmedia.store: ${websiteUrl}`);
         }
       } catch (subdomainError) {
         console.error('Error auto-configuring subdomain:', subdomainError);
         // Don't fail the publish if subdomain setup fails
       }
+    } else {
+      console.log('📤 No websiteUrl configured, skipping subdomain setup');
     }
     
     // Return config with subdomain setup result
