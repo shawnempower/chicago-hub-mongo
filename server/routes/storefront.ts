@@ -164,7 +164,44 @@ router.post('/:publicationId/publish', authenticateToken, async (req: any, res: 
     
     const { publicationId } = req.params;
     const config = await storefrontConfigurationsService.publish(publicationId, req.user.id);
-    res.json(config);
+    
+    // Automatically setup subdomain if websiteUrl is configured
+    let subdomainSetupResult = null;
+    if (config?.websiteUrl) {
+      try {
+        // Extract subdomain from websiteUrl
+        let websiteUrl = config.websiteUrl.trim().toLowerCase();
+        websiteUrl = websiteUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+        
+        if (websiteUrl.endsWith('.localmedia.store')) {
+          const subdomain = websiteUrl.replace('.localmedia.store', '');
+          
+          if (subdomain && subdomain !== 'localmedia' && !subdomain.includes('.')) {
+            const subdomainSvc = subdomainService();
+            if (subdomainSvc) {
+              console.log(`🔧 Auto-configuring subdomain on publish: ${subdomain}`);
+              subdomainSetupResult = await subdomainSvc.setupSubdomain(subdomain);
+              if (subdomainSetupResult.success) {
+                console.log(`✅ Subdomain auto-configured: ${subdomainSetupResult.fullDomain}`);
+              } else {
+                console.warn(`⚠️ Subdomain auto-config failed: ${subdomainSetupResult.error}`);
+              }
+            } else {
+              console.warn('⚠️ Subdomain service not available for auto-config');
+            }
+          }
+        }
+      } catch (subdomainError) {
+        console.error('Error auto-configuring subdomain:', subdomainError);
+        // Don't fail the publish if subdomain setup fails
+      }
+    }
+    
+    // Return config with subdomain setup result
+    res.json({
+      ...config,
+      subdomainSetup: subdomainSetupResult
+    });
   } catch (error) {
     console.error('Error publishing storefront configuration:', error);
     res.status(500).json({ error: 'Failed to publish storefront configuration' });
