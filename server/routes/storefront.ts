@@ -165,20 +165,28 @@ router.post('/:publicationId/publish', authenticateToken, async (req: any, res: 
     const { publicationId } = req.params;
     console.log(`📤 Publishing storefront for publication: ${publicationId}`);
     
-    const config = await storefrontConfigurationsService.publish(publicationId, req.user.id);
+    // Get the draft FIRST to get websiteUrl before publishing
+    const draftConfig = await storefrontConfigurationsService.getByPublicationId(publicationId, true);
+    const websiteUrlFromDraft = draftConfig?.websiteUrl;
+    console.log(`📤 Draft websiteUrl: ${websiteUrlFromDraft || 'NOT SET'}`);
+    
+    // Use publishDraft which properly copies draft to live
+    const config = await storefrontConfigurationsService.publishDraft(publicationId);
     console.log(`📤 Publish result - websiteUrl: ${config?.websiteUrl || 'NOT SET'}`);
     
     // Automatically setup subdomain if websiteUrl is configured
+    // Use websiteUrl from returned config, or fallback to draft value
+    const websiteUrl = config?.websiteUrl || websiteUrlFromDraft;
     let subdomainSetupResult = null;
-    if (config?.websiteUrl) {
+    if (websiteUrl) {
       try {
         // Extract subdomain from websiteUrl
-        let websiteUrl = config.websiteUrl.trim().toLowerCase();
-        websiteUrl = websiteUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-        console.log(`📤 Parsed websiteUrl: ${websiteUrl}`);
+        let cleanUrl = websiteUrl.trim().toLowerCase();
+        cleanUrl = cleanUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+        console.log(`📤 Parsed websiteUrl: ${cleanUrl}`);
         
-        if (websiteUrl.endsWith('.localmedia.store')) {
-          const subdomain = websiteUrl.replace('.localmedia.store', '');
+        if (cleanUrl.endsWith('.localmedia.store')) {
+          const subdomain = cleanUrl.replace('.localmedia.store', '');
           console.log(`📤 Extracted subdomain: ${subdomain}`);
           
           if (subdomain && subdomain !== 'localmedia' && !subdomain.includes('.')) {
@@ -200,7 +208,7 @@ router.post('/:publicationId/publish', authenticateToken, async (req: any, res: 
             console.log(`📤 Invalid subdomain format: "${subdomain}"`);
           }
         } else {
-          console.log(`📤 URL doesn't end with .localmedia.store: ${websiteUrl}`);
+          console.log(`📤 URL doesn't end with .localmedia.store: ${cleanUrl}`);
         }
       } catch (subdomainError) {
         console.error('Error auto-configuring subdomain:', subdomainError);
