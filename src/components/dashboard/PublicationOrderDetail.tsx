@@ -1390,13 +1390,16 @@ export function PublicationOrderDetail() {
                       const dimParts = placementDimensions ? placementDimensions.split(/x/i).map((d: string) => parseInt(d?.trim())) : [];
                       const [placementWidth, placementHeight] = dimParts.length === 2 ? dimParts : [0, 0];
                       
-                      // Filter scripts for this placement - match by itemPath only
+                      // Filter scripts for this placement - match by itemPath or _dim suffix variants
+                      // Scripts have itemPath like "basePath_dim0", "basePath_dim2" while placement has "basePath"
                       const scripts = isDigital ? trackingScripts.filter(s => 
-                        s.itemPath === itemPath
+                        s.itemPath === itemPath || 
+                        (s.itemPath && s.itemPath.startsWith(itemPath + '_dim'))
                       ) : [];
                       // Show assets for ALL placements (digital and non-digital)
+                      // Assets may have placementId with _dim suffix variants
                       const placementAssets = freshAssets
-                        .filter(fa => fa.placementId === itemPath && fa.hasAsset && fa.asset)
+                        .filter(fa => (fa.placementId === itemPath || (fa.placementId && fa.placementId.startsWith(itemPath + '_dim'))) && fa.hasAsset && fa.asset)
                         .map(fa => fa.asset!);
 
                       // Get delivery expectations for this placement
