@@ -117,10 +117,11 @@ function extractWebsiteInfo(
   const sizeList = parseDimensions(dimensions);
   
   // Match scripts to sizes
+  // Scripts can have channel: 'website' or 'display' depending on how they were generated
   const availableSizes = sizeList.map(dim => {
     const [width, height] = dim.split(/x/i).map(d => parseInt(d?.trim()));
     const matchingScript = trackingScripts.find(s => 
-      s.channel === 'display' && 
+      (s.channel === 'display' || s.channel === 'website') && 
       s.creative.width === width && 
       s.creative.height === height
     );
@@ -132,7 +133,7 @@ function extractWebsiteInfo(
 
   // If no specific sizes parsed, try to get scripts for this channel
   if (availableSizes.length === 0) {
-    const channelScripts = trackingScripts.filter(s => s.channel === 'display');
+    const channelScripts = trackingScripts.filter(s => s.channel === 'display' || s.channel === 'website');
     channelScripts.forEach(script => {
       if (script.creative.width && script.creative.height) {
         availableSizes.push({
