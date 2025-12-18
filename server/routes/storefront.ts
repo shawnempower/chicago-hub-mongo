@@ -125,9 +125,14 @@ router.put('/:publicationId', authenticateToken, async (req: any, res: Response)
     }
     
     const { publicationId } = req.params;
+    const { isDraft } = req.query;
     const updates = req.body;
     
-    const config = await storefrontConfigurationsService.update(publicationId, updates, req.user.id);
+    // Pass isDraft as boolean to target correct document (draft vs live)
+    const isDraftBool = isDraft === 'true' ? true : isDraft === 'false' ? false : undefined;
+    console.log(`📝 Updating storefront ${publicationId}, isDraft=${isDraftBool}, websiteUrl=${updates.websiteUrl || 'not in update'}`);
+    
+    const config = await storefrontConfigurationsService.update(publicationId, updates, isDraftBool);
     res.json(config);
   } catch (error) {
     console.error('Error updating storefront configuration:', error);
