@@ -253,19 +253,27 @@ export class InsertionOrderService {
             // Primary: Direct placement link (new approach)
             const assetPlacements = asset.associations?.placements;
             if (assetPlacements && Array.isArray(assetPlacements)) {
-              return assetPlacements.some((p: any) => 
-                p.placementId === itemPlacementId ||
-                (p.publicationId === order.publicationId && p.placementId === itemPlacementId)
-              );
+              return assetPlacements.some((p: any) => {
+                // Check for exact match
+                if (p.placementId === itemPlacementId) return true;
+                // Check for expanded dimension match (asset has _dim0, _dim1, etc suffix)
+                if (p.placementId && itemPlacementId && p.placementId.startsWith(itemPlacementId + '_dim')) return true;
+                // Also check with publication context
+                if (p.publicationId === order.publicationId) {
+                  if (p.placementId === itemPlacementId) return true;
+                  if (p.placementId && itemPlacementId && p.placementId.startsWith(itemPlacementId + '_dim')) return true;
+                }
+                return false;
+              });
             }
-            
+
             // Fallback: Legacy specGroupId match for older assets
             const assetSpecGroupId = asset.associations?.specGroupId || asset.metadata?.specGroupId;
             const itemSpecGroupId = item.specGroupId;
             if (assetSpecGroupId && itemSpecGroupId && assetSpecGroupId === itemSpecGroupId) {
               return true;
             }
-            
+
             return false;
           });
           
@@ -424,10 +432,18 @@ export class InsertionOrderService {
             // Primary: Direct placement link (new approach)
             const assetPlacements = asset.associations?.placements;
             if (assetPlacements && Array.isArray(assetPlacements)) {
-              return assetPlacements.some((p: any) => 
-                p.placementId === itemPlacementId ||
-                (p.publicationId === order.publicationId && p.placementId === itemPlacementId)
-              );
+              return assetPlacements.some((p: any) => {
+                // Check for exact match
+                if (p.placementId === itemPlacementId) return true;
+                // Check for expanded dimension match (asset has _dim0, _dim1, etc suffix)
+                if (p.placementId && itemPlacementId && p.placementId.startsWith(itemPlacementId + '_dim')) return true;
+                // Also check with publication context
+                if (p.publicationId === order.publicationId) {
+                  if (p.placementId === itemPlacementId) return true;
+                  if (p.placementId && itemPlacementId && p.placementId.startsWith(itemPlacementId + '_dim')) return true;
+                }
+                return false;
+              });
             }
             
             // Fallback: Legacy specGroupId match for older assets
@@ -767,10 +783,19 @@ export class InsertionOrderService {
             // Primary: Direct placement link (new approach)
             const assetPlacements = asset.associations?.placements;
             if (assetPlacements && Array.isArray(assetPlacements)) {
-              return assetPlacements.some((p: any) => 
-                p.placementId === placementId ||
-                (p.publicationId === pub.publicationId && p.placementId === placementId)
-              );
+              return assetPlacements.some((p: any) => {
+                // Check for exact match
+                if (p.placementId === placementId) return true;
+                // Check for expanded dimension match (asset has _dim0, _dim1, etc suffix)
+                // e.g., asset placementId: "path[0]_dim2" matches order placementId: "path[0]"
+                if (p.placementId && placementId && p.placementId.startsWith(placementId + '_dim')) return true;
+                // Also check with publication context
+                if (p.publicationId === pub.publicationId) {
+                  if (p.placementId === placementId) return true;
+                  if (p.placementId && placementId && p.placementId.startsWith(placementId + '_dim')) return true;
+                }
+                return false;
+              });
             }
             
             // Fallback: Legacy specGroupId match for older assets
@@ -1268,10 +1293,18 @@ export class InsertionOrderService {
           // Primary: Direct placement link (new approach)
           const assetPlacements = a.associations?.placements;
           if (assetPlacements && Array.isArray(assetPlacements)) {
-            const match = assetPlacements.some((p: any) => 
-              p.placementId === ref.placementId ||
-              (p.publicationId === parseInt(publicationId) && p.placementId === ref.placementId)
-            );
+            const match = assetPlacements.some((p: any) => {
+              // Check for exact match
+              if (p.placementId === ref.placementId) return true;
+              // Check for expanded dimension match (asset has _dim0, _dim1, etc suffix)
+              if (p.placementId && ref.placementId && p.placementId.startsWith(ref.placementId + '_dim')) return true;
+              // Also check with publication context
+              if (p.publicationId === parseInt(publicationId)) {
+                if (p.placementId === ref.placementId) return true;
+                if (p.placementId && ref.placementId && p.placementId.startsWith(ref.placementId + '_dim')) return true;
+              }
+              return false;
+            });
             if (match) return true;
           }
           
