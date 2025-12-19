@@ -1801,10 +1801,20 @@ export const PublicationStorefront: React.FC = () => {
                         </p>
                       </div>
                     )}
-                    {storefrontConfig.websiteUrl && !originalWebsiteUrl && !domainError && (
+                    {storefrontConfig.websiteUrl && !originalWebsiteUrl && !domainError && subdomainAvailable !== false && (
                       <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded text-xs">
-                        <p className="text-blue-900 dark:text-blue-100 font-medium mb-1">💡 Save first to configure DNS</p>
-                        <p className="text-blue-700 dark:text-blue-300">Click "Save Configuration" above to save your subdomain, then you can configure DNS settings.</p>
+                        <p className="text-blue-900 dark:text-blue-100 font-medium mb-1">💡 Save to configure DNS</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleSaveConfig(storefrontConfig)}
+                            disabled={saving || !hasChanges}
+                          >
+                            <Save className="w-3 h-3 mr-1" />
+                            {saving ? 'Saving...' : 'Save & Configure DNS'}
+                          </Button>
+                          <span className="text-blue-700 dark:text-blue-300">Click to save subdomain and auto-configure DNS</span>
+                        </div>
                       </div>
                     )}
                   </div>
