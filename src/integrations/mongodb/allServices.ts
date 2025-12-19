@@ -2172,8 +2172,11 @@ export class StorefrontConfigurationsService {
         }
       }
 
+      // Remove immutable fields that MongoDB won't allow in $set
+      const { _id, createdAt, ...cleanUpdates } = updates as any;
+
       const updateData: StorefrontConfigurationUpdate = {
-        ...updates,
+        ...cleanUpdates,
         updatedAt: new Date(),
       };
 
