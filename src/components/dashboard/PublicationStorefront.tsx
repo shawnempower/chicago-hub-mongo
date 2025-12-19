@@ -492,7 +492,7 @@ export const PublicationStorefront: React.FC = () => {
     try {
       setSaving(true);
       setError(null);
-      
+
       const publishedConfig = await publishStorefrontConfiguration(selectedPublication.publicationId.toString());
       if (publishedConfig) {
         setStorefrontConfig(publishedConfig);
@@ -500,6 +500,17 @@ export const PublicationStorefront: React.FC = () => {
         setHasDraft(false); // Draft was deleted during publish
         setHasLive(true); // New live version created
         setHasChanges(false);
+        
+        // Handle subdomain setup result from auto-configuration during publish
+        if (publishedConfig.subdomainSetup) {
+          setSubdomainStatus({
+            success: publishedConfig.subdomainSetup.success,
+            configured: publishedConfig.subdomainSetup.alreadyConfigured,
+            domain: publishedConfig.subdomainSetup.fullDomain,
+            error: publishedConfig.subdomainSetup.error
+          });
+        }
+        
         toast({
           title: "🎉 Draft Published Successfully!",
           description: `Your storefront is now live at: ${publishedConfig.websiteUrl}`,
@@ -1783,7 +1794,7 @@ export const PublicationStorefront: React.FC = () => {
                         </p>
                       </div>
                     )}
-                    {originalWebsiteUrl && !domainError && (
+                    {originalWebsiteUrl && !domainError && !subdomainConfigured && (
                       <div className="space-y-2">
                         <Button
                           type="button"
@@ -1798,6 +1809,17 @@ export const PublicationStorefront: React.FC = () => {
                         </Button>
                         <p className="text-xs text-muted-foreground text-center">
                           Manually check and configure Route53 & CloudFront for this subdomain
+                        </p>
+                      </div>
+                    )}
+                    {originalWebsiteUrl && !domainError && subdomainConfigured && (
+                      <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded text-xs">
+                        <p className="text-green-900 dark:text-green-100 font-medium flex items-center gap-2">
+                          <Globe className="w-4 h-4" />
+                          ✅ DNS Configured
+                        </p>
+                        <p className="text-green-700 dark:text-green-300 mt-1">
+                          Route53 and CloudFront are set up for this subdomain.
                         </p>
                       </div>
                     )}

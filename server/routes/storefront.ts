@@ -423,5 +423,178 @@ router.delete('/:publicationId/hero-image', authenticateToken, async (req: any, 
   }
 });
 
+// Upload storefront image (logo, hero, channel, about, ogImage, favicon, metaLogo)
+router.post('/:publicationId/images', authenticateToken, upload.single('image'), async (req: any, res: Response) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+    
+    const { publicationId } = req.params;
+    const { imageType, channelId } = req.body;
+    
+    if (!imageType) {
+      return res.status(400).json({ error: 'imageType is required' });
+    }
+    
+    const validImageTypes = ['logo', 'hero', 'channel', 'about', 'ogImage', 'favicon', 'metaLogo'];
+    if (!validImageTypes.includes(imageType)) {
+      return res.status(400).json({ error: `Invalid imageType. Must be one of: ${validImageTypes.join(', ')}` });
+    }
+    
+    // Initialize storefront image service if not already done
+    if (!storefrontImageService) {
+      const s3ServiceInstance = s3Service();
+      if (!s3ServiceInstance) {
+        return res.status(500).json({ error: 'Image storage service not available' });
+      }
+      storefrontImageService = new StorefrontImageService(s3ServiceInstance);
+    }
+    
+    console.log(`📷 Uploading storefront image: type=${imageType}, publication=${publicationId}`);
+    
+    const uploadResult = await storefrontImageService.uploadStorefrontImage({
+      userId: req.user.id,
+      publicationId,
+      imageType,
+      channelId,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      buffer: req.file.buffer
+    });
+    
+    if (!uploadResult.success) {
+      return res.status(500).json({ error: uploadResult.error || 'Failed to upload image' });
+    }
+    
+    console.log(`✅ Storefront image uploaded: ${uploadResult.url}`);
+    
+    res.json({ 
+      success: true, 
+      url: uploadResult.url,
+      imageType,
+      channelId
+    });
+  } catch (error) {
+    console.error('Error uploading storefront image:', error);
+    res.status(500).json({ error: 'Failed to upload storefront image' });
+  }
+});
+
+// Replace storefront image
+router.put('/:publicationId/images', authenticateToken, upload.single('image'), async (req: any, res: Response) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+    
+    const { publicationId } = req.params;
+    const { imageType, channelId } = req.body;
+    
+    if (!imageType) {
+      return res.status(400).json({ error: 'imageType is required' });
+    }
+    
+    // Initialize storefront image service if not already done
+    if (!storefrontImageService) {
+      const s3ServiceInstance = s3Service();
+      if (!s3ServiceInstance) {
+        return res.status(500).json({ error: 'Image storage service not available' });
+      }
+      storefrontImageService = new StorefrontImageService(s3ServiceInstance);
+    }
+    
+    console.log(`📷 Replacing storefront image: type=${imageType}, publication=${publicationId}`);
+    
+    const replaceResult = await storefrontImageService.replaceStorefrontImage({
+      userId: req.user.id,
+      publicationId,
+      imageType,
+      channelId,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      buffer: req.file.buffer
+    });
+    
+    if (!replaceResult.success) {
+      return res.status(500).json({ error: replaceResult.error || 'Failed to replace image' });
+    }
+    
+    console.log(`✅ Storefront image replaced: ${replaceResult.url}`);
+    
+    res.json({ 
+      success: true, 
+      url: replaceResult.url,
+      imageType,
+      channelId
+    });
+  } catch (error) {
+    console.error('Error replacing storefront image:', error);
+    res.status(500).json({ error: 'Failed to replace storefront image' });
+  }
+});
+
+// Remove storefront image
+router.delete('/:publicationId/images', authenticateToken, async (req: any, res: Response) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    const { publicationId } = req.params;
+    const { imageType, channelId } = req.query;
+    
+    if (!imageType) {
+      return res.status(400).json({ error: 'imageType query parameter is required' });
+    }
+    
+    // Initialize storefront image service if not already done
+    if (!storefrontImageService) {
+      const s3ServiceInstance = s3Service();
+      if (!s3ServiceInstance) {
+        return res.status(500).json({ error: 'Image storage service not available' });
+      }
+      storefrontImageService = new StorefrontImageService(s3ServiceInstance);
+    }
+    
+    console.log(`🗑️ Removing storefront image: type=${imageType}, publication=${publicationId}`);
+    
+    const removeResult = await storefrontImageService.removeStorefrontImage(
+      publicationId,
+      imageType as any,
+      channelId as string | undefined
+    );
+    
+    if (!removeResult.success) {
+      return res.status(500).json({ error: removeResult.error || 'Failed to remove image' });
+    }
+    
+    console.log(`✅ Storefront image removed`);
+    
+    res.json({ 
+      success: true,
+      imageType,
+      channelId
+    });
+  } catch (error) {
+    console.error('Error removing storefront image:', error);
+    res.status(500).json({ error: 'Failed to remove storefront image' });
+  }
+});
+
 export default router;
 

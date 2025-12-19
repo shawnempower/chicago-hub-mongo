@@ -44,8 +44,10 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
     "@aws-sdk/client-cloudfront": "^3.922.0",
+    "@aws-sdk/client-dynamodb": "^3.955.0",
     "@aws-sdk/client-route-53": "^3.922.0",
     "@aws-sdk/client-s3": "^3.896.0",
+    "@aws-sdk/lib-dynamodb": "^3.955.0",
     "@aws-sdk/s3-request-presigner": "^3.896.0",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",

@@ -780,6 +780,12 @@ export default function CampaignDetail() {
                 uploadedAssets={uploadedAssets}
                 onAssetsChange={setUploadedAssets}
                 campaignId={campaign?.campaignId}
+                campaignInfo={{
+                  name: campaign?.basicInfo?.name,
+                  advertiserName: campaign?.basicInfo?.advertiserName,
+                  startDate: campaign?.timeline?.startDate,
+                  endDate: campaign?.timeline?.endDate,
+                }}
               />
             </TabsContent>
 

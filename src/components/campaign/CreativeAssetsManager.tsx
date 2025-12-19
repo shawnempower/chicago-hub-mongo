@@ -73,6 +73,7 @@ import {
   ExternalLink,
   GitBranch,
   RefreshCw,
+  Download,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -108,11 +109,19 @@ import {
 import { API_BASE_URL } from '@/config/api';
 import { cn } from '@/lib/utils';
 
+interface CampaignInfo {
+  name?: string;
+  advertiserName?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 interface CreativeAssetsManagerProps {
   requirements: CreativeRequirement[];
   uploadedAssets: Map<string, UploadedAssetWithSpecs>;
   onAssetsChange: (assets: Map<string, UploadedAssetWithSpecs>) => void;
   campaignId?: string;
+  campaignInfo?: CampaignInfo;
 }
 
 interface PendingFile {
@@ -220,6 +229,386 @@ function formatAudioSpec(spec: {
 }
 
 /**
+ * Get recommended specifications based on channel type
+ */
+function getChannelRecommendedSpecs(channel: string): {
+  formats: string;
+  colorSpace: string;
+  resolution: string;
+  maxSize: string;
+  notes: string;
+} {
+  const channelLower = (channel || '').toLowerCase();
+  
+  switch (channelLower) {
+    case 'website':
+      return {
+        formats: 'PNG, JPG, GIF, WebP',
+        colorSpace: 'RGB',
+        resolution: '72 DPI',
+        maxSize: '150KB - 500KB',
+        notes: 'PNG for graphics/transparency, JPG for photos, GIF for animation. Optimize for fast load times.'
+      };
+    case 'newsletter':
+      return {
+        formats: 'PNG, JPG, GIF',
+        colorSpace: 'RGB',
+        resolution: '72 DPI',
+        maxSize: '100KB - 200KB',
+        notes: 'Keep file sizes small for email delivery. Avoid SVG (not supported in most email clients). Use JPG for photos, PNG for graphics.'
+      };
+    case 'print':
+      return {
+        formats: 'PDF, TIFF, EPS',
+        colorSpace: 'CMYK',
+        resolution: '300 DPI minimum',
+        maxSize: 'No limit',
+        notes: 'High-resolution required. Include bleed (typically 0.125" or 0.25"). Convert all fonts to outlines.'
+      };
+    case 'radio':
+      return {
+        formats: 'MP3, WAV',
+        colorSpace: 'N/A',
+        resolution: 'N/A',
+        maxSize: '10MB',
+        notes: 'MP3: 128-320kbps. WAV: 16-bit, 44.1kHz. Include 0.5s silence at start/end.'
+      };
+    case 'podcast':
+      return {
+        formats: 'MP3, WAV',
+        colorSpace: 'N/A',
+        resolution: 'N/A',
+        maxSize: '10MB',
+        notes: 'MP3: 128-192kbps recommended. Match podcast audio quality. Host-read spots: provide script instead.'
+      };
+    case 'streaming':
+      return {
+        formats: 'MP4, MOV, PNG, JPG',
+        colorSpace: 'RGB',
+        resolution: '72-150 DPI',
+        maxSize: '50MB for video',
+        notes: 'Video: H.264 codec, 1080p preferred. Static: same as website specs.'
+      };
+    case 'social':
+      return {
+        formats: 'PNG, JPG, MP4',
+        colorSpace: 'RGB',
+        resolution: '72 DPI',
+        maxSize: '8MB image, 512MB video',
+        notes: 'Platform-specific sizes vary. Square (1:1) or vertical (4:5, 9:16) often perform best.'
+      };
+    case 'events':
+      return {
+        formats: 'PDF, PNG, JPG',
+        colorSpace: 'RGB or CMYK',
+        resolution: '150-300 DPI',
+        maxSize: 'Varies',
+        notes: 'Digital signage: RGB. Printed materials: CMYK, 300 DPI with bleed.'
+      };
+    default:
+      return {
+        formats: 'PNG, JPG, PDF',
+        colorSpace: 'RGB',
+        resolution: '72-300 DPI',
+        maxSize: 'Varies',
+        notes: 'Contact for specific requirements.'
+      };
+  }
+}
+
+/**
+ * Group requirements by channel and dimensions for CSV export
+ * Returns unique asset specs with list of publications that need each
+ */
+interface GroupedAssetSpec {
+  channel: string;
+  dimensions: string;
+  fileFormats: string;
+  maxFileSize: string;
+  colorSpace: string;
+  resolution: string;
+  duration: string;
+  bleed: string;
+  trim: string;
+  publications: string[];
+  placementNames: string[];
+  placementCount: number;
+  additionalNotes: string[];
+}
+
+function groupRequirementsForCSV(requirements: CreativeRequirement[]): GroupedAssetSpec[] {
+  const groupsMap = new Map<string, GroupedAssetSpec>();
+  
+  requirements.forEach(req => {
+    const channel = (req.channel || 'general').toLowerCase();
+    const dimensions = Array.isArray(req.dimensions) 
+      ? req.dimensions.sort().join(', ') 
+      : req.dimensions || 'Not specified';
+    
+    // Create a unique key for grouping: channel + dimensions + duration (for audio)
+    const groupKey = `${channel}::${dimensions}::${req.duration || ''}`;
+    
+    let group = groupsMap.get(groupKey);
+    
+    if (!group) {
+      const recommendedSpecs = getChannelRecommendedSpecs(channel);
+      const fileFormats = req.fileFormats?.join(', ') || '';
+      
+      group = {
+        channel,
+        dimensions,
+        fileFormats: fileFormats || recommendedSpecs.formats,
+        maxFileSize: req.maxFileSize || recommendedSpecs.maxSize,
+        colorSpace: req.colorSpace || recommendedSpecs.colorSpace,
+        resolution: req.resolution || recommendedSpecs.resolution,
+        duration: req.duration ? String(req.duration) : '',
+        bleed: req.bleed || '',
+        trim: req.trim || '',
+        publications: [],
+        placementNames: [],
+        placementCount: 0,
+        additionalNotes: [],
+      };
+      groupsMap.set(groupKey, group);
+    }
+    
+    // Add publication if not already in list
+    if (req.publicationName && !group.publications.includes(req.publicationName)) {
+      group.publications.push(req.publicationName);
+    }
+    
+    // Add placement name if not already in list
+    if (req.placementName && !group.placementNames.includes(req.placementName)) {
+      group.placementNames.push(req.placementName);
+    }
+    
+    // Add additional notes if present and unique
+    if (req.additionalRequirements && !group.additionalNotes.includes(req.additionalRequirements)) {
+      group.additionalNotes.push(req.additionalRequirements);
+    }
+    
+    group.placementCount++;
+  });
+  
+  // Convert to array and sort by frequency (most placements first), then by channel
+  const channelOrder = ['website', 'newsletter', 'print', 'radio', 'podcast', 'streaming', 'social', 'events'];
+  
+  return Array.from(groupsMap.values()).sort((a, b) => {
+    // Primary sort: by placement count (descending - most frequent first)
+    if (b.placementCount !== a.placementCount) {
+      return b.placementCount - a.placementCount;
+    }
+    
+    // Secondary sort: by channel order
+    const aIdx = channelOrder.indexOf(a.channel);
+    const bIdx = channelOrder.indexOf(b.channel);
+    const aOrder = aIdx === -1 ? 999 : aIdx;
+    const bOrder = bIdx === -1 ? 999 : bIdx;
+    
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    
+    // Tertiary sort: by dimensions
+    return a.dimensions.localeCompare(b.dimensions);
+  });
+}
+
+/**
+ * Generate CSV content for creative asset specifications
+ * Organized by unique dimension and inventory type (channel)
+ */
+function generateSpecSheetCSV(requirements: CreativeRequirement[], campaignInfo?: CampaignInfo): string {
+  const rows: string[][] = [];
+  
+  // Campaign Info Header Section
+  rows.push(['CREATIVE ASSET SPECIFICATIONS']);
+  rows.push([]);
+  
+  if (campaignInfo) {
+    if (campaignInfo.name) {
+      rows.push(['Campaign Name:', campaignInfo.name]);
+    }
+    if (campaignInfo.advertiserName) {
+      rows.push(['Advertiser:', campaignInfo.advertiserName]);
+    }
+    if (campaignInfo.startDate) {
+      const startDate = new Date(campaignInfo.startDate);
+      rows.push(['Start Date:', startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })]);
+    }
+    if (campaignInfo.endDate) {
+      const endDate = new Date(campaignInfo.endDate);
+      rows.push(['End Date:', endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })]);
+    }
+  }
+  
+  // Group requirements by unique specs
+  const groupedSpecs = groupRequirementsForCSV(requirements);
+  
+  rows.push(['Total Unique Assets Needed:', String(groupedSpecs.length)]);
+  rows.push(['Total Placements Covered:', String(requirements.length)]);
+  rows.push([]);
+  rows.push(['Note:', 'Assets are ordered by impact - creating higher priority assets first will cover the most placements.']);
+  rows.push([]);
+  rows.push(['Generated:', new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })]);
+  rows.push([]);
+  rows.push([]);
+  
+  // CSV Header for asset table - organized by unique specs (most impactful first)
+  rows.push([
+    'Priority',
+    'Inventory Type',
+    'Dimensions / Size',
+    'Accepted Formats',
+    'Max File Size',
+    'Color Space',
+    'Resolution',
+    'Duration (sec)',
+    'Bleed',
+    'Trim',
+    'Placements Covered',
+    'Placement Types',
+    'Notes'
+  ]);
+
+  // Add rows for each unique asset spec
+  groupedSpecs.forEach((spec, index) => {
+    // Format placement names (limit to avoid overly long cells)  
+    const placementsList = spec.placementNames.length <= 3
+      ? spec.placementNames.join('; ')
+      : `${spec.placementNames.slice(0, 2).join('; ')}; +${spec.placementNames.length - 2} more`;
+    
+    // Combine additional notes
+    const notes = spec.additionalNotes.join(' | ');
+    
+    rows.push([
+      String(index + 1),
+      capitalizeFirst(spec.channel),
+      spec.dimensions,
+      spec.fileFormats,
+      spec.maxFileSize,
+      spec.colorSpace,
+      spec.resolution,
+      spec.duration,
+      spec.bleed,
+      spec.trim,
+      String(spec.placementCount),
+      placementsList,
+      notes
+    ]);
+  });
+
+  // Add summary by channel
+  rows.push([]);
+  rows.push([]);
+  rows.push(['SUMMARY BY INVENTORY TYPE']);
+  rows.push([]);
+  
+  const channelOrder = ['website', 'newsletter', 'print', 'radio', 'podcast', 'streaming', 'social', 'events'];
+  const channelSummary = new Map<string, { assets: number; placements: number }>();
+  
+  groupedSpecs.forEach(spec => {
+    const existing = channelSummary.get(spec.channel) || { assets: 0, placements: 0 };
+    existing.assets++;
+    existing.placements += spec.placementCount;
+    channelSummary.set(spec.channel, existing);
+  });
+  
+  const sortedChannels = Array.from(channelSummary.keys()).sort((a, b) => {
+    const aIdx = channelOrder.indexOf(a);
+    const bIdx = channelOrder.indexOf(b);
+    if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+    if (aIdx === -1) return 1;
+    if (bIdx === -1) return -1;
+    return aIdx - bIdx;
+  });
+  
+  rows.push(['Inventory Type', 'Unique Assets', 'Total Placements']);
+  sortedChannels.forEach(channel => {
+    const summary = channelSummary.get(channel)!;
+    rows.push([capitalizeFirst(channel), String(summary.assets), String(summary.placements)]);
+  });
+
+  // Add format guidelines section at the bottom
+  rows.push([]);
+  rows.push([]);
+  rows.push(['FORMAT GUIDELINES BY INVENTORY TYPE']);
+  rows.push([]);
+  
+  sortedChannels.forEach(channel => {
+    const specs = getChannelRecommendedSpecs(channel);
+    rows.push([capitalizeFirst(channel)]);
+    rows.push(['  Recommended Formats:', specs.formats]);
+    rows.push(['  Color Space:', specs.colorSpace]);
+    rows.push(['  Resolution:', specs.resolution]);
+    rows.push(['  Max File Size:', specs.maxSize]);
+    rows.push(['  Notes:', specs.notes]);
+    rows.push([]);
+  });
+
+  // Convert to CSV string with proper escaping
+  return rows.map(row => 
+    row.map(cell => {
+      // Escape quotes and wrap in quotes if cell contains comma, quote, or newline
+      const escaped = String(cell).replace(/"/g, '""');
+      if (escaped.includes(',') || escaped.includes('"') || escaped.includes('\n')) {
+        return `"${escaped}"`;
+      }
+      return escaped;
+    }).join(',')
+  ).join('\n');
+}
+
+/**
+ * Helper function for CSV generation
+ */
+function capitalizeFirst(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Sanitize string for use in filename (remove special characters)
+ */
+function sanitizeForFilename(str: string): string {
+  return str
+    .replace(/[^a-zA-Z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .toLowerCase()
+    .substring(0, 50); // Limit length
+}
+
+/**
+ * Download the spec sheet as a CSV file
+ */
+function downloadSpecSheet(requirements: CreativeRequirement[], campaignId?: string, campaignInfo?: CampaignInfo): void {
+  const csv = generateSpecSheetCSV(requirements, campaignInfo);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  
+  // Generate filename with campaign info
+  const date = new Date().toISOString().split('T')[0];
+  const parts: string[] = ['creative-specs'];
+  
+  if (campaignInfo?.name) {
+    parts.push(sanitizeForFilename(campaignInfo.name));
+  }
+  if (campaignInfo?.advertiserName) {
+    parts.push(sanitizeForFilename(campaignInfo.advertiserName));
+  }
+  
+  parts.push(date);
+  const filename = parts.join('-') + '.csv';
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Status badge component
  */
 function StatusBadge({ status }: { status: 'uploaded' | 'pending' | 'missing' }) {
@@ -255,7 +644,8 @@ export function CreativeAssetsManager({
   requirements,
   uploadedAssets,
   onAssetsChange,
-  campaignId
+  campaignId,
+  campaignInfo
 }: CreativeAssetsManagerProps) {
   const { toast } = useToast();
   const [activeView, setActiveView] = useState<'checklist' | 'uploaded'>('checklist');
@@ -1682,19 +2072,20 @@ export function CreativeAssetsManager({
     <>
       <div className="space-y-6">
         {/* ==================== CHANNEL TABS (PILL STYLE) ==================== */}
-        <div className="flex gap-2">
-          {/* All Channels Tab */}
-          <button 
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeChannel === 'all' 
-                ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                : 'border border-transparent'
-            }`}
-            style={activeChannel !== 'all' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
-            onClick={() => setActiveChannel('all')}
-          >
-            All ({metrics.uploaded}/{metrics.totalRequired})
-          </button>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex gap-2">
+            {/* All Channels Tab */}
+            <button 
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeChannel === 'all' 
+                  ? 'bg-orange-50 text-orange-600 border border-orange-600' 
+                  : 'border border-transparent'
+              }`}
+              style={activeChannel !== 'all' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
+              onClick={() => setActiveChannel('all')}
+            >
+              All ({metrics.uploaded}/{metrics.totalRequired})
+            </button>
           
           {/* Per-Channel Tabs */}
           {availableChannels.map(channel => {
@@ -1716,6 +2107,24 @@ export function CreativeAssetsManager({
               </button>
             );
           })}
+          </div>
+          
+          {/* Download Spec Sheet Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              downloadSpecSheet(requirements, campaignId, campaignInfo);
+              toast({
+                title: 'Spec Sheet Downloaded',
+                description: `Downloaded CSV with ${requirements.length} asset specifications for ${campaignInfo?.name || 'campaign'}`,
+              });
+            }}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Download Spec Sheet
+          </Button>
         </div>
 
         {/* ==================== UPPER SECTION: 2 COLUMNS ==================== */}

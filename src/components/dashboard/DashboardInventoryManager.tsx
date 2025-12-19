@@ -49,6 +49,9 @@ import {
 import { calculateRevenue } from '@/utils/pricingCalculations';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
+import { useWebAnalytics } from '@/hooks/useWebAnalytics';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
 // Helper function to validate inventory item data
 const validateInventoryItem = (item: any, type: string): boolean => {
@@ -76,6 +79,25 @@ export const DashboardInventoryManager = () => {
   const [activeTab, setActiveTab] = useState('website');
   const [currentPublication, setCurrentPublication] = useState<PublicationFrontend | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Get the website URL for analytics
+  const websiteUrl = currentPublication?.distributionChannels?.website?.url || 
+                     currentPublication?.basicInfo?.websiteUrl || null;
+  
+  // Fetch real-time web analytics
+  const {
+    analytics: webAnalytics,
+    loading: analyticsLoading,
+    hasData: hasAnalyticsData,
+    visitors: trackedVisitors,
+    pageViews: trackedPageViews,
+    mobilePercentage: trackedMobilePercentage,
+    trackingScript,
+    copyTrackingScript,
+    formatNumber,
+    getDateRangeString,
+    daysWithData,
+  } = useWebAnalytics(websiteUrl);
   
   // Helper function to get session storage key for temporarily shown tabs
   const getTempVisibilityStorageKey = (publicationId: string) => {
@@ -2763,9 +2785,9 @@ export const DashboardInventoryManager = () => {
                 Edit Website Info
               </Button>
             </div>
-            {/* Specifications Container */}
+            {/* Website URL and CMS */}
             <div className="mt-3 p-3 bg-gray-50 rounded-md border">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Website URL</span>
                   <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.url || currentPublication.basicInfo?.websiteUrl || 'Not specified'}</p>
@@ -2774,23 +2796,86 @@ export const DashboardInventoryManager = () => {
                   <span className="text-muted-foreground">CMS Platform</span>
                   <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.cmsplatform || 'Not specified'}</p>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Monthly Visitors</span>
-                  <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.metrics?.monthlyVisitors?.toLocaleString() || 'Not specified'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Monthly Page Views</span>
-                  <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.metrics?.monthlyPageViews?.toLocaleString() || 'Not specified'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Bounce Rate</span>
-                  <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.metrics?.bounceRate ? `${currentPublication.distributionChannels.website.metrics.bounceRate}%` : 'Not specified'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Mobile Traffic</span>
-                  <p className="font-medium mt-1">{currentPublication.distributionChannels?.website?.metrics?.mobilePercentage ? `${currentPublication.distributionChannels.website.metrics.mobilePercentage}%` : 'Not specified'}</p>
-                </div>
               </div>
+            </div>
+            
+            {/* Real-Time Analytics Section */}
+            <div className="mt-4">
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Real-Time Analytics
+                {analyticsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+              </h4>
+              
+              {/* Show tracked data when available */}
+              {!analyticsLoading && hasAnalyticsData && (
+                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <h5 className="font-semibold text-emerald-800 text-sm">
+                      Tracked Data
+                      {daysWithData && (
+                        <span className="font-normal text-emerald-600 ml-1">({getDateRangeString()})</span>
+                      )}
+                    </h5>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-emerald-700">Monthly Visitors</span>
+                      <p className="font-semibold text-emerald-900 text-lg">{formatNumber(trackedVisitors)}</p>
+                    </div>
+                    <div>
+                      <span className="text-emerald-700">Monthly Page Views</span>
+                      <p className="font-semibold text-emerald-900 text-lg">{formatNumber(trackedPageViews)}</p>
+                    </div>
+                    <div>
+                      <span className="text-emerald-700">Mobile Traffic</span>
+                      <p className="font-semibold text-emerald-900 text-lg">{trackedMobilePercentage !== undefined ? `${trackedMobilePercentage}%` : 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-emerald-700">Days Tracked</span>
+                      <p className="font-semibold text-emerald-900 text-lg">{daysWithData || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Loading state */}
+              {analyticsLoading && (
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-slate-600" />
+                    <span className="ml-2 text-sm text-slate-600">Loading analytics...</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Tracking Script Alert - Show when no analytics data available */}
+              {!analyticsLoading && !hasAnalyticsData && websiteUrl && (
+                <Alert className="border-amber-200 bg-amber-50">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertTitle className="text-amber-800">No Tracking Data Available</AlertTitle>
+                  <AlertDescription className="text-amber-700">
+                    <p className="mb-3">
+                      Add this script to your website's <code className="bg-amber-100 px-1 py-0.5 rounded text-xs">&lt;head&gt;</code> section to enable real-time analytics tracking:
+                    </p>
+                    <div className="relative bg-slate-800 rounded-md p-3 pr-20">
+                      <code className="text-green-400 text-xs font-mono break-all whitespace-pre-wrap block">
+                        {trackingScript}
+                      </code>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={copyTrackingScript}
+                      >
+                        <Copy className="w-3 h-3 mr-1" />
+                        Copy
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           </div>
 

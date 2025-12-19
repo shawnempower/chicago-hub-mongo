@@ -74,6 +74,7 @@ import proofOfPerformanceRouter from './routes/proof-of-performance';
 import reportingRouter from './routes/reporting';
 import trackingScriptsRouter from './routes/tracking-scripts';
 import notificationsRouter from './routes/notifications';
+import webAnalyticsRouter from './routes/web-analytics';
 import { authenticateToken } from './middleware/authenticate';
 import { activityTrackingMiddleware } from './middleware/activityTracking';
 import { createLogger } from '../src/utils/logger';
@@ -195,6 +196,7 @@ app.use('/api/proof-of-performance', activityTrackingMiddleware, proofOfPerforma
 app.use('/api/reporting', reportingRouter); // Campaign and order performance reporting
 app.use('/api/tracking-scripts', activityTrackingMiddleware, trackingScriptsRouter); // Ad tracking script generation
 app.use('/api/notifications', notificationsRouter); // User notifications
+app.use('/api/web-analytics', webAnalyticsRouter); // Real-time web analytics from DynamoDB
 
 // ===== STANDALONE ROUTES =====
 // Health check
