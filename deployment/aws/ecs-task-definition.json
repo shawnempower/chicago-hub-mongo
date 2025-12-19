@@ -39,6 +39,10 @@
           "value": "dzr71npsexxrt.cloudfront.net"
         },
         {
+          "name": "AWS_CLOUDFRONT_DOMAIN",
+          "value": "dzr71npsexxrt.cloudfront.net"
+        },
+        {
           "name": "AWS_REGION",
           "value": "us-east-2"
         }
