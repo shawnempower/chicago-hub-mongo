@@ -383,3 +383,5 @@ Schedule with EventBridge: `cron(0 6 * * ? *)` (daily at 6 AM UTC)
 **Tip:** Use partitioning by date to reduce Athena scan costs significantly.
 
 
+
+

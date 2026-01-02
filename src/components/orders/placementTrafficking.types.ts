@@ -172,3 +172,5 @@ export interface GenericTraffickingInfo extends BasePlacementInfo {
   audienceSize?: number;
   details?: string;
 }
+
+
