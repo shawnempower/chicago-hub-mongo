@@ -105,3 +105,5 @@ class WebAnalyticsAPI {
 }
 
 export const webAnalyticsApi = new WebAnalyticsAPI();
+
+

@@ -2873,6 +2873,16 @@ export const DashboardInventoryManager = () => {
                         Copy
                       </Button>
                     </div>
+                    
+                    {/* Self-Reported Data Summary */}
+                    <div className="mt-4 pt-3 border-t border-amber-200">
+                      <p className="text-sm text-amber-800">
+                        <span className="font-medium">Self-Reported:</span>{' '}
+                        {currentPublication.distributionChannels?.website?.metrics?.monthlyVisitors?.toLocaleString() || '—'} visitors | {' '}
+                        {currentPublication.distributionChannels?.website?.metrics?.monthlyPageViews?.toLocaleString() || '—'} pageviews | {' '}
+                        {currentPublication.distributionChannels?.website?.metrics?.mobilePercentage ? `${currentPublication.distributionChannels.website.metrics.mobilePercentage}%` : '—'} mobile
+                      </p>
+                    </div>
                   </AlertDescription>
                 </Alert>
               )}

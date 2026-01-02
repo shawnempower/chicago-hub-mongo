@@ -250,3 +250,5 @@ export const getDynamoDBService = (): DynamoDBService | null => {
 
 // Export as a getter function
 export { getDynamoDBService as dynamodbService };
+
+
