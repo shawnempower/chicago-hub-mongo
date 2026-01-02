@@ -733,6 +733,19 @@ export const PublicationStorefront: React.FC = () => {
           <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
           {storefrontConfig && (
             <>
+              {/* Preview button - always works using preview.localmedia.store */}
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  const previewUrl = `https://preview.localmedia.store?pubId=${selectedPublication?.publicationId}${storefrontConfig.meta.isDraft ? '&isDraft=1' : ''}`;
+                  window.open(previewUrl, '_blank', 'noopener,noreferrer');
+                }}
+                title="Preview storefront (works before domain is configured)"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Preview
+              </Button>
+              {/* View on Domain button - only enabled when subdomain is configured */}
               <Button 
                 variant="outline" 
                 disabled={!storefrontConfig.websiteUrl || !subdomainConfigured}
@@ -746,8 +759,8 @@ export const PublicationStorefront: React.FC = () => {
                 }}
                 title={!storefrontConfig.websiteUrl ? 'Subdomain URL not set' : !subdomainConfigured ? 'Configure DNS first using the button below' : ''}
               >
-                <Eye className="w-4 h-4 mr-2" />
-                {storefrontConfig.meta.isDraft ? 'Preview Draft' : 'View Live'}
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {storefrontConfig.meta.isDraft ? 'View Draft on Domain' : 'View Live'}
               </Button>
               <Button 
                 variant="outline" 
