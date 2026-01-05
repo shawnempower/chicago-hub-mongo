@@ -36,6 +36,7 @@ export interface DashboardStats {
   publications: number;
   adInventory: number;
   conversations: number;
+  unreadMessages: number; // Orders with messages from publications needing attention
   packages: number;
   publicationFiles: number;
   

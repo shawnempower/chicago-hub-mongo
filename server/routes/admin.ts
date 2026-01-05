@@ -75,6 +75,57 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
       hubId ? { publicationId: { $in: publications.map(p => String(p.publicationId)) } } : {}
     );
     
+    // Count orders with unread messages (publication messages newer than lastViewedByHub)
+    const ordersCollection = db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS);
+    
+    // Use aggregation to properly compare message timestamps with lastViewedByHub
+    const unreadMessagesResult = await ordersCollection.aggregate([
+      {
+        $match: {
+          ...(hubId ? { hubId } : {}),
+          deletedAt: { $exists: false },
+          'messages.sender': 'publication' // Has at least one message from a publication
+        }
+      },
+      {
+        $addFields: {
+          // Get the latest publication message timestamp
+          latestPubMessageTime: {
+            $max: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: { $ifNull: ['$messages', []] },
+                    as: 'msg',
+                    cond: { $eq: ['$$msg.sender', 'publication'] }
+                  }
+                },
+                as: 'pubMsg',
+                in: '$$pubMsg.timestamp'
+              }
+            }
+          }
+        }
+      },
+      {
+        $match: {
+          $expr: {
+            $or: [
+              // No lastViewedByHub means unread
+              { $eq: [{ $ifNull: ['$lastViewedByHub', null] }, null] },
+              // Or latest pub message is newer than lastViewedByHub
+              { $gt: ['$latestPubMessageTime', '$lastViewedByHub'] }
+            ]
+          }
+        }
+      },
+      {
+        $count: 'count'
+      }
+    ]).toArray();
+    
+    const ordersWithUnreadMessages = unreadMessagesResult[0]?.count || 0;
+    
     // Initialize counters
     let adInventoryCount = 0;
     const inventoryByType = {
@@ -814,7 +865,8 @@ router.get('/dashboard-stats', authenticateToken, async (req: any, res: Response
       leads: leadsCount,
       publications: publications.length,
       adInventory: adInventoryCount,
-      conversations: 0, // Placeholder for future feature
+      conversations: 0, // Placeholder for AI chat conversations
+      unreadMessages: ordersWithUnreadMessages, // Orders with messages from publications
       packages: packagesCount,
       publicationFiles: filesCount,
       inventoryByType,

@@ -68,6 +68,7 @@ interface OrderStats {
   placementStats: PlacementStats;
   ordersWithIssues: number;
   ordersWithMissingAssets: number;
+  ordersWithUnreadMessages: number;
 }
 
 type SortKey = 'campaignName' | 'publicationName' | 'generatedAt' | 'issues';
@@ -88,6 +89,7 @@ export function HubOrdersManagement() {
   const [rescindTarget, setRescindTarget] = useState<{ campaignId: string; publicationId: number; publicationName: string; campaignName: string } | null>(null);
 
   const issueOptions = [
+    { value: 'unread_messages', label: 'Unread Messages' },
     { value: 'rejected', label: 'Has Rejections' },
     { value: 'pending', label: 'Has Pending' },
     { value: 'no_assets', label: 'Missing Assets' },
@@ -204,6 +206,10 @@ export function HubOrdersManagement() {
     const issues: string[] = [];
     const statuses = Object.values(order.placementStatuses || {});
     
+    // Check for unread messages (messages from publications)
+    if (order.hasUnreadMessages) {
+      issues.push('unread_messages');
+    }
     if (statuses.includes('rejected')) {
       issues.push('rejected');
     }
@@ -246,6 +252,7 @@ export function HubOrdersManagement() {
     let totalPlacements = 0;
     let ordersWithIssues = 0;
     let ordersWithMissingAssets = 0;
+    let ordersWithUnreadMessages = 0;
 
     ordersList.forEach(order => {
       const statuses = Object.values(order.placementStatuses || {});
@@ -265,6 +272,11 @@ export function HubOrdersManagement() {
       if (!order.uploadedAssetCount || order.uploadedAssetCount === 0) {
         ordersWithMissingAssets++;
       }
+      
+      // Check for unread messages
+      if (order.hasUnreadMessages) {
+        ordersWithUnreadMessages++;
+      }
     });
 
     return {
@@ -272,7 +284,8 @@ export function HubOrdersManagement() {
       totalPlacements,
       placementStats,
       ordersWithIssues,
-      ordersWithMissingAssets
+      ordersWithMissingAssets,
+      ordersWithUnreadMessages
     };
   };
 
@@ -466,6 +479,22 @@ export function HubOrdersManagement() {
               <p className="text-xs text-muted-foreground">Rejected</p>
             </CardContent>
           </Card>
+          {stats.ordersWithUnreadMessages > 0 && (
+            <Card 
+              className="shadow-none border-l-4 border-l-blue-500 cursor-pointer hover:bg-blue-50/50 transition-colors"
+              onClick={() => {
+                setIssueFilter(['unread_messages']);
+              }}
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5 text-blue-600" />
+                  <div className="text-2xl font-bold text-blue-600">{stats.ordersWithUnreadMessages}</div>
+                </div>
+                <p className="text-xs text-muted-foreground">Unread Messages</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
@@ -642,7 +671,9 @@ export function HubOrdersManagement() {
                   return (
                     <TableRow
                       key={`${order.campaignId}-${order.publicationId}`}
-                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      className={`cursor-pointer hover:bg-gray-50 transition-colors ${
+                        order.hasUnreadMessages ? 'bg-blue-50/40 hover:bg-blue-50/60' : ''
+                      }`}
                       onClick={() => navigate(`/hubcentral?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`)}
                     >
                       <TableCell>

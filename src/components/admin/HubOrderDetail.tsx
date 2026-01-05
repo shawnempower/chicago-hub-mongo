@@ -105,6 +105,7 @@ export function HubOrderDetail() {
     if (campaignId && publicationId) {
       fetchOrderDetail();
       fetchCreatives();
+      markOrderAsViewed();
     }
   }, [campaignId, publicationId]);
 
@@ -133,6 +134,23 @@ export function HubOrderDetail() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Mark the order as viewed by hub user (clears unread indicator)
+  const markOrderAsViewed = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      await fetch(
+        `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/mark-viewed`,
+        {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+    } catch (error) {
+      // Silent fail - this is not critical
+      console.debug('Error marking order as viewed:', error);
     }
   };
 

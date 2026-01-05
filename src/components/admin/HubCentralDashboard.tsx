@@ -16,7 +16,7 @@ import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
 import { useHubPublications } from '@/hooks/useHubs';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
-import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle, Download, Megaphone, CheckCircle2 } from 'lucide-react';
+import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle, Download, Megaphone, CheckCircle2, MessageSquare } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { exportHubInventoryToCSV } from '@/utils/hubInventoryExport';
 import { toast } from '@/components/ui/use-toast';
@@ -235,6 +235,34 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                     stats?.conversations ?? 0
                   )}
                 </div>
+              </CardContent>
+            </Card>
+            <Card 
+              className={`cursor-pointer hover:shadow-md transition-shadow ${
+                (stats?.unreadMessages ?? 0) > 0 ? 'border-blue-300 bg-blue-50/30' : ''
+              }`}
+              onClick={() => onTabChange('orders')}
+            >
+              <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+                <MessageSquare className={`h-4 w-4 ${(stats?.unreadMessages ?? 0) > 0 ? 'text-blue-600' : 'text-muted-foreground'}`} />
+                <CardTitle className="text-sm font-medium">Messages</CardTitle>
+                {(stats?.unreadMessages ?? 0) > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                    {(stats?.unreadMessages ?? 0) > 9 ? '9+' : stats?.unreadMessages}
+                  </span>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${(stats?.unreadMessages ?? 0) > 0 ? 'text-blue-600' : ''}`}>
+                  {loading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    stats?.unreadMessages ?? 0
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {(stats?.unreadMessages ?? 0) > 0 ? 'Orders need attention' : 'No new messages'}
+                </p>
               </CardContent>
             </Card>
             <Card 
