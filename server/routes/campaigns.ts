@@ -238,7 +238,8 @@ router.patch('/:id/status', authenticateToken, async (req: any, res: Response) =
     const isAdmin = profile?.isAdmin;
     const isCreator = campaign.metadata.createdBy === req.user.id;
     
-    // Valid status transitions - simplified workflow (draft -> active is now allowed)
+    // Valid status transitions - campaigns auto-activate when orders are generated
+    // Manual status changes still allowed (e.g., pause, complete, cancel)
     // Legacy approval statuses are still supported for backwards compatibility
     const validStatuses = ['draft', 'active', 'paused', 'completed', 'cancelled', 'archived', 
                           'pending_review', 'pending_approval', 'approved', 'rejected'];

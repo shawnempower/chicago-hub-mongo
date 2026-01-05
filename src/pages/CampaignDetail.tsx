@@ -77,7 +77,7 @@ const STATUS_COLORS = {
 };
 
 const STATUS_LABELS = {
-  draft: 'Draft',
+  draft: 'Pending Orders',
   active: 'Active',
   paused: 'Paused',
   completed: 'Completed',
@@ -474,30 +474,7 @@ export default function CampaignDetail() {
                     </Badge>
                     
                     {/* Status-based Action Buttons - Simplified Workflow */}
-                    {campaign.status === 'draft' && (
-                      <Button
-                        onClick={() => handleStatusUpdate('active')}
-                        disabled={updating}
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <Play className="mr-2 h-4 w-4" />
-                        Launch Campaign
-                      </Button>
-                    )}
-                    
-                    {/* Legacy: Handle old pending_review/approved statuses */}
-                    {(campaign.status === 'pending_review' || campaign.status === 'approved') && (
-                      <Button
-                        onClick={() => handleStatusUpdate('active')}
-                        disabled={updating}
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <Play className="mr-2 h-4 w-4" />
-                        Launch Campaign
-                      </Button>
-                    )}
+                    {/* Draft campaigns auto-activate when insertion orders are generated */}
                     
                     {campaign.status === 'active' && (
                       <>

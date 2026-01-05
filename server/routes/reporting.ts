@@ -117,6 +117,81 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       latestDate: null,
     };
     
+    // Calculate delivery progress by channel from selectedInventory
+    const digitalChannels = ['website', 'newsletter', 'streaming'];
+    const deliveryProgress: Record<string, {
+      goal: number;
+      delivered: number;
+      deliveryPercent: number;
+      goalType: 'impressions' | 'frequency';
+      volumeLabel: string;
+    }> = {};
+    
+    let totalExpectedGoal = 0;
+    let totalExpectedReports = 0;
+    
+    // Build expected goals from selectedInventory
+    if (campaign.selectedInventory?.publications) {
+      for (const pub of campaign.selectedInventory.publications) {
+        for (const item of (pub.inventoryItems || [])) {
+          if (item.isExcluded) continue;
+          
+          const channel = (item.channel || 'other').toLowerCase();
+          const isDigital = digitalChannels.includes(channel);
+          
+          if (!deliveryProgress[channel]) {
+            const volumeLabel = isDigital ? 'Impressions' : 
+              (channel === 'podcast' ? 'Episodes' : 
+               channel === 'radio' ? 'Spots' : 
+               channel === 'print' ? 'Insertions' : 'Units');
+            
+            deliveryProgress[channel] = {
+              goal: 0,
+              delivered: 0,
+              deliveryPercent: 0,
+              goalType: isDigital ? 'impressions' : 'frequency',
+              volumeLabel
+            };
+          }
+          
+          totalExpectedReports++;
+          
+          if (isDigital) {
+            const impressions = item.performanceMetrics?.impressionsPerMonth || 0;
+            deliveryProgress[channel].goal += impressions;
+            totalExpectedGoal += impressions;
+          } else {
+            const frequency = item.currentFrequency || item.quantity || 1;
+            deliveryProgress[channel].goal += frequency;
+            totalExpectedGoal += frequency;
+          }
+        }
+      }
+    }
+    
+    // Fill in delivered amounts from channel breakdown
+    for (const ch of channelBreakdown) {
+      const channel = ch._id?.toLowerCase() || 'other';
+      const isDigital = digitalChannels.includes(channel);
+      
+      if (deliveryProgress[channel]) {
+        // Digital: delivered = impressions, Offline: delivered = report count
+        deliveryProgress[channel].delivered = isDigital ? (ch.impressions || 0) : (ch.entries || 0);
+        
+        const goal = deliveryProgress[channel].goal;
+        const delivered = deliveryProgress[channel].delivered;
+        deliveryProgress[channel].deliveryPercent = goal > 0 
+          ? Math.round((delivered / goal) * 100) 
+          : 0;
+      }
+    }
+    
+    // Calculate overall delivery % as average of channel percentages
+    const channelPercents = Object.values(deliveryProgress).map(ch => ch.deliveryPercent);
+    const overallDeliveryPercent = channelPercents.length > 0
+      ? Math.round(channelPercents.reduce((sum, p) => sum + p, 0) / channelPercents.length)
+      : 0;
+    
     // Calculate pacing if campaign has goals
     let pacing = null;
     if (campaign.objectives?.budget?.totalBudget || campaign.selectedInventory) {
@@ -127,11 +202,8 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       const daysPassed = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       
-      // Estimate total goal (this would come from campaign goals in a full implementation)
-      const estimatedGoal = campaign.estimatedPerformance?.impressions?.max || 0;
-      const delivered = totals.totalImpressions + totals.totalInsertions + totals.totalSpotsAired;
-      
-      pacing = calculatePacingStatus(delivered, estimatedGoal, Math.min(daysPassed, totalDays), totalDays);
+      // Use our calculated delivery percent
+      pacing = calculatePacingStatus(overallDeliveryPercent, 100, Math.min(daysPassed, totalDays), totalDays);
       pacing = {
         ...pacing,
         totalDays,
@@ -162,6 +234,13 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
         downloads: totals.totalDownloads,
         posts: totals.totalPosts,
         publications: totals.uniquePublications?.length || 0,
+      },
+      // Delivery progress by channel (goal vs delivered)
+      deliveryProgress: {
+        overallPercent: overallDeliveryPercent,
+        totalExpectedReports,
+        totalReportsSubmitted: totals.totalEntries,
+        byChannel: deliveryProgress,
       },
       byChannel: channelBreakdown.map(ch => ({
         channel: ch._id,

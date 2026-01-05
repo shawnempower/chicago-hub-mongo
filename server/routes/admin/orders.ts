@@ -8,6 +8,8 @@ import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../../middleware/authenticate';
 import { insertionOrderService } from '../../../src/services/insertionOrderService';
 import { userProfilesService } from '../../../src/integrations/mongodb/allServices';
+import { getDatabase } from '../../../src/integrations/mongodb/client';
+import { COLLECTIONS } from '../../../src/integrations/mongodb/schemas';
 
 const router = Router();
 
@@ -204,6 +206,7 @@ router.post('/:campaignId/:publicationId/notes', async (req: any, res: Response)
 /**
  * POST /api/admin/orders/generate/:campaignId
  * Generate insertion orders for a campaign
+ * Also sets campaign status to 'active' - orders generated = campaign is live
  */
 router.post('/generate/:campaignId', async (req: any, res: Response) => {
   try {
@@ -219,10 +222,27 @@ router.post('/generate/:campaignId', async (req: any, res: Response) => {
       return res.status(400).json({ error: result.error });
     }
 
+    // Auto-activate campaign when orders are generated
+    // Orders generated = campaign is committed and live
+    const db = getDatabase();
+    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
+    
+    await campaignsCollection.updateOne(
+      { campaignId },
+      { 
+        $set: { 
+          status: 'active',
+          'execution.launchDate': new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+
     res.json({ 
       success: true, 
       ordersGenerated: result.ordersGenerated,
-      message: `Generated ${result.ordersGenerated} insertion orders`
+      campaignStatus: 'active',
+      message: `Generated ${result.ordersGenerated} insertion orders - campaign is now active`
     });
   } catch (error) {
     console.error('Error generating orders:', error);

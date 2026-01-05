@@ -68,7 +68,7 @@ const STATUS_COLORS = {
 };
 
 const STATUS_LABELS = {
-  draft: 'Draft',
+  draft: 'Pending Orders',
   active: 'Active',
   paused: 'Paused',
   completed: 'Completed',
@@ -297,7 +297,7 @@ export default function CampaignList() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="draft">Pending Orders</SelectItem>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="paused">Paused</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>

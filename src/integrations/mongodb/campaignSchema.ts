@@ -227,7 +227,9 @@ export interface Campaign {
     executedAt: Date;
   };
   
-  // Campaign status - simplified workflow (draft -> active -> completed)
+  // Campaign status - simplified workflow:
+  // draft (pending orders) -> active (orders generated) -> completed
+  // Campaigns auto-activate when insertion orders are generated
   // Legacy statuses (pending_approval, approved, rejected, pending_review) kept for backwards compatibility
   status: 'draft' | 'active' | 'paused' | 'completed' | 'cancelled' | 'archived' | 'pending_approval' | 'approved' | 'rejected' | 'pending_review';
   

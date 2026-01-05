@@ -192,8 +192,8 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
         </div>
         <h3 className="text-2xl font-bold mb-2">Campaign Created Successfully!</h3>
         <p className="text-muted-foreground text-center max-w-md">
-          Your campaign "{formData.name}" has been created and saved as a draft. 
-          You can now generate an insertion order and launch the campaign.
+          Your campaign "{formData.name}" has been created. 
+          Generate insertion orders to activate the campaign and notify publications.
         </p>
         <Badge variant="secondary" className="mt-4">
           Campaign ID: {campaignId}
@@ -313,12 +313,12 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
               <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h4 className="font-semibold text-green-900 mb-1">Ready to Launch</h4>
+                <h4 className="font-semibold text-green-900 mb-1">Ready for Orders</h4>
                 <p className="text-sm text-green-800">
-                  When ready, launch the campaign to start sending insertion orders to publications.
+                  Generate insertion orders to activate the campaign and notify publications.
                 </p>
               </div>
             </div>
@@ -329,7 +329,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
       {/* Additional Info */}
       <div className="bg-gray-50 border rounded-lg p-4 text-sm text-muted-foreground">
         <p>
-          <strong>Note:</strong> Your campaign is saved as a draft. You can edit it anytime before submission. 
+          <strong>Note:</strong> You can edit campaign details anytime before generating orders. 
           All selected inventory is subject to availability at time of final booking.
         </p>
       </div>

@@ -51,6 +51,14 @@ interface CampaignPerformanceDashboardProps {
   endDate?: Date;
 }
 
+interface ChannelDelivery {
+  goal: number;
+  delivered: number;
+  deliveryPercent: number;
+  goalType: 'impressions' | 'frequency';
+  volumeLabel: string;
+}
+
 interface CampaignSummary {
   campaignId: string;
   campaignName: string;
@@ -67,6 +75,12 @@ interface CampaignSummary {
     downloads: number;
     posts: number;
     publications: number;
+  };
+  deliveryProgress?: {
+    overallPercent: number;
+    totalExpectedReports: number;
+    totalReportsSubmitted: number;
+    byChannel: Record<string, ChannelDelivery>;
   };
   byChannel: Array<{
     channel: string;
@@ -284,6 +298,59 @@ export function CampaignPerformanceDashboard({
 
   return (
     <div className="space-y-6">
+      {/* Delivery Progress - at the top */}
+      {summary.deliveryProgress && Object.keys(summary.deliveryProgress.byChannel).length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center justify-between gap-2 font-sans">
+              <span>Delivery Progress</span>
+              <Badge 
+                className={cn(
+                  "border-0",
+                  summary.deliveryProgress.overallPercent >= 100 ? "bg-blue-100 text-blue-700" :
+                  summary.deliveryProgress.overallPercent >= 90 ? "bg-green-100 text-green-700" :
+                  summary.deliveryProgress.overallPercent >= 70 ? "bg-yellow-100 text-yellow-700" :
+                  "bg-red-100 text-red-700"
+                )}
+              >
+                {summary.deliveryProgress.overallPercent}% Overall
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              {summary.deliveryProgress.totalReportsSubmitted} of {summary.deliveryProgress.totalExpectedReports} placements reported
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="space-y-3">
+              {Object.entries(summary.deliveryProgress.byChannel).map(([channel, data]) => {
+                const isOverDelivered = data.deliveryPercent > 100;
+                const statusColor = isOverDelivered ? "text-blue-600" :
+                  data.deliveryPercent >= 90 ? "text-green-600" :
+                  data.deliveryPercent >= 70 ? "text-yellow-600" :
+                  "text-red-600";
+                
+                return (
+                  <div key={channel} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="capitalize font-medium">{channel}</span>
+                      <span className={cn("font-medium", statusColor)}>
+                        {data.delivered.toLocaleString()} / {data.goal.toLocaleString()} {data.volumeLabel}
+                      </span>
+                    </div>
+                    <Progress value={Math.min(data.deliveryPercent, 100)} className="h-2" />
+                    <div className="flex justify-end text-xs text-muted-foreground">
+                      <span className={cn(statusColor)}>
+                        {data.deliveryPercent}%{isOverDelivered && " ✓"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Performance by Data Source */}
       <TooltipProvider delayDuration={200}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
