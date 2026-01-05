@@ -13,6 +13,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { API_BASE_URL } from '@/config/api';
 import { useHubContext } from '@/contexts/HubContext';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { format } from 'date-fns';
@@ -33,8 +44,14 @@ import {
   DollarSign,
   Bot,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  Check,
+  AlertTriangle,
+  Skull
 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/CustomAuthContext';
 import { cn } from '@/lib/utils';
 
 const STATUS_COLORS = {
@@ -65,11 +82,81 @@ const STATUS_LABELS = {
 
 export default function CampaignList() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin === true;
   const { selectedHubId, loading: hubLoading, error: hubError } = useHubContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
   
-  const { campaigns, loading, error } = useCampaigns({
+  // Copy campaign ID to clipboard
+  const handleCopyId = async (e: React.MouseEvent, campaignId: string) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(campaignId);
+      setCopiedId(campaignId);
+      toast({
+        title: 'Copied!',
+        description: 'Campaign ID copied to clipboard',
+      });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      toast({
+        title: 'Failed to copy',
+        description: 'Could not copy to clipboard',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Permanently delete campaign and all related records
+  const handlePermanentDelete = async () => {
+    if (!deleteTarget || confirmText !== 'DELETE') return;
+    
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/campaigns/${deleteTarget.id}/permanent`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete campaign');
+      }
+      
+      const result = await response.json();
+      
+      toast({
+        title: 'Campaign Permanently Deleted',
+        description: `"${deleteTarget.name}" and ${result.totalDeleted} related records have been permanently removed.`,
+      });
+      
+      setDeleteTarget(null);
+      setConfirmText('');
+      
+      // Refresh the page to show updated list
+      window.location.reload();
+    } catch (err) {
+      toast({
+        title: 'Delete Failed',
+        description: err instanceof Error ? err.message : 'Could not delete campaign',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+  
+  const { campaigns, loading, error, refetch } = useCampaigns({
     hubId: selectedHubId,
     status: statusFilter === 'all' ? undefined : statusFilter,
     searchTerm: searchTerm || undefined,
@@ -263,7 +350,7 @@ export default function CampaignList() {
                       <CardContent className="pt-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
+                            <div className="flex items-center gap-3 mb-1">
                               <h3 className="text-lg font-semibold font-sans">
                                 {campaign.basicInfo?.name || 'Untitled Campaign'}
                               </h3>
@@ -271,8 +358,21 @@ export default function CampaignList() {
                                 {STATUS_LABELS[campaign.status as keyof typeof STATUS_LABELS]}
                               </Badge>
                             </div>
+                            {/* Copyable Campaign ID */}
+                            <button
+                              onClick={(e) => handleCopyId(e, campaign._id?.toString() || '')}
+                              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-mono bg-muted/50 hover:bg-muted px-2 py-0.5 rounded transition-colors mb-2"
+                              title="Click to copy campaign ID"
+                            >
+                              <span className="truncate max-w-[180px]">{campaign._id?.toString()}</span>
+                              {copiedId === campaign._id?.toString() ? (
+                                <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                              ) : (
+                                <Copy className="h-3 w-3 flex-shrink-0" />
+                              )}
+                            </button>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-muted-foreground mt-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-muted-foreground mt-2">
                               <div>
                                 <p className="font-medium text-foreground">Advertiser</p>
                                 <p>{campaign.basicInfo?.advertiserName || 'N/A'}</p>
@@ -325,6 +425,23 @@ export default function CampaignList() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                             )}
+                            {/* Permanent Delete - Admin Only */}
+                            {isAdmin && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteTarget({
+                                    id: campaign._id?.toString() || '',
+                                    name: campaign.basicInfo?.name || 'Untitled Campaign'
+                                  });
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -336,6 +453,84 @@ export default function CampaignList() {
             </div>
           </div>
         </main>
+
+        {/* Permanent Delete Confirmation Modal */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            setConfirmText('');
+          }
+        }}>
+          <AlertDialogContent className="max-w-lg">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                <Skull className="h-6 w-6" />
+                Permanently Delete Campaign
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-4">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-red-900 mb-1">⚠️ This action is IRREVERSIBLE</p>
+                        <p className="text-sm text-red-800">
+                          You are about to permanently delete <strong>"{deleteTarget?.name}"</strong> and ALL related data.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-muted-foreground">
+                    <p className="font-medium text-foreground mb-2">This will permanently remove:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>The campaign and all its settings</li>
+                      <li>All publication insertion orders</li>
+                      <li>All creative assets and uploads</li>
+                      <li>All tracking scripts and pixels</li>
+                      <li>All performance data and metrics</li>
+                      <li>All proof of performance records</li>
+                      <li>All notifications related to this campaign</li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-2 border-t">
+                    <label className="text-sm font-medium text-foreground block mb-2">
+                      Type <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-red-600">DELETE</span> to confirm:
+                    </label>
+                    <Input
+                      value={confirmText}
+                      onChange={(e) => setConfirmText(e.target.value)}
+                      placeholder="Type DELETE to confirm"
+                      className="font-mono"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handlePermanentDelete}
+                disabled={confirmText !== 'DELETE' || deleting}
+                className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Permanently
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </ProtectedRoute>
   );

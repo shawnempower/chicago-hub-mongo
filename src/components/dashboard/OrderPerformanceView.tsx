@@ -19,7 +19,19 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,12 +53,16 @@ import {
   Radio,
   Mic,
   ChevronDown,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/config/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { ReportResultsForm } from './ReportResultsForm';
+import { EditPerformanceEntryForm } from './EditPerformanceEntryForm';
 import { PACING_STATUS_LABELS, PacingStatus } from '@/integrations/mongodb/dailyAggregateSchema';
 import { PerformanceEntry } from '@/integrations/mongodb/performanceEntrySchema';
 import { PROOF_FILE_TYPE_LABELS, ProofOfPerformance, formatFileSize } from '@/integrations/mongodb/proofOfPerformanceSchema';
@@ -95,6 +111,12 @@ export function OrderPerformanceView({
   const [summary, setSummary] = useState<any>(null);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [quickEntryPlacement, setQuickEntryPlacement] = useState<typeof placements[0] | null>(null);
+  
+  // Edit/Delete state
+  const [editingEntry, setEditingEntry] = useState<PerformanceEntry | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Identify offline placements that would benefit from quick entry
   const offlinePlacements = useMemo(() => {
@@ -189,6 +211,46 @@ export function OrderPerformanceView({
     }
   };
 
+  const handleDeleteEntry = async () => {
+    if (!deletingEntryId) return;
+    
+    setIsDeleting(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API_BASE_URL}/performance-entries/${deletingEntryId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to delete entry');
+      }
+      
+      toast({
+        title: 'Entry Deleted',
+        description: 'The performance entry has been removed',
+      });
+      
+      setDeletingEntryId(null);
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete entry',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditEntry = (entry: PerformanceEntry) => {
+    setEditingEntry(entry);
+    setShowEditDialog(true);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -259,26 +321,23 @@ export function OrderPerformanceView({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Overall Progress Bar */}
+          {/* Overall Delivery Progress */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Overall Delivery</span>
               <div className="flex items-center gap-2">
                 <span className={cn("font-bold", getPacingColor(overallStatus))}>
-                  {overallPercent}%
+                  {deliverySummary?.deliveryPercent ?? deliverySummary?.percentComplete ?? overallPercent}%
                 </span>
                 <Badge className={cn(getPacingBg(overallStatus), getPacingColor(overallStatus), "border-0")}>
                   {PACING_STATUS_LABELS[overallStatus]}
                 </Badge>
               </div>
             </div>
-            <Progress value={Math.min(overallPercent, 100)} className="h-3" />
+            <Progress value={Math.min(deliverySummary?.deliveryPercent ?? deliverySummary?.percentComplete ?? overallPercent, 100)} className="h-3" />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>
-                {deliverySummary?.totalDelivered?.toLocaleString() || 0} delivered
-              </span>
-              <span>
-                Goal: {deliverySummary?.totalGoalValue?.toLocaleString() || 0}
+                {deliverySummary?.totalReportsSubmitted ?? 0} of {deliverySummary?.totalExpectedReports ?? 0} placements reported
               </span>
             </div>
           </div>
@@ -289,20 +348,36 @@ export function OrderPerformanceView({
               <Separator />
               <h4 className="text-sm font-medium">By Channel</h4>
               <div className="grid gap-3">
-                {Object.entries(deliverySummary.byChannel).map(([channel, data]) => {
-                  const status = getPacingStatus(data.percent);
+                {Object.entries(deliverySummary.byChannel).map(([channel, data]: [string, any]) => {
+                  // All channels: show goal vs delivered
+                  const goal = data.goal ?? 0;
+                  const delivered = data.delivered ?? data.volume ?? 0;
+                  const deliveryPercent = data.deliveryPercent ?? (goal > 0 ? Math.round((delivered / goal) * 100) : 0);
+                  const volumeLabel = data.volumeLabel ?? 'Delivered';
+                  const goalType = data.goalType || 'frequency';
+                  
+                  // Format goal label based on type
+                  const goalLabel = goalType === 'impressions' ? volumeLabel : 
+                    (channel === 'podcast' ? 'Episodes' : 
+                     channel === 'radio' ? 'Spots' : 
+                     channel === 'print' ? 'Insertions' : 'Units');
+                  
+                  const status = getPacingStatus(deliveryPercent);
+                  const isOverDelivered = deliveryPercent > 100;
+                  
                   return (
                     <div key={channel} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
                         <span className="capitalize">{channel}</span>
-                        <span className={cn("font-medium", getPacingColor(status))}>
-                          {data.percent}%
+                        <span className={cn("font-medium", isOverDelivered ? "text-blue-600" : getPacingColor(status))}>
+                          {delivered.toLocaleString()} / {goal.toLocaleString()} {goalLabel}
                         </span>
                       </div>
-                      <Progress value={Math.min(data.percent, 100)} className="h-2" />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{data.delivered.toLocaleString()}</span>
-                        <span>{data.goal.toLocaleString()}</span>
+                      <Progress value={Math.min(deliveryPercent, 100)} className="h-2" />
+                      <div className="flex justify-end text-xs text-muted-foreground">
+                        <span className={cn(isOverDelivered ? "text-blue-600" : getPacingColor(status))}>
+                          {deliveryPercent}%{isOverDelivered && " ✓"}
+                        </span>
                       </div>
                     </div>
                   );
@@ -455,6 +530,7 @@ export function OrderPerformanceView({
                       <TableHead>Channel</TableHead>
                       <TableHead>Reported Metrics</TableHead>
                       <TableHead>Notes</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -526,6 +602,29 @@ export function OrderPerformanceView({
                             <div className="max-w-[150px] truncate text-muted-foreground text-xs" title={entry.notes}>
                               {entry.notes || '-'}
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditEntry(entry)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => setDeletingEntryId(entry._id?.toString() || null)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
@@ -669,6 +768,67 @@ export function OrderPerformanceView({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Edit Entry Dialog */}
+      {editingEntry && (
+        <Dialog open={showEditDialog} onOpenChange={(open) => {
+          setShowEditDialog(open);
+          if (!open) setEditingEntry(null);
+        }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Pencil className="w-5 h-5" />
+                Edit Performance Entry
+              </DialogTitle>
+              <DialogDescription>
+                Update the metrics for this entry. Changes will be reflected in campaign totals.
+              </DialogDescription>
+            </DialogHeader>
+            <EditPerformanceEntryForm
+              entry={editingEntry}
+              onSuccess={() => {
+                setShowEditDialog(false);
+                setEditingEntry(null);
+                fetchData();
+              }}
+              onCancel={() => {
+                setShowEditDialog(false);
+                setEditingEntry(null);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingEntryId} onOpenChange={(open) => !open && setDeletingEntryId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Performance Entry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove this performance entry and update campaign totals. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteEntry}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Entry'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

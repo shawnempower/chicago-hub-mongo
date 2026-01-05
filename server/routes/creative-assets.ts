@@ -536,10 +536,11 @@ router.get('/:id', async (req: any, res: Response) => {
 });
 
 /**
- * GET /api/creative-assets/:id/download
- * Download a creative asset
+ * GET /api/creative-assets/:id/download-url
+ * Get a signed download URL with Content-Disposition: attachment
+ * Returns the URL so frontend can redirect to it
  */
-router.get('/:id/download', async (req: any, res: Response) => {
+router.get('/:id/download-url', authenticateToken, async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -552,11 +553,53 @@ router.get('/:id/download', async (req: any, res: Response) => {
     // Record download
     await creativesService.recordDownload(id);
 
-    // Generate fresh signed URL for S3 assets
+    // Generate fresh signed URL for S3 assets with Content-Disposition: attachment
+    // This forces the browser to download instead of playing audio/video files
     let downloadUrl = asset.metadata.fileUrl;
     if (asset.metadata.storageProvider === 's3' && asset.metadata.storagePath) {
       try {
-        const freshUrl = await fileStorage.getSignedUrl(asset.metadata.storagePath, 3600); // 1 hour for downloads
+        const fileName = asset.metadata.fileName || asset.metadata.originalFileName || 'download';
+        const freshUrl = await fileStorage.getSignedDownloadUrl(asset.metadata.storagePath, fileName, 3600);
+        if (freshUrl) {
+          downloadUrl = freshUrl;
+        }
+      } catch (error) {
+        console.error('Error generating fresh signed URL for download:', asset._id, error);
+        // Keep the old URL as fallback
+      }
+    }
+
+    res.json({ downloadUrl, fileName: asset.metadata.fileName || asset.metadata.originalFileName });
+  } catch (error) {
+    console.error('Error getting download URL:', error);
+    res.status(500).json({ error: 'Failed to get download URL' });
+  }
+});
+
+/**
+ * GET /api/creative-assets/:id/download
+ * Download a creative asset (redirects to signed URL with Content-Disposition)
+ */
+router.get('/:id/download', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const asset = await creativesService.getById(id);
+
+    if (!asset) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+
+    // Record download
+    await creativesService.recordDownload(id);
+
+    // Generate fresh signed URL for S3 assets with Content-Disposition: attachment
+    // This forces the browser to download instead of playing audio/video files
+    let downloadUrl = asset.metadata.fileUrl;
+    if (asset.metadata.storageProvider === 's3' && asset.metadata.storagePath) {
+      try {
+        const fileName = asset.metadata.fileName || asset.metadata.originalFileName || 'download';
+        const freshUrl = await fileStorage.getSignedDownloadUrl(asset.metadata.storagePath, fileName, 3600);
         if (freshUrl) {
           downloadUrl = freshUrl;
         }
@@ -568,7 +611,7 @@ router.get('/:id/download', async (req: any, res: Response) => {
 
     // Redirect to file URL or serve file
     // For local storage, we'll redirect to the static file route
-    // For S3, we redirect to the fresh signed URL
+    // For S3, we redirect to the fresh signed URL with Content-Disposition: attachment
     res.redirect(downloadUrl);
   } catch (error) {
     console.error('Error downloading creative asset:', error);

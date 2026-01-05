@@ -46,7 +46,9 @@ import {
   Bot,
   BarChart3,
   Play,
-  Pause
+  Pause,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
@@ -101,6 +103,28 @@ export default function CampaignDetail() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+  
+  // Copy campaign ID to clipboard
+  const handleCopyId = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const idToCopy = campaign?._id?.toString() || id || '';
+    try {
+      await navigator.clipboard.writeText(idToCopy);
+      setCopiedId(true);
+      toast({
+        title: 'Copied!',
+        description: 'Campaign ID copied to clipboard',
+      });
+      setTimeout(() => setCopiedId(false), 2000);
+    } catch (err) {
+      toast({
+        title: 'Failed to copy',
+        description: 'Could not copy to clipboard',
+        variant: 'destructive',
+      });
+    }
+  };
   const [rescindTarget, setRescindTarget] = useState<{ publicationId: number; publicationName: string } | null>(null);
   const [rescindPlacementTarget, setRescindPlacementTarget] = useState<{ 
     publicationId: number; 
@@ -415,12 +439,25 @@ export default function CampaignDetail() {
                 {/* Title Row with Actions */}
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-1">
                       <h1 className="text-lg font-semibold font-sans">{campaign.basicInfo.name}</h1>
                       <span className="text-lg font-sans text-muted-foreground">
                         {campaign.basicInfo.advertiserName}
                       </span>
                     </div>
+                    {/* Copyable Campaign ID */}
+                    <button
+                      onClick={handleCopyId}
+                      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-mono bg-muted/50 hover:bg-muted px-2 py-0.5 rounded transition-colors"
+                      title="Click to copy campaign ID"
+                    >
+                      <span className="truncate max-w-[200px]">{campaign._id?.toString() || id}</span>
+                      {copiedId ? (
+                        <Check className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </button>
                     {campaign.algorithm && (
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-sm text-purple-700 font-medium font-sans bg-purple-100 px-2 py-1 rounded-md">

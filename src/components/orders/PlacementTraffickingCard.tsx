@@ -16,6 +16,7 @@ import {
   Mail, Tv, Share2, DollarSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { forceDownloadFile } from '@/utils/fileUpload';
 import { PlacementStatusBadge } from './PlacementStatusBadge';
 import type { PlacementStatus } from './PlacementStatusBadge';
 import {
@@ -345,11 +346,16 @@ function PrintContent({ placement }: { placement: PrintTraffickingInfo }) {
       {/* Download asset */}
       {placement.hasAsset && placement.assetUrl && (
         <div className="mt-4">
-          <Button variant="outline" size="sm" asChild>
-            <a href={placement.assetUrl} target="_blank" rel="noopener noreferrer">
-              <Download className="h-4 w-4 mr-2" />
-              Download Print-Ready PDF
-            </a>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              const fileName = placement.assetUrl!.split('/').pop() || 'print-asset.pdf';
+              forceDownloadFile(placement.assetUrl!, fileName);
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download Print-Ready PDF
           </Button>
         </div>
       )}
@@ -405,11 +411,16 @@ function RadioContent({ placement }: { placement: RadioTraffickingInfo }) {
       {/* Download/view assets */}
       <div className="flex gap-2 mt-4">
         {placement.hasAsset && placement.assetUrl && (
-          <Button variant="outline" size="sm" asChild>
-            <a href={placement.assetUrl} target="_blank" rel="noopener noreferrer">
-              <Download className="h-4 w-4 mr-2" />
-              Download Audio Spot
-            </a>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              const fileName = placement.assetUrl!.split('/').pop() || 'audio-spot.wav';
+              forceDownloadFile(placement.assetUrl!, fileName);
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download Audio Spot
           </Button>
         )}
         {placement.scriptText && (
@@ -702,6 +713,7 @@ function InfoItem({
 }
 
 export default PlacementTraffickingCard;
+
 
 
 

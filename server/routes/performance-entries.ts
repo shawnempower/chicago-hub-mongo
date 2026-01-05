@@ -442,75 +442,204 @@ router.post('/bulk', async (req: any, res: Response) => {
 
 /**
  * Helper function to update order delivery summary
+ * Tracks TWO metrics:
+ * 1. Reports completion - how many placements have been reported (e.g., 4/4 episodes)
+ * 2. Volume delivered - total impressions, downloads, spots aired, etc.
  */
 async function updateOrderDeliverySummary(orderId: string): Promise<void> {
   try {
     const db = getDatabase();
     const perfCollection = db.collection<PerformanceEntry>(COLLECTIONS.PERFORMANCE_ENTRIES);
     const ordersCollection = db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS);
+    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
     
-    // Aggregate performance data for this order
-    const aggregation = await perfCollection.aggregate([
-      { $match: { orderId, deletedAt: { $exists: false } } },
-      { $group: {
-        _id: '$channel',
-        impressions: { $sum: '$metrics.impressions' },
-        clicks: { $sum: '$metrics.clicks' },
-        units: { $sum: { 
-          $add: [
-            { $ifNull: ['$metrics.insertions', 0] },
-            { $ifNull: ['$metrics.spotsAired', 0] },
-            { $ifNull: ['$metrics.posts', 0] },
-            { $ifNull: ['$metrics.downloads', 0] }
-          ]
-        }},
-        reach: { $sum: '$metrics.reach' }
-      }}
-    ]).toArray();
-    
-    // Get current order to check goals
+    // Get current order
     const order = await ordersCollection.findOne({ _id: new ObjectId(orderId) });
     if (!order) return;
     
-    // Calculate totals
-    const byChannel: Record<string, { goal: number; delivered: number; percent: number }> = {};
-    let totalDelivered = 0;
-    let totalGoal = 0;
+    // Get campaign to access inventory items
+    const campaign = await campaignsCollection.findOne({ campaignId: order.campaignId });
+    const publication = campaign?.selectedInventory?.publications?.find(
+      (p: any) => p.publicationId === order.publicationId
+    );
     
-    // Process delivery goals if they exist
-    if (order.deliveryGoals) {
-      Object.entries(order.deliveryGoals).forEach(([itemPath, goal]: [string, any]) => {
-        totalGoal += goal.goalValue || 0;
+    // Calculate expected delivery by channel
+    // - Digital channels: use expected impressions (performanceMetrics.impressionsPerMonth)
+    // - Offline channels: use frequency (number of airings/episodes/insertions)
+    const expectedByChannel: Record<string, { 
+      count: number;        // Number of placements
+      goal: number;         // Expected delivery (impressions for digital, frequency for offline)
+      goalType: 'impressions' | 'frequency';
+    }> = {};
+    let totalExpectedReports = 0;
+    let totalExpectedGoal = 0;
+    
+    const digitalChannels = ['website', 'newsletter', 'streaming'];
+    
+    if (publication?.inventoryItems) {
+      publication.inventoryItems.forEach((item: any) => {
+        if (item.isExcluded) return;
+        const channel = (item.channel || 'other').toLowerCase();
+        const isDigital = digitalChannels.includes(channel);
+        
+        if (!expectedByChannel[channel]) {
+          expectedByChannel[channel] = { 
+            count: 0, 
+            goal: 0, 
+            goalType: isDigital ? 'impressions' : 'frequency' 
+          };
+        }
+        
+        expectedByChannel[channel].count++;
+        totalExpectedReports++;
+        
+        if (isDigital) {
+          // Digital: use expected impressions
+          const impressions = item.performanceMetrics?.impressionsPerMonth || 
+                             item.audienceMetrics?.monthlyPageViews || 
+                             item.audienceMetrics?.monthlyVisitors || 0;
+          expectedByChannel[channel].goal += impressions;
+          totalExpectedGoal += impressions;
+        } else {
+          // Offline: use frequency (number of airings/episodes/insertions)
+          const frequency = item.currentFrequency || item.quantity || 1;
+          expectedByChannel[channel].goal += frequency;
+          totalExpectedGoal += frequency;
+        }
       });
     }
     
-    aggregation.forEach((agg: any) => {
-      const channelDelivered = agg.impressions + agg.units;
-      totalDelivered += channelDelivered;
+    // Get all performance entries for this order (grouped by channel)
+    const entriesByChannel = await perfCollection.aggregate([
+      { $match: { orderId, deletedAt: { $exists: false } } },
+      { $group: {
+        _id: '$channel',
+        reportCount: { $sum: 1 },  // Number of reports submitted
+        impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } },
+        clicks: { $sum: { $ifNull: ['$metrics.clicks', 0] } },
+        reach: { $sum: { $ifNull: ['$metrics.reach', 0] } },
+        // Units (insertions, spots, downloads, posts)
+        insertions: { $sum: { $ifNull: ['$metrics.insertions', 0] } },
+        spotsAired: { $sum: { $ifNull: ['$metrics.spotsAired', 0] } },
+        downloads: { $sum: { $ifNull: ['$metrics.downloads', 0] } },
+        posts: { $sum: { $ifNull: ['$metrics.posts', 0] } },
+        circulation: { $sum: { $ifNull: ['$metrics.circulation', 0] } }
+      }}
+    ]).toArray();
+    
+    // Build channel summaries - goal vs delivered for all channels
+    const byChannel: Record<string, {
+      goal: number;           // Expected delivery (impressions for digital, frequency for offline)
+      delivered: number;      // Actual delivered
+      deliveryPercent: number;
+      goalType: 'impressions' | 'frequency';
+      volumeLabel: string;
+    }> = {};
+    
+    let totalReportsSubmitted = 0;
+    let totalDelivered = 0;
+    
+    // Initialize all expected channels with their goals
+    Object.entries(expectedByChannel).forEach(([channel, expected]) => {
+      const isDigital = digitalChannels.includes(channel);
+      const volumeLabel = isDigital ? 'Impressions' : 
+        (channel === 'podcast' ? 'Episodes' : 
+         channel === 'radio' ? 'Spots' : 
+         channel === 'print' ? 'Insertions' : 'Units');
       
-      // Get channel goal from order if available
-      const channelGoal = Object.values(order.deliveryGoals || {})
-        .filter((g: any) => g.goalType === 'impressions' || g.goalType === 'units')
-        .reduce((sum: number, g: any) => sum + (g.goalValue || 0), 0);
-      
-      byChannel[agg._id] = {
-        goal: channelGoal,
-        delivered: channelDelivered,
-        percent: channelGoal > 0 ? Math.round((channelDelivered / channelGoal) * 100) : 0
+      byChannel[channel] = {
+        goal: expected.goal,
+        delivered: 0,
+        deliveryPercent: 0,
+        goalType: expected.goalType,
+        volumeLabel
       };
     });
     
-    const percentComplete = totalGoal > 0 ? Math.round((totalDelivered / totalGoal) * 100) : 0;
+    // Process actual entries
+    entriesByChannel.forEach((agg: any) => {
+      const channel = agg._id?.toLowerCase() || 'other';
+      const expected = expectedByChannel[channel];
+      const isDigital = digitalChannels.includes(channel);
+      
+      // For digital: delivered = impressions
+      // For offline: delivered = report count (each report = 1 episode/spot/insertion)
+      let delivered = 0;
+      let volumeLabel = 'Delivered';
+      
+      if (isDigital) {
+        // Digital channels: goal and delivered are impressions
+        delivered = agg.impressions || 0;
+        volumeLabel = 'Impressions';
+      } else if (channel === 'podcast') {
+        // Podcast: delivered = number of episodes reported
+        delivered = agg.reportCount || 0;
+        volumeLabel = 'Episodes';
+      } else if (channel === 'radio') {
+        // Radio: delivered = number of spots reported  
+        delivered = agg.reportCount || 0;
+        volumeLabel = 'Spots';
+      } else if (channel === 'print') {
+        // Print: delivered = number of insertions reported
+        delivered = agg.reportCount || 0;
+        volumeLabel = 'Insertions';
+      } else if (channel === 'social_media' || channel === 'social') {
+        delivered = agg.reportCount || 0;
+        volumeLabel = 'Posts';
+      } else {
+        delivered = agg.reportCount || 0;
+        volumeLabel = 'Units';
+      }
+      
+      totalReportsSubmitted += agg.reportCount || 0;
+      totalDelivered += delivered;
+      
+      const goal = expected?.goal || 0;
+      
+      // Delivery percent (allow over 100% to show over-delivery)
+      const deliveryPercent = goal > 0 
+        ? Math.round((delivered / goal) * 100) 
+        : 0;
+      
+      byChannel[channel] = {
+        goal,
+        delivered,
+        deliveryPercent,
+        goalType: expected?.goalType || (isDigital ? 'impressions' : 'frequency'),
+        volumeLabel
+      };
+    });
     
-    // Update order with delivery summary
+    // Calculate overall percentages
+    const rawReportsPercent = totalExpectedReports > 0 
+      ? Math.round((totalReportsSubmitted / totalExpectedReports) * 100) 
+      : 0;
+    const reportsPercent = Math.min(rawReportsPercent, 100);
+    
+    // Calculate overall as average of channel percentages (so all channels count equally)
+    const channelPercents = Object.values(byChannel).map((ch: any) => ch.deliveryPercent || 0);
+    const deliveryPercent = channelPercents.length > 0
+      ? Math.round(channelPercents.reduce((sum, p) => sum + p, 0) / channelPercents.length)
+      : 0;
+    
+    // Update order with enhanced delivery summary
     await ordersCollection.updateOne(
       { _id: new ObjectId(orderId) },
       { 
         $set: {
           deliverySummary: {
-            totalGoalValue: totalGoal,
+            // Reports tracking (how many placements reported)
+            totalExpectedReports,
+            totalReportsSubmitted,
+            reportsPercent,
+            // Delivery tracking (actual volume delivered vs expected)
+            totalExpectedGoal,
             totalDelivered,
-            percentComplete,
+            deliveryPercent,
+            // Legacy fields for backward compatibility
+            totalGoalValue: totalExpectedGoal,
+            percentComplete: deliveryPercent, // Now based on actual delivery vs goal
+            // Per-channel breakdown
             byChannel,
             lastUpdated: new Date()
           },
@@ -520,6 +649,23 @@ async function updateOrderDeliverySummary(orderId: string): Promise<void> {
     );
   } catch (error) {
     console.error('Error updating order delivery summary:', error);
+  }
+}
+
+/**
+ * Get the appropriate volume label for a channel
+ */
+function getVolumeLabel(channel: string): string {
+  switch (channel.toLowerCase()) {
+    case 'podcast': return 'Downloads';
+    case 'radio': return 'Spots Aired';
+    case 'print': return 'Circulation';
+    case 'website':
+    case 'newsletter':
+    case 'streaming': return 'Impressions';
+    case 'social_media':
+    case 'social': return 'Engagements';
+    default: return 'Delivered';
   }
 }
 

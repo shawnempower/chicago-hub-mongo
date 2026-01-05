@@ -956,6 +956,57 @@ router.get('/:campaignId/:publicationId/messages', async (req: any, res: Respons
 });
 
 /**
+ * PUT /api/publication-orders/:campaignId/:publicationId/mark-viewed
+ * Mark the order as viewed by hub user (updates lastViewedByHub timestamp)
+ */
+router.put('/:campaignId/:publicationId/mark-viewed', async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { campaignId, publicationId } = req.params;
+
+    // Only hub users can mark as viewed (not publication users)
+    const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
+    const profile = await userProfilesService.getByUserId(userId);
+    
+    if (!profile?.isAdmin) {
+      // Check if user has hub access
+      const userHasHubAccess = await permissionsService.getUserHubs(userId);
+      if (userHasHubAccess.length === 0) {
+        return res.status(403).json({ error: 'Only hub users can mark orders as viewed' });
+      }
+    }
+
+    // Update the lastViewedByHub timestamp
+    const { getDatabase } = await import('../../src/integrations/mongodb/client');
+    const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+    const db = getDatabase();
+    
+    const result = await db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS).updateOne(
+      {
+        campaignId,
+        publicationId: parseInt(publicationId),
+        deletedAt: { $exists: false }
+      },
+      {
+        $set: {
+          lastViewedByHub: new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error marking order as viewed:', error);
+    res.status(500).json({ error: 'Failed to mark order as viewed' });
+  }
+});
+
+/**
  * PUT /api/publication-orders/:campaignId/:publicationId/placement-status
  * Update individual placement status (accept/reject)
  */

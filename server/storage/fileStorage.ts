@@ -333,6 +333,23 @@ export class FileStorage {
       return null;
     }
   }
+
+  /**
+   * Generate signed URL for download (forces browser to download instead of play/display)
+   */
+  async getSignedDownloadUrl(storagePath: string, fileName: string, expiresIn: number = 3600): Promise<string | null> {
+    try {
+      if (!s3ServiceInstance) {
+        return null;
+      }
+      
+      const url = await s3ServiceInstance.getSignedDownloadUrl(storagePath, fileName, expiresIn);
+      return url;
+    } catch (error) {
+      console.error('Error generating signed download URL:', error);
+      return null;
+    }
+  }
 }
 
 // Export singleton instance

@@ -3,7 +3,7 @@ import { Download, Eye, Trash2, FileText, Image, Video, File } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatFileSize } from '@/utils/fileUpload';
+import { formatFileSize, forceDownloadFile, downloadCreativeAsset } from '@/utils/fileUpload';
 
 interface CreativeAsset {
   assetId: string;
@@ -66,8 +66,13 @@ export function CreativeAssetCard({
     <Card className={`overflow-hidden ${className}`}>
       <CardContent className="p-4">
         <div className="flex gap-4">
-          {/* Thumbnail/Icon */}
-          <div className="flex-shrink-0">
+          {/* Thumbnail/Icon - clickable to download */}
+          <button
+            type="button"
+            onClick={() => asset.assetId ? downloadCreativeAsset(asset.assetId) : forceDownloadFile(asset.fileUrl, asset.fileName)}
+            className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            title="Click to download"
+          >
             {isImage && asset.thumbnailUrl ? (
               <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100">
                 <img
@@ -81,15 +86,20 @@ export function CreativeAssetCard({
                 {getFileIcon()}
               </div>
             )}
-          </div>
+          </button>
 
           {/* Details */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-medium text-gray-900 truncate">
+                <button
+                  type="button"
+                  onClick={() => asset.assetId ? downloadCreativeAsset(asset.assetId) : forceDownloadFile(asset.fileUrl, asset.fileName)}
+                  className="text-sm font-medium text-gray-900 truncate hover:text-blue-600 hover:underline cursor-pointer text-left w-full"
+                  title="Click to download"
+                >
                   {asset.fileName}
-                </h4>
+                </button>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {formatFileSize(asset.fileSize)}{asset.fileType && ` • ${asset.fileType}`}
                 </p>

@@ -471,6 +471,95 @@ router.delete('/:id', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
+// Permanently delete campaign and ALL related records (admin only)
+router.delete('/:id/permanent', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
+    const { ObjectId } = await import('mongodb');
+    const { id } = req.params;
+    
+    // Admin only
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required for permanent deletion' });
+    }
+    
+    // Find the campaign
+    const campaign = await campaignsService.getById(id);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    const db = getDatabase();
+    const campaignIdString = campaign._id?.toString() || id;
+    const campaignIdField = campaign.campaignId;
+    
+    // Build queries for related collections
+    const buildQuery = () => ({
+      $or: [
+        { campaignId: campaignIdString },
+        ...(campaignIdField ? [{ campaignId: campaignIdField }] : []),
+        { campaignObjectId: campaignIdString },
+      ]
+    });
+    
+    const stats: Record<string, number> = {};
+    
+    // Delete in order of dependencies
+    // 1. Notifications
+    const notifResult = await db.collection(COLLECTIONS.NOTIFICATIONS).deleteMany(buildQuery());
+    stats.notifications = notifResult.deletedCount;
+    
+    // 2. Daily aggregates
+    const aggResult = await db.collection(COLLECTIONS.DAILY_AGGREGATES).deleteMany(buildQuery());
+    stats.daily_aggregates = aggResult.deletedCount;
+    
+    // 3. Proof of performance
+    const proofResult = await db.collection(COLLECTIONS.PROOF_OF_PERFORMANCE).deleteMany(buildQuery());
+    stats.proof_of_performance = proofResult.deletedCount;
+    
+    // 4. Performance entries
+    const perfResult = await db.collection(COLLECTIONS.PERFORMANCE_ENTRIES).deleteMany(buildQuery());
+    stats.performance_entries = perfResult.deletedCount;
+    
+    // 5. Tracking scripts
+    const scriptsResult = await db.collection(COLLECTIONS.TRACKING_SCRIPTS).deleteMany(buildQuery());
+    stats.tracking_scripts = scriptsResult.deletedCount;
+    
+    // 6. Creative assets
+    const assetsResult = await db.collection(COLLECTIONS.CREATIVE_ASSETS).deleteMany(buildQuery());
+    stats.creative_assets = assetsResult.deletedCount;
+    
+    // 7. Publication insertion orders
+    const ordersResult = await db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS).deleteMany(buildQuery());
+    stats.publication_insertion_orders = ordersResult.deletedCount;
+    
+    // 8. Campaign itself (hard delete)
+    let campaignObjectId: InstanceType<typeof ObjectId>;
+    try {
+      campaignObjectId = new ObjectId(id);
+    } catch {
+      return res.status(400).json({ error: 'Invalid campaign ID format' });
+    }
+    const campaignResult = await db.collection(COLLECTIONS.CAMPAIGNS).deleteOne({ _id: campaignObjectId });
+    stats.campaigns = campaignResult.deletedCount;
+    
+    const totalDeleted = Object.values(stats).reduce((sum, n) => sum + n, 0);
+    
+    console.log(`[Permanent Delete] Campaign ${id} (${campaign.basicInfo?.name}) permanently deleted by ${req.user.email}:`, stats);
+    
+    res.json({ 
+      success: true, 
+      deletedRecords: stats,
+      totalDeleted,
+      campaignName: campaign.basicInfo?.name
+    });
+  } catch (error) {
+    console.error('Error permanently deleting campaign:', error);
+    res.status(500).json({ error: 'Failed to permanently delete campaign' });
+  }
+});
+
 // Get campaign statistics by status (public)
 router.get('/stats/by-status', async (req: Request, res: Response) => {
   try {

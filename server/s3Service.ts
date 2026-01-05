@@ -147,6 +147,22 @@ export class S3Service {
     }
   }
 
+  // Get signed URL for file download (forces browser to download instead of play/display)
+  async getSignedDownloadUrl(key: string, fileName: string, expiresIn: number = 3600): Promise<string> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ResponseContentDisposition: `attachment; filename="${encodeURIComponent(fileName)}"`,
+      });
+
+      return await getSignedUrl(this.s3Client, command, { expiresIn });
+    } catch (error) {
+      console.error('Error generating signed download URL:', error);
+      throw error;
+    }
+  }
+
   // Delete file from S3
   async deleteFile(key: string): Promise<{ success: boolean; error?: string }> {
     try {

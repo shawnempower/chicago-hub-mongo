@@ -44,7 +44,8 @@ type ActionType =
   | 'overdue_report'      // Campaign ended, no results reported
   | 'missing_proof'       // Results submitted but no proof
   | 'needs_acceptance'    // New order waiting for response
-  | 'ready_to_go_live'    // Accepted but not yet marked live
+  | 'awaiting_assets'     // Digital placement accepted but no scripts yet
+  | 'ready_to_go_live'    // Accepted and ready (has scripts for digital, assets for offline)
   | 'starting_soon'       // Campaign starts in next 7 days
   | 'ending_soon'         // Campaign ends in next 7 days
   | 'in_progress'         // Currently running
@@ -63,6 +64,8 @@ interface ActionItem {
   publicationId: number;
   placementId?: string;
   placementName?: string;
+  placementNames?: string[];  // For grouped items - list of placement names
+  placementCount?: number;    // For grouped items - total count
   channel?: string;
   dueDate?: Date;
   actionLabel: string;
@@ -77,6 +80,12 @@ interface OrderData {
   publicationName: string;
   status: string;
   placementStatuses?: Record<string, string>;
+  assetStatus?: {
+    totalPlacements?: number;
+    placementsWithAssets?: number;
+    allAssetsReady?: boolean;
+    pendingUpload?: boolean;
+  };
   campaignData?: {
     name?: string;
     timeline?: {
@@ -187,6 +196,18 @@ export function PublicationActionCenter({
   const actionItems = useMemo(() => {
     const items: ActionItem[] = [];
     const now = new Date();
+    
+    // Track grouped items by order + type for aggregation
+    const groupedByOrder: Record<string, {
+      type: ActionType;
+      priority: ActionPriority;
+      campaignId: string;
+      campaignName: string;
+      publicationId: number;
+      dueDate?: Date;
+      actionUrl: string;
+      placements: string[];
+    }> = {};
 
     for (const order of orders) {
       const orderId = order._id;
@@ -231,69 +252,82 @@ export function PublicationActionCenter({
         const channel = placement.channel || 'other';
         const isDigital = isDigitalChannel(channel);
         
-        const placementStatus = order.placementStatuses?.[itemPath] || 'pending';
-        const hasEntry = perf.entries.some((e: any) => e.itemPath === itemPath);
-        const hasProof = perf.proofs.some((p: any) => p.itemPath === itemPath || !p.itemPath);
+        // Look up placement status - check exact match first, then check for tier/dimension suffixes
+        // Status keys may have suffixes like "-tier0", "-tier1", "_dim0", etc.
+        let placementStatus: string = 'pending';
+        if (order.placementStatuses) {
+          if (order.placementStatuses[itemPath]) {
+            placementStatus = order.placementStatuses[itemPath];
+          } else {
+            // Check for keys that start with this itemPath (handling tier/dimension variants)
+            const matchingKey = Object.keys(order.placementStatuses).find(key => 
+              key === itemPath || key.startsWith(itemPath + '-') || key.startsWith(itemPath + '_')
+            );
+            if (matchingKey) {
+              // Use the "highest" status among all matching variants
+              const matchingStatuses = Object.entries(order.placementStatuses)
+                .filter(([key]) => key === itemPath || key.startsWith(itemPath + '-') || key.startsWith(itemPath + '_'))
+                .map(([, status]) => status);
+              
+              // Priority: delivered > in_production > accepted > rejected > pending
+              const statusPriority = ['delivered', 'in_production', 'accepted', 'rejected', 'pending'];
+              placementStatus = matchingStatuses.reduce((best, current) => {
+                return statusPriority.indexOf(current) < statusPriority.indexOf(best) ? current : best;
+              }, 'pending');
+            }
+          }
+        }
+        
+        const hasEntry = perf.entries.some((e: any) => e.itemPath === itemPath || e.itemPath?.startsWith(itemPath + '-') || e.itemPath?.startsWith(itemPath + '_'));
+        const hasProof = perf.proofs.some((p: any) => p.itemPath === itemPath || p.itemPath?.startsWith(itemPath + '-') || p.itemPath?.startsWith(itemPath + '_') || !p.itemPath);
         
         // Check for accepted placements that should be taken live
         if (placementStatus === 'accepted') {
           const isStarted = startDate && isPast(startDate);
           const startsWithin7Days = startDate && isFuture(startDate) && differenceInDays(startDate, now) <= 7;
           
-          // Urgent if campaign already started
-          if (isStarted) {
-            items.push({
-              id: `golive-${orderId}-${itemPath}`,
-              type: 'ready_to_go_live',
-              priority: 'urgent',
-              title: `Mark "${placementName}" as live`,
-              subtitle: `${campaignName} • Campaign has started`,
-              campaignId: order.campaignId,
-              campaignName,
-              publicationId: order.publicationId,
-              placementId: itemPath,
-              placementName,
-              channel,
-              actionLabel: 'Go Live',
-              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
-            });
-          } else if (startsWithin7Days) {
-            // Soon if starting within 7 days
-            items.push({
-              id: `golive-${orderId}-${itemPath}`,
-              type: 'ready_to_go_live',
-              priority: 'soon',
-              title: `Ready: "${placementName}"`,
-              subtitle: `${campaignName} • Starts ${format(startDate!, 'MMM d')} - mark live when ready`,
-              campaignId: order.campaignId,
-              campaignName,
-              publicationId: order.publicationId,
-              placementId: itemPath,
-              placementName,
-              channel,
-              dueDate: startDate!,
-              actionLabel: 'View',
-              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
-            });
-          } else {
-            // Info priority for accepted placements with no imminent start date
-            items.push({
-              id: `golive-${orderId}-${itemPath}`,
-              type: 'ready_to_go_live',
-              priority: 'info',
-              title: `Accepted: "${placementName}"`,
-              subtitle: `${campaignName}${startDate ? ` • Starts ${format(startDate, 'MMM d')}` : ''} - ready to go live`,
-              campaignId: order.campaignId,
-              campaignName,
-              publicationId: order.publicationId,
-              placementId: itemPath,
-              placementName,
-              channel,
-              dueDate: startDate || undefined,
-              actionLabel: 'View',
-              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
-            });
+          // For digital placements, check if assets/scripts are ready
+          const assetsReady = order.assetStatus?.allAssetsReady || !order.assetStatus?.pendingUpload;
+          
+          // Digital placements without scripts should show "awaiting assets"
+          if (isDigital && !assetsReady) {
+            const groupKey = `awaiting-${orderId}`;
+            if (!groupedByOrder[groupKey]) {
+              groupedByOrder[groupKey] = {
+                type: 'awaiting_assets' as ActionType,
+                priority: 'info' as ActionPriority,
+                campaignId: order.campaignId,
+                campaignName,
+                publicationId: order.publicationId,
+                dueDate: startDate || undefined,
+                actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+                placements: []
+              };
+            }
+            groupedByOrder[groupKey].placements.push(placementName);
+            continue;
           }
+          
+          // Determine priority for ready placements
+          let priority: ActionPriority = 'info';
+          if (isStarted) priority = 'urgent';
+          else if (startsWithin7Days) priority = 'soon';
+          
+          // Group key for aggregation
+          const groupKey = `golive-${orderId}-${priority}`;
+          if (!groupedByOrder[groupKey]) {
+            groupedByOrder[groupKey] = {
+              type: 'ready_to_go_live' as ActionType,
+              priority,
+              campaignId: order.campaignId,
+              campaignName,
+              publicationId: order.publicationId,
+              dueDate: startDate || undefined,
+              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+              placements: []
+            };
+          }
+          groupedByOrder[groupKey].placements.push(placementName);
           continue;
         }
         
@@ -305,82 +339,73 @@ export function PublicationActionCenter({
 
         // Check if overdue (campaign ended, no report)
         if (endDate && isPast(endDate) && !hasEntry) {
-          const daysOverdue = differenceInDays(now, endDate);
-          items.push({
-            id: `overdue-${orderId}-${itemPath}`,
-            type: 'overdue_report',
-            priority: 'urgent',
-            title: `Report results for "${placementName}"`,
-            subtitle: `${campaignName} • ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue`,
-            campaignId: order.campaignId,
-            campaignName,
-            publicationId: order.publicationId,
-            placementId: itemPath,
-            placementName,
-            channel,
-            dueDate: endDate,
-            actionLabel: 'Report Now',
-            actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
-          });
+          const groupKey = `overdue-${orderId}`;
+          if (!groupedByOrder[groupKey]) {
+            groupedByOrder[groupKey] = {
+              type: 'overdue_report' as ActionType,
+              priority: 'urgent' as ActionPriority,
+              campaignId: order.campaignId,
+              campaignName,
+              publicationId: order.publicationId,
+              dueDate: endDate,
+              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+              placements: []
+            };
+          }
+          groupedByOrder[groupKey].placements.push(placementName);
         }
         // Check if missing proof (has entry but no proof)
         else if (hasEntry && !hasProof && ['print', 'radio'].includes(channel)) {
-          items.push({
-            id: `proof-${orderId}-${itemPath}`,
-            type: 'missing_proof',
-            priority: 'urgent',
-            title: `Add proof for "${placementName}"`,
-            subtitle: `${campaignName} • Results submitted, proof needed`,
-            campaignId: order.campaignId,
-            campaignName,
-            publicationId: order.publicationId,
-            placementId: itemPath,
-            placementName,
-            channel,
-            actionLabel: 'Add Proof',
-            actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
-          });
+          const groupKey = `proof-${orderId}`;
+          if (!groupedByOrder[groupKey]) {
+            groupedByOrder[groupKey] = {
+              type: 'missing_proof' as ActionType,
+              priority: 'urgent' as ActionPriority,
+              campaignId: order.campaignId,
+              campaignName,
+              publicationId: order.publicationId,
+              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+              placements: []
+            };
+          }
+          groupedByOrder[groupKey].placements.push(placementName);
         }
         // Check if ending soon (within 7 days, not reported)
         else if (endDate && isFuture(endDate) && differenceInDays(endDate, now) <= 7 && !hasEntry) {
-          items.push({
-            id: `ending-${orderId}-${itemPath}`,
-            type: 'ending_soon',
-            priority: 'soon',
-            title: `"${placementName}" ending soon`,
-            subtitle: `${campaignName} • Ends ${format(endDate, 'MMM d')} - prepare to report`,
-            campaignId: order.campaignId,
-            campaignName,
-            publicationId: order.publicationId,
-            placementId: itemPath,
-            placementName,
-            channel,
-            dueDate: endDate,
-            actionLabel: 'View Order',
-            actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
-          });
+          const groupKey = `ending-${orderId}`;
+          if (!groupedByOrder[groupKey]) {
+            groupedByOrder[groupKey] = {
+              type: 'ending_soon' as ActionType,
+              priority: 'soon' as ActionPriority,
+              campaignId: order.campaignId,
+              campaignName,
+              publicationId: order.publicationId,
+              dueDate: endDate,
+              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+              placements: []
+            };
+          }
+          groupedByOrder[groupKey].placements.push(placementName);
         }
         // Completed
         else if (hasEntry && (hasProof || channel === 'podcast')) {
-          items.push({
-            id: `done-${orderId}-${itemPath}`,
-            type: 'completed',
-            priority: 'done',
-            title: `"${placementName}" reported`,
-            subtitle: `${campaignName} • ✓ Complete`,
-            campaignId: order.campaignId,
-            campaignName,
-            publicationId: order.publicationId,
-            placementId: itemPath,
-            placementName,
-            channel,
-            actionLabel: 'View',
-            actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
-          });
+          const groupKey = `done-${orderId}`;
+          if (!groupedByOrder[groupKey]) {
+            groupedByOrder[groupKey] = {
+              type: 'completed' as ActionType,
+              priority: 'done' as ActionPriority,
+              campaignId: order.campaignId,
+              campaignName,
+              publicationId: order.publicationId,
+              actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+              placements: []
+            };
+          }
+          groupedByOrder[groupKey].placements.push(placementName);
         }
       }
 
-      // Check for campaigns starting soon
+      // Check for campaigns starting soon (this is already order-level, not per-placement)
       if (startDate && isFuture(startDate) && differenceInDays(startDate, now) <= 7) {
         if (order.status === 'confirmed') {
           items.push({
@@ -392,12 +417,87 @@ export function PublicationActionCenter({
             campaignId: order.campaignId,
             campaignName,
             publicationId: order.publicationId,
+            placementCount: placements.length,
             dueDate: startDate,
             actionLabel: 'View Order',
             actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
           });
         }
       }
+    }
+
+    // Convert grouped items to action items
+    for (const [groupKey, group] of Object.entries(groupedByOrder)) {
+      const count = group.placements.length;
+      if (count === 0) continue;
+      
+      let title: string;
+      let subtitle: string;
+      let actionLabel: string;
+      
+      switch (group.type) {
+        case 'awaiting_assets':
+          title = count === 1 ? `Awaiting scripts for "${group.placements[0]}"` : `${count} placements awaiting scripts`;
+          subtitle = `${group.campaignName} • Hub uploading creative assets`;
+          actionLabel = 'View';
+          break;
+        case 'ready_to_go_live':
+          if (group.priority === 'urgent') {
+            title = count === 1 ? `Mark "${group.placements[0]}" as live` : `${count} placements to go live`;
+            subtitle = count === 1 ? `${group.campaignName} • Campaign has started` : `${group.campaignName} • Campaign has started`;
+            actionLabel = 'Go Live';
+          } else if (group.priority === 'soon') {
+            title = count === 1 ? `Ready: "${group.placements[0]}"` : `${count} placements ready`;
+            subtitle = `${group.campaignName} • Starts ${group.dueDate ? format(group.dueDate, 'MMM d') : 'soon'}`;
+            actionLabel = 'View';
+          } else {
+            title = count === 1 ? `Accepted: "${group.placements[0]}"` : `${count} placements accepted`;
+            subtitle = `${group.campaignName}${group.dueDate ? ` • Starts ${format(group.dueDate, 'MMM d')}` : ''}`;
+            actionLabel = 'View';
+          }
+          break;
+        case 'overdue_report':
+          title = count === 1 ? `Report results for "${group.placements[0]}"` : `${count} placements need reports`;
+          const daysOverdue = group.dueDate ? differenceInDays(now, group.dueDate) : 0;
+          subtitle = `${group.campaignName} • ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue`;
+          actionLabel = 'Report Now';
+          break;
+        case 'missing_proof':
+          title = count === 1 ? `Add proof for "${group.placements[0]}"` : `${count} placements need proof`;
+          subtitle = `${group.campaignName} • Results submitted, proof needed`;
+          actionLabel = 'Add Proof';
+          break;
+        case 'ending_soon':
+          title = count === 1 ? `"${group.placements[0]}" ending soon` : `${count} placements ending soon`;
+          subtitle = `${group.campaignName} • Ends ${group.dueDate ? format(group.dueDate, 'MMM d') : 'soon'}`;
+          actionLabel = 'View Order';
+          break;
+        case 'completed':
+          title = count === 1 ? `"${group.placements[0]}" reported` : `${count} placements reported`;
+          subtitle = `${group.campaignName} • ✓ Complete`;
+          actionLabel = 'View';
+          break;
+        default:
+          title = `${count} placement${count !== 1 ? 's' : ''}`;
+          subtitle = group.campaignName;
+          actionLabel = 'View';
+      }
+      
+      items.push({
+        id: groupKey,
+        type: group.type,
+        priority: group.priority,
+        title,
+        subtitle,
+        campaignId: group.campaignId,
+        campaignName: group.campaignName,
+        publicationId: group.publicationId,
+        placementNames: group.placements,
+        placementCount: count,
+        dueDate: group.dueDate,
+        actionLabel,
+        actionUrl: group.actionUrl,
+      });
     }
 
     // Sort by priority
@@ -443,6 +543,7 @@ export function PublicationActionCenter({
       case 'overdue_report': return <AlertCircle className="w-4 h-4" />;
       case 'missing_proof': return <FileText className="w-4 h-4" />;
       case 'needs_acceptance': return <Inbox className="w-4 h-4" />;
+      case 'awaiting_assets': return <Clock className="w-4 h-4" />;
       case 'ready_to_go_live': return <PlayCircle className="w-4 h-4" />;
       case 'starting_soon': return <PlayCircle className="w-4 h-4" />;
       case 'ending_soon': return <Clock className="w-4 h-4" />;
@@ -691,6 +792,7 @@ function ActionItemCard({
 }
 
 export default PublicationActionCenter;
+
 
 
 

@@ -412,11 +412,18 @@ export class InsertionOrderService {
           (p: any) => p.publicationId === order.publicationId
         );
         
-        // Count messages and check for unread (messages from publication)
+        // Count messages and check for unread (messages from publication since last hub view)
         const messageCount = order.messages?.length || 0;
-        const hasUnreadMessages = order.messages?.some(
-          (m: any) => m.sender === 'publication'
-        ) || false;
+        
+        // Get the latest publication message timestamp
+        const publicationMessages = (order.messages || []).filter((m: any) => m.sender === 'publication');
+        const latestPubMessageTime = publicationMessages.length > 0 
+          ? Math.max(...publicationMessages.map((m: any) => new Date(m.timestamp).getTime()))
+          : 0;
+        
+        // Compare against lastViewedByHub timestamp
+        const lastViewedTime = order.lastViewedByHub ? new Date(order.lastViewedByHub).getTime() : 0;
+        const hasUnreadMessages = latestPubMessageTime > lastViewedTime;
         
         // Calculate fresh asset status based on current assets
         const campaignAssets = assetsByCampaign.get(order.campaignId) || [];
@@ -1530,7 +1537,7 @@ export class InsertionOrderService {
         }
       );
 
-      // Check if all placements are accepted for auto-confirm
+      // Check if all placements are accepted (or past accepted) for auto-confirm
       let orderConfirmed = false;
       if (status === 'accepted' && order.status === 'sent') {
         // Get campaign to count total placements
@@ -1541,9 +1548,11 @@ export class InsertionOrderService {
         
         if (pub) {
           const totalPlacements = pub.inventoryItems?.length || 0;
-          const acceptedCount = Object.values(updatedStatuses).filter(s => s === 'accepted').length;
+          // Count placements that are accepted OR have progressed past accepted
+          const acceptedOrBeyond = ['accepted', 'in_production', 'delivered'];
+          const acceptedCount = Object.values(updatedStatuses).filter(s => acceptedOrBeyond.includes(s as string)).length;
           
-          if (acceptedCount === totalPlacements) {
+          if (acceptedCount === totalPlacements && totalPlacements > 0) {
             await this.ordersCollection.updateOne(
               { _id: order._id },
               {

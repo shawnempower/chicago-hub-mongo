@@ -128,6 +128,9 @@ export interface PublicationInsertionOrderDocument {
   // Message thread - conversation between hub and publication
   messages?: OrderMessage[];
   
+  // Timestamp when hub last viewed this order's messages
+  lastViewedByHub?: Date;
+  
   // Asset references - used to dynamically load current assets
   // Each placement needs an asset; this tracks which specGroupId maps to which placement
   assetReferences?: OrderAssetReference[];

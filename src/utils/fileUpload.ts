@@ -312,3 +312,97 @@ export function isPdfFile(file: File): boolean {
   return file.type === 'application/pdf';
 }
 
+/**
+ * Force download a file from URL
+ * This properly downloads files instead of opening them in a new tab
+ * (important for audio/video files that browsers try to play)
+ * 
+ * For S3 presigned URLs, we use a hidden anchor with download attribute.
+ * For same-origin URLs, we fetch as blob for guaranteed download behavior.
+ */
+export async function forceDownloadFile(url: string, fileName: string): Promise<void> {
+  // Check if this is a cross-origin URL (like S3)
+  const isCrossOrigin = !url.startsWith(window.location.origin) && !url.startsWith('/');
+  
+  if (isCrossOrigin) {
+    // For cross-origin URLs (S3, etc.), use anchor with download attribute
+    // This works better than fetch which may hit CORS issues
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.target = '_blank'; // Fallback if download doesn't work
+    link.rel = 'noopener noreferrer';
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return;
+  }
+  
+  // For same-origin URLs, fetch as blob for guaranteed download
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.statusText}`);
+    }
+    
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+  } catch (error) {
+    console.error('Error downloading file:', error);
+    // Last resort fallback
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.target = '_blank';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+}
+
+/**
+ * Download a creative asset by ID using the server's download endpoint
+ * This uses the server to generate a URL with Content-Disposition: attachment
+ * which forces the browser to download instead of playing audio/video
+ */
+export async function downloadCreativeAsset(assetId: string): Promise<void> {
+  const { API_BASE_URL } = await import('@/config/api');
+  const token = localStorage.getItem('auth_token');
+  
+  try {
+    // First, call the download endpoint to get a signed URL with Content-Disposition
+    const response = await fetch(`${API_BASE_URL}/creative-assets/${assetId}/download-url`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get download URL: ${response.statusText}`);
+    }
+    
+    const { downloadUrl } = await response.json();
+    
+    // Now redirect to the signed URL (which has Content-Disposition: attachment)
+    window.location.href = downloadUrl;
+  } catch (error) {
+    console.error('Error downloading asset:', error);
+    // Fallback: try the redirect approach
+    window.open(`${API_BASE_URL}/creative-assets/${assetId}/download`, '_blank');
+  }
+}
+

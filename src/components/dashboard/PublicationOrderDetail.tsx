@@ -48,6 +48,7 @@ import { TrackingScript } from '@/integrations/mongodb/trackingScriptSchema';
 import { API_BASE_URL } from '@/config/api';
 import { getChannelConfig, isDigitalChannel } from '@/config/inventoryChannels';
 import { calculateItemCost } from '@/utils/inventoryPricing';
+import { forceDownloadFile, downloadCreativeAsset } from '@/utils/fileUpload';
 import { cn } from '@/lib/utils';
 
 interface OrderDetailData extends PublicationInsertionOrderDocument {}
@@ -65,6 +66,14 @@ export function PublicationOrderDetail() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectingPlacementId, setRejectingPlacementId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  
+  // Proof prompt state - shown when completing self-reported placements
+  const [proofPromptOpen, setProofPromptOpen] = useState(false);
+  const [proofPromptPlacement, setProofPromptPlacement] = useState<{
+    itemPath: string;
+    itemName: string;
+    channel: string;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [copiedScriptId, setCopiedScriptId] = useState<string | null>(null);
   
@@ -109,6 +118,13 @@ export function PublicationOrderDetail() {
       fetchPerformanceData();
     }
   }, [campaignId, publicationId]);
+
+  // Re-fetch performance data when switching to placements tab (in case user just reported)
+  useEffect(() => {
+    if (activeTab === 'placements' && campaignId && publicationId) {
+      fetchPerformanceData();
+    }
+  }, [activeTab]);
 
   const fetchOrderDetail = async () => {
     try {
@@ -531,6 +547,36 @@ export function PublicationOrderDetail() {
       toast({ title: 'Error', description: 'Failed to update placement', variant: 'destructive' });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  /**
+   * Handle "Complete" button for non-digital (self-reported) placements.
+   * Shows a prompt to report proof of performance before completing,
+   * unless performance data already exists for this placement.
+   */
+  const handleCompleteClick = (itemPath: string, itemName: string, channel: string) => {
+    const config = getChannelConfig(channel);
+    
+    // Digital placements don't need self-reporting - complete directly
+    if (config.isDigital) {
+      handlePlacementAction(itemPath, 'delivered');
+      return;
+    }
+    
+    // Check if performance data already exists for this placement
+    // Match by itemPath directly or by placementId field
+    const hasPerformanceData = performanceEntries.some(entry => 
+      entry.itemPath === itemPath || entry.placementId === itemPath
+    );
+    
+    if (hasPerformanceData) {
+      // Already reported - allow completion
+      handlePlacementAction(itemPath, 'delivered');
+    } else {
+      // No performance data yet - prompt user
+      setProofPromptPlacement({ itemPath, itemName, channel });
+      setProofPromptOpen(true);
     }
   };
 
@@ -1423,12 +1469,15 @@ export function PublicationOrderDetail() {
                               <div className="flex items-center gap-2 flex-wrap">
                                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
                                 <span className="font-medium">{item.itemName || item.sourceName}</span>
-                                {item.format?.dimensions && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {parseDimensions(item.format.dimensions)[0]}
-                                    {parseDimensions(item.format.dimensions).length > 1 && ` +${parseDimensions(item.format.dimensions).length - 1}`}
-                                  </Badge>
-                                )}
+                                {(() => {
+                                  const dims = parseDimensions(item.format?.dimensions || item.format?.size);
+                                  return dims.length > 0 && dims[0] ? (
+                                    <Badge variant="outline" className="text-xs">
+                                      {dims[0]}
+                                      {dims.length > 1 && ` +${dims.length - 1}`}
+                                    </Badge>
+                                  ) : null;
+                                })()}
                               </div>
                               <div className="flex items-center gap-3">
                                 {earningsExp && (
@@ -1766,7 +1815,7 @@ export function PublicationOrderDetail() {
                                   <CreativeAssetCard
                                     key={asset.assetId}
                                     asset={{ ...asset, uploadedAt: new Date(asset.uploadedAt) }}
-                                    onDownload={(a) => window.open(a.fileUrl, '_blank')}
+                                    onDownload={(a) => a.assetId ? downloadCreativeAsset(a.assetId) : forceDownloadFile(a.fileUrl, a.fileName)}
                                     showActions={true}
                                   />
                                 ))}
@@ -1850,7 +1899,7 @@ export function PublicationOrderDetail() {
                                     <BarChart3 className="h-3 w-3 mr-1" /> Report
                                   </Button>
                                   <Button
-                                    onClick={() => handlePlacementAction(itemPath, 'delivered')}
+                                    onClick={() => handleCompleteClick(itemPath, item.itemName || item.sourceName || 'Placement', item.channel)}
                                     disabled={updating}
                                     className="bg-purple-600 hover:bg-purple-700 h-7 text-xs px-3"
                                     size="sm"
@@ -1993,6 +2042,79 @@ export function PublicationOrderDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Proof Required Prompt Dialog - for self-reported placements */}
+      <Dialog open={proofPromptOpen} onOpenChange={setProofPromptOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-purple-600" />
+              Report Performance First?
+            </DialogTitle>
+            <DialogDescription>
+              This placement requires self-reported performance data. You haven't submitted any metrics yet.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {proofPromptPlacement && (
+            <div className="space-y-4">
+              {/* Placement Info */}
+              <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <p className="text-sm font-medium text-purple-900">{proofPromptPlacement.itemName}</p>
+                <p className="text-xs text-purple-700 capitalize">
+                  {getChannelConfig(proofPromptPlacement.channel).label} • Self-Reported
+                </p>
+              </div>
+              
+              {/* Explanation */}
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p>
+                  <strong>Why report?</strong> Self-reported placements (like {getChannelConfig(proofPromptPlacement.channel).label.toLowerCase()}) 
+                  don't have automatic tracking. Reporting helps demonstrate value to the campaign.
+                </p>
+                <p>
+                  You can still mark as complete without reporting, but we recommend submitting metrics first.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setProofPromptOpen(false);
+                setProofPromptPlacement(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (proofPromptPlacement) {
+                  handlePlacementAction(proofPromptPlacement.itemPath, 'delivered');
+                }
+                setProofPromptOpen(false);
+                setProofPromptPlacement(null);
+              }}
+            >
+              Skip & Complete Anyway
+            </Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={() => {
+                setProofPromptOpen(false);
+                setProofPromptPlacement(null);
+                setActiveTab('performance');
+              }}
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Report Performance
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Tag Test Dialog */}
       <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -2118,8 +2240,18 @@ export function PublicationOrderDetail() {
 }
 
 // Helper function to parse dimensions (handles concatenated values like "728x90300x600320x50970x90")
-function parseDimensions(dimStr: string | undefined): string[] {
-  if (!dimStr || typeof dimStr !== 'string') return [];
+// Also handles arrays of dimensions
+function parseDimensions(dimInput: string | string[] | undefined): string[] {
+  if (!dimInput) return [];
+  
+  // If it's already an array, filter out empties and return
+  if (Array.isArray(dimInput)) {
+    return dimInput.map(d => String(d).trim()).filter(Boolean);
+  }
+  
+  // Convert to string if not already
+  const dimStr = String(dimInput);
+  if (!dimStr) return [];
   
   // First try splitting by common delimiters
   if (dimStr.includes(',') || dimStr.includes(' ') || dimStr.includes('/')) {
@@ -2134,7 +2266,7 @@ function parseDimensions(dimStr: string | undefined): string[] {
   }
   
   // Single dimension or simple format
-  return [dimStr];
+  return dimStr.trim() ? [dimStr.trim()] : [];
 }
 
 // PlacementStatusBadge is now imported from '../orders/PlacementStatusBadge'

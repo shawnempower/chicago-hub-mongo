@@ -64,13 +64,12 @@ function generateSpecKey(req: CreativeRequirement): string {
   const channelLower = (req.channel || 'general').toLowerCase();
   const isAudio = channelLower === 'radio' || channelLower === 'podcast';
   
-  // Combine website and newsletter into "digital_display" since they use the same image assets
-  // when dimensions match (e.g., 300x250 banner works for both website and newsletter)
+  // Keep website and newsletter as separate spec groups so they appear in the correct channel tabs
+  // The same image may work for both, but they need separate group entries for proper tab filtering
   const isDigitalDisplay = channelLower === 'website' || channelLower === 'newsletter';
-  const normalizedChannel = isDigitalDisplay ? 'digital_display' : (req.channel || 'general');
   
   const parts: string[] = [
-    normalizedChannel,
+    req.channel || 'general',  // Use original channel, not normalized
   ];
   
   // Audio channels: group by duration (15s, 30s, 60s are different creatives)
