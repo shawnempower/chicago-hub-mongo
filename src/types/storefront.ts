@@ -110,15 +110,11 @@ export interface AudienceComponent {
 // Testimonials interfaces
 export interface Testimonial {
   quote: string;
-  author: string;
-  age?: number;
-  location?: string;
-  company?: string;
-  role?: string;
+  attribution: string;
 }
 
 export interface TestimonialsContent {
-  title: string;
+  title?: string;
   subtitle?: string;
   testimonials: Testimonial[];
 }
@@ -154,6 +150,39 @@ export interface InventoryComponent {
   enabled: boolean;
   order: number;
   content: InventoryContent;
+}
+
+// Inventory Pricing interfaces
+export interface PricingColumn {
+  id: string;
+  label: string;
+}
+
+export interface PricingRow {
+  adFormat: string;
+  specs?: string;
+  prices: Record<string, string>;
+}
+
+export interface PricingTab {
+  id: string;
+  label: string;
+  icon?: 'globe' | 'envelope' | 'mail' | 'calendar' | 'users';
+  columns: PricingColumn[];
+  rows: PricingRow[];
+}
+
+export interface InventoryPricingContent {
+  title: string;
+  subtitle?: string;
+  tabs: PricingTab[];
+  footnotes?: string[];
+}
+
+export interface InventoryPricingComponent {
+  enabled: boolean;
+  order: number;
+  content: InventoryPricingContent;
 }
 
 // Campaign interfaces
@@ -259,6 +288,9 @@ export interface FooterComponent {
   content: FooterContent;
 }
 
+// Component type union
+export type ComponentType = 'navbar' | 'hero' | 'audience' | 'testimonials' | 'inventory' | 'inventorypricing' | 'campaign' | 'contactfaq' | 'aboutus' | 'footer';
+
 // Components collection
 export interface StorefrontComponents {
   navbar?: NavbarComponent;
@@ -266,6 +298,7 @@ export interface StorefrontComponents {
   audience?: AudienceComponent;
   testimonials?: TestimonialsComponent;
   inventory?: InventoryComponent;
+  inventorypricing?: InventoryPricingComponent;
   campaign?: CampaignComponent;
   contactfaq?: ContactFAQComponent;
   aboutus?: AboutUsComponent;
@@ -379,7 +412,7 @@ export const validateStorefrontConfig = (config: unknown): string[] => {
   } else {
     // Validate component structure if components exist
     const components = configObj.components as Record<string, unknown>;
-    const validComponents = ['navbar', 'hero', 'audience', 'testimonials', 'inventory', 'campaign', 'contactfaq', 'aboutus', 'footer'];
+    const validComponents = ['navbar', 'hero', 'audience', 'testimonials', 'inventory', 'inventorypricing', 'campaign', 'contactfaq', 'aboutus', 'footer'];
     Object.keys(components).forEach(componentKey => {
       if (!validComponents.includes(componentKey)) {
         errors.push(`Unknown component: ${componentKey}`);

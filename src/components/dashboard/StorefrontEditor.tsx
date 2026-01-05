@@ -8,12 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { 
   StorefrontConfiguration, 
   ComponentType,
   HeroContent,
   AudienceContent,
   InventoryContent,
+  InventoryPricingContent,
   CampaignContent,
   ContactFaqContent,
   AboutUsContent,
@@ -41,7 +43,8 @@ import {
   PlusCircle,
   MessageSquare,
   Megaphone,
-  Globe
+  Globe,
+  DollarSign
 } from 'lucide-react';
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -50,7 +53,7 @@ import { StorefrontImageManager } from './StorefrontImageManager';
 
 // Available component types that can be added
 const AVAILABLE_COMPONENT_TYPES: ComponentType[] = [
-  'navbar', 'hero', 'audience', 'testimonials', 'inventory', 'campaign', 'contactfaq', 'aboutus', 'footer'
+  'navbar', 'hero', 'audience', 'testimonials', 'inventory', 'inventorypricing', 'campaign', 'contactfaq', 'aboutus', 'footer'
 ];
 
 interface AddComponentDropdownProps {
@@ -283,6 +286,36 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
           subtitle: 'Explore what we offer',
           channels: []
         };
+      case 'inventorypricing':
+        return {
+          title: 'Advertise with us',
+          subtitle: 'Transparent pricing for all platforms',
+          tabs: [
+            {
+              id: 'website',
+              label: 'Website',
+              icon: 'globe' as const,
+              columns: [
+                { id: '1week', label: '1-week' },
+                { id: '4weeks', label: '4-weeks' },
+                { id: '8weeks', label: '8-weeks' }
+              ],
+              rows: [
+                {
+                  adFormat: 'Billboard',
+                  specs: '970 x 250 pixels',
+                  prices: { '1week': '$300', '4weeks': '$1000', '8weeks': '$1800' }
+                },
+                {
+                  adFormat: 'Leaderboard',
+                  specs: '728 x 90 pixels',
+                  prices: { '1week': '$250', '4weeks': '$800', '8weeks': '$1440' }
+                }
+              ]
+            }
+          ],
+          footnotes: ['Prices subject to availability', 'Contact for custom packages']
+        };
       case 'campaign':
         return {
           title: 'How It Works',
@@ -348,6 +381,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       audience: Users,
       testimonials: MessageSquare,
       inventory: Package,
+      inventorypricing: DollarSign,
       campaign: Megaphone,
       contactfaq: Mail,
       aboutus: Info,
@@ -363,6 +397,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
       audience: 'Audience',
       testimonials: 'Testimonials',
       inventory: 'Inventory',
+      inventorypricing: 'Pricing Tables',
       campaign: 'Campaign',
       contactfaq: 'Contact Us',
       aboutus: 'About Us',
@@ -905,6 +940,338 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
     </div>
   );
 
+  const renderInventoryPricingEditor = (content: InventoryPricingContent) => {
+    const handleAddTab = () => {
+      const newTabs = [...content.tabs, {
+        id: `tab-${Date.now()}`,
+        label: 'New Tab',
+        icon: 'globe' as const,
+        columns: [{ id: '1week', label: '1-week' }],
+        rows: []
+      }];
+      updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+    };
+    
+    const handleRemoveTab = (tabIndex: number) => {
+      if (content.tabs.length <= 1) return;
+      const newTabs = content.tabs.filter((_, i) => i !== tabIndex);
+      updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+    };
+    
+    const handleAddColumn = (tabIndex: number) => {
+      const newTabs = [...content.tabs];
+      const tab = newTabs[tabIndex];
+      newTabs[tabIndex] = {
+        ...tab,
+        columns: [...tab.columns, { id: `col-${Date.now()}`, label: 'New Period' }]
+      };
+      updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+    };
+    
+    const handleRemoveColumn = (tabIndex: number, colIndex: number) => {
+      const newTabs = [...content.tabs];
+      const tab = newTabs[tabIndex];
+      if (tab.columns.length <= 1) return;
+      const columnId = tab.columns[colIndex].id;
+      newTabs[tabIndex] = {
+        ...tab,
+        columns: tab.columns.filter((_, i) => i !== colIndex),
+        rows: tab.rows.map(row => {
+          const { [columnId]: _, ...remainingPrices } = row.prices;
+          return { ...row, prices: remainingPrices };
+        })
+      };
+      updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+    };
+    
+    const handleAddRow = (tabIndex: number) => {
+      const newTabs = [...content.tabs];
+      const tab = newTabs[tabIndex];
+      const initialPrices: Record<string, string> = {};
+      tab.columns.forEach(col => { initialPrices[col.id] = ''; });
+      
+      newTabs[tabIndex] = {
+        ...tab,
+        rows: [...tab.rows, { adFormat: '', specs: '', prices: initialPrices }]
+      };
+      updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+    };
+    
+    const handleRemoveRow = (tabIndex: number, rowIndex: number) => {
+      const newTabs = [...content.tabs];
+      const tab = newTabs[tabIndex];
+      newTabs[tabIndex] = {
+        ...tab,
+        rows: tab.rows.filter((_, i) => i !== rowIndex)
+      };
+      updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+    };
+    
+    const handleAddFootnote = () => {
+      updateComponentContent('inventorypricing', { 
+        ...content, 
+        footnotes: [...(content.footnotes || []), ''] 
+      });
+    };
+    
+    return (
+      <div className="space-y-4">
+        {/* Title and Subtitle */}
+        <div>
+          <Label htmlFor="pricing-title">Title</Label>
+          <Input
+            id="pricing-title"
+            value={content.title}
+            onChange={(e) => updateComponentContent('inventorypricing', { ...content, title: e.target.value })}
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="pricing-subtitle">Subtitle</Label>
+          <Textarea
+            id="pricing-subtitle"
+            value={content.subtitle || ''}
+            onChange={(e) => updateComponentContent('inventorypricing', { ...content, subtitle: e.target.value })}
+            rows={2}
+          />
+        </div>
+        
+        <Separator />
+        
+        {/* Tabs UI using Radix Tabs */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label>Pricing Tabs</Label>
+            <Button variant="outline" size="sm" onClick={handleAddTab}>
+              <Plus className="w-3 h-3 mr-1" /> Add Tab
+            </Button>
+          </div>
+          
+          <Tabs defaultValue={content.tabs[0]?.id} className="w-full">
+            <TabsList className="w-full justify-start">
+              {content.tabs.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            {content.tabs.map((tab, tabIndex) => (
+              <TabsContent key={tab.id} value={tab.id}>
+                <Card className="p-4">
+                  <div className="space-y-4">
+                    {/* Tab Settings */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Tab ID</Label>
+                        <Input
+                          value={tab.id}
+                          onChange={(e) => {
+                            const newTabs = [...content.tabs];
+                            newTabs[tabIndex] = { ...tab, id: e.target.value };
+                            updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+                          }}
+                          placeholder="website"
+                        />
+                      </div>
+                      <div>
+                        <Label>Tab Label</Label>
+                        <Input
+                          value={tab.label}
+                          onChange={(e) => {
+                            const newTabs = [...content.tabs];
+                            newTabs[tabIndex] = { ...tab, label: e.target.value };
+                            updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+                          }}
+                          placeholder="Website"
+                        />
+                      </div>
+                      <div>
+                        <Label>Icon</Label>
+                        <Select
+                          value={tab.icon || 'globe'}
+                          onValueChange={(value: 'globe' | 'envelope' | 'mail' | 'calendar' | 'users') => {
+                            const newTabs = [...content.tabs];
+                            newTabs[tabIndex] = { ...tab, icon: value };
+                            updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+                          }}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="globe">Globe</SelectItem>
+                            <SelectItem value="envelope">Envelope</SelectItem>
+                            <SelectItem value="mail">Mail</SelectItem>
+                            <SelectItem value="calendar">Calendar</SelectItem>
+                            <SelectItem value="users">Users</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    {/* EDITABLE TABLE */}
+                    <div>
+                      <Label className="mb-2 block">Pricing Table</Label>
+                      <div className="border rounded-lg overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-muted/50">
+                              <th className="p-2 text-left font-semibold border-r text-sm">Ad Format</th>
+                              <th className="p-2 text-left font-semibold border-r text-sm">Specs</th>
+                              {tab.columns.map((col, colIndex) => (
+                                <th key={colIndex} className="p-2 border-r min-w-[120px]">
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      value={col.label}
+                                      onChange={(e) => {
+                                        const newTabs = [...content.tabs];
+                                        const newColumns = [...tab.columns];
+                                        newColumns[colIndex] = { ...col, label: e.target.value };
+                                        newTabs[tabIndex] = { ...tab, columns: newColumns };
+                                        updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+                                      }}
+                                      className="font-semibold text-sm h-8 text-center"
+                                      placeholder="1-week"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 shrink-0"
+                                      onClick={() => handleRemoveColumn(tabIndex, colIndex)}
+                                      title="Remove column"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </th>
+                              ))}
+                              <th className="p-2 w-12"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tab.rows.map((row, rowIndex) => (
+                              <tr key={rowIndex} className="border-t hover:bg-muted/30">
+                                <td className="p-2 border-r">
+                                  <Input
+                                    value={row.adFormat}
+                                    onChange={(e) => {
+                                      const newTabs = [...content.tabs];
+                                      const newRows = [...tab.rows];
+                                      newRows[rowIndex] = { ...row, adFormat: e.target.value };
+                                      newTabs[tabIndex] = { ...tab, rows: newRows };
+                                      updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+                                    }}
+                                    placeholder="Billboard"
+                                    className="h-8 font-medium"
+                                  />
+                                </td>
+                                <td className="p-2 border-r">
+                                  <Input
+                                    value={row.specs || ''}
+                                    onChange={(e) => {
+                                      const newTabs = [...content.tabs];
+                                      const newRows = [...tab.rows];
+                                      newRows[rowIndex] = { ...row, specs: e.target.value };
+                                      newTabs[tabIndex] = { ...tab, rows: newRows };
+                                      updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+                                    }}
+                                    placeholder="970 x 250 pixels"
+                                    className="h-8 text-sm text-muted-foreground"
+                                  />
+                                </td>
+                                {tab.columns.map((col, colIndex) => (
+                                  <td key={colIndex} className="p-2 border-r">
+                                    <Input
+                                      value={row.prices[col.id] || ''}
+                                      onChange={(e) => {
+                                        const newTabs = [...content.tabs];
+                                        const newRows = [...tab.rows];
+                                        newRows[rowIndex] = { 
+                                          ...row, 
+                                          prices: { ...row.prices, [col.id]: e.target.value }
+                                        };
+                                        newTabs[tabIndex] = { ...tab, rows: newRows };
+                                        updateComponentContent('inventorypricing', { ...content, tabs: newTabs });
+                                      }}
+                                      placeholder="$300"
+                                      className="h-8 text-center font-semibold"
+                                    />
+                                  </td>
+                                ))}
+                                <td className="p-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => handleRemoveRow(tabIndex, rowIndex)}
+                                    title="Remove row"
+                                  >
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      {/* Table Action Buttons */}
+                      <div className="flex gap-2 mt-3">
+                        <Button variant="outline" size="sm" onClick={() => handleAddColumn(tabIndex)}>
+                          <Plus className="w-3 h-3 mr-1" /> Add Column
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleAddRow(tabIndex)}>
+                          <Plus className="w-3 h-3 mr-1" /> Add Row
+                        </Button>
+                        {content.tabs.length > 1 && (
+                          <Button variant="destructive" size="sm" onClick={() => handleRemoveTab(tabIndex)}>
+                            <Trash2 className="w-3 h-3 mr-1" /> Remove This Tab
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
+        
+        {/* Footnotes */}
+        <div>
+          <Label className="mb-2 block">Footnotes</Label>
+          <div className="space-y-2">
+            {(content.footnotes || []).map((footnote, index) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  value={footnote}
+                  onChange={(e) => {
+                    const newFootnotes = [...(content.footnotes || [])];
+                    newFootnotes[index] = e.target.value;
+                    updateComponentContent('inventorypricing', { ...content, footnotes: newFootnotes });
+                  }}
+                  placeholder="Pricing footnote or disclaimer"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const newFootnotes = (content.footnotes || []).filter((_, i) => i !== index);
+                    updateComponentContent('inventorypricing', { ...content, footnotes: newFootnotes });
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" onClick={handleAddFootnote}>
+              <Plus className="w-3 h-3 mr-1" /> Add Footnote
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderCampaignEditor = (content: CampaignContent) => (
     <div className="space-y-4">
       <div>
@@ -1444,7 +1811,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
         <Label htmlFor="testimonials-title">Title</Label>
         <Input
           id="testimonials-title"
-          value={content.title}
+          value={content.title || ''}
           onChange={(e) => updateComponentContent('testimonials', { ...content, title: e.target.value })}
         />
       </div>
@@ -1453,7 +1820,7 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
         <Label htmlFor="testimonials-subtitle">Subtitle</Label>
         <Input
           id="testimonials-subtitle"
-          value={content.subtitle}
+          value={content.subtitle || ''}
           onChange={(e) => updateComponentContent('testimonials', { ...content, subtitle: e.target.value })}
         />
       </div>
@@ -1467,10 +1834,8 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
             className="text-xs"
             onClick={() => {
               const newTestimonials = [...content.testimonials, { 
-                id: `testimonial-${Date.now()}`, 
-                name: '', 
-                company: '', 
-                quote: '' 
+                quote: '', 
+                attribution: '' 
               }];
               updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
             }}
@@ -1483,30 +1848,6 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
           {(content.testimonials || []).map((testimonial, index) => (
             <Card key={index} className="p-3">
               <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label>Name</Label>
-                    <Input
-                      value={testimonial.name}
-                      onChange={(e) => {
-                        const newTestimonials = [...(content.testimonials || [])];
-                        newTestimonials[index] = { ...testimonial, name: e.target.value };
-                        updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label>Company</Label>
-                    <Input
-                      value={testimonial.company}
-                      onChange={(e) => {
-                        const newTestimonials = [...(content.testimonials || [])];
-                        newTestimonials[index] = { ...testimonial, company: e.target.value };
-                        updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
-                      }}
-                    />
-                  </div>
-                </div>
                 <div>
                   <Label>Quote</Label>
                   <Textarea
@@ -1517,18 +1858,19 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
                       updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
                     }}
                     rows={3}
+                    placeholder="Working with this publication has transformed our community engagement..."
                   />
                 </div>
                 <div>
-                  <Label>Image URL (optional)</Label>
+                  <Label>Attribution</Label>
                   <Input
-                    value={testimonial.imageUrl || ''}
+                    value={testimonial.attribution}
                     onChange={(e) => {
                       const newTestimonials = [...(content.testimonials || [])];
-                      newTestimonials[index] = { ...testimonial, imageUrl: e.target.value || undefined };
+                      newTestimonials[index] = { ...testimonial, attribution: e.target.value };
                       updateComponentContent('testimonials', { ...content, testimonials: newTestimonials });
                     }}
-                    placeholder="https://example.com/person.jpg"
+                    placeholder="Sarah Johnson, Marketing Director at Rainbow Retail Co."
                   />
                 </div>
                 <Button
@@ -1561,6 +1903,8 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
         return renderNavbarEditor(component.content as NavbarContent);
       case 'inventory':
         return renderInventoryEditor(component.content as InventoryContent);
+      case 'inventorypricing':
+        return renderInventoryPricingEditor(component.content as InventoryPricingContent);
       case 'campaign':
         return renderCampaignEditor(component.content as CampaignContent);
       case 'contactfaq':
