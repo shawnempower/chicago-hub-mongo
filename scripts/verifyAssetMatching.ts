@@ -173,3 +173,4 @@ async function verify() {
 }
 
 verify().then(() => process.exit(0)).catch(console.error);
+
