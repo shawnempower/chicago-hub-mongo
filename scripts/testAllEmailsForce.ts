@@ -8,8 +8,8 @@ dotenv.config();
 // Force enable notifications for this test
 process.env.EMAIL_NOTIFICATIONS_ENABLED = 'true';
 
-const TEST_EMAIL = 'shawn@empowerlocal.com';
-const TEST_NAME = 'Shawn';
+const TEST_EMAIL = 'daniel@laylinedesign.com';
+const TEST_NAME = 'Daniel';
 
 async function testAllEmails() {
   try {
@@ -214,5 +214,6 @@ async function testAllEmails() {
 }
 
 testAllEmails();
+
 
 
