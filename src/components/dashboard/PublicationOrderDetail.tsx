@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { usePublication } from '@/contexts/PublicationContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,8 +57,28 @@ interface OrderDetailData extends PublicationInsertionOrderDocument {}
 export function PublicationOrderDetail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { selectedPublication } = usePublication();
   const campaignId = searchParams.get('campaignId');
   const publicationId = searchParams.get('publicationId');
+  
+  // Track the initial publication ID to detect changes from the dropdown
+  const initialPublicationIdRef = useRef<string | null>(publicationId);
+
+  // When selected publication changes via the dropdown and doesn't match the order's publication,
+  // navigate back to the orders list since we're viewing a different publication's order
+  useEffect(() => {
+    if (!selectedPublication || !publicationId) return;
+    
+    const selectedPubId = selectedPublication.publicationId?.toString() || selectedPublication._id;
+    
+    // If the selected publication has changed from what we initially loaded
+    // and doesn't match the order's publication, go back to orders list
+    if (initialPublicationIdRef.current && 
+        selectedPubId !== publicationId && 
+        selectedPubId !== initialPublicationIdRef.current) {
+      navigate('/dashboard?tab=orders');
+    }
+  }, [selectedPublication?.publicationId, selectedPublication?._id, publicationId, navigate]);
 
   const [order, setOrder] = useState<OrderDetailData | null>(null);
   const [loading, setLoading] = useState(true);
