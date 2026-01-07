@@ -2411,3 +2411,7 @@ export { leadNotesService };
 // Import and export campaignsService
 import { campaignsService } from './campaignService';
 export { campaignsService };
+
+// Import and export storefrontChatConfigService
+import { storefrontChatConfigService } from './storefrontChatConfigService';
+export { storefrontChatConfigService };

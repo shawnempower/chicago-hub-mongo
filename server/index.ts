@@ -75,6 +75,7 @@ import reportingRouter from './routes/reporting';
 import trackingScriptsRouter from './routes/tracking-scripts';
 import notificationsRouter from './routes/notifications';
 import webAnalyticsRouter from './routes/web-analytics';
+import storefrontChatConfigRouter from './routes/storefront-chat-config';
 import { authenticateToken } from './middleware/authenticate';
 import { activityTrackingMiddleware } from './middleware/activityTracking';
 import { createLogger } from '../src/utils/logger';
@@ -197,6 +198,7 @@ app.use('/api/reporting', reportingRouter); // Campaign and order performance re
 app.use('/api/tracking-scripts', activityTrackingMiddleware, trackingScriptsRouter); // Ad tracking script generation
 app.use('/api/notifications', notificationsRouter); // User notifications
 app.use('/api/web-analytics', webAnalyticsRouter); // Real-time web analytics from DynamoDB
+app.use('/api/storefront-chat-config', activityTrackingMiddleware, storefrontChatConfigRouter); // Storefront AI chat configuration
 
 // ===== STANDALONE ROUTES =====
 // Health check

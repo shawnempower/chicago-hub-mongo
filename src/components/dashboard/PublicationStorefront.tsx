@@ -43,12 +43,14 @@ import {
   BarChart3,
   FileText,
   Copy,
-  Upload
+  Upload,
+  MessageSquare
 } from 'lucide-react';
 import { StorefrontConfiguration, validateStorefrontConfig } from '@/types/storefront';
 import { getStorefrontConfiguration, createStorefrontConfiguration, updateStorefrontConfiguration, publishStorefrontConfiguration, createDraftStorefrontConfiguration, setupStorefrontSubdomain, checkSubdomainAvailability } from '@/api/storefront';
 import { StorefrontEditor } from './StorefrontEditor';
 import { StorefrontImageManager } from './StorefrontImageManager';
+import { StorefrontChatConfigEditor } from './StorefrontChatConfigEditor';
 import { API_BASE_URL } from '@/config/api';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
@@ -905,7 +907,7 @@ export const PublicationStorefront: React.FC = () => {
 
       {storefrontConfig ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="settings">
               <FileText className="w-4 h-4 mr-2" />
               Settings
@@ -925,6 +927,10 @@ export const PublicationStorefront: React.FC = () => {
             <TabsTrigger value="analytics">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="assistant">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Chat Assistant
             </TabsTrigger>
           </TabsList>
 
@@ -1929,6 +1935,42 @@ export const PublicationStorefront: React.FC = () => {
                 </div>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="assistant" className="space-y-0 px-12 py-8">
+            <StorefrontChatConfigEditor
+              publicationId={selectedPublication?.publicationId?.toString() || ''}
+              domain={selectedPublication?.basicInfo?.websiteUrl?.replace(/^https?:\/\//, '').replace(/\/+$/, '')}
+              publicationName={selectedPublication?.basicInfo?.publicationName}
+              chatEnabled={storefrontConfig?.chatEnabled ?? false}
+              onChatEnabledChange={async (enabled) => {
+                if (storefrontConfig && selectedPublication?.publicationId) {
+                  const updatedConfig = { ...storefrontConfig, chatEnabled: enabled };
+                  setStorefrontConfig(updatedConfig);
+                  try {
+                    await updateStorefrontConfiguration(
+                      selectedPublication.publicationId.toString(),
+                      updatedConfig
+                    );
+                    toast({
+                      title: enabled ? 'Chat Widget Enabled' : 'Chat Widget Disabled',
+                      description: enabled 
+                        ? 'The chat widget will now appear on your storefront.'
+                        : 'The chat widget has been hidden from your storefront.',
+                    });
+                  } catch (err) {
+                    console.error('Error saving chat enabled state:', err);
+                    // Revert on error
+                    setStorefrontConfig(storefrontConfig);
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to save chat widget setting.',
+                      variant: 'destructive',
+                    });
+                  }
+                }
+              }}
+            />
           </TabsContent>
         </Tabs>
       ) : (

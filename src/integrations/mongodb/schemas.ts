@@ -1088,6 +1088,7 @@ export interface StorefrontConfiguration {
     googleAnalyticsId?: string;
     facebookPixelId?: string;
   };
+  chatEnabled?: boolean; // Whether to show the AI chat widget on the storefront
   isActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -1322,6 +1323,35 @@ export interface AlgorithmConfigUpdate extends Partial<Omit<AlgorithmConfig, '_i
   updatedAt: Date;
 }
 
+// ===== STOREFRONT CHAT CONFIG SCHEMA =====
+// Configuration for the AI chat widget on storefronts
+// Note: The enable/disable toggle is in StorefrontConfiguration.chatEnabled
+export interface StorefrontChatConfig {
+  _id?: string | ObjectId;
+  
+  // Lookup key - unique index by publicationId
+  publicationId: string;
+  
+  // Template placeholders - replace {{key}} patterns in agent.yaml instructions
+  placeholders: Record<string, string>;
+  
+  // Publication context - free-form JSON injected into prompt as context
+  publicationContext: Record<string, unknown>;
+  
+  // Dynamic instructions
+  prependInstructions: string;  // Text added BEFORE base agent.yaml instructions
+  appendInstructions: string;   // Text added AFTER base agent.yaml instructions
+  
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface StorefrontChatConfigInsert extends Omit<StorefrontChatConfig, '_id' | 'createdAt' | 'updatedAt'> {}
+export interface StorefrontChatConfigUpdate extends Partial<Omit<StorefrontChatConfig, '_id' | 'publicationId' | 'createdAt'>> {
+  updatedAt: Date;
+}
+
 // Collection Names
 export const COLLECTIONS = {
   USERS: 'users',
@@ -1361,6 +1391,7 @@ export const COLLECTIONS = {
   DAILY_AGGREGATES: 'daily_aggregates', // Pre-computed daily rollups for reporting
   ESP_REFERENCE: 'esp_reference', // Email service provider compatibility data
   NOTIFICATIONS: 'notifications', // In-app notifications for users
+  STOREFRONT_CHAT_CONFIG: 'storefront_chat_config', // AI chat widget configuration per storefront
 } as const;
 
 // MongoDB Indexes Configuration
@@ -1603,5 +1634,9 @@ export const INDEXES = {
     { expiresAt: 1 },                      // For cleanup job
     { campaignId: 1 },                     // Notifications for a campaign
     { orderId: 1 }                         // Notifications for an order
+  ],
+  storefront_chat_config: [
+    { publicationId: 1 },                  // Unique lookup by publicationId
+    { updatedAt: -1 }                      // Sort by last update
   ]
 };
