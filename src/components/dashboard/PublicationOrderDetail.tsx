@@ -733,10 +733,21 @@ export function PublicationOrderDetail() {
     if (channel === 'website') {
       // Website: Impressions are the unit
       if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
-        const totalImpressions = (item.monthlyImpressions || perfMetrics.impressionsPerMonth) * durationMonths;
+        const monthlyImpressions = item.monthlyImpressions || perfMetrics.impressionsPerMonth;
+        const pricingModel = item.itemPricing?.pricingModel || 'flat';
+        
+        // For CPM/CPV/CPC, frequency is percentage share (25, 50, 75, 100)
+        let actualMonthlyImpressions = monthlyImpressions;
+        if (['cpm', 'cpv', 'cpc'].includes(pricingModel)) {
+          const percentageShare = frequency; // frequency IS the percentage for CPM
+          actualMonthlyImpressions = Math.round(monthlyImpressions * (percentageShare / 100));
+        }
+        
+        const totalImpressions = actualMonthlyImpressions * durationMonths;
+        
         expectations.push({
           label: 'Deliver',
-          value: `${formatNumber(totalImpressions)} impressions`,
+          value: `${formatNumber(totalImpressions)} impressions (${formatNumber(actualMonthlyImpressions)}/mo × ${durationMonths} mo)`,
           icon: <Eye className="h-3.5 w-3.5 text-blue-600" />,
           highlight: true
         });
