@@ -320,6 +320,17 @@ export interface Analytics {
   facebookPixelId?: string;
 }
 
+// Chat Widget Configuration
+export interface ChatWidget {
+  enabled: boolean;
+  apiEndpoint?: string;
+  buttonPosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  defaultOpen?: boolean;
+  title?: string;
+  subtitle?: string;
+  initialMessage?: string;
+}
+
 // Main configuration interface
 export interface StorefrontConfiguration {
   _id?: string;
@@ -330,6 +341,7 @@ export interface StorefrontConfiguration {
   components: StorefrontComponents;
   seoMetadata?: SEOMetadata;
   analytics?: Analytics;
+  chatWidget?: ChatWidget; // Chat widget configuration for the storefront
   isActive?: boolean;
   createdAt?: Date;
   updatedAt?: Date;

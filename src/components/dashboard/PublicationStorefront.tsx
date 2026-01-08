@@ -1942,32 +1942,16 @@ export const PublicationStorefront: React.FC = () => {
               publicationId={selectedPublication?.publicationId?.toString() || ''}
               domain={selectedPublication?.basicInfo?.websiteUrl?.replace(/^https?:\/\//, '').replace(/\/+$/, '')}
               publicationName={selectedPublication?.basicInfo?.publicationName}
-              chatEnabled={storefrontConfig?.chatEnabled ?? false}
-              onChatEnabledChange={async (enabled) => {
+              chatWidget={storefrontConfig?.chatWidget ?? { enabled: storefrontConfig?.chatEnabled ?? false }}
+              onChatWidgetChange={async (chatWidget) => {
                 if (storefrontConfig && selectedPublication?.publicationId) {
-                  const updatedConfig = { ...storefrontConfig, chatEnabled: enabled };
+                  const updatedConfig = { ...storefrontConfig, chatWidget, chatEnabled: chatWidget.enabled };
                   setStorefrontConfig(updatedConfig);
-                  try {
-                    await updateStorefrontConfiguration(
-                      selectedPublication.publicationId.toString(),
-                      updatedConfig
-                    );
-                    toast({
-                      title: enabled ? 'Chat Widget Enabled' : 'Chat Widget Disabled',
-                      description: enabled 
-                        ? 'The chat widget will now appear on your storefront.'
-                        : 'The chat widget has been hidden from your storefront.',
-                    });
-                  } catch (err) {
-                    console.error('Error saving chat enabled state:', err);
-                    // Revert on error
-                    setStorefrontConfig(storefrontConfig);
-                    toast({
-                      title: 'Error',
-                      description: 'Failed to save chat widget setting.',
-                      variant: 'destructive',
-                    });
-                  }
+                  // Save to backend - errors will be caught by the calling function
+                  await updateStorefrontConfiguration(
+                    selectedPublication.publicationId.toString(),
+                    updatedConfig
+                  );
                 }
               }}
             />

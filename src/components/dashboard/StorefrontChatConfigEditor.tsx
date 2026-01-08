@@ -38,21 +38,32 @@ import {
   ChatMessage
 } from '@/api/storefrontChatConfig';
 import { StorefrontChatConfig } from '@/integrations/mongodb/schemas';
+import { ChatWidget } from '@/types/storefront';
 
 interface StorefrontChatConfigEditorProps {
   publicationId: string;
   domain?: string; // Optional domain for passing to Lambda as clientId
   publicationName?: string;
-  chatEnabled?: boolean;
-  onChatEnabledChange?: (enabled: boolean) => void;
+  chatWidget?: ChatWidget;
+  onChatWidgetChange?: (chatWidget: ChatWidget) => void;
 }
+
+const defaultChatWidget: ChatWidget = {
+  enabled: false,
+  apiEndpoint: '',
+  buttonPosition: 'bottom-right',
+  defaultOpen: false,
+  title: 'Campaign Assistant',
+  subtitle: '',
+  initialMessage: ''
+};
 
 export const StorefrontChatConfigEditor: React.FC<StorefrontChatConfigEditorProps> = ({
   publicationId,
   domain,
   publicationName,
-  chatEnabled = false,
-  onChatEnabledChange
+  chatWidget = defaultChatWidget,
+  onChatWidgetChange
 }) => {
   const { toast } = useToast();
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -73,6 +84,20 @@ export const StorefrontChatConfigEditor: React.FC<StorefrontChatConfigEditorProp
   const [prependInstructions, setPrependInstructions] = useState('');
   const [appendInstructions, setAppendInstructions] = useState('');
   const [contextError, setContextError] = useState<string | null>(null);
+  
+  // Local chat widget state (saved with the rest of the config)
+  const [localChatWidget, setLocalChatWidget] = useState<ChatWidget>(chatWidget);
+  
+  // Sync local widget state when prop changes (e.g., on initial load)
+  useEffect(() => {
+    setLocalChatWidget(chatWidget);
+  }, [chatWidget]);
+  
+  // Helper to update widget and mark as changed
+  const updateChatWidget = (updates: Partial<ChatWidget>) => {
+    setLocalChatWidget(prev => ({ ...prev, ...updates }));
+    markChanged();
+  };
 
   // Simple markdown formatter
   const renderMarkdown = (text: string): string => {
@@ -332,6 +357,7 @@ export const StorefrontChatConfigEditor: React.FC<StorefrontChatConfigEditorProp
       setSaving(true);
       setError(null);
 
+      // Save chat config (placeholders, instructions, context)
       await saveStorefrontChatConfig(publicationId, {
         publicationId,
         placeholders,
@@ -339,6 +365,11 @@ export const StorefrontChatConfigEditor: React.FC<StorefrontChatConfigEditorProp
         prependInstructions,
         appendInstructions
       });
+      
+      // Save widget settings to storefront config
+      if (onChatWidgetChange) {
+        await onChatWidgetChange(localChatWidget);
+      }
 
       setHasChanges(false);
       setIsNewConfig(false); // Config is now saved, enable test chat
@@ -542,9 +573,16 @@ export const StorefrontChatConfigEditor: React.FC<StorefrontChatConfigEditorProp
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Configuration Panel (Left - 3 cols) */}
         <div className="lg:col-span-3 space-y-6">
-          {/* Enable/Disable Chat Widget */}
+          {/* Chat Widget Settings */}
           <Card>
-            <CardContent className="pt-6">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Widget Settings</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Configure the appearance and behavior of your chat widget
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Enable/Disable Toggle */}
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-base font-medium">Enable Chat Widget</Label>
@@ -553,9 +591,112 @@ export const StorefrontChatConfigEditor: React.FC<StorefrontChatConfigEditorProp
                   </p>
                 </div>
                 <Switch
-                  checked={chatEnabled}
-                  onCheckedChange={(checked) => onChatEnabledChange?.(checked)}
+                  checked={localChatWidget.enabled}
+                  onCheckedChange={(checked) => updateChatWidget({ enabled: checked })}
                 />
+              </div>
+
+              <Separator />
+
+              {/* Title and Subtitle */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="widget-title">Widget Title</Label>
+                  <Input
+                    id="widget-title"
+                    value={localChatWidget.title ?? ''}
+                    onChange={(e) => updateChatWidget({ title: e.target.value })}
+                    placeholder="Campaign Assistant"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Displayed in the chat widget header
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="widget-subtitle">Widget Subtitle</Label>
+                  <Input
+                    id="widget-subtitle"
+                    value={localChatWidget.subtitle ?? ''}
+                    onChange={(e) => updateChatWidget({ subtitle: e.target.value })}
+                    placeholder="Your Publication Advertising"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Secondary text shown below the title
+                  </p>
+                </div>
+              </div>
+
+              {/* Position and Default Open */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="button-position">Button Position</Label>
+                  <Select
+                    value={localChatWidget.buttonPosition ?? 'bottom-right'}
+                    onValueChange={(value: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left') => 
+                      updateChatWidget({ buttonPosition: value })
+                    }
+                  >
+                    <SelectTrigger id="button-position">
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bottom-right">Bottom Right</SelectItem>
+                      <SelectItem value="bottom-left">Bottom Left</SelectItem>
+                      <SelectItem value="top-right">Top Right</SelectItem>
+                      <SelectItem value="top-left">Top Left</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Where the chat button appears on the page
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Open by Default</Label>
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Switch
+                      id="default-open"
+                      checked={localChatWidget.defaultOpen ?? false}
+                      onCheckedChange={(checked) => updateChatWidget({ defaultOpen: checked })}
+                    />
+                    <Label htmlFor="default-open" className="text-sm font-normal">
+                      Auto-open widget on page load
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Widget will be expanded when visitors arrive
+                  </p>
+                </div>
+              </div>
+
+              {/* API Endpoint */}
+              <div className="space-y-2">
+                <Label htmlFor="api-endpoint">API Endpoint</Label>
+                <Input
+                  id="api-endpoint"
+                  value={localChatWidget.apiEndpoint ?? ''}
+                  onChange={(e) => updateChatWidget({ apiEndpoint: e.target.value })}
+                  placeholder="https://your-lambda-url.on.aws/chat"
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  The chat service endpoint URL (Lambda function URL)
+                </p>
+              </div>
+
+              {/* Initial Message */}
+              <div className="space-y-2">
+                <Label htmlFor="initial-message">Initial Message</Label>
+                <Textarea
+                  id="initial-message"
+                  value={localChatWidget.initialMessage ?? ''}
+                  onChange={(e) => updateChatWidget({ initialMessage: e.target.value })}
+                  placeholder="Hi! I'm your campaign assistant. How can I help you today?"
+                  rows={6}
+                />
+                <p className="text-xs text-muted-foreground">
+                  The first message displayed when the chat opens. Supports component tags like{' '}
+                  <code className="bg-muted px-1 py-0.5 rounded text-xs">{'<component type="choices">...</component>'}</code>
+                </p>
               </div>
             </CardContent>
           </Card>

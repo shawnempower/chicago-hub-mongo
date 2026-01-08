@@ -836,6 +836,47 @@
           "pattern": "^(FB_PIXEL_ID|\\d+)$"
         }
       }
+    },
+    "chatWidget": {
+      "type": "object",
+      "description": "Chat widget configuration for the AI campaign assistant",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether to show the chat widget on the storefront"
+        },
+        "apiEndpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "The API endpoint URL for the chat service"
+        },
+        "buttonPosition": {
+          "type": "string",
+          "description": "Position of the chat button on the page",
+          "enum": ["bottom-right", "bottom-left", "top-right", "top-left"],
+          "default": "bottom-right"
+        },
+        "defaultOpen": {
+          "type": "boolean",
+          "description": "Whether the chat widget should be open by default",
+          "default": false
+        },
+        "title": {
+          "type": "string",
+          "description": "Title displayed in the chat widget header",
+          "maxLength": 100
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Subtitle displayed in the chat widget header",
+          "maxLength": 200
+        },
+        "initialMessage": {
+          "type": "string",
+          "description": "Initial message displayed when the chat opens. Supports component tags for interactive elements."
+        }
+      }
     }
   }
 }

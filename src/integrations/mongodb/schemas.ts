@@ -1088,7 +1088,16 @@ export interface StorefrontConfiguration {
     googleAnalyticsId?: string;
     facebookPixelId?: string;
   };
-  chatEnabled?: boolean; // Whether to show the AI chat widget on the storefront
+  chatEnabled?: boolean; // Deprecated: use chatWidget.enabled instead
+  chatWidget?: {
+    enabled: boolean;
+    apiEndpoint?: string;
+    buttonPosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+    defaultOpen?: boolean;
+    title?: string;
+    subtitle?: string;
+    initialMessage?: string;
+  };
   isActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
