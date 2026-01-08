@@ -698,12 +698,19 @@ export function PublicationOrderDetail() {
 
   // Calculate campaign duration in months
   const getDurationMonths = () => {
+    // Use stored duration if available (already calculated at campaign creation)
+    if (campaignData?.timeline?.durationMonths) {
+      return campaignData.timeline.durationMonths;
+    }
+    
+    // Fallback: calculate from dates
     const startDate = campaignData?.timeline?.startDate ? new Date(campaignData.timeline.startDate) : null;
     const endDate = campaignData?.timeline?.endDate ? new Date(campaignData.timeline.endDate) : null;
     if (!startDate || !endDate) return 1;
     const diffTime = endDate.getTime() - startDate.getTime();
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
-    return Math.max(1, Math.ceil(diffDays / 30));
+    // Use round instead of ceil to avoid 31 days → 2 months
+    return Math.max(1, Math.round(diffDays / 30));
   };
 
   // Helper function to get delivery expectations for a placement
