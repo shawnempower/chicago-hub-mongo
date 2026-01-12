@@ -74,6 +74,7 @@ import {
   GitBranch,
   RefreshCw,
   Download,
+  Eye,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -2281,49 +2282,6 @@ export function CreativeAssetsManager({
                 </div>
               )}
 
-              {/* Batch Click URL for digital channels */}
-              {['website', 'newsletter', 'streaming'].includes(activeChannel) && pendingFiles.size > 0 && (
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Link className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">Click-Through URL</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="url"
-                      placeholder="https://advertiser.com/landing-page"
-                      className="h-8 text-sm flex-1"
-                      value={batchClickUrl}
-                      onChange={(e) => setBatchClickUrl(e.target.value)}
-                    />
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={!batchClickUrl.trim()}
-                      onClick={() => {
-                        if (!batchClickUrl.trim()) return;
-                        setPendingFiles(prev => {
-                          const next = new Map(prev);
-                          next.forEach((fileData, id) => {
-                            next.set(id, { ...fileData, clickUrl: batchClickUrl.trim() });
-                          });
-                          return next;
-                        });
-                        toast({
-                          title: 'Click URL Applied',
-                          description: `Applied to ${pendingFiles.size} pending file${pendingFiles.size !== 1 ? 's' : ''}`,
-                        });
-                      }}
-                    >
-                      Apply to All ({pendingFiles.size})
-                    </Button>
-                  </div>
-                  <p className="text-xs text-blue-700 mt-2">
-                    Enter a URL and click "Apply to All" to set the same click-through URL for all pending files. You can edit individual URLs below.
-                  </p>
-                </div>
-              )}
-
               {/* Pending files queue */}
               {pendingFiles.size > 0 && (
                 <div className="mt-4 space-y-2">
@@ -2713,6 +2671,82 @@ export function CreativeAssetsManager({
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
+                              {/* File attachment indicator */}
+                              {asset && (asset.uploadStatus === 'uploaded' || asset.uploadStatus === 'pending') && (
+                                <div className="flex-shrink-0">
+                                  {(() => {
+                                    // Determine file type for appropriate icon
+                                    const fileType = asset.file?.type || '';
+                                    const fileName = asset.file?.name || asset.fileName || '';
+                                    const fileExt = fileName.toLowerCase().split('.').pop() || '';
+                                    
+                                    // Text files
+                                    if (asset.detectedSpecs?.isTextAsset || fileType.startsWith('text/')) {
+                                      return (
+                                        <div className="w-6 h-6 rounded border bg-amber-50 flex items-center justify-center">
+                                          <FileText className="h-3 w-3 text-amber-600" />
+                                        </div>
+                                      );
+                                    }
+                                    
+                                    // Audio files
+                                    if (asset.detectedSpecs?.isAudioAsset || fileType.startsWith('audio/') || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(fileExt)) {
+                                      return (
+                                        <div className="w-6 h-6 rounded border bg-purple-50 flex items-center justify-center">
+                                          <FileText className="h-3 w-3 text-purple-600" />
+                                        </div>
+                                      );
+                                    }
+                                    
+                                    // Video files
+                                    if (asset.detectedSpecs?.isVideoAsset || fileType.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(fileExt)) {
+                                      return (
+                                        <div className="w-6 h-6 rounded border bg-blue-50 flex items-center justify-center">
+                                          <FileText className="h-3 w-3 text-blue-600" />
+                                        </div>
+                                      );
+                                    }
+                                    
+                                    // PDF files - always show icon, never try to load as image
+                                    if (fileType === 'application/pdf' || fileExt === 'pdf') {
+                                      return (
+                                        <div className="w-6 h-6 rounded border bg-red-50 flex items-center justify-center">
+                                          <FileText className="h-3 w-3 text-red-600" />
+                                        </div>
+                                      );
+                                    }
+                                    
+                                    // Images - show actual thumbnail
+                                    if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExt)) {
+                                      if (asset.previewUrl) {
+                                        return (
+                                          <img 
+                                            src={asset.previewUrl} 
+                                            alt="Preview"
+                                            className="w-6 h-6 object-cover rounded border"
+                                            onError={(e) => {
+                                              // If image fails, show generic icon
+                                              const target = e.target as HTMLImageElement;
+                                              target.style.display = 'none';
+                                              const parent = target.parentElement;
+                                              if (parent) {
+                                                parent.innerHTML = '<div class="w-6 h-6 rounded border bg-muted flex items-center justify-center"><svg class="h-3 w-3 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
+                                              }
+                                            }}
+                                          />
+                                        );
+                                      }
+                                    }
+                                    
+                                    // Default - show generic file icon
+                                    return (
+                                      <div className="w-6 h-6 rounded border bg-green-50 flex items-center justify-center">
+                                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              )}
                               <span className="text-sm font-medium">
                                 {/* Show audio-specific format for radio/podcast, dimensions for others */}
                                 {(spec.channel === 'radio' || spec.channel === 'podcast')
@@ -2757,7 +2791,53 @@ export function CreativeAssetsManager({
                             <span className="text-muted-foreground"> publication{spec.publicationCount !== 1 ? 's' : ''}</span>
                           </TableCell>
                           <TableCell className="text-right">
-                            <StatusBadge status={spec.status} />
+                            <div className="flex items-center justify-end gap-2">
+                              {/* Quick action buttons for uploaded assets */}
+                              {asset && (asset.uploadStatus === 'uploaded' || asset.uploadStatus === 'pending') && (asset.uploadedUrl || asset.previewUrl) && (
+                                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                  {/* Preview button */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const url = asset.uploadedUrl || asset.previewUrl;
+                                      if (url) {
+                                        window.open(url, '_blank');
+                                      }
+                                    }}
+                                    title="Preview file"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  {/* Download button */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const url = asset.uploadedUrl || asset.previewUrl;
+                                      const fileName = asset.file?.name || asset.fileName || 'download';
+                                      if (url) {
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.download = fileName;
+                                        link.target = '_blank';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                      }
+                                    }}
+                                    title="Download file"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
+                              <StatusBadge status={spec.status} />
+                            </div>
                           </TableCell>
                         </TableRow>
 
@@ -2776,26 +2856,89 @@ export function CreativeAssetsManager({
                                     </h4>
                                     {asset && (asset.uploadStatus === 'uploaded' || asset.uploadStatus === 'pending') ? (
                                       <div className="flex gap-3">
-                                        {/* Preview - handle both images and text files */}
-                                        {asset.detectedSpecs?.isTextAsset ? (
-                                          // Text file preview
-                                          <div className="w-20 h-20 rounded border bg-amber-50 flex flex-col items-center justify-center p-1">
-                                            <FileText className="h-6 w-6 text-amber-600 mb-1" />
-                                            <span className="text-[9px] text-amber-700 font-medium">
-                                              {asset.detectedSpecs.fileExtension}
-                                            </span>
-                                          </div>
-                                        ) : asset.previewUrl ? (
-                                          <img 
-                                            src={asset.previewUrl} 
-                                            alt={asset.fileName || 'Preview'}
-                                            className="w-20 h-20 object-contain rounded border bg-white"
-                                          />
-                                        ) : (
-                                          <div className="w-20 h-20 rounded border bg-white flex items-center justify-center">
-                                            <FileImage className="h-8 w-8 text-muted-foreground" />
-                                          </div>
-                                        )}
+                                        {/* Preview - handle different file types with appropriate icons */}
+                                        {(() => {
+                                          const fileType = asset.file?.type || '';
+                                          const fileName = asset.file?.name || asset.fileName || '';
+                                          const fileExt = fileName.toLowerCase().split('.').pop() || '';
+                                          
+                                          // Text files
+                                          if (asset.detectedSpecs?.isTextAsset || fileType.startsWith('text/')) {
+                                            return (
+                                              <div className="w-20 h-20 rounded border bg-amber-50 flex flex-col items-center justify-center p-1">
+                                                <FileText className="h-6 w-6 text-amber-600 mb-1" />
+                                                <span className="text-[9px] text-amber-700 font-medium">
+                                                  {asset.detectedSpecs?.fileExtension || fileExt.toUpperCase()}
+                                                </span>
+                                              </div>
+                                            );
+                                          }
+                                          
+                                          // Audio files
+                                          if (asset.detectedSpecs?.isAudioAsset || fileType.startsWith('audio/') || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(fileExt)) {
+                                            return (
+                                              <div className="w-20 h-20 rounded border bg-purple-50 flex flex-col items-center justify-center p-1">
+                                                <FileText className="h-6 w-6 text-purple-600 mb-1" />
+                                                <span className="text-[9px] text-purple-700 font-medium">
+                                                  {asset.detectedSpecs?.audioFormat || fileExt.toUpperCase()}
+                                                </span>
+                                              </div>
+                                            );
+                                          }
+                                          
+                                          // Video files
+                                          if (asset.detectedSpecs?.isVideoAsset || fileType.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(fileExt)) {
+                                            return (
+                                              <div className="w-20 h-20 rounded border bg-blue-50 flex flex-col items-center justify-center p-1">
+                                                <FileText className="h-6 w-6 text-blue-600 mb-1" />
+                                                <span className="text-[9px] text-blue-700 font-medium">
+                                                  {asset.detectedSpecs?.videoFormat || fileExt.toUpperCase()}
+                                                </span>
+                                              </div>
+                                            );
+                                          }
+                                          
+                                          // PDF files - ALWAYS show icon, never try to display as image
+                                          if (fileType === 'application/pdf' || fileExt === 'pdf') {
+                                            return (
+                                              <div className="w-20 h-20 rounded border bg-red-50 flex flex-col items-center justify-center p-1">
+                                                <FileText className="h-6 w-6 text-red-600 mb-1" />
+                                                <span className="text-[9px] text-red-700 font-medium">
+                                                  PDF
+                                                </span>
+                                              </div>
+                                            );
+                                          }
+                                          
+                                          // Images - show actual preview
+                                          if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExt)) {
+                                            if (asset.previewUrl) {
+                                              return (
+                                                <img 
+                                                  src={asset.previewUrl} 
+                                                  alt={asset.fileName || 'Preview'}
+                                                  className="w-20 h-20 object-contain rounded border bg-white"
+                                                  onError={(e) => {
+                                                    // If image fails to load, replace with icon
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.style.display = 'none';
+                                                    const parent = target.parentElement;
+                                                    if (parent) {
+                                                      parent.innerHTML = '<div class="w-20 h-20 rounded border bg-white flex items-center justify-center"><svg class="h-8 w-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
+                                                    }
+                                                  }}
+                                                />
+                                              );
+                                            }
+                                          }
+                                          
+                                          // Default fallback
+                                          return (
+                                            <div className="w-20 h-20 rounded border bg-white flex items-center justify-center">
+                                              <FileImage className="h-8 w-8 text-muted-foreground" />
+                                            </div>
+                                          );
+                                        })()}
                                         {/* File Info */}
                                         <div className="flex-1 min-w-0 space-y-1">
                                           <p className="text-sm font-medium truncate">
@@ -2884,7 +3027,56 @@ export function CreativeAssetsManager({
                                           )}
                                           
                                           {/* Actions */}
-                                          <div className="pt-1">
+                                          <div className="pt-1 flex flex-wrap gap-1">
+                                            {/* Preview Button - works for images, PDFs, and opens in new tab for all types */}
+                                            {(asset.previewUrl || asset.uploadedUrl) && (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const url = asset.uploadedUrl || asset.previewUrl;
+                                                  if (url) {
+                                                    window.open(url, '_blank');
+                                                  }
+                                                }}
+                                                className="h-7 px-2 text-xs"
+                                                title="Preview file in new tab"
+                                              >
+                                                <Eye className="h-3 w-3 mr-1" />
+                                                Preview
+                                              </Button>
+                                            )}
+                                            
+                                            {/* Download Button - always available if file URL exists */}
+                                            {(asset.uploadedUrl || asset.previewUrl) && (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const url = asset.uploadedUrl || asset.previewUrl;
+                                                  const fileName = asset.file?.name || asset.fileName || 'download';
+                                                  if (url) {
+                                                    // Create a temporary link to trigger download
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.download = fileName;
+                                                    link.target = '_blank';
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                  }
+                                                }}
+                                                className="h-7 px-2 text-xs"
+                                                title="Download file"
+                                              >
+                                                <Download className="h-3 w-3 mr-1" />
+                                                Download
+                                              </Button>
+                                            )}
+                                            
+                                            {/* Remove Button */}
                                             {asset.uploadStatus === 'uploaded' && asset.assetId ? (
                                               <Button
                                                 size="sm"
@@ -3086,34 +3278,98 @@ export function CreativeAssetsManager({
                   uploadedAssetsList.map(({ specGroupId, asset, spec }) => (
                     <TableRow key={specGroupId}>
                       <TableCell>
-                        {asset.detectedSpecs?.isTextAsset ? (
-                          // Text file - show icon with file type
-                          <div className="w-12 h-12 rounded border bg-amber-50 flex flex-col items-center justify-center">
-                            <FileText className="h-5 w-5 text-amber-600" />
-                            <span className="text-[8px] text-amber-700 font-medium mt-0.5">
-                              {asset.detectedSpecs.fileExtension}
-                            </span>
-                          </div>
-                        ) : asset.previewUrl ? (
-                          <button
-                            type="button"
-                            onClick={() => setPreviewAsset({ 
-                              url: asset.previewUrl!, 
-                              fileName: asset.file?.name || asset.fileName || 'Asset' 
-                            })}
-                            className="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
-                          >
-                            <img 
-                              src={asset.previewUrl} 
-                              alt={asset.fileName || 'Asset preview'}
-                              className="w-12 h-12 object-contain rounded border bg-muted"
-                            />
-                          </button>
-                        ) : (
-                          <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center">
-                            <FileImage className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        )}
+                        {(() => {
+                          // Determine file type for appropriate icon/preview
+                          const fileType = asset.file?.type || asset.detectedSpecs?.fileType || '';
+                          const fileName = asset.file?.name || asset.fileName || '';
+                          const fileExt = fileName.toLowerCase().split('.').pop() || '';
+                          
+                          // Text files
+                          if (asset.detectedSpecs?.isTextAsset || fileType.startsWith('text/')) {
+                            return (
+                              <div className="w-12 h-12 rounded border bg-amber-50 flex flex-col items-center justify-center">
+                                <FileText className="h-5 w-5 text-amber-600" />
+                                <span className="text-[8px] text-amber-700 font-medium mt-0.5">
+                                  {asset.detectedSpecs?.fileExtension || fileExt.toUpperCase()}
+                                </span>
+                              </div>
+                            );
+                          }
+                          
+                          // Audio files
+                          if (asset.detectedSpecs?.isAudioAsset || fileType.startsWith('audio/') || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(fileExt)) {
+                            return (
+                              <div className="w-12 h-12 rounded border bg-purple-50 flex flex-col items-center justify-center">
+                                <FileText className="h-5 w-5 text-purple-600" />
+                                <span className="text-[8px] text-purple-700 font-medium mt-0.5">
+                                  {asset.detectedSpecs?.audioFormat || fileExt.toUpperCase()}
+                                </span>
+                              </div>
+                            );
+                          }
+                          
+                          // Video files
+                          if (asset.detectedSpecs?.isVideoAsset || fileType.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(fileExt)) {
+                            return (
+                              <div className="w-12 h-12 rounded border bg-blue-50 flex flex-col items-center justify-center">
+                                <FileText className="h-5 w-5 text-blue-600" />
+                                <span className="text-[8px] text-blue-700 font-medium mt-0.5">
+                                  {asset.detectedSpecs?.videoFormat || fileExt.toUpperCase()}
+                                </span>
+                              </div>
+                            );
+                          }
+                          
+                          // PDF files
+                          if (fileType === 'application/pdf' || fileExt === 'pdf') {
+                            return (
+                              <div className="w-12 h-12 rounded border bg-red-50 flex flex-col items-center justify-center">
+                                <FileText className="h-5 w-5 text-red-600" />
+                                <span className="text-[8px] text-red-700 font-medium mt-0.5">
+                                  PDF
+                                </span>
+                              </div>
+                            );
+                          }
+                          
+                          // Images - show actual preview
+                          if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExt)) {
+                            if (asset.previewUrl) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewAsset({ 
+                                    url: asset.previewUrl!, 
+                                    fileName: asset.file?.name || asset.fileName || 'Asset' 
+                                  })}
+                                  className="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+                                >
+                                  <img 
+                                    src={asset.previewUrl} 
+                                    alt={asset.fileName || 'Asset preview'}
+                                    className="w-12 h-12 object-contain rounded border bg-muted"
+                                    onError={(e) => {
+                                      // If image fails to load, show icon instead
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const parent = target.parentElement;
+                                      if (parent) {
+                                        parent.innerHTML = `<div class="w-12 h-12 rounded border bg-muted flex items-center justify-center"><svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>`;
+                                      }
+                                    }}
+                                  />
+                                </button>
+                              );
+                            }
+                          }
+                          
+                          // Default fallback - generic file icon
+                          return (
+                            <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center">
+                              <FileImage className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <span className="font-medium text-sm">
@@ -3154,6 +3410,43 @@ export function CreativeAssetsManager({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {/* Preview option */}
+                            {(asset.uploadedUrl || asset.previewUrl) && (
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  const url = asset.uploadedUrl || asset.previewUrl;
+                                  if (url) {
+                                    window.open(url, '_blank');
+                                  }
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Preview file
+                              </DropdownMenuItem>
+                            )}
+                            
+                            {/* Download option */}
+                            {(asset.uploadedUrl || asset.previewUrl) && (
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  const url = asset.uploadedUrl || asset.previewUrl;
+                                  const fileName = asset.file?.name || asset.fileName || 'download';
+                                  if (url) {
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = fileName;
+                                    link.target = '_blank';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                  }
+                                }}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Download file
+                              </DropdownMenuItem>
+                            )}
+                            
                             <DropdownMenuItem 
                               onClick={() => handleReplaceAssetClick(specGroupId)}
                             >

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { PricingAnalytics, ChannelPricingAnalytics } from '@/hooks/useDashboardStats';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
-import { Loader2, TrendingUp, AlertCircle, Info, Star, ThumbsUp, AlertTriangle, CheckCircle, ArrowUp, BarChart3 } from 'lucide-react';
+import { Loader2, TrendingUp, AlertCircle, Info, Star, ThumbsUp, AlertTriangle, CheckCircle, ArrowUp, BarChart3, DollarSign } from 'lucide-react';
 import { assessPricing, getSuggestedPrice } from '@/utils/pricingBenchmarks';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
@@ -833,6 +833,32 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
             );
           })()}
         </>
+      )}
+
+      {/* No Inventory Message */}
+      {detailedInventory.length === 0 && publications.length > 0 && (
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
+                <DollarSign className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No Hub Pricing Configured</h3>
+              <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                {publications.length} publication{publications.length !== 1 ? 's' : ''} found, but no inventory has pricing enabled for this hub.
+              </p>
+              <div className="bg-muted/50 rounded-lg p-4 text-left max-w-md mx-auto">
+                <p className="text-sm font-medium text-foreground mb-2">To configure pricing:</p>
+                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>Go to the <span className="font-medium">Inventory Manager</span></li>
+                  <li>Select a publication to edit</li>
+                  <li>Enable hub pricing on each ad unit you want to offer</li>
+                  <li>Set the price and mark as available</li>
+                </ol>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Pricing Analytics Modal */}

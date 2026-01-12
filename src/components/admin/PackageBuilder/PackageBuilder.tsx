@@ -432,6 +432,27 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                   
                   {publications.length > 0 ? (
                     <>
+                      {/* Check if any publications have inventory */}
+                      {publications.every(pub => (pub.inventory || []).length === 0) ? (
+                        <div className="text-center py-8 px-4">
+                          <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
+                            <DollarSign className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-foreground mb-2">No Inventory with Hub Pricing</h3>
+                          <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                            {publications.length} publication{publications.length !== 1 ? 's' : ''} found, but none have pricing configured for this hub.
+                          </p>
+                          <div className="bg-muted/50 rounded-lg p-4 text-left max-w-md mx-auto">
+                            <p className="text-sm font-medium text-foreground mb-2">To add inventory:</p>
+                            <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                              <li>Go to <span className="font-medium">Inventory Manager</span></li>
+                              <li>Select a publication</li>
+                              <li>Enable pricing for this hub on each ad unit</li>
+                            </ol>
+                          </div>
+                        </div>
+                      ) : (
+                      <>
                       {/* Select All */}
                       <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/20">
                         <label className="flex items-center space-x-3 cursor-pointer">
@@ -527,8 +548,8 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                             <Separator className="mb-4" />
                             {(pub.inventory || []).length === 0 ? (
                               <div className="text-center py-6 text-muted-foreground">
-                                <p>No inventory available for the selected channels.</p>
-                                <p className="text-xs mt-2">Try selecting different channels to see more inventory.</p>
+                                <p>No inventory with hub pricing for the selected channels.</p>
+                                <p className="text-xs mt-2">Configure pricing in the Inventory Manager to include this publication.</p>
                               </div>
                             ) : (
                               <div className="space-y-4">
@@ -688,6 +709,8 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                           );
                         })}
                       </div>
+                    </>
+                      )}
                     </>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
