@@ -135,11 +135,13 @@ export class PackageBuilderService {
 
   /**
    * Extract inventory items from a publication with frequency constraints
+   * @param hubId - The hub ID to filter pricing for (required for hub-specific pricing)
    */
   extractInventoryFromPublication(
     publication: PublicationData,
     channelFilters: string[],
-    frequencyStrategy: 'standard' | 'reduced' | 'minimum' | 'custom'
+    frequencyStrategy: 'standard' | 'reduced' | 'minimum' | 'custom',
+    hubId?: string
   ): InventoryItemWithConstraints[] {
     const items: InventoryItemWithConstraints[] = [];
     const channels = publication.distributionChannels;
@@ -262,6 +264,17 @@ export class PackageBuilderService {
       return pricingData;
     };
 
+    // Helper to find hub pricing - filter by hubId if provided, otherwise find any available
+    const findHubPricing = (ad: any) => {
+      if (!ad.hubPricing) return null;
+      if (hubId) {
+        // Filter by specific hub
+        return ad.hubPricing.find((hp: any) => hp.hubId === hubId && hp.available);
+      }
+      // Fallback: find any available
+      return ad.hubPricing.find((hp: any) => hp.available);
+    };
+
     // Extract website inventory
     if (channels.website?.advertisingOpportunities) {
       const websiteMetrics = {
@@ -271,7 +284,7 @@ export class PackageBuilderService {
       };
       
       channels.website.advertisingOpportunities.forEach((ad: any, idx: number) => {
-        const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+        const hubPricing = findHubPricing(ad);
         if (hubPricing?.pricing) {
           const pricing = selectBestPricingTier(hubPricing.pricing);
           
@@ -301,7 +314,7 @@ export class PackageBuilderService {
         };
         
         newsletter.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
-          const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+          const hubPricing = findHubPricing(ad);
           if (hubPricing?.pricing) {
             const pricing = selectBestPricingTier(hubPricing.pricing);
             
@@ -341,7 +354,7 @@ export class PackageBuilderService {
         };
         
         printPub.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
-          const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+          const hubPricing = findHubPricing(ad);
           if (hubPricing?.pricing) {
             const pricing = selectBestPricingTier(hubPricing.pricing);
             
@@ -376,7 +389,7 @@ export class PackageBuilderService {
         };
         
         social.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
-          const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+          const hubPricing = findHubPricing(ad);
           if (hubPricing?.pricing) {
             const pricing = selectBestPricingTier(hubPricing.pricing);
             
@@ -411,7 +424,7 @@ export class PackageBuilderService {
         };
         
         podcast.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
-          const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+          const hubPricing = findHubPricing(ad);
           if (hubPricing?.pricing) {
             const pricing = selectBestPricingTier(hubPricing.pricing);
             
@@ -454,7 +467,7 @@ export class PackageBuilderService {
             };
             
             show.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
-              const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+              const hubPricing = findHubPricing(ad);
               if (hubPricing?.pricing) {
                 const pricing = selectBestPricingTier(hubPricing.pricing);
                 
@@ -481,7 +494,7 @@ export class PackageBuilderService {
         
         // Also handle station-level ads (if any)
         radio.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
-          const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+          const hubPricing = findHubPricing(ad);
           if (hubPricing?.pricing) {
             const pricing = selectBestPricingTier(hubPricing.pricing);
             
@@ -520,7 +533,7 @@ export class PackageBuilderService {
         };
         
         stream.advertisingOpportunities?.forEach((ad: any, adIdx: number) => {
-          const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+          const hubPricing = findHubPricing(ad);
           if (hubPricing?.pricing) {
             const pricing = selectBestPricingTier(hubPricing.pricing);
             
@@ -555,7 +568,7 @@ export class PackageBuilderService {
         };
         
         event.sponsorshipOpportunities?.forEach((sponsorship: any, sponsIdx: number) => {
-          const hubPricing = sponsorship.hubPricing?.find((hp: any) => hp.available);
+          const hubPricing = findHubPricing(sponsorship);
           if (hubPricing?.pricing) {
             const pricing = selectBestPricingTier(hubPricing.pricing);
             
@@ -606,7 +619,7 @@ export class PackageBuilderService {
     // Extract all inventory
     const allInventory: InventoryItemWithConstraints[] = [];
     for (const pub of publications) {
-      const items = this.extractInventoryFromPublication(pub, channels, frequencyStrategy);
+      const items = this.extractInventoryFromPublication(pub, channels, frequencyStrategy, hubId);
       allInventory.push(...items);
     }
 
@@ -728,7 +741,7 @@ export class PackageBuilderService {
     let totalCost = 0;
 
     for (const pub of selectedPubs) {
-      const items = this.extractInventoryFromPublication(pub, channels, frequencyStrategy);
+      const items = this.extractInventoryFromPublication(pub, channels, frequencyStrategy, hubId);
       
       if (items.length > 0) {
         // Use calculateItemCost for proper CPM/impression-based pricing

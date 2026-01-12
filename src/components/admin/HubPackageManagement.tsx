@@ -613,7 +613,7 @@ export const HubPackageManagement = () => {
       // Extract all inventory from all publications
       const allInventory: any[] = [];
       for (const pub of publications) {
-        const items = packageBuilderService.extractInventoryFromPublication(pub, allChannels, 'standard');
+        const items = packageBuilderService.extractInventoryFromPublication(pub, allChannels, 'standard', selectedHubId);
         items.forEach(item => {
           allInventory.push({
             publicationName: pub.basicInfo.publicationName,

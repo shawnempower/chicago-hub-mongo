@@ -147,7 +147,8 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
           const items = packageBuilderService.extractInventoryFromPublication(
             pub,
             selectedChannels,
-            'standard' // Using standard for display purposes
+            'standard', // Using standard for display purposes
+            selectedHubId || undefined
           );
 
                           const inventory: InventoryDisplay[] = items.map(item => ({
