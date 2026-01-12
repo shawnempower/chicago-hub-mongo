@@ -114,10 +114,10 @@ export const HubPackageManagement = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (filterStatus === 'active') params.append('active_only', 'true');
-      if (filterStatus === 'draft') params.append('approval_status', 'draft');
-      if (filterStatus === 'archived') params.append('approval_status', 'archived');
-      if (selectedHubId) params.append('hub_id', selectedHubId);
+      if (filterStatus === 'active') params.append('isActive', 'true');
+      if (filterStatus === 'draft') params.append('approvalStatus', 'draft');
+      if (filterStatus === 'archived') params.append('approvalStatus', 'archived');
+      if (selectedHubId) params.append('hubId', selectedHubId);
 
       const response = await fetch(`${API_BASE_URL}/hub-packages?${params}`, {
         headers: getAuthHeaders()
