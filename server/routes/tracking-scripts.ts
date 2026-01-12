@@ -31,10 +31,10 @@ router.use(authenticateToken);
 
 /**
  * Tracking CDN base URL - change this to your production CDN domain
- * The tracking endpoint should handle:
- * - /i.gif - Impression pixel (returns 1x1 transparent gif, logs impression)
- * - /c - Click redirect (logs click, redirects to destination)
- * - /a/* - Asset serving (serves creative images)
+ * The tracking endpoints:
+ * - /pxl.png - Impression pixel (static 1x1 PNG in S3, CloudFront logs capture parameters)
+ * - /c - Click redirect (Lambda@Edge logs click, redirects to landing page)
+ * - /a/* - Asset serving (serves creative images from S3)
  */
 // Ensure TRACKING_CDN_URL has https:// prefix
 function getTrackingCdnBaseUrl(): string {
@@ -630,9 +630,9 @@ router.get('/config', async (req: any, res: Response) => {
   res.json({
     cdnBaseUrl: TRACKING_CDN_BASE_URL,
     endpoints: {
-      impression: '/i.gif',
-      click: '/c',
-      asset: '/a/'
+      impression: '/pxl.png',  // Static pixel file in S3
+      click: '/c',              // Lambda@Edge redirect
+      asset: '/a/'              // Creative assets in S3
     },
     parameters: {
       cr: 'creative_id',

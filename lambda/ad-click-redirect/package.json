@@ -1,7 +1,7 @@
 {
-  "name": "empowerlocal-tracking-edge",
+  "name": "ad-click-redirect",
   "version": "1.0.0",
-  "description": "Lambda@Edge function for CloudFront ad tracking - click redirects and impression pixels",
+  "description": "Lambda@Edge function for ad click tracking via server-side redirects",
   "main": "index.js",
   "scripts": {
     "test": "node test.js",
@@ -13,7 +13,9 @@
     "edge",
     "cloudfront",
     "tracking",
-    "advertising"
+    "advertising",
+    "redirect",
+    "analytics"
   ],
   "author": "EmpowerLocal",
   "license": "UNLICENSED",

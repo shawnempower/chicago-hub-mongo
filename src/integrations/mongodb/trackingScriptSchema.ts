@@ -326,9 +326,10 @@ export function generateNewsletterTextTag(
  * @returns Complete tracking URL with all parameters
  * 
  * URL Structure:
- * - Impressions: /pxl.png?oid=...&cid=...&pid=...&ch=...&t=display&cb=CACHE_BUSTER
- * - Clicks: /c?oid=...&cid=...&pid=...&ch=...&t=click&r={encodedLandingUrl}
- * - Viewability: /v (POST with JSON body)
+ * - Impressions: /pxl.png?oid=...&cid=...&pid=...&ch=...&t=display&cb=CACHE_BUSTER (static S3 file)
+ * - Clicks: /c?oid=...&cid=...&pid=...&ch=...&t=click&r={encodedLandingUrl} (Lambda@Edge redirect)
+ * 
+ * CloudFront Access Logs capture all request parameters automatically for both clicks and impressions.
  */
 export function buildTrackingUrl(
   baseUrl: string,
@@ -350,9 +351,9 @@ export function buildTrackingUrl(
   let path = pixelPath;
   if (eventType === 'click') {
     path = '/c';  // Click redirect endpoint
-  } else if (eventType === 'view' || eventType === 'display') {
-    path = '/v';  // Impression/view pixel endpoint
   }
+  // For impressions/views, use the provided pixelPath (e.g., '/pxl.png')
+  // This matches the static file in S3, and CloudFront Access Logs capture all parameters
   
   const url = new URL(`${baseUrl}${path}`);
   
