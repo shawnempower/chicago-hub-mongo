@@ -152,6 +152,17 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
 
   // Extract detailed inventory items from publications
   const detailedInventory = useMemo(() => {
+    // Helper to find hub pricing - filter by selectedHubId if available
+    const findHubPricing = (ad: any) => {
+      if (!ad.hubPricing) return null;
+      if (selectedHubId) {
+        // Filter by specific hub
+        return ad.hubPricing.find((hp: any) => hp.hubId === selectedHubId && hp.available);
+      }
+      // Fallback: find any available
+      return ad.hubPricing.find((hp: any) => hp.available);
+    };
+
     const items: InventoryItem[] = [];
     
     publications.forEach(pub => {
@@ -162,7 +173,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
       // Website
       if (dc.website?.advertisingOpportunities) {
         dc.website.advertisingOpportunities.forEach((ad: any) => {
-          const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+          const hubPricing = findHubPricing(ad);
           if (hubPricing?.pricing) {
             const pricing = Array.isArray(hubPricing.pricing) ? hubPricing.pricing[0] : hubPricing.pricing;
             const rawPricingModel = pricing.pricingModel || 'flat';
@@ -216,7 +227,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
         dc.newsletters.forEach((newsletter: any) => {
           const audience = newsletter.subscribers || 0;
           newsletter.advertisingOpportunities?.forEach((ad: any) => {
-            const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+            const hubPricing = findHubPricing(ad);
             if (hubPricing?.pricing) {
               const pricing = Array.isArray(hubPricing.pricing) ? hubPricing.pricing[0] : hubPricing.pricing;
               const rawPricingModel = pricing.pricingModel || 'per_send';
@@ -265,7 +276,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
         printPubs.forEach((printPub: any) => {
           const audience = printPub.circulation || 0;
           printPub.advertisingOpportunities?.forEach((ad: any) => {
-            const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+            const hubPricing = findHubPricing(ad);
             if (hubPricing?.pricing) {
               const pricing = Array.isArray(hubPricing.pricing) ? hubPricing.pricing[0] : hubPricing.pricing;
               const rawPricingModel = pricing.pricingModel || 'per_ad';
@@ -295,7 +306,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
         dc.podcasts.forEach((podcast: any) => {
           const audience = podcast.averageListeners || podcast.listeners || 0;
           podcast.advertisingOpportunities?.forEach((ad: any) => {
-            const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+            const hubPricing = findHubPricing(ad);
             if (hubPricing?.pricing) {
               const pricing = Array.isArray(hubPricing.pricing) ? hubPricing.pricing[0] : hubPricing.pricing;
               const rawPricingModel = pricing.pricingModel || 'per_episode';
@@ -325,7 +336,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
         dc.radioStations.forEach((station: any) => {
           const audience = station.listeners || 0;
           station.advertisingOpportunities?.forEach((ad: any) => {
-            const hubPricing = ad.hubPricing?.find((hp: any) => hp.available);
+            const hubPricing = findHubPricing(ad);
             if (hubPricing?.pricing) {
               const pricing = Array.isArray(hubPricing.pricing) ? hubPricing.pricing[0] : hubPricing.pricing;
               const rawPricingModel = pricing.pricingModel || 'per_spot';
@@ -352,7 +363,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
     });
 
     return items;
-  }, [publications]);
+  }, [publications, selectedHubId]);
 
   // Get channel data
   const channelData = useMemo(() => {
