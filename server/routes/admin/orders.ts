@@ -33,12 +33,13 @@ router.use(async (req: any, res: Response, next: Function) => {
  */
 router.get('/', async (req: any, res: Response) => {
   try {
-    const { status, publicationId, campaignId, dateFrom, dateTo } = req.query;
+    const { status, publicationId, campaignId, hubId, dateFrom, dateTo } = req.query;
 
     const filters: any = {};
     if (status) filters.status = status;
     if (publicationId) filters.publicationId = parseInt(publicationId as string);
     if (campaignId) filters.campaignId = campaignId;
+    if (hubId) filters.hubId = hubId;
     if (dateFrom) filters.dateFrom = new Date(dateFrom as string);
     if (dateTo) filters.dateTo = new Date(dateTo as string);
 
@@ -57,11 +58,12 @@ router.get('/', async (req: any, res: Response) => {
  */
 router.get('/stats', async (req: any, res: Response) => {
   try {
-    const { publicationId, campaignId } = req.query;
+    const { publicationId, campaignId, hubId } = req.query;
 
     const filters: any = {};
     if (publicationId) filters.publicationId = parseInt(publicationId as string);
     if (campaignId) filters.campaignId = campaignId;
+    if (hubId) filters.hubId = hubId;
 
     const stats = await insertionOrderService.getOrderStatistics(filters);
 

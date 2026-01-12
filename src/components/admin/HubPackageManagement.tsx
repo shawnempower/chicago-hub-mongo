@@ -105,10 +105,10 @@ export const HubPackageManagement = () => {
   
   // Sync local hub ID with context when context changes
   useEffect(() => {
-    if (contextHubId && !localHubId) {
+    if (contextHubId) {
       setLocalHubId(contextHubId);
     }
-  }, [contextHubId, localHubId]);
+  }, [contextHubId]);
 
   const fetchPackages = useCallback(async () => {
     try {

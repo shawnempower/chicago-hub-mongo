@@ -98,7 +98,7 @@ export function HubOrdersManagement() {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [selectedHubId]);
 
   useEffect(() => {
     if (issuePopoverOpen) {
@@ -111,7 +111,13 @@ export function HubOrdersManagement() {
       setLoading(true);
       const token = localStorage.getItem('auth_token');
 
-      const response = await fetch(`${API_BASE_URL}/admin/orders`, {
+      // Build URL with hubId filter if a hub is selected
+      const url = new URL(`${API_BASE_URL}/admin/orders`, window.location.origin);
+      if (selectedHubId) {
+        url.searchParams.set('hubId', selectedHubId);
+      }
+
+      const response = await fetch(url.toString(), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
