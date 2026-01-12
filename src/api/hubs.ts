@@ -200,7 +200,7 @@ class HubsAPI {
    * Remove publication from hub (admin only)
    */
   async removePublicationFromHub(publicationId: string, hubId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/publications/${publicationId}/hubs/${hubId}`, {
+    const response = await fetch(`${this.baseUrl}/${hubId}/publications/${publicationId}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
       credentials: 'include',
@@ -208,7 +208,7 @@ class HubsAPI {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'Failed to remove publication from hub');
+      throw new Error(error.error || error.message || 'Failed to remove publication from hub');
     }
   }
 

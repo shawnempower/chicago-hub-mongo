@@ -120,7 +120,7 @@ router.get('/:id/stats', async (req, res) => {
   try {
     const { id } = req.params;
     const stats = await HubsService.getHubStats(id);
-    res.json(stats);
+    res.json({ stats });
   } catch (error) {
     console.error('Error fetching hub stats:', error);
     res.status(500).json({ error: 'Failed to fetch hub statistics' });
@@ -179,7 +179,7 @@ router.delete('/:hubId/publications/:publicationId', authenticateToken, async (r
     }
     
     const { hubId, publicationId } = req.params;
-    await HubsService.removePublicationFromHub(hubId, publicationId);
+    await HubsService.removePublicationFromHub(publicationId, hubId);
     res.json({ success: true });
   } catch (error) {
     console.error('Error removing publication from hub:', error);
