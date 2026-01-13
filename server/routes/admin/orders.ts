@@ -13,17 +13,26 @@ import { COLLECTIONS } from '../../../src/integrations/mongodb/schemas';
 
 const router = Router();
 
-// All routes require authentication and admin access
+// All routes require authentication
+// Hub users can access orders for campaigns in their assigned hubs
 router.use(authenticateToken);
 router.use(async (req: any, res: Response, next: Function) => {
   try {
-    const userProfile = await userProfilesService.getByUserId(req.user.id);
-    if (!userProfile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    // Store these on the request for use in route handlers
+    req.isAdmin = isAdmin;
+    req.assignedHubIds = assignedHubIds;
+    
+    // Allow if admin or has hub assignments
+    if (isAdmin || assignedHubIds.length > 0) {
+      return next();
     }
-    next();
+    
+    return res.status(403).json({ error: 'Access denied. Admin or hub user access required.' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to verify admin access' });
+    res.status(500).json({ error: 'Failed to verify access' });
   }
 });
 
@@ -42,6 +51,11 @@ router.get('/', async (req: any, res: Response) => {
     if (hubId) filters.hubId = hubId;
     if (dateFrom) filters.dateFrom = new Date(dateFrom as string);
     if (dateTo) filters.dateTo = new Date(dateTo as string);
+    
+    // For non-admins, restrict to orders from their assigned hubs
+    if (!req.isAdmin && req.assignedHubIds.length > 0) {
+      filters.hubIds = req.assignedHubIds;
+    }
 
     const orders = await insertionOrderService.getAllOrders(filters);
 
@@ -214,6 +228,26 @@ router.post('/generate/:campaignId', async (req: any, res: Response) => {
   try {
     const userId = req.user.id;
     const { campaignId } = req.params;
+    
+    // Get the campaign to check hub access for non-admins
+    const db = getDatabase();
+    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
+    
+    const campaign = await campaignsCollection.findOne({ 
+      $or: [{ campaignId }, { _id: campaignId }] 
+    });
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // For non-admins, verify they have access to this campaign's hub
+    if (!req.isAdmin) {
+      const campaignHubId = campaign.hubId || campaign.hubInfo?.hubId;
+      if (!campaignHubId || !req.assignedHubIds.includes(campaignHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to generate orders for this campaign' });
+      }
+    }
 
     const result = await insertionOrderService.generateOrdersForCampaign(
       campaignId,
@@ -226,8 +260,6 @@ router.post('/generate/:campaignId', async (req: any, res: Response) => {
 
     // Auto-activate campaign when orders are generated
     // Orders generated = campaign is committed and live
-    const db = getDatabase();
-    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
     
     await campaignsCollection.updateOne(
       { campaignId },
@@ -259,6 +291,24 @@ router.post('/generate/:campaignId', async (req: any, res: Response) => {
 router.delete('/:campaignId/publication-orders', async (req: any, res: Response) => {
   try {
     const { campaignId } = req.params;
+    
+    // For non-admins, verify they have access to this campaign's hub
+    if (!req.isAdmin) {
+      const db = getDatabase();
+      const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
+      const campaign = await campaignsCollection.findOne({ 
+        $or: [{ campaignId }, { _id: campaignId }] 
+      });
+      
+      if (!campaign) {
+        return res.status(404).json({ error: 'Campaign not found' });
+      }
+      
+      const campaignHubId = campaign.hubId || campaign.hubInfo?.hubId;
+      if (!campaignHubId || !req.assignedHubIds.includes(campaignHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to delete orders for this campaign' });
+      }
+    }
 
     const result = await insertionOrderService.deleteOrdersForCampaign(campaignId);
 

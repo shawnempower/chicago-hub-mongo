@@ -619,8 +619,8 @@ export default function CampaignDetail() {
               <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4 gap-0">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="creative-requirements">Creative Requirements</TabsTrigger>
               <TabsTrigger value="insertion-order">Insertion Order</TabsTrigger>
+              <TabsTrigger value="creative-requirements">Creative Requirements</TabsTrigger>
               <TabsTrigger value="performance" className="flex items-center gap-1">
                 <BarChart3 className="h-4 w-4" />
                 Performance
