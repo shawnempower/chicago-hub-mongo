@@ -32,10 +32,6 @@ const router = Router();
 // Analyze inventory for package building (budget-first or specification-first)
 router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { 
       hubId, 
       mode, 
@@ -46,6 +42,19 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
       publications: publicationIds, 
       frequencyStrategy 
     } = req.body;
+    
+    // Check if user has permission to analyze packages for this hub
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    if (!isAdmin) {
+      if (!hubId) {
+        return res.status(400).json({ error: 'Hub ID is required' });
+      }
+      if (!assignedHubIds.includes(hubId)) {
+        return res.status(403).json({ error: 'You do not have permission to build packages for this hub' });
+      }
+    }
 
     if (!hubId || !mode || !duration || !channels) {
       return res.status(400).json({ 
@@ -757,15 +766,22 @@ router.put('/packages/:id', authenticateToken, async (req: any, res: Response) =
 // Duplicate a package
 router.post('/packages/:id/duplicate', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { id } = req.params;
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
     const originalPackage = await hubPackagesService.getById(id);
     
     if (!originalPackage) {
       return res.status(404).json({ error: 'Package not found' });
+    }
+    
+    // For non-admins, verify they have access to this package's hub
+    if (!isAdmin) {
+      const packageHubId = originalPackage.hubInfo?.hubId;
+      if (!packageHubId || !assignedHubIds.includes(packageHubId)) {
+        return res.status(403).json({ error: 'You do not have permission to duplicate packages for this hub' });
+      }
     }
 
     // Create a copy with modified fields - PRESERVE metadata (especially builderInfo)
@@ -1111,10 +1127,6 @@ router.get('/packages/health-summary', authenticateToken, async (req: any, res: 
  */
 router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { 
       hubId, 
       currentPublications, // Current package state with exclusions/frequencies
@@ -1125,6 +1137,14 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
       return res.status(400).json({ 
         error: 'Missing required fields: hubId, currentPublications, filters' 
       });
+    }
+    
+    // Check if user has permission to refresh packages for this hub
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    if (!isAdmin && !assignedHubIds.includes(hubId)) {
+      return res.status(403).json({ error: 'You do not have permission to refresh packages for this hub' });
     }
 
     // Get publications collection
@@ -1614,10 +1634,6 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
  */
 router.post('/new-publications', authenticateToken, async (req: any, res: Response) => {
   try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const { 
       hubId, 
       currentPublicationIds, // Array of publication IDs already in the package
@@ -1628,6 +1644,14 @@ router.post('/new-publications', authenticateToken, async (req: any, res: Respon
       return res.status(400).json({ 
         error: 'Missing required fields: hubId, currentPublicationIds, filters' 
       });
+    }
+    
+    // Check if user has permission to find publications for this hub
+    const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
+    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+    
+    if (!isAdmin && !assignedHubIds.includes(hubId)) {
+      return res.status(403).json({ error: 'You do not have permission to access publications for this hub' });
     }
 
     const existingIds = new Set(currentPublicationIds);
