@@ -315,13 +315,14 @@ export class InsertionOrderService {
   }
 
   /**
-   * Get all insertion orders (for admin)
+   * Get all insertion orders (for admin or hub users)
    */
   async getAllOrders(filters?: {
     status?: InsertionOrderStatus;
     publicationId?: number;
     campaignId?: string;
     hubId?: string;
+    hubIds?: string[]; // For hub users - filter to their assigned hubs
     dateFrom?: Date;
     dateTo?: Date;
   }): Promise<PublicationInsertionOrderWithCampaign[]> {
@@ -341,6 +342,10 @@ export class InsertionOrderService {
       }
       if (filters?.hubId) {
         query.hubId = filters.hubId;
+      }
+      // Support filtering by multiple hub IDs (for hub users)
+      if (filters?.hubIds && filters.hubIds.length > 0) {
+        query.hubId = { $in: filters.hubIds };
       }
       if (filters?.dateFrom) {
         query.generatedAt = { ...query.generatedAt, $gte: filters.dateFrom };

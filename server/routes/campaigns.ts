@@ -8,6 +8,28 @@ import multer from 'multer';
 
 const router = Router();
 
+// Helper to check if user can access a campaign
+const canAccessCampaign = (user: any, campaign: any, profile: any): boolean => {
+  // Admin can access all
+  if (profile?.isAdmin || user.isAdmin === true || user.role === 'admin') {
+    return true;
+  }
+  
+  // Creator can access their own campaigns
+  if (campaign.metadata?.createdBy === user.id) {
+    return true;
+  }
+  
+  // Hub users can access campaigns in their assigned hubs
+  const assignedHubIds = user.permissions?.assignedHubIds || [];
+  const campaignHubId = campaign.hubId || campaign.hubInfo?.hubId;
+  if (campaignHubId && assignedHubIds.includes(campaignHubId)) {
+    return true;
+  }
+  
+  return false;
+};
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -198,14 +220,14 @@ router.put('/:id', authenticateToken, async (req: any, res: Response) => {
     const { id } = req.params;
     const updates = req.body;
     
-    // Check if user has access (admin or creator)
+    // Check if user has access (admin, creator, or hub user)
     const campaign = await campaignsService.getById(id);
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
     const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin && campaign.metadata.createdBy !== req.user.id) {
+    if (!canAccessCampaign(req.user, campaign, profile)) {
       return res.status(403).json({ error: 'Access denied' });
     }
     
@@ -235,8 +257,7 @@ router.patch('/:id/status', authenticateToken, async (req: any, res: Response) =
     }
     
     const profile = await userProfilesService.getByUserId(req.user.id);
-    const isAdmin = profile?.isAdmin;
-    const isCreator = campaign.metadata.createdBy === req.user.id;
+    const isAdmin = profile?.isAdmin || req.user.isAdmin === true || req.user.role === 'admin';
     
     // Valid status transitions - campaigns auto-activate when orders are generated
     // Manual status changes still allowed (e.g., pause, complete, cancel)
@@ -252,7 +273,7 @@ router.patch('/:id/status', authenticateToken, async (req: any, res: Response) =
       return res.status(403).json({ error: 'Only admins can set legacy approval statuses' });
     }
     
-    if (!isAdmin && !isCreator) {
+    if (!canAccessCampaign(req.user, campaign, profile)) {
       return res.status(403).json({ error: 'Access denied' });
     }
     
@@ -272,14 +293,14 @@ router.post('/:id/insertion-order', authenticateToken, async (req: any, res: Res
     const { id } = req.params;
     const { format = 'html' } = req.body;
     
-    // Check if user has access
+    // Check if user has access (admin, creator, or hub user)
     const campaign = await campaignsService.getById(id);
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
     const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin && campaign.metadata.createdBy !== req.user.id) {
+    if (!canAccessCampaign(req.user, campaign, profile)) {
       return res.status(403).json({ error: 'Access denied' });
     }
     
@@ -315,14 +336,14 @@ router.post('/:id/publication-insertion-orders', authenticateToken, async (req: 
     const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     const { id } = req.params;
     
-    // Check if user has access
+    // Check if user has access (admin, creator, or hub user)
     const campaign = await campaignsService.getById(id);
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
     const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin && campaign.metadata.createdBy !== req.user.id) {
+    if (!canAccessCampaign(req.user, campaign, profile)) {
       return res.status(403).json({ error: 'Access denied' });
     }
     
@@ -416,14 +437,14 @@ router.get('/:id/publication-insertion-orders/:publicationId', authenticateToken
     const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     const { id, publicationId } = req.params;
     
-    // Check if user has access
+    // Check if user has access (admin, creator, or hub user)
     const campaign = await campaignsService.getById(id);
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
     const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin && campaign.metadata.createdBy !== req.user.id) {
+    if (!canAccessCampaign(req.user, campaign, profile)) {
       return res.status(403).json({ error: 'Access denied' });
     }
     
@@ -453,14 +474,14 @@ router.delete('/:id', authenticateToken, async (req: any, res: Response) => {
     const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
     const { id } = req.params;
     
-    // Check if user has access
+    // Check if user has access (admin, creator, or hub user)
     const campaign = await campaignsService.getById(id);
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
     const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin && campaign.metadata.createdBy !== req.user.id) {
+    if (!canAccessCampaign(req.user, campaign, profile)) {
       return res.status(403).json({ error: 'Access denied' });
     }
     
