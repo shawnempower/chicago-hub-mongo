@@ -17,10 +17,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Hub, HubInsert, HubUpdate, validateHubId } from '@/integrations/mongodb/hubSchema';
+import { Hub, HubInsert, HubUpdate, HubAdvertisingTerms, validateHubId } from '@/integrations/mongodb/hubSchema';
 import { hubsApi } from '@/api/hubs';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileText } from 'lucide-react';
 
 interface HubFormProps {
   hub?: Hub | null;
@@ -41,6 +41,15 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
     region: '',
     primaryCity: '',
     state: '',
+    // Advertising Terms
+    leadTime: '',
+    materialDeadline: '',
+    paymentTerms: '',
+    cancellationPolicy: '',
+    agencyCommission: '',
+    modificationPolicy: '',
+    legalDisclaimer: '',
+    customTerms: '',
   });
 
   useEffect(() => {
@@ -56,6 +65,15 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
         region: hub.geography?.region || '',
         primaryCity: hub.geography?.primaryCity || '',
         state: hub.geography?.state || '',
+        // Advertising Terms
+        leadTime: hub.advertisingTerms?.standardTerms?.leadTime || '',
+        materialDeadline: hub.advertisingTerms?.standardTerms?.materialDeadline || '',
+        paymentTerms: hub.advertisingTerms?.standardTerms?.paymentTerms || '',
+        cancellationPolicy: hub.advertisingTerms?.standardTerms?.cancellationPolicy || '',
+        agencyCommission: hub.advertisingTerms?.standardTerms?.agencyCommission || '',
+        modificationPolicy: hub.advertisingTerms?.standardTerms?.modificationPolicy || '',
+        legalDisclaimer: hub.advertisingTerms?.legalDisclaimer || '',
+        customTerms: hub.advertisingTerms?.customTerms || '',
       });
     }
   }, [hub]);
@@ -72,6 +90,24 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
     setLoading(true);
 
     try {
+      // Build advertising terms object only if any terms are set
+      const hasAdvertisingTerms = formData.leadTime || formData.materialDeadline || 
+        formData.paymentTerms || formData.cancellationPolicy || formData.agencyCommission || 
+        formData.modificationPolicy || formData.legalDisclaimer || formData.customTerms;
+      
+      const advertisingTerms: HubAdvertisingTerms | undefined = hasAdvertisingTerms ? {
+        standardTerms: {
+          leadTime: formData.leadTime || undefined,
+          materialDeadline: formData.materialDeadline || undefined,
+          paymentTerms: formData.paymentTerms || undefined,
+          cancellationPolicy: formData.cancellationPolicy || undefined,
+          agencyCommission: formData.agencyCommission || undefined,
+          modificationPolicy: formData.modificationPolicy || undefined,
+        },
+        legalDisclaimer: formData.legalDisclaimer || undefined,
+        customTerms: formData.customTerms || undefined,
+      } : undefined;
+
       const hubData: HubInsert | Partial<HubUpdate> = {
         hubId: formData.hubId,
         basicInfo: {
@@ -89,6 +125,7 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
           primaryCity: formData.primaryCity || undefined,
           state: formData.state || undefined,
         } : undefined,
+        advertisingTerms,
       };
 
       if (hub) {
@@ -275,6 +312,127 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
                 placeholder="Illinois"
               />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Advertising Terms & Conditions
+          </CardTitle>
+          <CardDescription>
+            Standard terms that apply to all insertion orders sent to publications from this hub
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="leadTime">Lead Time</Label>
+              <Input
+                id="leadTime"
+                value={formData.leadTime}
+                onChange={(e) => setFormData({ ...formData, leadTime: e.target.value })}
+                placeholder="e.g., 10 business days"
+              />
+              <p className="text-xs text-muted-foreground">
+                Time required before campaign start
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="materialDeadline">Material Deadline</Label>
+              <Input
+                id="materialDeadline"
+                value={formData.materialDeadline}
+                onChange={(e) => setFormData({ ...formData, materialDeadline: e.target.value })}
+                placeholder="e.g., 5 business days before start"
+              />
+              <p className="text-xs text-muted-foreground">
+                When creative assets must be submitted
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="paymentTerms">Payment Terms</Label>
+              <Input
+                id="paymentTerms"
+                value={formData.paymentTerms}
+                onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
+                placeholder="e.g., Net 30"
+              />
+              <p className="text-xs text-muted-foreground">
+                Invoice payment timeline
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cancellationPolicy">Cancellation Policy</Label>
+              <Input
+                id="cancellationPolicy"
+                value={formData.cancellationPolicy}
+                onChange={(e) => setFormData({ ...formData, cancellationPolicy: e.target.value })}
+                placeholder="e.g., 10 business days notice required"
+              />
+              <p className="text-xs text-muted-foreground">
+                Notice required for cancellations
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agencyCommission">Agency Commission</Label>
+              <Input
+                id="agencyCommission"
+                value={formData.agencyCommission}
+                onChange={(e) => setFormData({ ...formData, agencyCommission: e.target.value })}
+                placeholder="e.g., 15% standard commission"
+              />
+              <p className="text-xs text-muted-foreground">
+                Commission for agency bookings
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="modificationPolicy">Modification Policy</Label>
+              <Input
+                id="modificationPolicy"
+                value={formData.modificationPolicy}
+                onChange={(e) => setFormData({ ...formData, modificationPolicy: e.target.value })}
+                placeholder="e.g., Changes require 5 business days notice"
+              />
+              <p className="text-xs text-muted-foreground">
+                Rules for campaign changes
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="legalDisclaimer">Legal Disclaimer</Label>
+            <Textarea
+              id="legalDisclaimer"
+              value={formData.legalDisclaimer}
+              onChange={(e) => setFormData({ ...formData, legalDisclaimer: e.target.value })}
+              placeholder="Boilerplate legal text that appears on all insertion orders..."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Standard legal language included on all orders
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="customTerms">Additional Custom Terms</Label>
+            <Textarea
+              id="customTerms"
+              value={formData.customTerms}
+              onChange={(e) => setFormData({ ...formData, customTerms: e.target.value })}
+              placeholder="Any additional terms specific to this hub..."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Any other terms or conditions for advertisers
+            </p>
           </div>
         </CardContent>
       </Card>

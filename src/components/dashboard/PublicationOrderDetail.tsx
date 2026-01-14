@@ -19,7 +19,8 @@ import {
   Calendar, DollarSign, Layers, MessageSquare, Download,
   ChevronDown, ChevronUp, ChevronRight, Clock, Package, RefreshCw,
   Eye, Users, Newspaper, Radio, Headphones, CalendarDays, Target,
-  Lock, XCircle, PlayCircle, Timer, Megaphone, MoreVertical
+  Lock, XCircle, PlayCircle, Timer, Megaphone, MoreVertical,
+  Globe, Mail, Tv
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
@@ -46,6 +47,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { PublicationInsertionOrderDocument } from '@/integrations/mongodb/insertionOrderSchema';
 import { TrackingScript } from '@/integrations/mongodb/trackingScriptSchema';
+import { HubAdvertisingTerms } from '@/integrations/mongodb/hubSchema';
 import { API_BASE_URL } from '@/config/api';
 import { getChannelConfig, isDigitalChannel } from '@/config/inventoryChannels';
 import { calculateItemCost } from '@/utils/inventoryPricing';
@@ -130,6 +132,9 @@ export function PublicationOrderDetail() {
   // Performance entries and proofs for workflow tracking
   const [performanceEntries, setPerformanceEntries] = useState<any[]>([]);
   const [proofs, setProofs] = useState<any[]>([]);
+  
+  // Hub advertising terms
+  const [hubTerms, setHubTerms] = useState<HubAdvertisingTerms | null>(null);
 
   useEffect(() => {
     if (campaignId && publicationId) {
@@ -158,6 +163,11 @@ export function PublicationOrderDetail() {
       if (!response.ok) throw new Error('Failed to fetch order');
       const data = await response.json();
       setOrder(data.order);
+      
+      // Set hub advertising terms if available
+      if (data.hubTerms) {
+        setHubTerms(data.hubTerms);
+      }
       
       if (data.order?.placementStatuses) {
         setPlacementStatuses(data.order.placementStatuses);
@@ -950,7 +960,7 @@ export function PublicationOrderDetail() {
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right text-sm">
-                <p className="font-semibold text-green-600">${publication?.publicationTotal?.toFixed(2) || '0.00'}</p>
+                <p className="font-semibold text-green-600">${(publication?.publicationTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <p className="text-xs text-muted-foreground">
                   {campaignData?.timeline?.startDate && campaignData?.timeline?.endDate 
                     ? `${new Date(campaignData.timeline.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(campaignData.timeline.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
@@ -961,17 +971,6 @@ export function PublicationOrderDetail() {
             </div>
           </div>
           
-          {/* Inline placement summary */}
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t text-sm">
-            <span className="text-muted-foreground">{totalPlacements} placement{totalPlacements !== 1 ? 's' : ''}</span>
-            <div className="flex items-center gap-2">
-              {acceptedCount > 0 && <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">{acceptedCount} accepted</Badge>}
-              {inProductionCount > 0 && <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">{inProductionCount} live</Badge>}
-              {deliveredCount > 0 && <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">{deliveredCount} delivered</Badge>}
-              {pendingCount > 0 && <Badge variant="outline" className="bg-yellow-50 text-yellow-700 text-xs">{pendingCount} pending</Badge>}
-              {rejectedCount > 0 && <Badge variant="outline" className="bg-red-50 text-red-700 text-xs">{rejectedCount} rejected</Badge>}
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -1060,261 +1059,207 @@ export function PublicationOrderDetail() {
         </TabsList>
 
         {/* OVERVIEW TAB */}
-        <TabsContent value="overview" className="mt-0 space-y-4">
-          {/* What's Next - Priority Action */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-sans flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                What's Next
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                // Determine the single most important next action
-                if (pendingCount > 0) {
-                  return (
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          <Eye className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-blue-900">Review {pendingCount} Placement{pendingCount !== 1 ? 's' : ''}</p>
-                          <p className="text-sm text-blue-700">Accept or reject to confirm this order</p>
-                        </div>
+        <TabsContent value="overview" className="mt-0">
+          {(() => {
+            // Calculate publication revenue from inventory
+            const pubData = campaignData?.selectedInventory?.publications?.find(
+              (p: any) => p.publicationId === order.publicationId
+            );
+            const publicationTotal = pubData?.publicationTotal || 0;
+            
+            // Calculate channel breakdown
+            const channelBreakdown: Record<string, { total: number; count: number }> = {};
+            (pubData?.inventoryItems || inventoryItems).forEach((item: any) => {
+              const channel = item.channel || 'other';
+              if (!channelBreakdown[channel]) {
+                channelBreakdown[channel] = { total: 0, count: 0 };
+              }
+              const itemTotal = item.itemPricing?.totalCost || item.itemPricing?.hubPrice || 0;
+              channelBreakdown[channel].total += itemTotal;
+              channelBreakdown[channel].count += 1;
+            });
+            
+            const startDate = campaignData?.timeline?.startDate ? new Date(campaignData.timeline.startDate) : null;
+            const endDate = campaignData?.timeline?.endDate ? new Date(campaignData.timeline.endDate) : null;
+            const durationWeeks = campaignData?.timeline?.durationWeeks;
+            
+            // Check if there's a pending action
+            const hasPendingAction = pendingCount > 0;
+            const liveWithoutPerf = inventoryItems.filter((item: any, idx: number) => {
+              const itemPath = item.itemPath || item.sourcePath || `placement-${idx}`;
+              const status = placementStatuses[itemPath];
+              const config = getChannelConfig(item.channel);
+              return !config.isDigital && ['in_production', 'delivered'].includes(status) && 
+                !performanceEntries.some(e => e.itemPath === itemPath);
+            });
+            
+            return (
+              <div className="space-y-6">
+                {/* Potential Earnings Card */}
+                <div className="rounded-xl border bg-gradient-to-r from-emerald-50 to-green-50 overflow-hidden">
+                  <div className="px-6 py-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-emerald-700 uppercase tracking-wider mb-1">Potential Earnings</p>
+                        <p className="text-3xl font-bold text-emerald-700">
+                          ${publicationTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
                       </div>
-                      <Button onClick={() => setActiveTab('placements')}>
-                        Review Now
-                      </Button>
-                    </div>
-                  );
-                }
-                
-                if (acceptedCount > 0 && inProductionCount === 0 && deliveredCount === 0) {
-                  return (
-                    <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                          <PlayCircle className="h-5 w-5 text-amber-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-amber-900">Ready to Go Live</p>
-                          <p className="text-sm text-amber-700">Mark placements as "In Production" when ads start running</p>
-                        </div>
+                      <div className="text-right">
+                        <p className="text-sm text-emerald-600">
+                          {inventoryItems.length} placement{inventoryItems.length !== 1 ? 's' : ''}
+                        </p>
+                        {Object.keys(channelBreakdown).length > 1 && (
+                          <p className="text-xs text-emerald-600/80">
+                            across {Object.keys(channelBreakdown).length} channels
+                          </p>
+                        )}
                       </div>
-                      <Button variant="outline" onClick={() => setActiveTab('placements')}>
-                        View Placements
-                      </Button>
-                    </div>
-                  );
-                }
-                
-                const liveWithoutPerf = inventoryItems.filter((item: any, idx: number) => {
-                  const itemPath = item.itemPath || item.sourcePath || `placement-${idx}`;
-                  const status = placementStatuses[itemPath];
-                  const config = getChannelConfig(item.channel);
-                  return !config.isDigital && ['in_production', 'delivered'].includes(status) && 
-                    !performanceEntries.some(e => e.itemPath === itemPath);
-                });
-                
-                if (liveWithoutPerf.length > 0) {
-                  return (
-                    <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                          <BarChart3 className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-purple-900">Report Your Results</p>
-                          <p className="text-sm text-purple-700">{liveWithoutPerf.length} placement{liveWithoutPerf.length !== 1 ? 's' : ''} need performance data</p>
-                        </div>
-                      </div>
-                      <Button variant="outline" onClick={() => setActiveTab('performance')}>
-                        Report Results
-                      </Button>
-                    </div>
-                  );
-                }
-                
-                if (inProductionCount > 0 || deliveredCount > 0) {
-                  return (
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                          <CheckCircle2 className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-green-900">You're All Set!</p>
-                          <p className="text-sm text-green-700">Campaign is running smoothly</p>
-                        </div>
-                      </div>
-                      <Button variant="outline" onClick={() => setActiveTab('performance')}>
-                        View Performance
-                      </Button>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                      <Clock className="h-5 w-5 text-gray-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Waiting for Campaign Setup</p>
-                      <p className="text-sm text-muted-foreground">The hub is preparing this order</p>
                     </div>
                   </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
+                </div>
 
-          {/* Placements Quick View */}
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-sans flex items-center gap-2">
-                  <Layers className="h-4 w-4" />
-                  Placements
-                </CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => setActiveTab('placements')}>
-                  View All
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {inventoryItems.slice(0, 5).map((item: any, idx: number) => {
-                  const itemPath = item.itemPath || item.sourcePath || `placement-${idx}`;
-                  const status = placementStatuses[itemPath] || 'pending';
-                  const config = getChannelConfig(item.channel);
-                  
-                  return (
-                    <div key={itemPath} className="flex items-center justify-between py-2 border-b last:border-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {config.icon === 'newspaper' && <Newspaper className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-                        {config.icon === 'radio' && <Radio className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-                        {config.icon === 'headphones' && <Headphones className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-                        {!['newspaper', 'radio', 'headphones'].includes(config.icon || '') && <Layers className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-                        <span className="truncate text-sm">{item.itemName || item.sourceName}</span>
+                {/* Action Banner - Only shows when there's something to do */}
+                {hasPendingAction && (
+                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <Eye className="h-5 w-5 text-blue-600" />
                       </div>
-                      <PlacementStatusBadge status={status} />
+                      <div>
+                        <p className="font-medium text-blue-900">Review {pendingCount} Placement{pendingCount !== 1 ? 's' : ''}</p>
+                        <p className="text-sm text-blue-700">Accept or reject to confirm this order</p>
+                      </div>
                     </div>
-                  );
-                })}
-                {inventoryItems.length > 5 && (
-                  <p className="text-xs text-muted-foreground text-center pt-2">
-                    + {inventoryItems.length - 5} more placements
-                  </p>
+                    <Button onClick={() => setActiveTab('placements')} className="bg-blue-600 hover:bg-blue-700">
+                      Review Now
+                    </Button>
+                  </div>
                 )}
+
+                {!hasPendingAction && liveWithoutPerf.length > 0 && (
+                  <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                        <BarChart3 className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-purple-900">Report Your Results</p>
+                        <p className="text-sm text-purple-700">{liveWithoutPerf.length} placement{liveWithoutPerf.length !== 1 ? 's' : ''} need performance data</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" onClick={() => setActiveTab('performance')} className="border-purple-300 text-purple-700 hover:bg-purple-100">
+                      Report Results
+                    </Button>
+                  </div>
+                )}
+
+
+                {/* Terms & Conditions - Legal Style */}
+                <div className="rounded-lg border-2 border-slate-300 bg-gradient-to-b from-slate-50 to-white overflow-hidden shadow-sm">
+                  {/* Header */}
+                  <div className="bg-slate-800 px-5 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-slate-700 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-slate-300" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-white tracking-wide">TERMS & CONDITIONS</h3>
+                        <p className="text-xs text-slate-400">Advertising Insertion Order Agreement</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-slate-400">Order #{order._id?.toString().slice(-8).toUpperCase()}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Terms Content */}
+                  <div className="p-5">
+                    {hubTerms?.standardTerms ? (
+                      <div className="space-y-4">
+                        {/* Terms List */}
+                        <div className="space-y-2 text-sm">
+                          {hubTerms.standardTerms.paymentTerms && (
+                            <p>
+                              <span className="font-semibold text-slate-800">Payment Terms:</span>
+                              <span className="text-slate-600 ml-1">{hubTerms.standardTerms.paymentTerms}</span>
+                            </p>
+                          )}
+                          {hubTerms.standardTerms.materialDeadline && (
+                            <p>
+                              <span className="font-semibold text-slate-800">Material Deadline:</span>
+                              <span className="text-slate-600 ml-1">{hubTerms.standardTerms.materialDeadline}</span>
+                            </p>
+                          )}
+                          {hubTerms.standardTerms.leadTime && (
+                            <p>
+                              <span className="font-semibold text-slate-800">Lead Time Required:</span>
+                              <span className="text-slate-600 ml-1">{hubTerms.standardTerms.leadTime}</span>
+                            </p>
+                          )}
+                          {hubTerms.standardTerms.cancellationPolicy && (
+                            <p>
+                              <span className="font-semibold text-slate-800">Cancellation Policy:</span>
+                              <span className="text-slate-600 ml-1">{hubTerms.standardTerms.cancellationPolicy}</span>
+                            </p>
+                          )}
+                          {hubTerms.standardTerms.modificationPolicy && (
+                            <p>
+                              <span className="font-semibold text-slate-800">Modification Policy:</span>
+                              <span className="text-slate-600 ml-1">{hubTerms.standardTerms.modificationPolicy}</span>
+                            </p>
+                          )}
+                          {hubTerms.standardTerms.agencyCommission && (
+                            <p>
+                              <span className="font-semibold text-slate-800">Agency Commission:</span>
+                              <span className="text-slate-600 ml-1">{hubTerms.standardTerms.agencyCommission}</span>
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Additional Terms */}
+                        {hubTerms.customTerms && (
+                          <div className="pt-4 border-t border-slate-200">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Additional Terms</p>
+                            <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{hubTerms.customTerms}</p>
+                          </div>
+                        )}
+
+                        {/* Legal Disclaimer */}
+                        {hubTerms.legalDisclaimer && (
+                          <div className="pt-4 border-t border-slate-200">
+                            <p className="text-[11px] text-slate-500 leading-relaxed whitespace-pre-wrap">{hubTerms.legalDisclaimer}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2 text-sm">
+                        <p>
+                          <span className="font-semibold text-slate-800">Payment Terms:</span>
+                          <span className="text-slate-600 ml-1">Net 30 days from invoice date</span>
+                        </p>
+                        <p>
+                          <span className="font-semibold text-slate-800">Material Deadline:</span>
+                          <span className="text-slate-600 ml-1">5 business days before campaign start</span>
+                        </p>
+                        <p>
+                          <span className="font-semibold text-slate-800">Cancellation & Modifications:</span>
+                          <span className="text-slate-600 ml-1">Contact hub for policies</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="bg-slate-100 px-5 py-3 border-t border-slate-200">
+                    <p className="text-xs text-slate-500 text-center">
+                      By accepting placements in this order, you agree to these terms and conditions.
+                    </p>
+                  </div>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Performance Summary (if data exists) */}
-          {performanceEntries.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    Performance
-                  </CardTitle>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('performance')}>
-                    View Details
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {(() => {
-                  // Compute channel-aware totals
-                  const totals = performanceEntries.reduce((acc, e) => ({
-                    impressions: acc.impressions + (e.metrics?.impressions || 0),
-                    clicks: acc.clicks + (e.metrics?.clicks || 0),
-                    insertions: acc.insertions + (e.metrics?.insertions || 0),
-                    circulation: acc.circulation + (e.metrics?.circulation || 0),
-                    spotsAired: acc.spotsAired + (e.metrics?.spotsAired || 0),
-                    downloads: acc.downloads + (e.metrics?.downloads || 0),
-                  }), { impressions: 0, clicks: 0, insertions: 0, circulation: 0, spotsAired: 0, downloads: 0 });
-                  
-                  const hasDigital = totals.impressions > 0;
-                  const hasPrint = totals.insertions > 0;
-                  const hasRadio = totals.spotsAired > 0;
-                  const hasPodcast = totals.downloads > 0;
-                  
-                  return (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold">{performanceEntries.length}</p>
-                        <p className="text-xs text-muted-foreground">Reports</p>
-                      </div>
-                      {hasDigital && (
-                        <div className="text-center">
-                          <p className="text-2xl font-bold">{totals.impressions.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground">Impressions</p>
-                        </div>
-                      )}
-                      {hasPrint && (
-                        <div className="text-center">
-                          <p className="text-2xl font-bold">{totals.insertions}</p>
-                          <p className="text-xs text-muted-foreground">Issues</p>
-                        </div>
-                      )}
-                      {hasRadio && (
-                        <div className="text-center">
-                          <p className="text-2xl font-bold">{totals.spotsAired}</p>
-                          <p className="text-xs text-muted-foreground">Spots</p>
-                        </div>
-                      )}
-                      {hasPodcast && (
-                        <div className="text-center">
-                          <p className="text-2xl font-bold">{totals.downloads.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground">Downloads</p>
-                        </div>
-                      )}
-                      <div className="text-center">
-                        <p className="text-2xl font-bold">{proofs.length}</p>
-                        <p className="text-xs text-muted-foreground">Proofs</p>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Campaign Info - Simple */}
-          {(campaignData?.objectives?.primaryGoal || campaignData?.objectives?.targetAudience) && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-sans text-muted-foreground">Campaign Info</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {campaignData?.timeline?.durationWeeks && (
-                    <div>
-                      <p className="text-muted-foreground">Duration</p>
-                      <p className="font-medium">{campaignData.timeline.durationWeeks} weeks</p>
-                    </div>
-                  )}
-                  {campaignData?.objectives?.primaryGoal && (
-                    <div>
-                      <p className="text-muted-foreground">Goal</p>
-                      <p className="font-medium capitalize">{campaignData.objectives.primaryGoal.replace(/_/g, ' ')}</p>
-                    </div>
-                  )}
-                  {campaignData?.objectives?.targetAudience && (
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Target Audience</p>
-                      <p className="font-medium">{campaignData.objectives.targetAudience}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            );
+          })()}
         </TabsContent>
 
         {/* PLACEMENTS TAB (organized by channel type) */}
@@ -1420,19 +1365,40 @@ export function PublicationOrderDetail() {
             const endDate = campaignData?.timeline?.endDate 
               ? new Date(campaignData.timeline.endDate) : null;
 
+            // Channel color configurations for visual distinction
+            const channelColors: Record<string, { border: string; bg: string; iconBg: string; iconColor: string; badge: string }> = {
+              website: { border: 'border-l-blue-500', bg: 'bg-blue-50/30', iconBg: 'bg-blue-100', iconColor: 'text-blue-600', badge: 'bg-blue-100 text-blue-700' },
+              newsletter: { border: 'border-l-indigo-500', bg: 'bg-indigo-50/30', iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600', badge: 'bg-indigo-100 text-indigo-700' },
+              print: { border: 'border-l-purple-500', bg: 'bg-purple-50/30', iconBg: 'bg-purple-100', iconColor: 'text-purple-600', badge: 'bg-purple-100 text-purple-700' },
+              radio: { border: 'border-l-orange-500', bg: 'bg-orange-50/30', iconBg: 'bg-orange-100', iconColor: 'text-orange-600', badge: 'bg-orange-100 text-orange-700' },
+              podcast: { border: 'border-l-pink-500', bg: 'bg-pink-50/30', iconBg: 'bg-pink-100', iconColor: 'text-pink-600', badge: 'bg-pink-100 text-pink-700' },
+              streaming: { border: 'border-l-cyan-500', bg: 'bg-cyan-50/30', iconBg: 'bg-cyan-100', iconColor: 'text-cyan-600', badge: 'bg-cyan-100 text-cyan-700' },
+              other: { border: 'border-l-gray-400', bg: 'bg-gray-50/30', iconBg: 'bg-gray-100', iconColor: 'text-gray-600', badge: 'bg-gray-100 text-gray-700' },
+            };
+
             return sortedChannels.map(channel => {
               const items = channelGroups[channel];
               const config = getChannelConfig(channel);
               const isDigital = config.isDigital;
+              const colors = channelColors[channel] || channelColors.other;
 
               return (
-                <Card key={channel} className="border bg-white shadow-none">
-                  <CardHeader className="pb-2">
+                <Card key={channel} className={cn("border-l-4 shadow-none overflow-hidden", colors.border)}>
+                  <CardHeader className={cn("pb-2", colors.bg)}>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base font-sans flex items-center gap-2">
+                      <CardTitle className="text-base font-sans flex items-center gap-3">
+                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", colors.iconBg)}>
+                          {config.icon === 'globe' && <Globe className={cn("h-4 w-4", colors.iconColor)} />}
+                          {config.icon === 'mail' && <Mail className={cn("h-4 w-4", colors.iconColor)} />}
+                          {config.icon === 'newspaper' && <Newspaper className={cn("h-4 w-4", colors.iconColor)} />}
+                          {config.icon === 'radio' && <Radio className={cn("h-4 w-4", colors.iconColor)} />}
+                          {config.icon === 'headphones' && <Headphones className={cn("h-4 w-4", colors.iconColor)} />}
+                          {config.icon === 'tv' && <Tv className={cn("h-4 w-4", colors.iconColor)} />}
+                          {!['globe', 'mail', 'newspaper', 'radio', 'headphones', 'tv'].includes(config.icon || '') && <Layers className={cn("h-4 w-4", colors.iconColor)} />}
+                        </div>
                         {config.label}
                       </CardTitle>
-                      <Badge variant="secondary">{items.length} placement{items.length !== 1 ? 's' : ''}</Badge>
+                      <Badge className={cn("font-medium", colors.badge)}>{items.length} placement{items.length !== 1 ? 's' : ''}</Badge>
                     </div>
                     
                     {/* Implementation Instructions */}
@@ -1489,9 +1455,6 @@ export function PublicationOrderDetail() {
 
                       // Get delivery expectations for this placement
                       const deliveryExpectations = getDeliveryExpectations(item);
-                      
-                      // Get earnings for collapsed header
-                      const earningsExp = deliveryExpectations.find(e => e.label === 'Earn');
 
                       return (
                         <AccordionItem 
@@ -1502,60 +1465,97 @@ export function PublicationOrderDetail() {
                             placementStatus === 'rejected' && "border-red-300 bg-red-50/50"
                           )}
                         >
-                          {/* Collapsed Header - shows key info at a glance */}
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-gray-50/50 [&[data-state=open]>svg]:rotate-90">
-                            <div className="flex items-center justify-between w-full pr-2">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
-                                <span className="font-medium">{item.itemName || item.sourceName}</span>
-                                {(() => {
-                                  const dims = parseDimensions(item.format?.dimensions || item.format?.size);
-                                  return dims.length > 0 && dims[0] ? (
-                                    <Badge variant="outline" className="text-xs">
-                                      {dims[0]}
-                                      {dims.length > 1 && ` +${dims.length - 1}`}
-                                    </Badge>
-                                  ) : null;
-                                })()}
-                              </div>
-                              <div className="flex items-center gap-3">
-                                {earningsExp && (
-                                  <span className="text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded">
-                                    {earningsExp.value}
-                                  </span>
-                                )}
-                                <PlacementStatusBadge status={placementStatus} />
-                              </div>
-                            </div>
-                          </AccordionTrigger>
-                          
-                          <AccordionContent>
-                            {/* Full Delivery Expectations */}
-                            {deliveryExpectations.length > 0 && (
-                              <div className="px-4 pb-3 pt-1 border-b bg-gray-50/50">
-                                <div className="flex flex-wrap items-center gap-3 text-xs">
-                                  {deliveryExpectations.map((exp, i) => (
-                                    <div 
-                                      key={i} 
-                                      className={cn(
-                                        "flex items-center gap-1",
-                                        (exp as any).highlight 
-                                          ? "bg-white px-2 py-1 rounded-md font-medium border" 
-                                          : "text-muted-foreground"
-                                      )}
-                                    >
-                                      {exp.icon}
-                                      <span className={(exp as any).highlight ? "text-gray-700" : "text-gray-600"}>
-                                        {exp.label}:
-                                      </span>
-                                      <span className={(exp as any).highlight ? "text-gray-900 font-semibold" : "font-medium text-gray-900"}>
-                                        {exp.value}
-                                      </span>
-                                    </div>
-                                  ))}
+                          {/* Header Row - Trigger + Actions */}
+                          <div className="flex items-center">
+                            {/* Collapsed Header - shows key info at a glance */}
+                            <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline hover:bg-gray-50/50 [&[data-state=open]>svg]:rotate-90">
+                              <div className="flex items-center justify-between w-full pr-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+                                  <span className="font-serif font-semibold text-slate-800">{item.itemName || item.sourceName}</span>
+                                  {(() => {
+                                    const dims = parseDimensions(item.format?.dimensions || item.format?.size);
+                                    return dims.length > 0 && dims[0] ? (
+                                      <Badge variant="outline" className="text-xs font-mono bg-slate-100">
+                                        {dims[0]}
+                                        {dims.length > 1 && ` +${dims.length - 1}`}
+                                      </Badge>
+                                    ) : null;
+                                  })()}
                                 </div>
                               </div>
-                            )}
+                            </AccordionTrigger>
+                            
+                            {/* Quick Actions - Always Visible */}
+                            <div className="flex items-center gap-2 px-3 border-l">
+                              {placementStatus === 'pending' && (
+                                <>
+                                  <Button
+                                    onClick={(e) => { e.stopPropagation(); handlePlacementAction(itemPath, 'accepted'); }}
+                                    disabled={updating}
+                                    size="sm"
+                                    className="h-8 bg-green-600 hover:bg-green-700"
+                                  >
+                                    <Check className="h-3.5 w-3.5 mr-1" /> Accept
+                                  </Button>
+                                  <Button
+                                    onClick={(e) => { e.stopPropagation(); setRejectingPlacementId(itemPath); setRejectDialogOpen(true); }}
+                                    disabled={updating}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+                                  >
+                                    <X className="h-3.5 w-3.5 mr-1" /> Reject
+                                  </Button>
+                                </>
+                              )}
+                              {placementStatus === 'accepted' && (
+                                <span className="text-xs text-green-700 flex items-center gap-1">
+                                  <CheckCircle2 className="h-4 w-4" /> Accepted
+                                </span>
+                              )}
+                              {placementStatus === 'in_production' && (
+                                <span className="text-xs text-blue-700 flex items-center gap-1">
+                                  <PlayCircle className="h-4 w-4" /> Live
+                                </span>
+                              )}
+                              {placementStatus === 'delivered' && (
+                                <span className="text-xs text-purple-700 flex items-center gap-1">
+                                  <CheckCircle2 className="h-4 w-4" /> Delivered
+                                </span>
+                              )}
+                              {placementStatus === 'rejected' && (
+                                <span className="text-xs text-red-700 flex items-center gap-1">
+                                  <XCircle className="h-4 w-4" /> Rejected
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Delivery Expectations - Always Visible */}
+                          {deliveryExpectations.length > 0 && (
+                            <div className="px-4 py-2 border-t bg-slate-50/80">
+                              <div className="flex flex-wrap items-center gap-4 text-xs">
+                                {deliveryExpectations.map((exp, i) => (
+                                  <div 
+                                    key={i} 
+                                    className="flex items-center gap-1.5"
+                                  >
+                                    {exp.icon}
+                                    <span className="text-slate-500">{exp.label}:</span>
+                                    <span className={cn(
+                                      "font-medium",
+                                      exp.label === 'Earn' ? "text-green-700" : "text-slate-700"
+                                    )}>
+                                      {exp.value}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <AccordionContent>
 
                             <div className="p-3 space-y-3">
                             

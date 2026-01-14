@@ -8,6 +8,20 @@
 
 import { ObjectId } from 'mongodb';
 
+// Advertising Terms interface - used in Hub and for type safety
+export interface HubAdvertisingTerms {
+  standardTerms: {
+    leadTime?: string;           // e.g., "10 business days"
+    materialDeadline?: string;   // e.g., "5 business days before start"
+    paymentTerms?: string;       // e.g., "Net 30"
+    cancellationPolicy?: string; // e.g., "10 business days notice required"
+    agencyCommission?: string;   // e.g., "15% standard commission"
+    modificationPolicy?: string; // e.g., "Changes require 5 business days notice"
+  };
+  legalDisclaimer?: string;      // Boilerplate legal text
+  customTerms?: string;          // Additional custom terms (free text)
+}
+
 export interface Hub {
   _id?: string | ObjectId;
   hubId: string; // Unique slug identifier (e.g., "chicago-hub")
@@ -57,6 +71,10 @@ export interface Hub {
     currency?: string; // ISO currency code (e.g., "USD")
     defaultLanguage?: string; // ISO language code (e.g., "en")
   };
+  
+  // Advertising Terms and Conditions
+  // These terms apply to all insertion orders sent to publications from this hub
+  advertisingTerms?: HubAdvertisingTerms;
   
   // Status and Metadata
   status: 'active' | 'inactive' | 'pending' | 'archived';

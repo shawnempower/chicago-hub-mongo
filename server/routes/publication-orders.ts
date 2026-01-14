@@ -296,6 +296,16 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
     const publicationsCollection = getDb().collection(COLS.PUBLICATIONS);
     const publicationDoc = await publicationsCollection.findOne({ publicationId: parseInt(publicationId) });
     
+    // Fetch hub to get advertising terms
+    let hubTerms = null;
+    if (order.hubId) {
+      const { HubsService } = await import('../../src/integrations/mongodb/hubService');
+      const hub = await HubsService.getHubBySlug(order.hubId);
+      if (hub?.advertisingTerms) {
+        hubTerms = hub.advertisingTerms;
+      }
+    }
+    
     // Include campaign data with inventory for ad specs
     const orderWithCampaignData = {
       ...order,
@@ -311,7 +321,7 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
       } : null
     };
 
-    res.json({ order: orderWithCampaignData });
+    res.json({ order: orderWithCampaignData, hubTerms });
   } catch (error) {
     console.error('Error fetching order detail:', error);
     res.status(500).json({ error: 'Failed to fetch order' });
