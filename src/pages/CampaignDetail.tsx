@@ -48,7 +48,8 @@ import {
   Play,
   Pause,
   Copy,
-  Check
+  Check,
+  Pencil
 } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,7 @@ import { calculateItemCost } from '@/utils/inventoryPricing';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 import { CampaignPerformanceDashboard } from '@/components/admin/CampaignPerformanceDashboard';
+import { CampaignEditDialog } from '@/components/campaign/CampaignEditDialog';
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-800 border border-gray-300 hover:bg-gray-100',
@@ -104,6 +106,7 @@ export default function CampaignDetail() {
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   
   // Copy campaign ID to clipboard
   const handleCopyId = async (e: React.MouseEvent) => {
@@ -468,6 +471,17 @@ export default function CampaignDetail() {
                   </div>
                   
                   <div className="flex items-center gap-3">
+                    {/* Edit Campaign Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEditDialog(true)}
+                      className="gap-2"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Edit
+                    </Button>
+                    
                     <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
                     <Badge className={STATUS_COLORS[campaign.status as keyof typeof STATUS_COLORS]}>
                       {STATUS_LABELS[campaign.status as keyof typeof STATUS_LABELS]}
@@ -714,52 +728,6 @@ export default function CampaignDetail() {
                   </CardContent>
                 </Card>
               )}
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-sans text-lg">Pricing & Performance</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-1">Standard Price</p>
-                      <p className="text-lg font-bold">${(campaign.pricing?.subtotal || campaign.pricing?.totalStandardPrice || 0).toLocaleString()}</p>
-                    </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-1">Hub Price</p>
-                      <p className="text-lg font-bold text-green-600">${(campaign.pricing?.total || campaign.pricing?.totalHubPrice || campaign.pricing?.finalPrice || 0).toLocaleString()}</p>
-                    </div>
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-1">Discount</p>
-                      <p className="text-lg font-bold text-blue-600">{(campaign.pricing?.hubDiscount || campaign.pricing?.packageDiscount || 0).toFixed(1)}%</p>
-                    </div>
-                  </div>
-
-                  {campaign.estimatedPerformance && (
-                    <div className="pt-4 border-t">
-                      <h4 className="font-semibold font-sans mb-3">Performance Estimates</h4>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Estimated Reach</p>
-                          <p className="font-semibold">
-                            {campaign.estimatedPerformance.reach?.min?.toLocaleString() || 'N/A'} - {campaign.estimatedPerformance.reach?.max?.toLocaleString() || 'N/A'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Est. Impressions</p>
-                          <p className="font-semibold">
-                            {campaign.estimatedPerformance.impressions?.min?.toLocaleString() || 'N/A'} - {campaign.estimatedPerformance.impressions?.max?.toLocaleString() || 'N/A'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">CPM</p>
-                          <p className="font-semibold">${campaign.estimatedPerformance.cpm?.toFixed(2) || 'N/A'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
 
             </TabsContent>
 
@@ -1367,6 +1335,14 @@ export default function CampaignDetail() {
           sectionName="Campaign"
           activityTypes={['campaign_create', 'campaign_update', 'campaign_delete']}
           hubId={campaign?.hubId}
+        />
+
+        {/* Campaign Edit Dialog */}
+        <CampaignEditDialog
+          campaign={campaign}
+          isOpen={showEditDialog}
+          onClose={() => setShowEditDialog(false)}
+          onSaved={refetch}
         />
       </div>
     </ProtectedRoute>
