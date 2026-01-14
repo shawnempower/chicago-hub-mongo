@@ -50,12 +50,28 @@ interface StorefrontChatConfigEditorProps {
 
 const defaultChatWidget: ChatWidget = {
   enabled: false,
-  apiEndpoint: '',
+  apiEndpoint: 'https://oj5okrvfzkyybvuq3q4pgzdxru0bvdlj.lambda-url.us-east-2.on.aws/chat',
   buttonPosition: 'bottom-right',
   defaultOpen: false,
-  title: 'Campaign Assistant',
-  subtitle: '',
-  initialMessage: ''
+  title: '', // Will be set dynamically from publicationName
+  subtitle: "Let's get started",
+  initialMessage: `Hi! I'm the campaign assistant and I'm here to help you explore advertising opportunities. What are you looking to promote?
+
+<component type="choices">
+{
+  "id": "initial_interest",
+  "question": "Select an option or tell me more:",
+  "options": [
+    {"value": "event", "label": "Event or show"},
+    {"value": "restaurant", "label": "Restaurant or bar"},
+    {"value": "retail", "label": "Retail or service business"},
+    {"value": "job", "label": "Job opening"},
+    {"value": "brand_story", "label": "Tell our brand's story"},
+    {"value": "other", "label": "Other"}
+  ],
+  "allowMultiple": false
+}
+</component>`
 };
 
 export const StorefrontChatConfigEditor: React.FC<StorefrontChatConfigEditorProps> = ({
@@ -89,9 +105,13 @@ export const StorefrontChatConfigEditor: React.FC<StorefrontChatConfigEditorProp
   const [localChatWidget, setLocalChatWidget] = useState<ChatWidget>(chatWidget);
   
   // Sync local widget state when prop changes (e.g., on initial load)
+  // Use publicationName for title if not already set
   useEffect(() => {
-    setLocalChatWidget(chatWidget);
-  }, [chatWidget]);
+    setLocalChatWidget({
+      ...chatWidget,
+      title: chatWidget.title || publicationName || 'Campaign Assistant'
+    });
+  }, [chatWidget, publicationName]);
   
   // Helper to update widget and mark as changed
   const updateChatWidget = (updates: Partial<ChatWidget>) => {
