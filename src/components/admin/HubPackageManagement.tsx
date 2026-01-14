@@ -56,6 +56,7 @@ import { ErrorBoundary } from './PackageBuilder/ErrorBoundary';
 import { BuilderFilters, BuilderResult, packageBuilderService } from '@/services/packageBuilderService';
 import { downloadPackageCSV, downloadPackageInsertionOrder } from '@/utils/packageExport';
 import { calculateItemCost } from '@/utils/inventoryPricing';
+import { calculatePackageReach } from '@/utils/reachCalculations';
 import { packagesApi } from '@/api/packages';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
@@ -281,6 +282,9 @@ export const HubPackageManagement = () => {
       if (editingPackage && editingPackage._id) {
         console.log('Updating existing package:', editingPackage._id);
         
+        // Calculate reach from current publications (reflects any user modifications)
+        const reachSummary = calculatePackageReach(builderResult.publications);
+        
         // Build update data with proper nesting to preserve all fields
         const updateData = {
           basicInfo: {
@@ -299,6 +303,23 @@ export const HubPackageManagement = () => {
               finalPrice: builderResult.summary.monthlyCost
             },
             displayPrice: `$${builderResult.summary.monthlyCost.toLocaleString()}/month`
+          },
+          // Update performance with fresh reach calculation
+          performance: {
+            estimatedReach: {
+              minReach: reachSummary.estimatedUniqueReach || 0,
+              maxReach: reachSummary.estimatedUniqueReach || 0,
+              reachDescription: `${(reachSummary.estimatedUniqueReach || 0).toLocaleString()}+ estimated unique reach`,
+              deduplicatedReach: reachSummary.estimatedUniqueReach || 0
+            },
+            estimatedImpressions: {
+              minImpressions: reachSummary.totalMonthlyImpressions || 0,
+              maxImpressions: reachSummary.totalMonthlyImpressions || 0,
+              impressionsByChannel: reachSummary.channelAudiences
+            },
+            costPerThousand: reachSummary.totalMonthlyImpressions > 0
+              ? (builderResult.summary.monthlyCost / (reachSummary.totalMonthlyImpressions / 1000))
+              : 0
           },
           metadata: {
             ...editingPackage.metadata,
@@ -341,6 +362,9 @@ export const HubPackageManagement = () => {
         return;
       }
 
+      // Calculate reach from current publications (reflects any user modifications like excluded items)
+      const newPackageReachSummary = calculatePackageReach(builderResult.publications);
+      
       // Build package data structure for new package
       const packageData = {
         packageId: `package-${Date.now()}`,
@@ -379,18 +403,18 @@ export const HubPackageManagement = () => {
         },
         performance: {
           estimatedReach: {
-            minReach: builderResult.summary.estimatedUniqueReach || 0,
-            maxReach: builderResult.summary.estimatedUniqueReach || 0,
-            reachDescription: `${(builderResult.summary.estimatedUniqueReach || 0).toLocaleString()}+ estimated unique reach`,
-            deduplicatedReach: builderResult.summary.estimatedUniqueReach
+            minReach: newPackageReachSummary.estimatedUniqueReach || 0,
+            maxReach: newPackageReachSummary.estimatedUniqueReach || 0,
+            reachDescription: `${(newPackageReachSummary.estimatedUniqueReach || 0).toLocaleString()}+ estimated unique reach`,
+            deduplicatedReach: newPackageReachSummary.estimatedUniqueReach || 0
           },
           estimatedImpressions: {
-            minImpressions: builderResult.summary.totalMonthlyImpressions || 0,
-            maxImpressions: builderResult.summary.totalMonthlyImpressions || 0,
-            impressionsByChannel: builderResult.summary.channelAudiences
+            minImpressions: newPackageReachSummary.totalMonthlyImpressions || 0,
+            maxImpressions: newPackageReachSummary.totalMonthlyImpressions || 0,
+            impressionsByChannel: newPackageReachSummary.channelAudiences
           },
-          costPerThousand: builderResult.summary.totalMonthlyImpressions > 0
-            ? (builderResult.summary.monthlyCost / (builderResult.summary.totalMonthlyImpressions / 1000))
+          costPerThousand: newPackageReachSummary.totalMonthlyImpressions > 0
+            ? (builderResult.summary.monthlyCost / (newPackageReachSummary.totalMonthlyImpressions / 1000))
             : 0
         },
         features: {

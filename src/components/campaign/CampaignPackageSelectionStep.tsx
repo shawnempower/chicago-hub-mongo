@@ -4,7 +4,7 @@
  * Allows users to select from pre-built hub packages
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useHubContext } from '@/contexts/HubContext';
 import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { Loader2, Package, CheckCircle2, Users, MapPin, DollarSign, Calendar } f
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { API_BASE_URL } from '@/config/api';
+import { calculatePackageReach } from '@/utils/reachCalculations';
 
 // Currency formatting helper
 const formatCurrency = (amount: number) => 
@@ -103,7 +104,18 @@ export function CampaignPackageSelectionStep({
 
   const getTotalReach = (pkg: HubPackage): number => {
     if (!pkg.components?.publications) return 0;
-    return pkg.components.publications.reduce((sum, pub) => sum + (pub.monthlyReach || 0), 0);
+    
+    // Filter out excluded items before calculating reach
+    const activePublications = pkg.components.publications.map(pub => ({
+      ...pub,
+      inventoryItems: (pub.inventoryItems || []).filter(item => !item.isExcluded)
+    })).filter(pub => pub.inventoryItems.length > 0);
+    
+    if (activePublications.length === 0) return 0;
+    
+    // Use the shared reach calculation utility for consistency across the app
+    const reachSummary = calculatePackageReach(activePublications);
+    return reachSummary.estimatedUniqueReach || 0;
   };
 
   const getPublicationCount = (pkg: HubPackage): number => {

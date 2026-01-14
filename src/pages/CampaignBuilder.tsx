@@ -154,7 +154,7 @@ export default function CampaignBuilder() {
         if (!formData.targetAudience || formData.budget <= 0) {
           toast({
             title: 'Missing Information',
-            description: 'Please fill in target audience and budget',
+            description: 'Please fill in target audience and estimated budget',
             variant: 'destructive',
           });
           return false;

@@ -214,13 +214,13 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
         </p>
       </div>
 
-      {/* Budget */}
+      {/* Estimated Budget */}
       <div className="space-y-4 pt-4 border-t">
-        <h3 className="text-base font-semibold font-sans">Budget</h3>
+        <h3 className="text-base font-semibold font-sans">Estimated Budget</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="budget">Budget Amount <span className="text-red-500">*</span></Label>
+            <Label htmlFor="budget">Estimated Budget Amount <span className="text-red-500">*</span></Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
               <Input

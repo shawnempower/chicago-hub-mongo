@@ -4,6 +4,7 @@
  * Final review and success confirmation
  */
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import { CheckCircle2, Download, Eye, FileText, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { CampaignAnalysisResponse } from '@/integrations/mongodb/campaignSchema';
 import { CreativeRequirementsChecklist } from './CreativeRequirementsChecklist';
+import { calculatePackageReach } from '@/utils/reachCalculations';
 
 interface CampaignReviewStepProps {
   formData: {
@@ -36,6 +38,23 @@ interface CampaignReviewStepProps {
 }
 
 export function CampaignReviewStep({ formData, result, campaignId, selectedPackageData, onGenerateIO, onViewCampaign, onNavigateToStep }: CampaignReviewStepProps) {
+  // Calculate reach from package publications using the same calculation used elsewhere in the app
+  // This ensures consistent reach numbers across package builder, campaign review, and campaign detail
+  const calculatedPackageReach = useMemo(() => {
+    const publications = selectedPackageData?.components?.publications || [];
+    if (publications.length === 0) return null;
+    
+    // Filter out excluded items from publications before calculating
+    const activePublications = publications.map((pub: any) => ({
+      ...pub,
+      inventoryItems: (pub.inventoryItems || []).filter((item: any) => !item.isExcluded)
+    })).filter((pub: any) => pub.inventoryItems.length > 0);
+    
+    if (activePublications.length === 0) return null;
+    
+    return calculatePackageReach(activePublications);
+  }, [selectedPackageData?.components?.publications]);
+
   if (!campaignId) {
     // Pre-creation review
     const isPackageBased = formData.inventorySelectionMethod === 'package';
@@ -46,12 +65,20 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
       const activeItems = (pub.inventoryItems || []).filter((item: any) => !item.isExcluded);
       return sum + activeItems.length;
     }, 0);
-    const estimatedReach = selectedPackageData?.performance?.estimatedReach?.minReach || 0;
+    
+    // Use calculated reach from publications (most accurate), falling back to stored package data
+    // Note: Many packages have estimatedReach.minReach = 0 due to a bug in the builder that didn't
+    // calculate reach when saving. This ensures we always show accurate reach by calculating it fresh.
+    const estimatedReach = calculatedPackageReach?.estimatedUniqueReach 
+      || selectedPackageData?.performance?.estimatedReach?.minReach 
+      || 0;
     
     // Debug logging
     console.log('📊 CampaignReviewStep - Data:', {
       isPackageBased,
-      estimatedReach: isPackageBased ? estimatedReach : result?.estimatedPerformance?.reach?.min,
+      calculatedReach: calculatedPackageReach?.estimatedUniqueReach,
+      storedReach: selectedPackageData?.performance?.estimatedReach?.minReach,
+      finalReach: estimatedReach,
       result: result ? {
         hasEstimatedPerformance: !!result.estimatedPerformance,
         reach: result.estimatedPerformance?.reach,
@@ -110,7 +137,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
                 )}
               </div>
               <div>
-                <p className="text-muted-foreground font-sans">Budget</p>
+                <p className="text-muted-foreground font-sans">Estimated Budget</p>
                 {formData.budget > 0 ? (
                   <p className="font-semibold font-sans">${formData.budget.toLocaleString()}</p>
                 ) : (
@@ -118,7 +145,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
                     onClick={() => onNavigateToStep?.(2)}
                     className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
                   >
-                    Add budget
+                    Add estimated budget
                     <Pencil className="h-3 w-3" />
                   </button>
                 )}

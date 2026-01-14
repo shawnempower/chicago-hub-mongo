@@ -13,6 +13,7 @@ import {
 } from '@/utils/frequencyEngine';
 import { calculateItemCost } from '@/utils/inventoryPricing';
 import { inferOccurrencesFromFrequency } from '@/utils/pricingCalculations';
+import { calculatePackageReach } from '@/utils/reachCalculations';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('auth_token');
@@ -696,6 +697,9 @@ export class PackageBuilderService {
       if (currentCost >= targetBudget * 0.95) break;
     }
 
+    // Calculate reach metrics using shared utility
+    const reachSummary = calculatePackageReach(selectedPublications);
+
     return {
       publications: selectedPublications,
       summary: {
@@ -709,7 +713,15 @@ export class PackageBuilderService {
         ),
         monthlyCost: currentCost,
         totalCost: currentCost * duration,
-        budgetUsed: (currentCost / budget) * 100
+        budgetUsed: (currentCost / budget) * 100,
+        // Include reach metrics for package saving
+        totalMonthlyImpressions: reachSummary.totalMonthlyImpressions,
+        totalMonthlyExposures: reachSummary.totalMonthlyExposures,
+        estimatedTotalReach: reachSummary.estimatedTotalReach,
+        estimatedUniqueReach: reachSummary.estimatedUniqueReach,
+        channelAudiences: reachSummary.channelAudiences,
+        reachCalculationMethod: reachSummary.calculationMethod,
+        reachOverlapFactor: reachSummary.overlapFactor
       }
     };
   }
@@ -760,6 +772,9 @@ export class PackageBuilderService {
       }
     }
 
+    // Calculate reach metrics using shared utility
+    const reachSummary = calculatePackageReach(packagePublications);
+
     return {
       publications: packagePublications,
       summary: {
@@ -772,7 +787,15 @@ export class PackageBuilderService {
           0
         ),
         monthlyCost: totalCost,
-        totalCost: totalCost * duration
+        totalCost: totalCost * duration,
+        // Include reach metrics for package saving
+        totalMonthlyImpressions: reachSummary.totalMonthlyImpressions,
+        totalMonthlyExposures: reachSummary.totalMonthlyExposures,
+        estimatedTotalReach: reachSummary.estimatedTotalReach,
+        estimatedUniqueReach: reachSummary.estimatedUniqueReach,
+        channelAudiences: reachSummary.channelAudiences,
+        reachCalculationMethod: reachSummary.calculationMethod,
+        reachOverlapFactor: reachSummary.overlapFactor
       }
     };
   }

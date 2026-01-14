@@ -331,11 +331,11 @@ export class CampaignLLMService {
   ): string {
     const { objectives, timeline, includeAllOutlets } = request;
 
-    // Calculate duration
+    // Calculate duration (use Math.round to avoid 31 days → 2 months bug)
     const startDate = new Date(timeline.startDate);
     const endDate = new Date(timeline.endDate);
     const durationMs = endDate.getTime() - startDate.getTime();
-    const durationMonths = Math.ceil(durationMs / (1000 * 60 * 60 * 24 * 30));
+    const durationMonths = Math.max(1, Math.round(durationMs / (1000 * 60 * 60 * 24 * 30)));
 
     const includeAllMessage = includeAllOutlets ? `
 

@@ -103,6 +103,25 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       { $sort: { impressions: -1 } }
     ]).toArray();
     
+    // Look up publication names for entries where publicationName is null
+    const publicationsCollection = db.collection(COLLECTIONS.HUB_PUBLICATIONS);
+    const publicationIdsToLookup = publicationBreakdown
+      .filter(pub => !pub._id.publicationName && pub._id.publicationId)
+      .map(pub => pub._id.publicationId);
+    
+    let publicationNamesMap: Record<number, string> = {};
+    if (publicationIdsToLookup.length > 0) {
+      const publications = await publicationsCollection
+        .find({ publicationId: { $in: publicationIdsToLookup } })
+        .project({ publicationId: 1, name: 1 })
+        .toArray();
+      
+      publicationNamesMap = publications.reduce((acc, pub) => {
+        acc[pub.publicationId] = pub.name;
+        return acc;
+      }, {} as Record<number, string>);
+    }
+    
     const totals = aggregation[0] || {
       totalEntries: 0,
       totalImpressions: 0,
@@ -253,7 +272,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       })),
       byPublication: publicationBreakdown.map(pub => ({
         publicationId: pub._id.publicationId,
-        publicationName: pub._id.publicationName,
+        publicationName: pub._id.publicationName || publicationNamesMap[pub._id.publicationId] || `Publication ${pub._id.publicationId}`,
         entries: pub.entries,
         impressions: pub.impressions,
         clicks: pub.clicks,
@@ -622,11 +641,32 @@ router.post('/compute-aggregates', async (req: any, res: Response) => {
       }}
     ]).toArray();
     
+    // Look up publication names for aggregates where publicationName is null
+    const publicationsCollection = db.collection(COLLECTIONS.HUB_PUBLICATIONS);
+    const publicationIdsToLookup = aggregation
+      .filter(agg => !agg.publicationName && agg._id.publicationId)
+      .map(agg => agg._id.publicationId);
+    
+    let publicationNamesMap: Record<number, string> = {};
+    if (publicationIdsToLookup.length > 0) {
+      const publications = await publicationsCollection
+        .find({ publicationId: { $in: publicationIdsToLookup } })
+        .project({ publicationId: 1, name: 1 })
+        .toArray();
+      
+      publicationNamesMap = publications.reduce((acc, pub) => {
+        acc[pub.publicationId] = pub.name;
+        return acc;
+      }, {} as Record<number, string>);
+    }
+    
     // Upsert aggregates
     const now = new Date();
     let updated = 0;
     
     for (const agg of aggregation) {
+      const pubName = agg.publicationName || publicationNamesMap[agg._id.publicationId] || null;
+      
       await aggregatesCollection.updateOne(
         {
           date: new Date(agg._id.date),
@@ -636,7 +676,7 @@ router.post('/compute-aggregates', async (req: any, res: Response) => {
         },
         {
           $set: {
-            publicationName: agg.publicationName,
+            publicationName: pubName,
             impressions: agg.impressions || 0,
             clicks: agg.clicks || 0,
             unitsDelivered: agg.units || 0,
