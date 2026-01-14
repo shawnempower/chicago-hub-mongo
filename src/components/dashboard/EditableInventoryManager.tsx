@@ -1676,11 +1676,17 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="full page">Full Page</SelectItem>
-                              <SelectItem value="half page">Half Page</SelectItem>
-                              <SelectItem value="quarter page">Quarter Page</SelectItem>
-                              <SelectItem value="eighth page">Eighth Page</SelectItem>
-                              <SelectItem value="business card">Business Card</SelectItem>
+                              <SelectItem value="full page">Full Page (10" x 13")</SelectItem>
+                              <SelectItem value="tall full page">Tall Full Page (10" x 15.5")</SelectItem>
+                              <SelectItem value="tall portrait full page">Tall Portrait Full Page (10.5" x 13.5")</SelectItem>
+                              <SelectItem value="upper portrait full page">Upper Portrait Full Page (10" x 12.75")</SelectItem>
+                              <SelectItem value="square full page">Square/Short Full Page (10" x 10")</SelectItem>
+                              <SelectItem value="narrow full page">Narrow Full Page (8.5" x 10.85")</SelectItem>
+                              <SelectItem value="half page horizontal">Half Page Horizontal (10" x 6.5")</SelectItem>
+                              <SelectItem value="half page vertical">Half Page Vertical (5" x 13")</SelectItem>
+                              <SelectItem value="quarter page">Quarter Page (5" x 6.5")</SelectItem>
+                              <SelectItem value="eighth page">Eighth Page (5" x 3.25")</SelectItem>
+                              <SelectItem value="business card">Business Card (3.5" x 2")</SelectItem>
                               <SelectItem value="classified">Classified</SelectItem>
                               <SelectItem value="insert">Insert</SelectItem>
                             </SelectContent>
