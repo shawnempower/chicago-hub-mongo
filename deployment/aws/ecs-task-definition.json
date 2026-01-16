@@ -131,6 +131,10 @@
         {
           "name": "EMAIL_NOTIFICATIONS_ENABLED",
           "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/email-notifications-enabled"
+        },
+        {
+          "name": "STOREFRONT_AI_CHAT_URL",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub/storefront-ai-chat-url"
         }
       ],
       "logConfiguration": {
