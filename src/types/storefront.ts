@@ -466,7 +466,9 @@ export const createDefaultStorefrontConfig = (publisherId: string): StorefrontCo
     colors: {
       lightPrimary: "#0077b6",
       darkPrimary: "#003d5c",
-      mode: "light" as const
+      mode: "light" as const,
+      ctaBackground: "#0077b6",
+      ctaForeground: "#ffffff"
     },
     typography: {
       primaryFont: "Inter"

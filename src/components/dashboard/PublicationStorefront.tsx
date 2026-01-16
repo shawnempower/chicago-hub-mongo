@@ -145,6 +145,15 @@ export const PublicationStorefront: React.FC = () => {
         setViewingVersion('live');
       }
       
+      // Ensure default values for newer fields that may not exist in older configs
+      if (config?.theme?.colors) {
+        config.theme.colors = {
+          ...config.theme.colors,
+          ctaBackground: config.theme.colors.ctaBackground || config.theme.colors.lightPrimary || '#0077b6',
+          ctaForeground: config.theme.colors.ctaForeground || '#ffffff',
+        };
+      }
+      
       setStorefrontConfig(config);
       // Track the original websiteUrl to distinguish "already set" from "being typed"
       setOriginalWebsiteUrl(config?.websiteUrl || null);
@@ -637,6 +646,14 @@ export const PublicationStorefront: React.FC = () => {
       
       if (response.ok) {
         const config = await response.json();
+        // Ensure default values for newer fields that may not exist in older configs
+        if (config?.theme?.colors) {
+          config.theme.colors = {
+            ...config.theme.colors,
+            ctaBackground: config.theme.colors.ctaBackground || config.theme.colors.lightPrimary || '#0077b6',
+            ctaForeground: config.theme.colors.ctaForeground || '#ffffff',
+          };
+        }
         setStorefrontConfig(config);
         setViewingVersion(version);
         setHasChanges(false);
@@ -663,7 +680,9 @@ export const PublicationStorefront: React.FC = () => {
         colors: {
           lightPrimary: "#0077b6",
           darkPrimary: "#003d5c",
-          mode: "light"
+          mode: "light",
+          ctaBackground: "#0077b6",
+          ctaForeground: "#ffffff"
         },
         typography: {
           primaryFont: "Inter"

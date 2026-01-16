@@ -1,0 +1,566 @@
+Publication ID,Publication Name,Channel,Channel Name,Inventory Name,Ad Format,Dimensions,Position,Duration,Pricing
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,5 Standard Banners,banner,970x250,ROS,,Flat: $6; Model: cpm
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,5 Standard Banners,banner,728x90,ROS,,Flat: $6; Model: cpm
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,5 Standard Banners,banner,300x600,ROS,,Flat: $6; Model: cpm
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,5 Standard Banners,banner,300x250,ROS,,Flat: $6; Model: cpm
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,5 Standard Banners,banner,320x50,ROS,,Flat: $6; Model: cpm
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,Static Mural Ads,banner,640x960,ROS,,Flat: $15; Model: cpm
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,Static Mural Ads,banner,1060x590,ROS,,Flat: $15; Model: cpm
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,Video Mural Ads,video,640x960,ROS,,Flat: $20; Model: cpm
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,Video Mural Ads,video,1060x590,ROS,,Flat: $20; Model: cpm
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,E-Paper,banner,160x600,Takeover,,Flat: $1000; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,E-Paper,banner,728x90,Takeover,,Flat: $1000; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,E-Paper,banner,768x1024,Takeover,,Flat: $1000; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,E-Paper,banner,300x250,Takeover,,Flat: $1000; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,Homepage - Takeover,banner,970x250,Takeover,,Flat: $1900; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,Homepage - Takeover,banner,728x90,Takeover,,Flat: $1900; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,Homepage - Takeover,banner,300x600,Takeover,,Flat: $1900; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,Homepage - Takeover,banner,300x250,Takeover,,Flat: $1900; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,Homepage - Takeover,banner,320x50,Takeover,,Flat: $1900; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,News Section - Takeover,banner,970x250,"Metro/State, Crime, The Watchdogs, Nation/World, Obituaries, Cannabis, Education, Environment, Immigration, LGBTQ, Religion",,Flat: $3000; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,News Section - Takeover,banner,728x90,"Metro/State, Crime, The Watchdogs, Nation/World, Obituaries, Cannabis, Education, Environment, Immigration, LGBTQ, Religion",,Flat: $3000; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,News Section - Takeover,banner,300x600,"Metro/State, Crime, The Watchdogs, Nation/World, Obituaries, Cannabis, Education, Environment, Immigration, LGBTQ, Religion",,Flat: $3000; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,News Section - Takeover,banner,300x250,"Metro/State, Crime, The Watchdogs, Nation/World, Obituaries, Cannabis, Education, Environment, Immigration, LGBTQ, Religion",,Flat: $3000; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,News Section - Takeover,banner,320x50,"Metro/State, Crime, The Watchdogs, Nation/World, Obituaries, Cannabis, Education, Environment, Immigration, LGBTQ, Religion",,Flat: $3000; Model: per_day
+68db3df49f10c5187ff811b5,Chicago Sun-Times,website,Website,Sponsored Content,sponsored_content,native-inline,Article Page,,Flat: $2500; Model: flat_rate
+68db3df49f10c5187ff811b5,Chicago Sun-Times,newsletter,Morning Editions,Newsletter Sponsorship,header,600x200,header,,Flat: $2000; Model: per_send
+68db3df49f10c5187ff811b5,Chicago Sun-Times,newsletter,"Entertainment Newsletter - Vocalo ""The Goods""",Weekly Sponsorship,header,600x150,header,,Flat: $500; Model: per_send
+68db3df49f10c5187ff811b5,Chicago Sun-Times,newsletter,Local Deals,1 Ad Position,inline,multiple,inline,,Flat: $1500; Model: per_send
+68db3df49f10c5187ff811b5,Chicago Sun-Times,newsletter,Local Deals,Exclusive Sponsorship,dedicated,multiple,dedicated,,Flat: $6000; Model: per_send
+68db3df49f10c5187ff811b5,Chicago Sun-Times,print,Print,Full Page - Monday - Saturday,full page,"10"" x 9.875""",Run of paper,,
+68db3df49f10c5187ff811b5,Chicago Sun-Times,print,Print,Full Page Sunday,full page,"10"" x 9.875""",Run of paper,,
+68db3df49f10c5187ff811b5,Chicago Sun-Times,print,Print,Half Page,half page,"10"" x 4.875""",Run of paper,,
+68db3df49f10c5187ff811b5,Chicago Sun-Times,print,Print,Quarter Page,quarter page,"4.93"" x 4.875""",Run of paper,,
+68db3df49f10c5187ff811b5,Chicago Sun-Times,print,Print,Advertorial,,Full Page,ROP,,
+68db3df49f10c5187ff811b5,Chicago Sun-Times,streaming,Video Murals,30 Second (:30) Video Ad,,,,30s,Flat: $20; Model: cpv
+68db3df49f10c5187ff811b5,Chicago Sun-Times,streaming,Video Murals,60 Second (:60) Video Ad,,,,60s,Flat: $20; Model: cpv
+68db3df49f10c5187ff811b5,Chicago Sun-Times,social,facebook,Sponsored Post - Facebook,,,,,Flat: $500; Model: per_post
+68db3df49f10c5187ff811b5,Chicago Sun-Times,social,twitter,Sponsored Post - Twitter/X,,,,,Flat: $500; Model: per_post
+68db3df49f10c5187ff811b5,Chicago Sun-Times,social,instagram,Sponsored Post - Instagram,,,,,Flat: $500; Model: per_post
+68db3df49f10c5187ff811b7,Chicago Reader,website,Website,Leaderboard,banner,728x90,Above content,,Flat: $12; Model: cpm
+68db3df49f10c5187ff811b7,Chicago Reader,website,Website,Leaderboard,banner,320x50,Above content,,Flat: $12; Model: cpm
+68db3df49f10c5187ff811b7,Chicago Reader,website,Website,Half Page / Skyscraper,banner,300x600,Sidebar position,,Flat: $12; Model: cpm
+68db3df49f10c5187ff811b7,Chicago Reader,website,Website,Medium Rectangle,banner,300x250,Run of site,,Flat: $12; Model: cpm
+68db3df49f10c5187ff811b7,Chicago Reader,website,Website,In-Story,banner,728x90,In-story,,Flat: $12; Model: cpm
+68db3df49f10c5187ff811b7,Chicago Reader,website,Website,In-Story,banner,320x50,In-story,,Flat: $12; Model: cpm
+68db3df49f10c5187ff811b7,Chicago Reader,website,Website,Sponsored Content - Supplied,sponsored_content,native-inline,,,Flat: $500; Model: flat_rate
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Daily Reader,Newsletter Leaderboard,header,600x150,header,,Flat: $300; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Daily Reader,Dedicated Send,dedicated,full-newsletter,dedicated,,Flat: $2500; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Daily Reader,Newsletter Banner,inline,600x150,inline,,Flat: $250; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Early Warning,Newsletter Leaderboard,header,600x150,header,,Flat: $300; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Early Warning,Newsletter Banner,inline,600x150,inline,,Flat: $250; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Food & Drink,Dedicated Send,dedicated,full-newsletter,dedicated,,Flat: $1500; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Food & Drink,Newsletter Leaderboard,inline,600x150,inline,,Flat: $250; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Food & Drink,Newsletter Banner,inline,600x150,inline,,Flat: $250; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Arts Newsletter,Dedicated Send,dedicated,full-newsletter,dedicated,,Flat: $1000; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Arts Newsletter,Newsletter Leaderboard,inline,600x150,inline,,Flat: $250; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Arts Newsletter,Newsletter Banner,inline,600x150,inline,,Flat: $250; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,newsletter,Full List Blast,Dedicated Send,dedicated,custom,dedicated,,Flat: $1500; Model: per_send
+68db3df49f10c5187ff811b7,Chicago Reader,print,Chicago Reader,Full Page,full page,"9.75"" x 9.875""",,,
+68db3df49f10c5187ff811b7,Chicago Reader,print,Chicago Reader,Half Page Vertical,half page,"4.7917"" x 9.875""",,,
+68db3df49f10c5187ff811b7,Chicago Reader,print,Chicago Reader,Quarter Page,quarter page,"4.7917"" x 4.8542""",,,
+68db3df49f10c5187ff811b7,Chicago Reader,print,Chicago Reader,Premium - Full page,full page,"9.75"" x 9.875""","Page 2, 3, 5, back cover",,
+68db3df49f10c5187ff811b7,Chicago Reader,print,Chicago Reader,Two Page Spread,full page,"9.875"" x 9.875""",,,
+68db3df49f10c5187ff811b7,Chicago Reader,print,Chicago Reader,Center Spread,full page,"20.25"" x 9.875""",,,
+68db3df49f10c5187ff811b7,Chicago Reader,social,facebook,Sponsored Post,,,,,Flat: $450; Model: per_post
+68db3df49f10c5187ff811b7,Chicago Reader,social,instagram,Sponsored Post,,,,,Flat: $450; Model: per_post
+68db3df49f10c5187ff811b8,La Raza Chicago,website,Website,Full Page,728x90 banner,300x600,,,
+68db3df49f10c5187ff811b8,La Raza Chicago,website,Website,Medium Rectangle,300x250 banner,300x250,Sidebar and in-content,,
+68db3df49f10c5187ff811b8,La Raza Chicago,website,Website,Medium Rectangle,300x250 banner,320x50,Sidebar and in-content,,
+68db3df49f10c5187ff811b8,La Raza Chicago,website,Website,Mobile Banner,320x50 banner,320x50,Mobile optimized positions,,Model: contact
+68db3df49f10c5187ff811b8,La Raza Chicago,website,Website,Sponsored Content,native,sponsored-content,In-content feed,,Flat: $2500; Model: monthly
+68db3df49f10c5187ff811b8,La Raza Chicago,newsletter,La Raza Newsletter,Header Sponsorship,header,600x100,header,,Flat: $250; Model: per_send
+68db3df49f10c5187ff811b8,La Raza Chicago,newsletter,La Raza Newsletter,In-Content Display,inline,600x200,inline,,
+68db3df49f10c5187ff811b8,La Raza Chicago,newsletter,La Raza Newsletter,Dedicated Send,dedicated,Full email,dedicated,,Flat: $1500; Model: per_send
+68db3df49f10c5187ff811b8,La Raza Chicago,print,La Raza,Full Page,full page,"9.81"" x 10""",Throughout publication,,
+68db3df49f10c5187ff811b8,La Raza Chicago,print,La Raza,Half Page (Horizontal or Vertical),half page,"9.81"" x 4.93""",Throughout publication,,
+68db3df49f10c5187ff811b8,La Raza Chicago,print,La Raza,Quarter Page,quarter page,"4.93"" x 4.83""",Throughout publication,,
+68db3df49f10c5187ff811b8,La Raza Chicago,print,La Raza,Classifieds,classified,Variable,Classified section,,
+68db3df49f10c5187ff811b8,La Raza Chicago,social,facebook,Sponsored Post / Facebook & X Package,,,,,Flat: $600; Model: per_post
+68db3df49f10c5187ff811bd,N'DIGO,website,Website,Digital Ads Package,custom,Multiple ad placements,Throughout N'DIGO website,,Flat: $3000; Model: monthly
+68db3df49f10c5187ff811bd,N'DIGO,website,Website,Banner Ads,728x90 banner,728x90,Site-wide placement,,
+68db3df49f10c5187ff811bd,N'DIGO,website,Website,Sponsored Content,sponsored content,sponsored-content,Editorial integration,,Flat: $2000; Model: per_week
+68db3df49f10c5187ff811bd,N'DIGO,website,Website,Largest Digital Ad,300x250 banner,600x800,,,
+68db3df49f10c5187ff811bd,N'DIGO,website,Website,Second Largest Ad,300x250 banner,600x400,,,
+68db3df49f10c5187ff811bd,N'DIGO,newsletter,NEWSY Monday Q&A,Q&A Sponsorship,inline,Thought leadership alignment,inline,,
+68db3df49f10c5187ff811bd,N'DIGO,newsletter,NEWSY Wednesday Hot Copy,Hot Copy Sponsorship,inline,News-adjacent advertising,inline,,
+68db3df49f10c5187ff811bd,N'DIGO,newsletter,NEWSY Friday Ziggy,Ziggy Sponsorship,inline,Lifestyle and entertainment brands,inline,,
+68db3df49f10c5187ff811bd,N'DIGO,podcast,N'Digo Studio Podcast,30 Podcast Second Ad,pre_roll,,pre_roll,30s,Flat: $500; Model: per_episode
+68db3df49f10c5187ff811bd,N'DIGO,podcast,N'Digo Studio Podcast,60 Second Podcast Ad,pre_roll,,pre_roll,60s,Flat: $750; Model: per_episode
+68db3df49f10c5187ff811bd,N'DIGO,podcast,N'Digo Studio Podcast,Podcast Takeover Ad Special,sponsorship,,sponsorship,30 secondss,Flat: $2000; Model: per_episode
+68db3df49f10c5187ff811bd,N'DIGO,streaming,N'Digo Studio TV,Pre- Inline- or Mid-Show (30),sponsored_content,,sponsored_content,30s,Flat: $2500; Model: per_spot
+68db3df49f10c5187ff811bd,N'DIGO,streaming,N'Digo Studio TV,Pre- Inline- or Mid-Show (15),sponsored_content,,sponsored_content,15s,Flat: $2500; Model: per_spot
+68db3df49f10c5187ff811bd,N'DIGO,social,facebook,Facebook Sponsored Post,,,,,Flat: $1500; Model: per_post
+68db3df49f10c5187ff811bd,N'DIGO,social,instagram,Instagram Sponsored Post,,,,,Flat: $1500; Model: per_post
+68db3df49f10c5187ff811bd,N'DIGO,social,linkedin,LinkedIn Sponsored Post,,,,,Flat: $1000; Model: per_post
+68db3df49f10c5187ff811bd,N'DIGO,social,BlueSky,Sponsored Post,,,,,Flat: $1000; Model: per_post
+68db3df49f10c5187ff811bd,N'DIGO,social,TikTok,Sponsored Post,,,,,Flat: $1000; Model: per_post
+68db3df49f10c5187ff811be,Free Spirit Media,website,Website,Banner Placements,custom,,Website sections,,Model: contact
+68db3df49f10c5187ff811be,Free Spirit Media,website,Website,Content Sponsorship,sponsored content,,Integrated content,,Model: contact
+68db3df49f10c5187ff811be,Free Spirit Media,website,Website,Section Sponsorship,custom,,Website sections,,Model: contact
+68db3df49f10c5187ff811c1,CHIRP Radio (Chicago Independent Radio Project),website,Website,Rotating Digital Banner - Large,300x250 banner,300x250,Throughout site pages,,Flat: $500; Model: monthly
+68db3df49f10c5187ff811c1,CHIRP Radio (Chicago Independent Radio Project),website,Website,Rotating Digital Banner - Large,300x250 banner,728x90,Throughout site pages,,Flat: $500; Model: monthly
+68db3df49f10c5187ff811c1,CHIRP Radio (Chicago Independent Radio Project),website,Website,Rotating Digital Banner - Large,300x250 banner,160x600,Throughout site pages,,Flat: $500; Model: monthly
+68db3df49f10c5187ff811c1,CHIRP Radio (Chicago Independent Radio Project),website,Website,Rotating Digital Banner - Large,300x250 banner,320x50,Throughout site pages,,Flat: $500; Model: monthly
+68db3df49f10c5187ff811c1,CHIRP Radio (Chicago Independent Radio Project),newsletter,CHIRP Monthly Newsletter,Largest Newsletter Sponsor Mention,inline,Text-based,inline,,Flat: $500; Model: per_send
+68db3df49f10c5187ff811c1,CHIRP Radio (Chicago Independent Radio Project),radio,Chirp,A La Carte,15_second_spot,,6am-6pm,20s,Flat: $25; Model: flat
+68db3df49f10c5187ff811c1,CHIRP Radio (Chicago Independent Radio Project),radio,Chirp,Weekday 20 seconds (:20),15_second_spot,,drive-time,20s,Flat: $350; Model: contact
+68db3df49f10c5187ff811c1,CHIRP Radio (Chicago Independent Radio Project),radio,Chirp - Evening Drive (6AM-6PM),A La Carte,15_second_spot,,6am-6pm,20s,Flat: $25; Model: per_spot
+68db3df49f10c5187ff811c1,CHIRP Radio (Chicago Independent Radio Project),radio,Chirp - drive-time,Weekday 20 seconds (:20),15_second_spot,,drive-time,20s,Flat: $350; Model: per_spot
+68db3df49f10c5187ff811c2,CAN TV (Chicago Access Network Television),website,Website,Website Recognition,custom,,Homepage and underwriter page,,Model: contact
+68db3df49f10c5187ff811c2,CAN TV (Chicago Access Network Television),newsletter,Weekly Newsletter,Large Banner,inline,600x100,inline,,
+68db3df49f10c5187ff811c2,CAN TV (Chicago Access Network Television),newsletter,Weekly Newsletter,Medium Rectangle,inline,300x250,inline,,
+68db3df49f10c5187ff811c2,CAN TV (Chicago Access Network Television),print,Print,Television Underwriting - All Channels,custom,10-15 seconds,During regular programming on all 5 channels,,
+68db3df49f10c5187ff811c2,CAN TV (Chicago Access Network Television),print,Print,Program Sponsorship - Original Programming,custom,Opening/closing acknowledgments,Prime 7 PM slots Monday-Thursday,,
+68db3df59f10c5187ff811c8,Chicago Public Square,website,Website,Homepage Display Ad,custom,300x250,Homepage placement,,Flat: $700; Model: per_week
+68db3df59f10c5187ff811c8,Chicago Public Square,newsletter,Chicago Public Square,Standard Newsletter Ad,inline,300x250,inline,,Flat: $100; Model: per_send
+68db3df59f10c5187ff811c8,Chicago Public Square,newsletter,Chicago Public Square,Standard Newsletter Ad,inline,600x,inline,,Flat: $100; Model: per_send
+68db3df59f10c5187ff811c8,Chicago Public Square,newsletter,Chicago Public Square,Classified Ad,inline,Text only,inline,,Flat: $50; Model: per_send
+68db3df59f10c5187ff811ca,Evanston Now,website,Website,Best Visibility Package,custom,1800x450,Above story text,,Flat: $1300; Model: monthly
+68db3df59f10c5187ff811ca,Evanston Now,website,Website,Best Visibility Package,custom,450x225,Above story text,,Flat: $1300; Model: monthly
+68db3df59f10c5187ff811ca,Evanston Now,website,Website,Better Visibility Package,custom,450x900,Within story text,,Flat: $800; Model: monthly
+68db3df59f10c5187ff811ca,Evanston Now,website,Website,Better Visibility Package,custom,300x250,Within story text,,Flat: $800; Model: monthly
+68db3df59f10c5187ff811ca,Evanston Now,website,Website,Better Visibility Package,custom,300x600,Within story text,,Flat: $800; Model: monthly
+68db3df59f10c5187ff811ca,Evanston Now,website,Website,Good Visibility Package,custom,450x900,Below story text,,Flat: $500; Model: monthly
+68db3df59f10c5187ff811ca,Evanston Now,website,Website,Good Visibility Package,custom,300x250,Below story text,,Flat: $500; Model: monthly
+68db3df59f10c5187ff811ca,Evanston Now,website,Website,Good Visibility Package,custom,300x600,Below story text,,Flat: $500; Model: monthly
+68db3df59f10c5187ff811ca,Evanston Now,website,Website,Sponsored Content - Single Post,sponsored content,,Website and newsletter,,Flat: $600; Model: flat_rate
+68db3df59f10c5187ff811ca,Evanston Now,website,Website,Sponsored Content - 3 Post Package,sponsored content,,Website and newsletter,,Flat: $1800; Model: flat_rate
+68db3df59f10c5187ff811ca,Evanston Now,newsletter,Daybreak News,Newsletter Display Ad,inline,600x300,inline,,Flat: $300; Model: per_send
+68db3df59f10c5187ff811ca,Evanston Now,newsletter,Midday Updates,Newsletter Display Ad,inline,600x300,inline,,Flat: $300; Model: per_send
+68db3df59f10c5187ff811ca,Evanston Now,newsletter,Subscribers - Dedicated,Email Blast - Single,dedicated,Custom graphical,dedicated,,Flat: $800; Model: per_send
+68db3df59f10c5187ff811cc,Inside Publications,website,Website,Homepage Takeover,takeover ad,,Homepage premium placement,,Model: contact
+68db3df59f10c5187ff811cc,Inside Publications,website,Website,Article Page Display,300x250 banner,300x250,Article pages,,Model: contact
+68db3df59f10c5187ff811cc,Inside Publications,website,Website,Mobile Optimized Units,320x50 banner,320x50,Mobile pages,,Model: contact
+68db3df59f10c5187ff811cc,Inside Publications,print,Three Editions,Full Page,full page,"10"" x 15.5""",,,
+68db3df59f10c5187ff811cc,Inside Publications,print,Three Editions,3/4 Page,half page,"10"" x 12""",,,
+68db3df59f10c5187ff811cc,Inside Publications,print,Three Editions,1/2 Page,half page,"10"" x 8""",,,
+68db3df59f10c5187ff811cc,Inside Publications,print,Three Editions,1/4 Page,quarter page,"5"" x 8""",,,
+68db3df59f10c5187ff811cc,Inside Publications,print,Three Editions,1/8 Page,eighth page,"4"" x 5""",,,
+68db3df59f10c5187ff811cc,Inside Publications,print,Three Editions,Service Directory,business card,"1.5"" x 1""",,,
+68db3df59f10c5187ff811cc,Inside Publications,print,Three Editions,Classified Ad,classified,"2"" x 2""",,,
+68db3df59f10c5187ff811cc,Inside Publications,print,Three Editions,Pre-printed Inserts,insert,"8.5"" x 11""",,,
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),website,Website,Monthly Banner Ad,banner,300x250,Website display positions,,Flat: $3000; Model: monthly
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),website,Website,Leaderboard / Tall Tower Ad,banner,728x90,Premium positions,,Flat: $3000; Model: monthly
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),website,Website,Leaderboard / Tall Tower Ad,banner,300x600,Premium positions,,Flat: $3000; Model: monthly
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),website,Website,Leaderboard / Tall Tower Ad,banner,320x50,Premium positions,,Flat: $3000; Model: monthly
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),website,Website,Leaderboard / Tall Tower Ad,banner,970x90,Premium positions,,Flat: $3000; Model: monthly
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),website,Website,Home Page Takeover / Welcome Ad,takeover ad,1200x600,Homepage dominant position,,Flat: $3500; Model: monthly
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),website,Website,Home Page Takeover / Welcome Ad,takeover ad,320x50,Homepage dominant position,,Flat: $3500; Model: monthly
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),website,Website,Road Block Ad (Full Site),takeover ad,Various,ROS,,Flat: $10000; Model: monthly
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),website,Website,Sponsored Content,native,,Editorial feed,,Model: contact
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),newsletter,The Stay Ready Playbook,Full Series Sponsorship,dedicated,Email series,dedicated,,Flat: $1111; Model: per_send
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),newsletter,The Stay Ready Playbook,One Week in Newsletter,inline,728x90,inline,,Flat: $600; Model: per_send
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),newsletter,The Stay Ready Playbook,One Week in Newsletter,inline,320x50,inline,,Flat: $600; Model: per_send
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),newsletter,The Stay Ready Playbook,One Week in Newsletter,inline,300x250,inline,,Flat: $600; Model: per_send
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),print,Chicago News Weekly (CNW),Full Page Ad,full page,"10"" x 12.5""",Any page,,
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),print,Chicago News Weekly (CNW),Half Page Ad,half page,"10"" x 6""",Any page,,
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),print,Chicago News Weekly (CNW),Quarter Page Ad,quarter page,"5"" x 6""",Any page,,
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),podcast,New Podcast,Podcast Ad - 30 seconds (:30),pre_roll,,pre_roll,30s,Flat: $100; Model: per_episode
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),radio,WCPT,Family Meeting - 30 second (:30) ad,30_second_spot,,prime-time,30s,Flat: $100; Model: per_spot
+68db3df59f10c5187ff811d2,Chicago News Weekly (CNW),radio,WCPT - prime-time,Family Meeting - 30 second (:30) ad,30_second_spot,,prime-time,30s,Flat: $100; Model: per_spot
+68db3df59f10c5187ff811d3,E3 Radio,website,Website,30-Second Video Ad,video,1920x1080 or 1080x1080,Website streaming player,,Flat: $500; Model: contact
+68db3df59f10c5187ff811d3,E3 Radio,website,Website,60-Second Video Ad,video,1920x1080 or 1080x1080,Website streaming player,,Flat: $750; Model: contact
+68db3df59f10c5187ff811d3,E3 Radio,website,Website,Home Page Right Rail (420 px by 420 px),300x250 banner,300x250,Homepage,,Flat: $500; Model: monthly
+68db3df59f10c5187ff811d3,E3 Radio,newsletter,Queer News Newsletter,Newsletter Ad Placement Inline,inline,600px wide,inline,,Flat: $250; Model: per_send
+68db3df59f10c5187ff811d3,E3 Radio,newsletter,Queer News Newsletter,Newsletter Ad Placement Inline,inline,responsive,inline,,Flat: $250; Model: per_send
+68db3df59f10c5187ff811d3,E3 Radio,newsletter,Queer News Newsletter,Newsletter Ad Placement Header,header,Full newsletter sponsorship,header,,Flat: $500; Model: per_send
+68db3df59f10c5187ff811d3,E3 Radio,podcast,Queer News,Podcast Midroll - 30 sec,mid_roll_30,,mid_roll_30,30s,Flat: $350; Model: per_episode
+68db3df59f10c5187ff811d3,E3 Radio,podcast,Queer News,Podcast Midroll - 60 sec,mid_roll_60,,mid_roll_60,60s,Flat: $450; Model: per_episode
+68db3df59f10c5187ff811d3,E3 Radio,social,tiktok,TikTok Sponsored Video,,,,,Flat: $1000; Model: per_post
+68db3df59f10c5187ff811d5,Bridge,website,Website,Front Page Header/Footer,custom,1800x300,Homepage top or bottom,,Flat: $300; Model: monthly
+68db3df59f10c5187ff811d5,Bridge,website,Website,Interior Page Placement,custom,1800x300,Within weekly news content,,Flat: $150; Model: monthly
+68db3df59f10c5187ff811d5,Bridge,newsletter,Bridge Newsletter,Display Placement,header,"6"" x 3""",header,,Flat: $300; Model: per_send
+68db3df59f10c5187ff811d5,Bridge,newsletter,Bridge Newsletter,Dedicated Send,dedicated,Full email,dedicated,,Flat: $450; Model: per_send
+68db3df59f10c5187ff811d5,Bridge,print,Print,Full Page,full page,"10.5"" x 13.5""",Throughout publication,,
+68db3df59f10c5187ff811d5,Bridge,print,Print,Half Page Horizontal,half page,"10.25"" x 6.54""",,,
+68db3df59f10c5187ff811d5,Bridge,print,Print,Half Page Vertical,half page,"4.99"" x 13.25""",,,
+68db3df59f10c5187ff811d5,Bridge,print,Print,2-Page Spread,full page,"21.25"" x 13.75""",,,
+68db3df59f10c5187ff811d5,Bridge,streaming,Bridge Video,Pre-roll,,,,15 secondss,Flat: $300; Model: contact
+68db3df59f10c5187ff811d5,Bridge,streaming,Bridge Video,Mid-roll,,,,15 secondss,Flat: $250; Model: contact
+68db3df59f10c5187ff811d5,Bridge,streaming,Bridge Video,End-roll,,,,15 secondss,Flat: $200; Model: contact
+68db3df59f10c5187ff811d5,Bridge,social,facebook,Sponsored Post,,,,,Flat: $100; Model: per_post
+68db3df59f10c5187ff811d5,Bridge,social,instagram,Sponsored post,,,,,Flat: $100; Model: per_post
+68db3df59f10c5187ff811d5,Bridge,social,instagram,Boosted Sponsored Post,,,,,Model: contact
+68dc1ccb1c230a4ce89f73ce,The BIGS,website,Website,Medium Rectangle,300x600 banner,300x600,Sidebar/In-content,,
+68dc1ccb1c230a4ce89f73ce,The BIGS,website,Website,Leaderboard,728x90 banner,728x90,Above/below fold,,
+68dc1ccb1c230a4ce89f73ce,The BIGS,website,Website,Website Takeover,takeover ad,,Full homepage domination,,Flat: $2500; Model: per_day
+68dc1ccb1c230a4ce89f73ce,The BIGS,newsletter,The BIGS Newsletter,Large Rectangle,inline,336x280,inline,,
+68dc1ccb1c230a4ce89f73ce,The BIGS,newsletter,The BIGS Newsletter,Medium Rectangle,inline,300x250,inline,,
+68dc1ccb1c230a4ce89f73ce,The BIGS,newsletter,The BIGS Newsletter,Newsletter Takeover,dedicated,Full newsletter,dedicated,,Flat: $2750; Model: per_send
+68dc1ccb1c230a4ce89f73ce,The BIGS,streaming,The BIGS (4x Weekly),30-Second Video Ad,pre-roll,,pre-roll,30s,Flat: $750; Model: flat
+68dc1ccb1c230a4ce89f73ce,The BIGS,streaming,The BIGS (4x Weekly),60-Second Video Ad,pre-roll,,pre-roll,60s,Flat: $1500; Model: flat
+68dc2532db57e442aef4837f,AirGo Radio,podcast,AirGo,Pre-Roll Ad,pre_roll,,pre_roll,30s,
+68dc2532db57e442aef4837f,AirGo Radio,podcast,AirGo,Post-Roll Ad (15-second),post_roll,,post_roll,15s,
+68dc2532db57e442aef4837f,AirGo Radio,social,instagram,Sponsored Post,,,,,Flat: $250; Model: per_post
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Run-of-Site Leaderboard (Premium),custom,1800x450 (mobile),Above masthead on every page / Exclusive,,
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Run-of-Site Leaderboard (Premium),custom,1456x180 (desktop),Above masthead on every page / Exclusive,,
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Run-of-Site Leaderboard (Premium),custom,600x500 (mobile homepage),Above masthead on every page / Exclusive,,
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Run-of-Site Leaderboard (Standard),custom,1800x450 (mobile),Above masthead on every page / Non-exclusive,,
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Run-of-Site Leaderboard (Standard),custom,1456x180 (desktop),Above masthead on every page / Non-exclusive,,
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Run-of-Site Leaderboard (Standard),custom,600x500 (mobile homepage),Above masthead on every page / Non-exclusive,,
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Tile Ads (Premium Weighting),custom,300x250,In-article and sidebar / No. 1 in-article position,,Flat: $750; Model: monthly
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Tile Ads (Premium Weighting),custom,320x50,In-article and sidebar / No. 1 in-article position,,Flat: $750; Model: monthly
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Tile Ads (Standard Weighting),custom,300x250,In-article and sidebar / Second priority position,,Flat: $550; Model: monthly
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Tile Ads (Standard Weighting),custom,320x50,In-article and sidebar / Second priority position,,Flat: $550; Model: monthly
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Tile Ads (Basic Weighting),custom,300x250,In-article and sidebar / Focus on nonprofits-small business-community organization,,Flat: $350; Model: monthly
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,website,Website,Tile Ads (Basic Weighting),custom,320x50,In-article and sidebar / Focus on nonprofits-small business-community organization,,Flat: $350; Model: monthly
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Evanston RoundTable Daily Newsletter,Newsletter Banner - Top Position,header,1800x450 (newsletter),header,,Flat: $80; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Evanston RoundTable Daily Newsletter,Newsletter Banner - Top Position,header,1456x180 (homepage desktop),header,,Flat: $80; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Evanston RoundTable Daily Newsletter,Newsletter Banner - Top Position,header,600x500 (mobile homepage),header,,Flat: $80; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Evanston RoundTable Daily Newsletter,Newsletter Banner - Second Position,inline,1800x450 (newsletter),inline,,Flat: $40; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Evanston RoundTable Daily Newsletter,Newsletter Banner - Second Position,inline,1456x180 (homepage desktop),inline,,Flat: $40; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Evanston RoundTable Daily Newsletter,Newsletter Banner - Second Position,inline,600x500 (mobile homepage),inline,,Flat: $40; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Evanston RoundTable Daily Newsletter,Newsletter Banner - Bottom Position,footer,1800x450 (newsletter),footer,,Flat: $20; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Evanston RoundTable Daily Newsletter,Newsletter Banner - Bottom Position,footer,1456x180 (homepage desktop),footer,,Flat: $20; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Evanston RoundTable Daily Newsletter,Newsletter Banner - Bottom Position,footer,600x500 (mobile homepage),footer,,Flat: $20; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Evanston RoundTable Daily Newsletter,Newsletter Third Zone,inline,1800x450,inline,,Flat: $32; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Raising Evanston,Raising Evanston Banner - Top Position,header,1800x450,header,,Flat: $187.5; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Raising Evanston,Raising Evanston Banner - Top Position,header,1456x180,header,,Flat: $187.5; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Raising Evanston,Raising Evanston Banner - Top Position,header,600x500,header,,Flat: $187.5; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Raising Evanston,Raising Evanston Banner - Second Position,inline,1800x450,inline,,Flat: $137.5; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Raising Evanston,Raising Evanston Banner - Second Position,inline,1456x180,inline,,Flat: $137.5; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Raising Evanston,Raising Evanston Banner - Second Position,inline,600x500,inline,,Flat: $137.5; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Raising Evanston,Raising Evanston Banner - Bottom Position,footer,1800x450,footer,,Flat: $87.5; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Raising Evanston,Raising Evanston Banner - Bottom Position,footer,1456x180,footer,,Flat: $87.5; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Raising Evanston,Raising Evanston Banner - Bottom Position,footer,600x500,footer,,Flat: $87.5; Model: per_send
+68dd9f2a63cfd4fa2a6d615b,Evanston RoundTable,newsletter,Raising Evanston,Raising Evanston Banner - Third Position,inline,1800x450,inline,,Flat: $112.5; Model: per_send
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,website,Website,Top Banner,728x90 banner,728x90,Header position,,Flat: $300; Model: monthly
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,website,Website,Top Banner,728x90 banner,320x50,Header position,,Flat: $300; Model: monthly
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,website,Website,Featured Sidebar,300x250 banner,300x250,"Right sidebar, above fold",,Flat: $250; Model: monthly
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,website,Website,Affordable Sidebar,300x250 banner,300x250,"Right sidebar, below fold",,Flat: $150; Model: monthly
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,website,Website,Video Sidebar,300x250 banner,300x250,Left sidebar with video content,,Flat: $300; Model: monthly
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,website,Website,Embedded In-Story,native,728x90,Within article content,,Flat: $500; Model: monthly
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,website,Website,Embedded In-Story,native,320x50,Within article content,,Flat: $500; Model: monthly
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,website,Website,Embedded In-Story,native,300x250,Within article content,,Flat: $500; Model: monthly
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,newsletter,The Latest,Banner Below Headlines,inline,728x90,inline,,Flat: $30; Model: per_send
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,newsletter,The Weeks,Embedded Ads,inline,Display ads within content,inline,,Flat: $225; Model: per_send
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,newsletter,The Weeks,Newsletter Top Banner,header,728x90,header,,Flat: $300; Model: per_send
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,print,Print,Full Page,full page,"9"" x 10""",,,
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,print,Print,Half Page,half page,"9"" x 4.75""",,,
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,print,Print,Quarter Page,quarter page,"4.44"" x 4.75""",,,
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,print,Print,Eighth Page,eighth page,"4.44"" x 2.3""",,,
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,print,Print,Center Spread,full page,"21"" x 10""",Center spread,,
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,print,Print,Back Page,full page,"9"" x 10""",Back page,,
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,print,Print,Inside Back Cover,full page,"9"" x 10""",Inside back cover,,
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,print,Print,Inside Front Cover,full page,"9"" x 10""",Inside front cover,,
+68dd9f3963cfd4fa2a6d615c,Homewood-Flossmoor Chronicle,print,Print,Insert Program,insert,Full distribution,,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,website,Website,Medium Rectangle,300x250 banner,300x250,Website sidebar and in-content,,Flat: $150; Model: monthly
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,website,Website,Large Leaderboard,970x250 banner,970x100,Premium header position,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,website,Website,Half Page Ad,300x600 banner,300x600,Premium sidebar,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,newsletter,HPHerald Evening Digest,Evening Digest Banner (728 x 100),footer,728x100,footer,,Flat: $175; Model: per_send
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,print,Print,Eighth Page Vertical,eighth page,"3.33"" x 5""",,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,print,Print,Eighth Page Horizontal,eighth page,"5.05"" x 3.25""",,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,print,Print,Small Square,quarter page,"5.05"" x 5""",,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,print,Print,Quarter Page Vertical,quarter page,"5.05"" x 6.5""",,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,print,Print,Quarter Page Horizontal,quarter page,"6.75"" x 4.75""",,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,print,Print,Half Page Horizontal / Vertical,half page,"5.05"" x 12.75""",,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,print,Print,Full Page,full page,"10.25"" x 12.75""",,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,print,Print,Preprints/Inserts,insert,"8.5"" x 11""",,,
+68dd9f4763cfd4fa2a6d615d,Hyde Park Herald,print,Print,Classified Ads,classified,"2"" x 2""",,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,website,Website,Largest Digital Ad,custom,1200x600,Website placement,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,website,Website,Second Largest Digital Ad,300x250 banner,960x270,,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,website,Website,Sponsored Content,300x250 banner,300x250,,,Flat: $350; Model: monthly
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,website,Website,30 Second Video,300x250 banner,300x250,YouTube,,Flat: $200; Model: flat_rate
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,website,Website,60 Second Video,300x250 banner,300x250,YouTube,,Flat: $350; Model: flat_rate
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,newsletter,Community Newsletter,Newsletter Sponsorship,header,Contact for details,header,,Model: contact
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,print,Print,Full Page,full page,"10"" x 12.625""",Any page,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,print,Print,Full Page Color,full page,"10"" x 12.625""",Any page,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,print,Print,Half Page,half page,"Vertical: 6-7/8"" W x 9-3/8"" H, Horizontal: 10"" W x 6-1/4"" H",Any page,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,print,Print,Quarter Page,quarter page,"5"" x 6.25""",Any page,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,print,Print,One-Eighth Page,eighth page,"Horizontal: 5"" W x 3-5/8"" H, Vertical: 2-1/2"" W x 7-1/4"" H",Any page,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,print,Print,Business Card,business card,Business card size,Classified section,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,print,Print,Insert,insert,Customer provided insert,Inserted into publication,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,print,Print,Half Page (Copy),half page,"Vertical: 6-7/8"" W x 9-3/8"" H, Horizontal: 10"" W x 6-1/4"" H",Any page,,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,podcast,New Podcast,30 Second Podcast Ad,pre_roll,,pre_roll,30s,
+68dd9f5463cfd4fa2a6d615e,North Lawndale Community News,podcast,New Podcast,60 Second Podcast Ad,pre_roll,,pre_roll,60s,
+68dda24363cfd4fa2a6d615f,Pigment International,website,Website,Website Banner,custom,Banner display,Rotating positions throughout site,,Flat: $450; Model: monthly
+68dda24363cfd4fa2a6d615f,Pigment International,newsletter,Pigment Weekly Newsletter,Newsletter Sponsorship,inline,Custom,inline,,
+68dda24363cfd4fa2a6d615f,Pigment International,newsletter,Pigment Weekly Newsletter,E-Blast (Dedicated Send),dedicated,Full email,dedicated,,Flat: $2500; Model: per_send
+68dda24363cfd4fa2a6d615f,Pigment International,print,Print,Pigment Magazine Full Page,full page,"12"" x 15""",56-page glossy magazine,,
+68dda24363cfd4fa2a6d615f,Pigment International,print,Print,Black Gallery Guide+ Listing,classified,Directory listing,Annual resource guide,,
+68dda24363cfd4fa2a6d615f,Pigment International,social,youtube,Sponsored Post,,,,,Flat: $250; Model: per_post
+68dda24363cfd4fa2a6d615f,Pigment International,social,facebook,Sponsored Post,,,,,Flat: $250; Model: per_post
+68dda24363cfd4fa2a6d615f,Pigment International,social,instagram,Sponsored Post,,,,,Flat: $250; Model: per_post
+68dda26163cfd4fa2a6d6160,South Side Weekly,website,Website,Leaderboard,728x90 banner,728x90,Homepage and article pages,,Flat: $175; Model: per_week
+68dda26163cfd4fa2a6d6160,South Side Weekly,website,Website,Large Leaderboard,970x250 banner,970x100,Premium above-fold positions,,
+68dda26163cfd4fa2a6d6160,South Side Weekly,website,Website,Medium Rectangle,300x250 banner,300x250,Sidebar and in-content,,Flat: $150; Model: monthly
+68dda26163cfd4fa2a6d6160,South Side Weekly,website,Website,Large Rectangle,300x600 banner,300x600,Premium sidebar positions,,Flat: $225; Model: monthly
+68dda26163cfd4fa2a6d6160,South Side Weekly,newsletter,South Side Weekly Digest,Weekly Digest Position,inline,500x417,inline,,Flat: $60; Model: per_send
+68dda26163cfd4fa2a6d6160,South Side Weekly,print,Print,Full Page,full page,"9.65"" x 10""",,,
+68dda26163cfd4fa2a6d6160,South Side Weekly,print,Print,Half Page Vertical / Horizontal,half page,"4.825"" x 10""",,,
+68dda27663cfd4fa2a6d6161,StreetWise,website,Website,Website Display Advertising,custom,,Various positions,,Model: contact
+68dda27663cfd4fa2a6d6161,StreetWise,newsletter,StreetWise eNews,Newsletter Advertising,inline,Contact for specifications,inline,,
+68dda27663cfd4fa2a6d6161,StreetWise,print,Print,Full Page,full page,"8.5"" x 10.85""",Run of magazine,,
+68dda27663cfd4fa2a6d6161,StreetWise,print,Print,Back Page Premium,full page,"8.5"" x 10.85""",Back cover,,
+68dda27663cfd4fa2a6d6161,StreetWise,print,Print,Half Page Horizontal,half page,"8.5"" x 5.5""",Various throughout magazine,,
+68dda27663cfd4fa2a6d6161,StreetWise,print,Print,Half Page Vertical,half page,"4.25"" x 10.85""",Various throughout magazine,,
+68dda27663cfd4fa2a6d6161,StreetWise,print,Print,Third Page,quarter page,"8.5"" x 3.5""",Various throughout magazine,,
+68dda27663cfd4fa2a6d6161,StreetWise,print,Print,Sixth Page Horizontal,eighth page,"3.75"" x 3.5""",Various throughout magazine,,
+68dda27663cfd4fa2a6d6161,StreetWise,print,Print,Sixth Page Vertical,eighth page,"2.4"" x 5.1""",Various throughout magazine,,
+68dda28763cfd4fa2a6d6162,The Record North Shore,website,Website,Banner Ad,728x90 banner,1280x400,Throughout website,,Flat: $2000; Model: monthly
+68dda28763cfd4fa2a6d6162,The Record North Shore,website,Website,Square Ad,300x250 banner,400x400,Sidebar/in-content positions,,Flat: $800; Model: monthly
+68dda28763cfd4fa2a6d6162,The Record North Shore,newsletter,The Shortcut,Banner Newsletter Ad,inline,600x100,inline,,Flat: $250; Model: per_send
+68dda28763cfd4fa2a6d6162,The Record North Shore,newsletter,The Shortcut,Square Newsletter Ad,inline,300x250,inline,,Flat: $200; Model: per_send
+68dda28763cfd4fa2a6d6162,The Record North Shore,newsletter,Members Only,Banner Newsletter Ad,inline,600x100,inline,,Flat: $250; Model: per_send
+68dda28763cfd4fa2a6d6162,The Record North Shore,print,The Express,Display Ad,quarter page,Custom for 14x22 broadsheet,Throughout publication,,
+68dda28763cfd4fa2a6d6162,The Record North Shore,podcast,The Varsity,Title Sponsorship,sponsorship,,sponsorship,30s,Flat: $2500; Model: per_episode
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Homepage Lead Banner,728x90 banner,728x90,Top of homepage,,Flat: $1150; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Homepage Lead Banner,728x90 banner,320x50,Top of homepage,,Flat: $1150; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Homepage Square Ad,300x250 banner,250x250,Homepage sidebar,,Flat: $675; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Homepage Skyscraper Ad,300x600 banner,300x600,Homepage prominent position,,Flat: $750; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Homepage Footer Banner,728x90 banner,728x90,Bottom of homepage,,Flat: $550; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Homepage Footer Banner,728x90 banner,320x50,Bottom of homepage,,Flat: $550; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Site-Wide Article Lead Banner,728x90 banner,728x90,Top of all article pages,,Flat: $1250; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Site-Wide Article Lead Banner,728x90 banner,320x50,Top of all article pages,,Flat: $1250; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Site-Wide Article Square Ad,300x250 banner,250x250,Article page sidebars,,Flat: $775; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Site-Wide Article Skyscraper Ad,300x600 banner,300x600,Article pages prominent position,,Flat: $850; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,website,Website,Site-Wide Article Skyscraper Ad,300x600 banner,320x50,Article pages prominent position,,Flat: $850; Model: monthly
+68dda2a163cfd4fa2a6d6163,The TRiiBE,newsletter,The TRiiBE Newsletter,Newsletter Sponsorship Package,header,Full newsletter,header,,Flat: $1250; Model: per_send
+68dda2a163cfd4fa2a6d6163,The TRiiBE,newsletter,The TRiiBE Newsletter,Newsletter Banner Ad,header,728x90,header,,Flat: $500; Model: per_send
+68dda2a163cfd4fa2a6d6163,The TRiiBE,newsletter,The TRiiBE Newsletter,Newsletter Large Rectangle Ad,inline,1200x675,inline,,Flat: $775; Model: per_send
+68dda2a163cfd4fa2a6d6163,The TRiiBE,newsletter,The TRiiBE Newsletter,Newsletter Sponsored Message,inline,250 characters,inline,,Flat: $350; Model: per_send
+68dda2a163cfd4fa2a6d6163,The TRiiBE,social,instagram,Instagram Native Post,,,,,Flat: $500; Model: per_post
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),website,Website,Medium Rectangle Banner,banner,300x250,"Article pages, homepage",,Flat: $25; Model: flat_rate
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),website,Website,Medium Rectangle Banner,banner,300x600,"Article pages, homepage",,Flat: $25; Model: flat_rate
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),website,Website,Audio Pre-Roll Streaming,native,15 seconds,Beginning of stream session,,Flat: $25; Model: cpm
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),website,Website,Sponsored Content,300x250 banner,300x250,,,Flat: $2500; Model: flat_rate
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),newsletter,Weekly Rundown,Sponsored Content,inline,,inline,,Flat: $2500; Model: per_send
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),newsletter,The Rundown,Sponsored Content - Logo Ad,inline,150x40,inline,,Flat: $2500; Model: per_send
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),podcast,Local Podcast,Local Podcast Bundle - 4 Shows,pre_roll,,pre_roll,15s,Flat: $25; Model: cpm
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),podcast,Local Podcast,Local Podcast Bundle - 4 Shows,pre_roll,,pre_roll,30s,Flat: $25; Model: cpm
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),podcast,Local Podcast,Run of Network - Any Show,pre_roll,,pre_roll,30s,Flat: $25; Model: cpm
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ,AM Drive,15_second_spot,,5AM-10AM,15s,Flat: $275; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ,Weekday - Midday,15_second_spot,,10AM-3PM,15s,Flat: $250; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ,PM Drive,15_second_spot,,3PM-7PM,15s,Flat: $275; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ,Marketplace - 4:30PM,15_second_spot,,4:30PM,15s,Flat: $400; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ,Broad Rotator,15_second_spot,,drive-time,15s,Flat: $300; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ,Evenings,15_second_spot,,drive-time,15s,Flat: $150; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ,Weekend,15_second_spot,,6AM-7PM,15s,Flat: $150; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ,Marketplace - 7PM,15_second_spot,,7PM,15s,Flat: $150; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ,AM Drive,15_second_spot,,6AM-10AM,15s,Flat: $150; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ,Takeover,sponsorship,,Custom,1320s,Flat: $3000; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ - Midday (5AM-10AM),AM Drive,15_second_spot,,5AM-10AM,15s,Flat: $275; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ - Midday (10AM-3PM),Weekday - Midday,15_second_spot,,10AM-3PM,15s,Flat: $250; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ - Evening Drive (3PM-7PM),PM Drive,15_second_spot,,3PM-7PM,15s,Flat: $275; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ - 4:30PM,Marketplace - 4:30PM,15_second_spot,,4:30PM,15s,Flat: $400; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ - drive-time,Broad Rotator,15_second_spot,,drive-time,15s,Flat: $300; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ - drive-time,Evenings,15_second_spot,,drive-time,15s,Flat: $150; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ - Evening Drive (6AM-7PM),Weekend,15_second_spot,,6AM-7PM,15s,Flat: $150; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ - Evening Drive,Marketplace - 7PM,15_second_spot,,7PM,15s,Flat: $150; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ - Morning Drive (6AM-10AM),AM Drive,15_second_spot,,6AM-10AM,15s,Flat: $150; Model: per_spot
+68dda3df63cfd4fa2a6d6164,WBEZ Chicago (91.5 FM),radio,WBEZ - Custom,Takeover,sponsorship,,Custom,1320s,Flat: $3000; Model: per_spot
+68dda3ef63cfd4fa2a6d6165,Windy City Times,website,Website,Billboard Banner,970x250 banner,970x250,Premium homepage position,,
+68dda3ef63cfd4fa2a6d6165,Windy City Times,website,Website,Top Leaderboard,728x90 banner,728x90,"Above fold, top of page",,
+68dda3ef63cfd4fa2a6d6165,Windy City Times,website,Website,Medium Rectangle,300x250 banner,300x250,Sidebar/In-content,,Flat: $500; Model: monthly
+68dda3ef63cfd4fa2a6d6165,Windy City Times,website,Website,Medium Rectangle,300x250 banner,320x50,Sidebar/In-content,,Flat: $500; Model: monthly
+68dda3ef63cfd4fa2a6d6165,Windy City Times,website,Website,Filmstrip/MPU,300x600 banner,300x600,Sidebar premium position,,Flat: $700; Model: monthly
+68dda3ef63cfd4fa2a6d6165,Windy City Times,website,Website,Sponsored / Branded Content (TBD),native,,In-content placement ,,Model: contact
+68dda3ef63cfd4fa2a6d6165,Windy City Times,newsletter,News on Q,Top Leaderboard,header,728x90,header,,
+68dda3ef63cfd4fa2a6d6165,Windy City Times,newsletter,News on Q,Middle Leaderboard,inline,728x90,inline,,
+68dda3ef63cfd4fa2a6d6165,Windy City Times,newsletter,Chicago Social Butterflies,Top Leaderboard,header,728x90,header,,Flat: $500; Model: per_send
+68dda3ef63cfd4fa2a6d6165,Windy City Times,newsletter,Chicago Social Butterflies,Middle Leaderboard,inline,728x90,inline,,
+68dda3ef63cfd4fa2a6d6165,Windy City Times,newsletter,BLACKlines,Top Leaderboard,header,728x90,header,,Flat: $150; Model: per_send
+68dda3ef63cfd4fa2a6d6165,Windy City Times,newsletter,BLACKlines,Middle Leaderboard,inline,728x90,inline,,Flat: $300; Model: per_send
+68dda3ef63cfd4fa2a6d6165,Windy City Times,newsletter,En La Vida,Top Leaderboard,header,728x90,header,,Flat: $150; Model: per_send
+68dda3ef63cfd4fa2a6d6165,Windy City Times,newsletter,En La Vida,Middle Leaderboard,inline,728x90,inline,,Flat: $300; Model: per_send
+68dda3ef63cfd4fa2a6d6165,Windy City Times,social,facebook,Sponsored Post,,,,,Flat: $100; Model: per_post
+68dda3ef63cfd4fa2a6d6165,Windy City Times,social,instagram,Sponsored Post,,,,,Flat: $100; Model: per_post
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,website,Website,Display Banner,banner,300x250,Homepage and content pages,,Flat: $2500; Model: monthly
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,website,Website,Display Banner,banner,728x90,Homepage and content pages,,Flat: $2500; Model: monthly
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,newsletter,WRLL E-Newsletter,Newsletter Sponsorship,header,300x250,header,,
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,newsletter,WRLL E-Newsletter,Newsletter Sponsorship,header,728x90,header,,
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Morning Drive - 60,60_second_spot,,M-F 6AM-9AM,60s,Flat: $265; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Morning Drive - 30,30_second_spot,,M-F 6AM-9AM,30s,Flat: $175; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Morning Drive - 15,15_second_spot,,M-F 6AM-9AM,15s,Flat: $125; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Midday Morning - 60,60_second_spot,,M-F 9AM-12PM,60s,Flat: $265; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Midday Morning - 30,30_second_spot,,M-F 9AM-12PM,30s,Flat: $175; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Midday Morning - 15,15_second_spot,,M-F 9AM-12PM,15s,Flat: $125; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Midday Afternoon - 60,60_second_spot,,M-F 12PM-3PM,60s,Flat: $265; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Midday Afternoon - 30,30_second_spot,,M-F 12PM-3PM,30s,Flat: $175; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Midday Afternoon - 15,15_second_spot,,M-F 12PM-3PM,15s,Flat: $125; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Afternoon Drive - 60,60_second_spot,,M-F 3PM-6PM,60s,Flat: $265; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Afternoon Drive - 30,30_second_spot,,M-F 3PM-6PM,30s,Flat: $175; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Afternoon Drive - 15,15_second_spot,,M-F 3PM-6PM,15s,Flat: $125; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Evenings - 60,60_second_spot,,M-F 6PM-9PM,60s,Flat: $265; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Evenings - 30,30_second_spot,,M-F 6PM-9PM,30s,Flat: $175; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL,Evenings - 15,15_second_spot,,M-F 6PM-9PM,15s,Flat: $125; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Morning Drive (6AM-9AM),Morning Drive - 60,60_second_spot,,M-F 6AM-9AM,60s,Flat: $265; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Morning Drive (6AM-9AM),Morning Drive - 30,30_second_spot,,M-F 6AM-9AM,30s,Flat: $175; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Morning Drive (6AM-9AM),Morning Drive - 15,15_second_spot,,M-F 6AM-9AM,15s,Flat: $125; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Midday (9AM-12PM),Midday Morning - 60,60_second_spot,,M-F 9AM-12PM,60s,Flat: $265; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Midday (9AM-12PM),Midday Morning - 30,30_second_spot,,M-F 9AM-12PM,30s,Flat: $175; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Midday (9AM-12PM),Midday Morning - 15,15_second_spot,,M-F 9AM-12PM,15s,Flat: $125; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Midday (12PM-3PM),Midday Afternoon - 60,60_second_spot,,M-F 12PM-3PM,60s,Flat: $265; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Midday (12PM-3PM),Midday Afternoon - 30,30_second_spot,,M-F 12PM-3PM,30s,Flat: $175; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Midday (12PM-3PM),Midday Afternoon - 15,15_second_spot,,M-F 12PM-3PM,15s,Flat: $125; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Evening Drive (3PM-6PM),Afternoon Drive - 60,60_second_spot,,M-F 3PM-6PM,60s,Flat: $265; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Evening Drive (3PM-6PM),Afternoon Drive - 30,30_second_spot,,M-F 3PM-6PM,30s,Flat: $175; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Evening Drive (3PM-6PM),Afternoon Drive - 15,15_second_spot,,M-F 3PM-6PM,15s,Flat: $125; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Evening Drive (6PM-9PM),Evenings - 60,60_second_spot,,M-F 6PM-9PM,60s,Flat: $265; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Evening Drive (6PM-9PM),Evenings - 30,30_second_spot,,M-F 6PM-9PM,30s,Flat: $175; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,radio,WRLL - Evening Drive (6PM-9PM),Evenings - 15,15_second_spot,,M-F 6PM-9PM,15s,Flat: $125; Model: per_spot
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,social,facebook,Sponsored Post - Facebook,,,,,Flat: $750; Model: per_post
+68dda43a63cfd4fa2a6d6166,WRLL 1450 AM,social,instagram,Sponsored Post - Instagram,,,,,Flat: $900; Model: per_post
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,website,Website,Digital Package 1,banner,300x250,Website display,,Flat: $2500; Model: monthly
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,website,Website,Digital Package 1,banner,728x90,Website display,,Flat: $2500; Model: monthly
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,newsletter,WVON Insider,E-Newsletter Sponsorship,inline,300x250,inline,,
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,newsletter,WVON Insider,E-Newsletter Sponsorship,inline,728x90,inline,,
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Morning Drive - 60,60_second_spot,,M-F 6AM-9AM,60s,Flat: $265; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Morning Drive - 30,30_second_spot,,M-F 6AM-9AM,30s,Flat: $175; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Morning Drive - 15,15_second_spot,,M-F 6AM-9AM,15s,Flat: $125; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Midday Morning - 60,60_second_spot,,M-F 9AM-12PM,60s,Flat: $265; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Midday Morning - 30,30_second_spot,,M-F 9AM-12PM,30s,Flat: $175; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Midday Morning - 15,15_second_spot,,M-F 9AM-12PM,15s,Flat: $125; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Midday Afternoon - 60,60_second_spot,,M-F 12PM-3PM,60s,Flat: $265; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Midday Afternoon - 30,30_second_spot,,M-F 12PM-3PM,30s,Flat: $175; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Midday Afternoon - 15,15_second_spot,,M-F 12PM-3PM,15s,Flat: $125; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Afternoon Drive - 60,60_second_spot,,M-F 3PM-6PM,60s,Flat: $265; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Afternoon Drive - 30,30_second_spot,,M-F 3PM-6PM,30s,Flat: $175; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Afternoon Drive - 15,15_second_spot,,M-F 3PM-6PM,15s,Flat: $125; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Evenings - 60,60_second_spot,,M-F 6PM-9PM,60s,Flat: $250; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Evenings - 30,30_second_spot,,M-F 6PM-9PM,30s,Flat: $150; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,Evenings - 15,15_second_spot,,M-F 6PM-9PM,15s,Flat: $100; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,22-minute takeover,sponsorship,,,1320s,Flat: $3000; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON,10-minute long form interview,sponsorship,,,600s,Flat: $1700; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Morning Drive (6AM-9AM),Morning Drive - 60,60_second_spot,,M-F 6AM-9AM,60s,Flat: $265; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Morning Drive (6AM-9AM),Morning Drive - 30,30_second_spot,,M-F 6AM-9AM,30s,Flat: $175; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Morning Drive (6AM-9AM),Morning Drive - 15,15_second_spot,,M-F 6AM-9AM,15s,Flat: $125; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Midday (9AM-12PM),Midday Morning - 60,60_second_spot,,M-F 9AM-12PM,60s,Flat: $265; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Midday (9AM-12PM),Midday Morning - 30,30_second_spot,,M-F 9AM-12PM,30s,Flat: $175; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Midday (9AM-12PM),Midday Morning - 15,15_second_spot,,M-F 9AM-12PM,15s,Flat: $125; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Midday (12PM-3PM),Midday Afternoon - 60,60_second_spot,,M-F 12PM-3PM,60s,Flat: $265; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Midday (12PM-3PM),Midday Afternoon - 30,30_second_spot,,M-F 12PM-3PM,30s,Flat: $175; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Midday (12PM-3PM),Midday Afternoon - 15,15_second_spot,,M-F 12PM-3PM,15s,Flat: $125; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Evening Drive (3PM-6PM),Afternoon Drive - 60,60_second_spot,,M-F 3PM-6PM,60s,Flat: $265; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Evening Drive (3PM-6PM),Afternoon Drive - 30,30_second_spot,,M-F 3PM-6PM,30s,Flat: $175; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Evening Drive (3PM-6PM),Afternoon Drive - 15,15_second_spot,,M-F 3PM-6PM,15s,Flat: $125; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Evening Drive (6PM-9PM),Evenings - 60,60_second_spot,,M-F 6PM-9PM,60s,Flat: $250; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Evening Drive (6PM-9PM),Evenings - 30,30_second_spot,,M-F 6PM-9PM,30s,Flat: $150; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - Evening Drive (6PM-9PM),Evenings - 15,15_second_spot,,M-F 6PM-9PM,15s,Flat: $100; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - General,22-minute takeover,sponsorship,,General,1320s,Flat: $3000; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,radio,WVON - General,10-minute long form interview,sponsorship,,General,600s,Flat: $1700; Model: per_spot
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,streaming,VONTV.com,Package One (1-3 weeks),,,,30s,Flat: $32; Model: cpv
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,social,facebook,Sponsored Post - Facebook,,,,,Flat: $750; Model: per_post
+68dda44d63cfd4fa2a6d6167,WVON 1690 AM,social,instagram,Sponsored Post - Instagram,,,,,Flat: $900; Model: per_post
+69022fc654bbd90298dbfbb0,True Star Media,website,Website,Large Display Ad,banner,300x600,Sidebar/prominent placement,,Flat: $375; Model: per_week
+69022fc654bbd90298dbfbb0,True Star Media,website,Website,Leaderboard Banner,banner,728x90,Header,,Flat: $250; Model: per_week
+69022fc654bbd90298dbfbb0,True Star Media,website,Website,Leaderboard Banner,banner,320x50,Header,,Flat: $250; Model: per_week
+69022fc654bbd90298dbfbb0,True Star Media,website,Website,Website Takeover,takeover,full-page,Homepage domination,,Flat: $1000; Model: per_day
+69022fc654bbd90298dbfbb0,True Star Media,newsletter,True Star Newsletter,Leaderboard Banner,header,728x90,header,,Flat: $225; Model: per_send
+69022fc654bbd90298dbfbb0,True Star Media,newsletter,True Star Newsletter,Medium Rectangle,inline,300x250,inline,,Flat: $150; Model: per_send
+69022fc654bbd90298dbfbb0,True Star Media,newsletter,True Star Newsletter,Newsletter Takeover,dedicated,full-newsletter,dedicated,,Flat: $500; Model: per_send
+69022fc654bbd90298dbfbb0,True Star Media,podcast,From the 'Go Show,30-Second Mid-Roll Package (Video),mid-roll,,mid-roll,30s,Flat: $500; Model: per_episode
+69022fc654bbd90298dbfbb0,True Star Media,podcast,From the 'Go Show,Show Takeover/Sponsorship,sponsored_content,,sponsored_content,,Flat: $1500; Model: per_episode
+69022fc654bbd90298dbfbb0,True Star Media,social,instagram,Instagram Post/Reel,sponsored_post,,,,Flat: $400; Model: per_post
+69022fc654bbd90298dbfbb0,True Star Media,social,instagram,Instagram Story,story_ad,,,,Flat: $250; Model: per_story
+69022fc654bbd90298dbfbb0,True Star Media,social,facebook,Facebook Post,sponsored_post,,,,Flat: $250; Model: per_post
+69022fc654bbd90298dbfbb0,True Star Media,social,tiktok,TikTok Video,sponsored_post,,,,Flat: $150; Model: per_post
+6902f6f854bbd90298dbfbb3,Streetsblog Chicago,website,Website,Large Display Rectangle ,banner,300x600,"sidebar, rotating",,Flat: $500; Model: monthly
+6902f6f854bbd90298dbfbb3,Streetsblog Chicago,website,Website,Medium Display Rectangle,banner,300x250,"sidebar, rotating",,Flat: $500; Model: monthly
+6902f6f854bbd90298dbfbb3,Streetsblog Chicago,website,Website,Post Sponsorship,sponsored_content,custom,top and bottom of specific posts,,Flat: $100; Model: per_week
+6902f6f854bbd90298dbfbb3,Streetsblog Chicago,website,Website,Post Sponsorship,sponsored_content,300x250,top and bottom of specific posts,,Flat: $100; Model: per_week
+6902f6f854bbd90298dbfbb3,Streetsblog Chicago,website,Website,Post Sponsorship,sponsored_content,728x90,top and bottom of specific posts,,Flat: $100; Model: per_week
+6902f6f854bbd90298dbfbb3,Streetsblog Chicago,newsletter,Streetsblog Chicago Daily Digest,Newsletter Display Ad,inline,300x250,inline,,Flat: $30; Model: per_send
+6902f6f854bbd90298dbfbb3,Streetsblog Chicago,newsletter,Streetsblog Chicago Daily Digest,Newsletter Sponsorship,header,300x250,header,,Flat: $12.5; Model: per_send
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,website,Website,Billboard,banner,970x250,Header position,,
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,website,Website,Billboard,banner,320x50,Header position,,
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,website,Website,Leaderboard,banner,728x90,Header position,,
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,website,Website,Medium Rectangle,banner,300x250,Sidebar and inline positions,,
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,website,Website,Mobile Banner,banner,320x50,Mobile optimized positions,,Model: contact
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,website,Website,Sponsored Content (3 Months),sponsored_content,custom,Editorial placement,,Flat: $2500; Model: flat_rate
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,newsletter,Chicago Southsider,Presenting Sponsor,header,600x300,header,,
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,newsletter,Chicago Southsider,Business Sponsorship,inline,580x400,inline,,
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,newsletter,Chicago Southsider,Featured Event Listing,inline,text-only,inline,,Model: contact
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,newsletter,Chicago Southsider,Dedicated Send,dedicated,full-newsletter,dedicated,,Flat: $1000; Model: per_send
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,newsletter,Chicago Southsider,Dedicated Send,dedicated,300x250,dedicated,,Flat: $1000; Model: per_send
+69039ca0f5fe7d5f40d2d5cc,Chicago Southsider,newsletter,Chicago Southsider,Dedicated Send,dedicated,sponsored-content,dedicated,,Flat: $1000; Model: per_send
+69175ccfdc7022d3d2c19483,Harvey World Herald,website,Website,Sidebar Display Ad (Medium Box),banner,300x250,"Upper sidebar, persistent across pages",,Flat: $100; Model: monthly
+69175ccfdc7022d3d2c19483,Harvey World Herald,website,Website,Inline Display Ad,banner,728x90,Within article content,,Flat: $60; Model: monthly
+69175ccfdc7022d3d2c19483,Harvey World Herald,website,Website,Inline Display Ad,banner,300x250,Within article content,,Flat: $60; Model: monthly
+69175ccfdc7022d3d2c19483,Harvey World Herald,newsletter,The Renaissance Letter,Newsletter Presenting Sponsorship,header,970x550,header,,Flat: $175; Model: per_send
+69175ccfdc7022d3d2c19483,Harvey World Herald,newsletter,The Renaissance Letter,Newsletter Presenting Sponsorship (nonprofit) 970 x 550 px,header,,header,,Flat: $131
+69175ccfdc7022d3d2c19483,Harvey World Herald,social,facebook,Facebook Sponsored Post,sponsored_post,,,,Model: contact
+69175ccfdc7022d3d2c19483,Harvey World Herald,social,instagram,Instagram Sponsored Post,sponsored_post,,,,Model: contact
+69175ccfdc7022d3d2c19483,Harvey World Herald,social,twitter,Twitter/X Sponsored Post,sponsored_post,,,,Model: contact
+69175e5adc7022d3d2c19484,Nadig Newspapers,website,Website,Largest Display Ad,banner,300x250,website,,Flat: $199; Model: per_week
+69175e5adc7022d3d2c19484,Nadig Newspapers,website,Website,Monthly Display Ad,banner,300x250,website,,Flat: $425; Model: flat_rate
+69175e5adc7022d3d2c19484,Nadig Newspapers,website,Website,Website Takeover,takeover,full-site,homepage,,Flat: $499; Model: flat_rate
+69175e5adc7022d3d2c19484,Nadig Newspapers,newsletter,Main Newsletter,Largest Newsletter Ad,inline,720x1000,inline,,Flat: $399; Model: per_send
+69175e5adc7022d3d2c19484,Nadig Newspapers,newsletter,Main Newsletter,Second Largest Newsletter Ad,inline,720x300,inline,,Flat: $299; Model: per_send
+69175e5adc7022d3d2c19484,Nadig Newspapers,newsletter,Main Newsletter,Newsletter Takeover,dedicated,full-newsletter,dedicated,,Flat: $499; Model: per_send
+69175e5adc7022d3d2c19484,Nadig Newspapers,print,Northwest Side Press,Full Page,full page,"10"" x 15.5""",any page,,
+69175e5adc7022d3d2c19484,Nadig Newspapers,print,Northwest Side Press,Half Page,half page,"6.75"" x 11.5""",any page,,
+69175e5adc7022d3d2c19484,Nadig Newspapers,print,Northwest Side Press,Quarter Page,quarter page,"5"" x 7.75""",any page,,
+69175e5adc7022d3d2c19484,Nadig Newspapers,print,The Reporter,Full Page,full page,"10"" x 15.5""",any page,,
+69175e5adc7022d3d2c19484,Nadig Newspapers,print,The Reporter,Half Page,half page,"6.75"" x 11.5""",any page,,
+69175e5adc7022d3d2c19484,Nadig Newspapers,print,The Reporter,Quarter Page,quarter page,"5"" x 7.75""",any page,,
+692f6cc84e7d54b8860a40cb,The Culture,website,Website,Medium Rectangle,banner,300x250,Breaking News section,,Flat: $75; Model: per_week
+692f6cc84e7d54b8860a40cb,The Culture,website,Website,Leaderboard,banner,728x90,Banner/Header area,,Flat: $150; Model: per_week
+692f6cc84e7d54b8860a40cb,The Culture,newsletter,The Culture Newsletter,Dedicated Email Blast,dedicated,full-newsletter,dedicated,,
+692f6cc84e7d54b8860a40cb,The Culture,print,The Culture,Full Page,full page,"10"" x 9.585""",,,
+692f6cc84e7d54b8860a40cb,The Culture,print,The Culture,Half Page,half page,"4.9167"" x 9.585""",,,
+692f6cc84e7d54b8860a40cb,The Culture,print,The Culture,Quarter Page,quarter page,"4.9167"" x 4.7092""",,,
+692f6cc84e7d54b8860a40cb,The Culture,social,facebook,Sponsored Facebook Post,sponsored_post,,,,
+694083ba0e995cb521246935,Newcity,website,Website,Billboard,banner,970x250,Homepage header,,Model: contact
+694083ba0e995cb521246935,Newcity,website,Website,Half Page,banner,300x600,Sidebar,,Model: contact
+694083ba0e995cb521246935,Newcity,website,Website,Medium Rectangle,banner,300x250,"In-content, sidebar",,Model: contact
+694083ba0e995cb521246935,Newcity,website,Website,Mobile Portrait,banner,320x100,Mobile header,,Model: contact
+694083ba0e995cb521246935,Newcity,website,Website,Medium Rectangle Mobile,banner,300x250,Mobile in-content,,Model: contact
+694083ba0e995cb521246935,Newcity,website,Website,Survey-Mentioned Size,banner,1200x250,,,Model: contact
+694083ba0e995cb521246935,Newcity,newsletter,Newcity Today,Email Newsletter Sponsorship,header,970x250,header,,Model: contact
+694083ba0e995cb521246935,Newcity,newsletter,Newcity Today,Dedicated E-Blast,dedicated,700x500,dedicated,,Model: contact
+694083ba0e995cb521246935,Newcity,print,Newcity Magazine,Full Page,full page,"8.125"" x 10.5"" (8.375"" x 10.75"" with bleed)",,,
+694083ba0e995cb521246935,Newcity,print,Newcity Magazine,Half Page Horizontal,half page,"7.5"" x 4.9""",,,
+694083ba0e995cb521246935,Newcity,print,Newcity Magazine,Half Page Vertical,half page,"3.7"" x 9.9""",,,
+694083ba0e995cb521246935,Newcity,print,Newcity Magazine,2/3 Page,full page,"4.97"" x 9.9""",,,
+694083ba0e995cb521246935,Newcity,print,Newcity Magazine,1/3 Page Horizontal,quarter page,"4.97"" x 4.9""",,,
+694083ba0e995cb521246935,Newcity,print,Newcity Magazine,1/3 Page Vertical,quarter page,"2.44"" x 9.9""",,,
+694083ba0e995cb521246935,Newcity,print,Newcity Magazine,Quarter Page,quarter page,"3.7"" x 4.9""",,,
+694084750e995cb521246937,Rebellious Magazine for Women,website,Website,Display Ad 600x300,banner,600x300,Website placement,,Flat: $100; Model: monthly
+694084750e995cb521246937,Rebellious Magazine for Women,website,Website,Display Ad 300x250,banner,300x250,Website placement,,Flat: $50; Model: monthly
+694084750e995cb521246937,Rebellious Magazine for Women,newsletter,Main Weekly Newsletter,Newsletter Banner Ad 600x150,header,600x300,header,,Flat: $50; Model: per_send
+694084750e995cb521246937,Rebellious Magazine for Women,newsletter,Main Weekly Newsletter,Newsletter Ad 300x250,inline,300x250,inline,,Flat: $50; Model: per_send
+694084750e995cb521246937,Rebellious Magazine for Women,newsletter,Main Weekly Newsletter,Dedicated Email Blast,dedicated,full-newsletter,dedicated,,Flat: $150; Model: per_send
+694084750e995cb521246937,Rebellious Magazine for Women,podcast,Of Course I'm Not OK: The Podcast,Pre-roll,pre_roll,,pre_roll,15s,Flat: $50; Model: per_episode
+694084750e995cb521246937,Rebellious Magazine for Women,streaming,Rebellious Magazine YouTube,Pre-roll,pre-roll,,pre-roll,15s,Flat: $100; Model: per_spot
+694084750e995cb521246937,Rebellious Magazine for Women,social,facebook,Sponsored Social Media Post,sponsored_post,,,,Flat: $75; Model: per_post
+694084750e995cb521246937,Rebellious Magazine for Women,social,instagram,Sponsored Social Media Post,sponsored_post,,,,Flat: $75; Model: per_post
+6940850b0e995cb521246939,Chicago Defender,website,Website,Leaderboard,banner,728x90,Header/Top of page,,Flat: $13; Model: cpm
+6940850b0e995cb521246939,Chicago Defender,website,Website,Leaderboard Large,banner,970x250,Homepage/Section fronts,,Flat: $15; Model: cpm
+6940850b0e995cb521246939,Chicago Defender,website,Website,Medium Rectangle,banner,300x250,"Sidebar, in-content",,Flat: $13; Model: cpm
+6940850b0e995cb521246939,Chicago Defender,website,Website,Half-Page Ad,banner,300x600,Sidebar,,Flat: $13; Model: cpm
+6940850b0e995cb521246939,Chicago Defender,website,Website,Mobile Leaderboard,banner,320x50,Mobile header,,Flat: $15; Model: cpm
+6940850b0e995cb521246939,Chicago Defender,website,Website,Large Mobile Banner,banner,320x100,Mobile content,,Flat: $15; Model: cpm
+6940850b0e995cb521246939,Chicago Defender,website,Website,Website Takeover,takeover,custom,Exclusive site presence,,Flat: $3000; Model: flat_rate
+6940850b0e995cb521246939,Chicago Defender,newsletter,Chicago Defender E-News Digital Daily,Top Leaderboard,header,728x90,header,,Flat: $800; Model: per_send
+6940850b0e995cb521246939,Chicago Defender,newsletter,Chicago Defender E-News Digital Daily,Bottom Leaderboard,footer,728x90,footer,,Flat: $700; Model: per_send
+6940850b0e995cb521246939,Chicago Defender,newsletter,Chicago Defender E-News Digital Daily,Newsletter Takeover,dedicated,full-newsletter,dedicated,,Flat: $1500; Model: per_send
+6940850b0e995cb521246939,Chicago Defender,social,facebook,Sponsored Post,sponsored_post,,,,Model: per_post
+6940850b0e995cb521246939,Chicago Defender,social,instagram,Sponsored Post,sponsored_post,,,,Model: per_post
+6940850b0e995cb521246939,Chicago Defender,social,instagram,Sponsored Reel,sponsored_post,,,,Model: per_post
+6940850b0e995cb521246939,Chicago Defender,social,twitter,Sponsored Post,sponsored_post,,,,Model: per_post
+6940850b0e995cb521246939,Chicago Defender,social,linkedin,Sponsored Post,sponsored_post,,,,Model: per_post
+6940850b0e995cb521246939,Chicago Defender,social,youtube,Sponsored Post,sponsored_post,,,,Model: per_post
+6940850b0e995cb521246939,Chicago Defender,social,tiktok,Sponsored Post,sponsored_post,,,,Model: per_post
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),website,Website,Medium Rectangle,banner,300x250,"Home page, right sidebar in-article",,Flat: $75; Model: per_week
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),website,Website,Medium Rectangle - Monthly,banner,300x250,"Home page, right sidebar in-article",,Flat: $300; Model: monthly
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),print,Polish Daily News - Dziennik Związkowy,Full Page,full page,"10"" x 12.75""",,,
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),print,Polish Daily News - Dziennik Związkowy,Half Page,half page,"4.9"" W x 12.75"" H (vertical) OR 10"" W x 6.25"" H (horizontal)",,,
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),print,Polish Daily News - Dziennik Związkowy,Quarter Page,quarter page,"4.9"" W x 6.25"" H OR 10"" W x 3.25"" H",,,
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),print,Polish Daily News - Dziennik Związkowy,1/8 Page,eighth page,"4.9"" W x 3.25"" H OR 3.25"" W x 5"" H OR 10"" W x 1.5"" H",,,
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),print,Polish Daily News - Dziennik Związkowy,Business Card,business card,"3.25"" W x 2"" H",,,
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),print,Polish Daily News - Dziennik Związkowy,Print Insert,insert,"Maximum 10"" x 12""",,,
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),print,Polish Daily News - Dziennik Związkowy,Classified Ad,classified,,,,
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),print,Kalejdoskop Magazine,Full Page - Kalejdoskop,full page,,,,
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),print,Kalejdoskop Magazine,Half Page - Kalejdoskop,half page,,,,
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),podcast,Dziennik Związkowy Podcast,30-Second Pre-recorded Ad,pre-roll,,pre-roll,30s,
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),podcast,Dziennik Związkowy Podcast,60-Second Pre-recorded Ad,mid-roll,,mid-roll,60s,Flat: $160; Model: per_episode
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),podcast,Dziennik Związkowy Podcast,15-Second Billboard/Sponsorship,pre-roll,,pre-roll,15s,Flat: $50; Model: per_episode
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),podcast,Dziennik Związkowy Podcast,Podcast Takeover,sponsored_content,,sponsored_content,,Flat: $300; Model: per_episode
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),streaming,Dziennik Związkowy Video,30-Second Video Ad,pre-roll,,pre-roll,30s,Flat: $100; Model: per_spot
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),streaming,Dziennik Związkowy Video,60-Second Video Ad,mid-roll,,mid-roll,60s,Flat: $160; Model: per_spot
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),streaming,Dziennik Związkowy Video,Interview/Infomercial,sponsored_content,,sponsored_content,,Flat: $300; Model: flat
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),social,facebook,Sponsored Post,sponsored_post,,,,Flat: $60; Model: per_post
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),social,instagram,Sponsored Post,sponsored_post,,,,Model: per_post
+694085ce0e995cb52124693b,Dziennik Związkowy (Polish Daily News),social,twitter,Sponsored Post,sponsored_post,,,,Model: per_post
