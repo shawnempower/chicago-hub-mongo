@@ -5,6 +5,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { ObjectId } from 'mongodb';
 import { authenticateToken } from '../../middleware/authenticate';
 import { insertionOrderService } from '../../../src/services/insertionOrderService';
 import { userProfilesService } from '../../../src/integrations/mongodb/allServices';
@@ -233,9 +234,18 @@ router.post('/generate/:campaignId', async (req: any, res: Response) => {
     const db = getDatabase();
     const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
     
-    const campaign = await campaignsCollection.findOne({ 
-      $or: [{ campaignId }, { _id: campaignId }] 
-    });
+    // Build query to find by campaignId string or _id (as ObjectId)
+    const query: any = { $or: [{ campaignId }] };
+    try {
+      // Try to add ObjectId query if the string is a valid ObjectId
+      if (ObjectId.isValid(campaignId)) {
+        query.$or.push({ _id: new ObjectId(campaignId) });
+      }
+    } catch {
+      // If ObjectId conversion fails, just use the string query
+    }
+    
+    const campaign = await campaignsCollection.findOne(query);
     
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
@@ -296,9 +306,18 @@ router.delete('/:campaignId/publication-orders', async (req: any, res: Response)
     if (!req.isAdmin) {
       const db = getDatabase();
       const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
-      const campaign = await campaignsCollection.findOne({ 
-        $or: [{ campaignId }, { _id: campaignId }] 
-      });
+      
+      // Build query to find by campaignId string or _id (as ObjectId)
+      const query: any = { $or: [{ campaignId }] };
+      try {
+        if (ObjectId.isValid(campaignId)) {
+          query.$or.push({ _id: new ObjectId(campaignId) });
+        }
+      } catch {
+        // If ObjectId conversion fails, just use the string query
+      }
+      
+      const campaign = await campaignsCollection.findOne(query);
       
       if (!campaign) {
         return res.status(404).json({ error: 'Campaign not found' });

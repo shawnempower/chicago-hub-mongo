@@ -624,7 +624,17 @@ export default function CampaignDetail() {
                       <Calendar className="h-4 w-4 text-gray-400" />
                       <p className="text-sm text-muted-foreground font-sans">Duration</p>
                     </div>
-                    <p className="text-lg font-bold font-sans">{campaign.timeline.durationMonths} months</p>
+                    <p className="text-lg font-bold font-sans">
+                      {(() => {
+                        const months = campaign.timeline.durationMonths;
+                        const weeks = campaign.timeline.durationWeeks;
+                        // Show weeks if less than 1 month, otherwise show months with weeks in parentheses
+                        if (months < 1 && weeks) {
+                          return `${weeks} ${weeks === 1 ? 'week' : 'weeks'}`;
+                        }
+                        return `${months} ${months === 1 ? 'month' : 'months'}${weeks ? ` (${weeks} weeks)` : ''}`;
+                      })()}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1156,72 +1166,6 @@ export default function CampaignDetail() {
                         </div>
                       </div>
 
-                      {/* Performance & Investment Summary */}
-                      <div className="border rounded-lg p-6 bg-white space-y-6">
-                        {/* Estimated Performance */}
-                        {campaign.estimatedPerformance && (
-                          <div>
-                            <h3 className="text-base font-semibold font-sans mb-4">Estimated Performance</h3>
-                            <div className="grid grid-cols-3 gap-4">
-                              {campaign.estimatedPerformance.reach && (
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Estimated Reach</p>
-                                  <p className="text-lg font-semibold">
-                                    {campaign.estimatedPerformance.reach.min?.toLocaleString()} - {campaign.estimatedPerformance.reach.max?.toLocaleString()}
-                                  </p>
-                                </div>
-                              )}
-                              {campaign.estimatedPerformance.impressions && (
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Estimated Impressions</p>
-                                  <p className="text-lg font-semibold">
-                                    {campaign.estimatedPerformance.impressions.min?.toLocaleString()} - {campaign.estimatedPerformance.impressions.max?.toLocaleString()}
-                                  </p>
-                                </div>
-                              )}
-                              {campaign.estimatedPerformance.cpm && (
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Cost Per Thousand (CPM)</p>
-                                  <p className="text-lg font-semibold">${campaign.estimatedPerformance.cpm.toFixed(2)}</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Divider */}
-                        <hr className="border-t" />
-
-                        {/* Investment Summary */}
-                        <Card className="bg-white">
-                          <CardContent className="p-0">
-                            {/* Header */}
-                            <div className="flex justify-between items-center px-4 py-3 bg-gray-50/50 border-b">
-                              <span className="font-semibold text-foreground text-base">Investment Summary</span>
-                            </div>
-                            {/* Content */}
-                            <div className="px-4 py-3 space-y-3">
-                              {(campaign.pricing?.monthlyTotal || campaign.pricing?.monthlyPrice) && (
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">Monthly Total</span>
-                                  <span className="font-medium">${(campaign.pricing?.monthlyTotal || campaign.pricing?.monthlyPrice || 0).toLocaleString()}</span>
-                                </div>
-                              )}
-                              {campaign.timeline.durationMonths && (
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">Campaign Duration</span>
-                                  <span className="font-medium">{campaign.timeline.durationMonths} {campaign.timeline.durationMonths === 1 ? 'month' : 'months'}</span>
-                                </div>
-                              )}
-                            </div>
-                            {/* Total Row */}
-                            <div className="flex justify-between items-center px-4 py-3 bg-gray-50/50 border-t">
-                              <span className="font-semibold text-sm">Total Campaign Investment</span>
-                              <span className="font-bold text-base">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
               </div>
             </TabsContent>
 

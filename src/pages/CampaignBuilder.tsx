@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { addWeeks, addMonths } from 'date-fns';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,12 +81,12 @@ const INITIAL_FORM_DATA: CampaignFormData = {
 const getSteps = (inventoryMethod: 'ai' | 'package') => [
   { id: 1, title: 'Campaign Basics', description: 'Name and advertiser information' },
   { id: 2, title: 'Campaign Objectives', description: 'Goals, budget, and targeting' },
-  { id: 3, title: 'Timeline', description: 'Campaign dates and duration' },
   { 
-    id: 4, 
+    id: 3, 
     title: inventoryMethod === 'ai' ? 'AI Analysis' : 'Package Selection', 
     description: inventoryMethod === 'ai' ? 'Intelligent inventory selection' : 'Choose pre-built package' 
   },
+  { id: 4, title: 'Timeline', description: 'Campaign dates and duration' },
   { id: 5, title: 'Review & Create', description: 'Review and finalize campaign' },
 ];
 
@@ -124,6 +125,37 @@ export default function CampaignBuilder() {
   const handlePackageSelect = (packageId: string, packageData: any) => {
     updateFormData({ selectedPackageId: packageId });
     setSelectedPackageData(packageData);
+    
+    // Auto-populate timeline based on package duration
+    const packageDuration = packageData.metadata?.builderInfo?.originalDuration;
+    const packageDurationUnit = packageData.metadata?.builderInfo?.originalDurationUnit || 'months';
+    
+    if (packageDuration) {
+      // Use existing start date or default to today
+      const startDate = formData.startDate || new Date();
+      
+      let calculatedEndDate: Date;
+      if (packageDurationUnit === 'weeks') {
+        calculatedEndDate = addWeeks(startDate, packageDuration);
+      } else {
+        calculatedEndDate = addMonths(startDate, packageDuration);
+      }
+      
+      // Update both dates
+      updateFormData({ 
+        startDate: startDate,
+        endDate: calculatedEndDate 
+      });
+      
+      const durationLabel = packageDuration === 1 
+        ? `1 ${packageDurationUnit.slice(0, -1)}` 
+        : `${packageDuration} ${packageDurationUnit}`;
+      
+      toast({
+        title: 'Timeline Set',
+        description: `Campaign dates set to ${durationLabel} based on package`,
+      });
+    }
   };
 
   const validateStep = (step: number): boolean => {
@@ -171,6 +203,21 @@ export default function CampaignBuilder() {
         return true;
         
       case 3:
+        // Package selection validation (only for package method)
+        if (formData.inventorySelectionMethod === 'package') {
+          if (!formData.selectedPackageId || !selectedPackageData) {
+            toast({
+              title: 'No Package Selected',
+              description: 'Please select a package to continue',
+              variant: 'destructive',
+            });
+            return false;
+          }
+        }
+        return true;
+        
+      case 4:
+        // Timeline validation
         if (!formData.startDate || !formData.endDate) {
           toast({
             title: 'Missing Dates',
@@ -199,41 +246,29 @@ export default function CampaignBuilder() {
       return;
     }
 
-    if (currentStep === 3) {
-      // Different behavior based on inventory selection method
+    if (currentStep === 2) {
+      // After objectives, if AI method, move to step 3 and trigger analysis
       if (formData.inventorySelectionMethod === 'ai') {
-        // Move to step 4 FIRST to show loading screen
-        setCurrentStep(4);
-        // Then trigger AI analysis
+        setCurrentStep(3);
         await handleAnalyze();
-        // Don't increment step again - we're already on step 4
-        return;
-      } else {
-        // Package method: just move to package selection step
-        setCurrentStep(4);
         return;
       }
+      // Package method: just move to package selection step
+      setCurrentStep(3);
+      return;
     }
 
-    if (currentStep === 4 && formData.inventorySelectionMethod === 'package') {
-      // Validate package selection before moving to review
-      if (!formData.selectedPackageId || !selectedPackageData) {
+    if (currentStep === 3) {
+      // After package/AI selection, move to timeline
+      if (formData.inventorySelectionMethod === 'ai' && !result) {
         toast({
-          title: 'No Package Selected',
-          description: 'Please select a package to continue',
+          title: 'Analysis Required',
+          description: 'Please complete the AI analysis before proceeding',
           variant: 'destructive',
         });
         return;
       }
-    }
-
-    if (currentStep === 4 && formData.inventorySelectionMethod === 'ai' && !result) {
-      // Validate AI analysis completed before moving to review
-      toast({
-        title: 'Analysis Required',
-        description: 'Please complete the AI analysis before proceeding',
-        variant: 'destructive',
-      });
+      setCurrentStep(4);
       return;
     }
     
@@ -786,14 +821,7 @@ export default function CampaignBuilder() {
                 />
               )}
               
-              {currentStep === 3 && (
-                <CampaignTimelineStep
-                  formData={formData}
-                  updateFormData={updateFormData}
-                />
-              )}
-              
-              {currentStep === 4 && formData.inventorySelectionMethod === 'ai' && (
+              {currentStep === 3 && formData.inventorySelectionMethod === 'ai' && (
                 <CampaignAnalysisStep
                   analyzing={analyzing}
                   result={result}
@@ -810,11 +838,19 @@ export default function CampaignBuilder() {
                 />
               )}
               
-              {currentStep === 4 && formData.inventorySelectionMethod === 'package' && (
+              {currentStep === 3 && formData.inventorySelectionMethod === 'package' && (
                 <CampaignPackageSelectionStep
                   selectedPackageId={formData.selectedPackageId}
                   onPackageSelect={handlePackageSelect}
                   budget={formData.budget}
+                />
+              )}
+              
+              {currentStep === 4 && (
+                <CampaignTimelineStep
+                  formData={formData}
+                  updateFormData={updateFormData}
+                  selectedPackageData={selectedPackageData}
                 />
               )}
               
@@ -846,7 +882,7 @@ export default function CampaignBuilder() {
             <div className="flex gap-2">
               {currentStep < 4 && (
                 <Button onClick={handleNext}>
-                  {currentStep === 3 ? (
+                  {currentStep === 2 ? (
                     formData.inventorySelectionMethod === 'ai' ? (
                       <>
                         <Sparkles className="mr-2 h-4 w-4" />
@@ -858,6 +894,11 @@ export default function CampaignBuilder() {
                         Select Package
                       </>
                     )
+                  ) : currentStep === 3 ? (
+                    <>
+                      Set Timeline
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
                   ) : (
                     <>
                       Next
@@ -867,7 +908,7 @@ export default function CampaignBuilder() {
                 </Button>
               )}
               
-              {currentStep === 4 && formData.inventorySelectionMethod === 'package' && formData.selectedPackageId && (
+              {currentStep === 4 && (
                 <Button onClick={handleNext}>
                   Review Campaign
                   <ArrowRight className="ml-2 h-4 w-4" />

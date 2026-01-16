@@ -203,13 +203,65 @@ export function getPublicationTypeLabel(publicationType: PublicationFrequencyTyp
 }
 
 /**
- * Check if frequency is at maximum for publication type
+ * Check if frequency is at or exceeds maximum for publication type
+ * Optionally accounts for package duration (e.g., 3 weeks = 21 days max for daily)
  */
 export function isAtMaxFrequency(
   frequency: number,
-  publicationType: PublicationFrequencyType
+  publicationType: PublicationFrequencyType,
+  durationInMonths?: number
 ): boolean {
-  return frequency >= getMaxFrequency(publicationType);
+  const effectiveMax = getEffectiveMaxFrequency(publicationType, durationInMonths);
+  return frequency >= effectiveMax;
+}
+
+/**
+ * Get the effective maximum frequency considering package duration
+ * Uses 7 days/week for accurate calculation on sub-month packages
+ */
+export function getEffectiveMaxFrequency(
+  publicationType: PublicationFrequencyType,
+  durationInMonths?: number
+): number {
+  const monthlyMax = getMaxFrequency(publicationType);
+  
+  // If no duration specified or duration is 1+ months, use monthly max
+  // (scaled by number of months for multi-month packages)
+  if (!durationInMonths || durationInMonths >= 1) {
+    return monthlyMax;
+  }
+  
+  // For sub-month packages, calculate based on weeks
+  // Convert duration to weeks (4 weeks per month)
+  const durationInWeeks = durationInMonths * 4;
+  
+  // Calculate duration-adjusted max based on actual time units
+  let durationAdjustedMax: number;
+  
+  switch (publicationType) {
+    case 'daily':
+      // Daily: 7 days per week
+      durationAdjustedMax = Math.floor(durationInWeeks * 7);
+      break;
+    case 'weekly':
+      // Weekly: 1 per week
+      durationAdjustedMax = Math.floor(durationInWeeks);
+      break;
+    case 'bi-weekly':
+      // Bi-weekly: 1 per 2 weeks
+      durationAdjustedMax = Math.floor(durationInWeeks / 2);
+      break;
+    case 'monthly':
+      // Monthly: 1 per 4 weeks (still allow 1 for sub-month packages)
+      durationAdjustedMax = Math.max(1, Math.floor(durationInWeeks / 4));
+      break;
+    default:
+      // Custom: treat like daily
+      durationAdjustedMax = Math.floor(durationInWeeks * 7);
+  }
+  
+  // Return at least 1, and cap at monthly max
+  return Math.max(1, Math.min(monthlyMax, durationAdjustedMax));
 }
 
 /**

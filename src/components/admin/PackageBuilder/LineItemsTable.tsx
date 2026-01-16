@@ -7,7 +7,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { HubPackageInventoryItem, PublicationFrequencyType } from '@/integrations/mongodb/hubPackageSchema';
 import {
   getFrequencyOptionsWithLabels,
-  isAtMaxFrequency
+  isAtMaxFrequency,
+  getEffectiveMaxFrequency,
+  getMaxFrequency
 } from '@/utils/frequencyEngine';
 import { calculateItemCost } from '@/utils/inventoryPricing';
 import { getFrequencyLabel } from '@/utils/frequencyLabels';
@@ -21,6 +23,8 @@ interface LineItemsTableProps {
   onToggleExclude?: (pubId: number, itemIndex: number) => void;
   defaultExpanded?: boolean;
   totalCost: number;
+  durationInMonths?: number; // Package duration in months for calculating total sends
+  durationDisplay?: string; // Formatted duration string like "3 Weeks" or "6 Months"
 }
 
 export function LineItemsTable({
@@ -30,7 +34,9 @@ export function LineItemsTable({
   onFrequencyChange,
   onToggleExclude,
   defaultExpanded = true,
-  totalCost
+  totalCost,
+  durationInMonths,
+  durationDisplay
 }: LineItemsTableProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   
@@ -147,8 +153,19 @@ export function LineItemsTable({
     const isFrequencyLocked = fixedFrequencyModels.includes(pricingModel);
     const isImpressionBased = ['cpm', 'cpv', 'cpc'].includes(pricingModel);
     
-    // Calculate if at max frequency
-    const atMax = isAtMaxFrequency(frequency, publicationType);
+    // Calculate frequency limits
+    const monthlyMax = getMaxFrequency(publicationType);
+    const effectiveMax = getEffectiveMaxFrequency(publicationType, durationInMonths);
+    
+    // Warning scenarios:
+    // 1. exceedsDurationMax: frequency exceeds what's physically possible for the duration (RED)
+    // 2. atMonthlyMax: frequency equals the monthly max on a 1+ month package (soft warning)
+    // Note: Selecting max for duration (e.g., 3x weekly in 3 weeks) is NOT a warning
+    const exceedsDurationMax = frequency > effectiveMax;
+    const atMonthlyMax = frequency >= monthlyMax && (!durationInMonths || durationInMonths >= 1);
+    
+    // Don't show warning if this is the only valid option (e.g., monthly item in a sub-month package = 1 send only)
+    const isOnlyOption = effectiveMax === 1 && frequency === 1;
     
     // For impression-based pricing
     if (isImpressionBased && (item as any).monthlyImpressions) {
@@ -223,8 +240,14 @@ export function LineItemsTable({
             Fixed monthly rate
           </div>
         )}
-        {!isFrequencyLocked && atMax && (
-          <div className="flex items-center gap-1 text-xs text-amber-600">
+        {!isFrequencyLocked && exceedsDurationMax && !isOnlyOption && (
+          <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
+            <AlertCircle className="h-3 w-3" />
+            Exceeds max ({effectiveMax}) for {durationDisplay || 'this duration'}
+          </div>
+        )}
+        {!isFrequencyLocked && atMonthlyMax && !exceedsDurationMax && !isOnlyOption && (
+          <div className="flex items-center gap-1 text-xs text-red-600">
             <AlertCircle className="h-3 w-3" />
             Max frequency for {publicationType} publication
           </div>
@@ -250,7 +273,8 @@ export function LineItemsTable({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-gray-700">
-                    ${(totalCost || 0).toLocaleString()}/mo
+                    ${(durationInMonths ? (totalCost * durationInMonths) : totalCost).toLocaleString()}
+                    {durationDisplay ? ` for ${durationDisplay.toLowerCase()}` : '/mo'}
                   </span>
                   <Button
                     type="button"
@@ -355,13 +379,13 @@ export function LineItemsTable({
                   </div>
                 </td>
                 
-                {/* Monthly Cost */}
+                {/* Item Cost */}
                 <td className="px-4 py-3 text-right w-32">
                   <div className="text-sm font-medium">
-                    ${(monthlyCost || 0).toLocaleString()}
+                    ${(durationInMonths ? (monthlyCost * durationInMonths) : monthlyCost).toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground font-normal">
-                    /month
+                    {durationDisplay ? `for ${durationDisplay.toLowerCase()}` : '/month'}
                   </div>
                 </td>
                 

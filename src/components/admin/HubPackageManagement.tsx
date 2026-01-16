@@ -456,6 +456,7 @@ export const HubPackageManagement = () => {
             buildMode: builderFilters.mode,
             originalBudget: builderFilters.budget,
             originalDuration: builderFilters.duration,
+            originalDurationUnit: builderFilters.durationUnit || 'months',
             filtersUsed: {
               geography: builderFilters.geography,
               channels: builderFilters.channels,
@@ -923,6 +924,7 @@ export const HubPackageManagement = () => {
         mode: pkg.metadata?.builderInfo?.buildMode || 'specification-first',
         budget: pkg.metadata?.builderInfo?.originalBudget,
         duration: pkg.metadata?.builderInfo?.originalDuration || 6,
+        durationUnit: pkg.metadata?.builderInfo?.originalDurationUnit || 'months',
         geography: pkg.metadata?.builderInfo?.filtersUsed?.geography,
         channels: pkg.metadata?.builderInfo?.filtersUsed?.channels || ['website', 'newsletter', 'print'],
         publications: pkg.metadata?.builderInfo?.filtersUsed?.publications,
@@ -954,7 +956,12 @@ export const HubPackageManagement = () => {
             0
           ),
           monthlyCost: pkg.pricing?.breakdown?.finalPrice || 0,
-          totalCost: (pkg.pricing?.breakdown?.finalPrice || 0) * (pkg.metadata?.builderInfo?.originalDuration || 6)
+          totalCost: (() => {
+            const duration = pkg.metadata?.builderInfo?.originalDuration || 6;
+            const unit = pkg.metadata?.builderInfo?.originalDurationUnit || 'months';
+            const durationInMonths = unit === 'weeks' ? duration / 4 : duration;
+            return (pkg.pricing?.breakdown?.finalPrice || 0) * durationInMonths;
+          })()
         }
       };
 
@@ -1020,6 +1027,7 @@ export const HubPackageManagement = () => {
         result={builderResult}
         budget={builderFilters.budget}
         duration={builderFilters.duration}
+        durationUnit={builderFilters.durationUnit || 'months'}
         initialPackageName={editingPackage?.basicInfo.name}
         initialApprovalStatus={editingPackage?.metadata?.approvalStatus || 'draft'}
         isEditingExistingPackage={!!editingPackage?._id}
@@ -1449,8 +1457,15 @@ export const HubPackageManagement = () => {
                   {/* Package Info */}
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <p className="text-muted-foreground">Monthly Cost</p>
-                      <p className="font-semibold">${Math.round(actualMonthlyCost).toLocaleString()}/month</p>
+                      <p className="text-muted-foreground">Package Price</p>
+                      <p className="font-semibold">
+                        ${(() => {
+                          const duration = pkg.metadata?.builderInfo?.originalDuration || 6;
+                          const unit = pkg.metadata?.builderInfo?.originalDurationUnit || 'months';
+                          const durationInMonths = unit === 'weeks' ? duration / 4 : duration;
+                          return Math.round(actualMonthlyCost * durationInMonths).toLocaleString();
+                        })()}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Outlets</p>
@@ -1459,7 +1474,14 @@ export const HubPackageManagement = () => {
                     <div>
                       <p className="text-muted-foreground">Duration</p>
                       <p className="font-semibold">
-                        {pkg.metadata?.builderInfo?.originalDuration || 6} months
+                        {(() => {
+                          const duration = pkg.metadata?.builderInfo?.originalDuration || 6;
+                          const unit = pkg.metadata?.builderInfo?.originalDurationUnit || 'months';
+                          if (unit === 'weeks') {
+                            return duration === 1 ? '1 Week' : `${duration} Weeks`;
+                          }
+                          return duration === 1 ? '1 Month' : `${duration} Months`;
+                        })()}
                       </p>
                     </div>
                     <div>

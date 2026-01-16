@@ -386,14 +386,20 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
                 }
               }
               
+              // Detect item-level frequency type (use item's own frequency if available, fallback to publication)
+              // This ensures a weekly newsletter in a daily newspaper still caps at 4x/month
+              const itemPubType = itemFrequencyString 
+                ? detectFrequencyType(itemFrequencyString)
+                : pubType;
+              
               const item: any = {
                 channel: channelName,
                 itemPath: `${path}[${idx}]${tierSuffix}`,
                 itemName: itemName,
                 quantity: frequency,
                 currentFrequency: frequency,
-                maxFrequency: pubType === 'daily' ? 30 : pubType === 'weekly' ? 4 : pubType === 'bi-weekly' ? 2 : 1,
-                publicationFrequencyType: pubType,
+                maxFrequency: itemPubType === 'daily' ? 30 : itemPubType === 'weekly' ? 4 : itemPubType === 'bi-weekly' ? 2 : 1,
+                publicationFrequencyType: itemPubType,
                 frequency: itemFrequencyString || pub.printFrequency,  // Use item-specific frequency or publication frequency
                 itemPricing: {
                   standardPrice: hubPrice,
@@ -1351,6 +1357,11 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
               }
             }
 
+            // Detect item-level frequency type (use item's own frequency if available, fallback to publication)
+            const itemPubType = itemFrequencyString 
+              ? detectFrequencyType(itemFrequencyString)
+              : pubType;
+
             const freshItem: any = {
               itemPath: `${path}[${idx}]${tierSuffix}`,
               channel: channelName,
@@ -1362,7 +1373,7 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
               },
               format, // Use standardized format object
               frequency: itemFrequencyString || freshPub.printFrequency,
-              publicationFrequencyType: pubType,
+              publicationFrequencyType: itemPubType,
               audienceMetrics: Object.keys(channelMetrics).length > 0 ? channelMetrics : undefined,
               performanceMetrics: opp.performanceMetrics || undefined,
               sourceName: sourceInfo?.sourceName
@@ -1534,18 +1545,19 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
             matchedBasePaths.add(getBasePath(freshItem.itemPath));
           }
           
-          // New item - use defaults
-          const standardFreq = pubType === 'daily' ? 12 : 
-                              pubType === 'weekly' ? 4 : 
-                              pubType === 'bi-weekly' ? 2 : 1;
+          // New item - use defaults based on item's own frequency type (not publication level)
+          const itemFreqType = freshItem.publicationFrequencyType || pubType;
+          const standardFreq = itemFreqType === 'daily' ? 12 : 
+                              itemFreqType === 'weekly' ? 4 : 
+                              itemFreqType === 'bi-weekly' ? 2 : 1;
           
           return {
             ...freshItem,
             quantity: standardFreq,
             currentFrequency: standardFreq,
-            maxFrequency: pubType === 'daily' ? 30 : 
-                         pubType === 'weekly' ? 4 : 
-                         pubType === 'bi-weekly' ? 2 : 1,
+            maxFrequency: itemFreqType === 'daily' ? 30 : 
+                         itemFreqType === 'weekly' ? 4 : 
+                         itemFreqType === 'bi-weekly' ? 2 : 1,
             isExcluded: false
           };
         }
@@ -1863,14 +1875,19 @@ router.post('/new-publications', authenticateToken, async (req: any, res: Respon
 
             const format = opp.format ? { ...opp.format } : {};
 
+            // Detect item-level frequency type (use item's own frequency if available, fallback to publication)
+            const itemPubType = itemFrequencyString 
+              ? detectFrequencyType(itemFrequencyString)
+              : pubType;
+
             const item: any = {
               channel: channelName,
               itemPath: `${path}[${idx}]${tierSuffix}`,
               itemName: itemName,
               quantity: frequency,
               currentFrequency: frequency,
-              maxFrequency: pubType === 'daily' ? 30 : pubType === 'weekly' ? 4 : pubType === 'bi-weekly' ? 2 : 1,
-              publicationFrequencyType: pubType,
+              maxFrequency: itemPubType === 'daily' ? 30 : itemPubType === 'weekly' ? 4 : itemPubType === 'bi-weekly' ? 2 : 1,
+              publicationFrequencyType: itemPubType,
               frequency: itemFrequencyString || pub.printFrequency,
               itemPricing: {
                 standardPrice: hubPrice,

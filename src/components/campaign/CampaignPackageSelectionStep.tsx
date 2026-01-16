@@ -10,7 +10,7 @@ import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Package, CheckCircle2, Users, MapPin, DollarSign, Calendar } from 'lucide-react';
+import { Loader2, Package, CheckCircle2, Users, MapPin, DollarSign, Calendar, Clock } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { API_BASE_URL } from '@/config/api';
@@ -146,6 +146,30 @@ export function CampaignPackageSelectionStep({
       return sum + activeItems.length;
     }, 0);
   };
+  
+  // Get package duration info
+  const getPackageDuration = (pkg: HubPackage): { value: number; unit: 'weeks' | 'months'; display: string } => {
+    const duration = pkg.metadata?.builderInfo?.originalDuration;
+    const unit = pkg.metadata?.builderInfo?.originalDurationUnit || 'months';
+    
+    if (!duration) {
+      return { value: 6, unit: 'months', display: '6 Months' };
+    }
+    
+    if (unit === 'weeks') {
+      return { 
+        value: duration, 
+        unit: 'weeks', 
+        display: duration === 1 ? '1 Week' : `${duration} Weeks` 
+      };
+    }
+    
+    return { 
+      value: duration, 
+      unit: 'months', 
+      display: duration === 1 ? '1 Month' : `${duration} Months` 
+    };
+  };
 
   if (loading) {
     return (
@@ -186,7 +210,8 @@ export function CampaignPackageSelectionStep({
         <h3 className="text-base font-semibold font-sans">Select a Pre-Built Package</h3>
         <p className="text-sm text-gray-600 font-sans">
           Choose from curated packages with proven publication combinations. Each package includes 
-          pre-selected inventory, pricing, and reach estimates.
+          pre-selected inventory, pricing, and a set duration. <strong>Your campaign timeline will be 
+          automatically set based on the package you select.</strong>
         </p>
       </div>
 
@@ -219,6 +244,7 @@ export function CampaignPackageSelectionStep({
           const packagePrice = pkg.pricing?.breakdown?.finalPrice || 0;
           const isWithinBudget = budget > 0 && packagePrice <= budget * 1.1; // Within 10% of budget
           const packageId = pkg._id?.toString() || '';
+          const duration = getPackageDuration(pkg);
 
           return (
             <div
@@ -243,11 +269,17 @@ export function CampaignPackageSelectionStep({
                       </Label>
                     </div>
                     <div className="text-right">
+                      <div className="flex items-center gap-2 justify-end mb-1">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-semibold">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {duration.display}
+                        </Badge>
+                      </div>
                       <p className="text-xl font-bold text-primary font-sans">
                         {formatCurrency(packagePrice)}
                       </p>
                       <p className="text-xs text-muted-foreground font-sans">
-                        {pkg.pricing?.displayPrice || ''}
+                        for {duration.display.toLowerCase()}
                       </p>
                     </div>
                   </div>
@@ -272,9 +304,9 @@ export function CampaignPackageSelectionStep({
                       <div>
                         <div className="flex items-center gap-1.5 mb-0.5">
                           <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground font-sans">Commitment</p>
+                          <p className="text-xs text-muted-foreground font-sans">Duration</p>
                         </div>
-                        <p className="text-sm font-semibold font-sans">{pkg.campaignDetails?.minimumCommitment || 'Flexible'}</p>
+                        <p className="text-sm font-semibold font-sans">{duration.display}</p>
                       </div>
                     </div>
                     

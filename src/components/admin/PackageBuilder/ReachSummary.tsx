@@ -24,6 +24,8 @@ interface ReachSummaryProps {
   publicationsCount?: number;
   channelsCount?: number;
   compact?: boolean;
+  durationInMonths?: number; // Package duration in months for scaling reach
+  durationDisplay?: string; // Formatted duration string like "3 Weeks" or "6 Months"
 }
 
 export function ReachSummary({
@@ -36,10 +38,25 @@ export function ReachSummary({
   overlapFactor = 0.70,
   publicationsCount = 0,
   channelsCount = 0,
-  compact = false
+  compact = false,
+  durationInMonths,
+  durationDisplay
 }: ReachSummaryProps) {
   const overlapPercent = Math.round((1 - overlapFactor) * 100);
   const hasData = estimatedTotalReach > 0 || totalMonthlyImpressions || totalMonthlyExposures;
+  
+  // Calculate package-scaled reach metrics
+  const durationMultiplier = durationInMonths || 1;
+  const packageImpressions = totalMonthlyImpressions ? Math.round(totalMonthlyImpressions * durationMultiplier) : undefined;
+  const packageExposures = totalMonthlyExposures ? Math.round(totalMonthlyExposures * durationMultiplier) : undefined;
+  // Note: Unique reach doesn't scale linearly with duration - it's more of a ceiling
+  // We use a diminishing returns formula: uniqueReach * (1 + ln(duration)/2) for longer durations
+  const packageUniqueReach = estimatedUniqueReach > 0 
+    ? Math.round(estimatedUniqueReach * (durationMultiplier <= 1 ? durationMultiplier : Math.min(1 + Math.log(durationMultiplier) / 2, durationMultiplier)))
+    : 0;
+  
+  // Duration label for display
+  const durationLabel = durationDisplay ? `for ${durationDisplay.toLowerCase()}` : 'monthly';
 
   if (!hasData) {
     return (
@@ -62,22 +79,22 @@ export function ReachSummary({
   if (compact) {
     return (
       <div className="space-y-2">
-        {estimatedUniqueReach > 0 && (
+        {packageUniqueReach > 0 && (
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Unique Reach:</span>
-            <span className="font-semibold">~{formatReachNumber(estimatedUniqueReach)}</span>
+            <span className="font-semibold">~{formatReachNumber(packageUniqueReach)}</span>
           </div>
         )}
-        {totalMonthlyExposures && (
+        {packageExposures && (
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Total Exposures:</span>
-            <span className="font-semibold">{formatReachNumber(totalMonthlyExposures)}/mo</span>
+            <span className="font-semibold">{formatReachNumber(packageExposures)} {durationLabel}</span>
           </div>
         )}
-        {totalMonthlyImpressions && (
+        {packageImpressions && (
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Impressions:</span>
-            <span className="font-semibold">{totalMonthlyImpressions.toLocaleString()}/mo</span>
+            <span className="font-semibold">{packageImpressions.toLocaleString()} {durationLabel}</span>
           </div>
         )}
       </div>
@@ -96,10 +113,10 @@ export function ReachSummary({
         {/* Primary Metrics */}
         <div className="space-y-3">
           {/* Unique Reach */}
-          {estimatedUniqueReach > 0 && (
+          {packageUniqueReach > 0 && (
             <div>
               <div className="text-2xl font-bold flex items-baseline gap-2">
-                <span>~{formatReachNumber(estimatedUniqueReach)}</span>
+                <span>~{formatReachNumber(packageUniqueReach)}</span>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -107,24 +124,25 @@ export function ReachSummary({
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p className="text-xs">
-                        Estimated unique individuals reached monthly, 
+                        Estimated unique individuals reached {durationLabel}, 
                         adjusted for {overlapPercent}% audience overlap across channels.
+                        {durationMultiplier > 1 && ' Unique reach grows slower than duration due to audience overlap.'}
                       </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                Unique Monthly Reach (People)
+                Unique Reach {durationDisplay ? `(${durationDisplay})` : '(People)'}
               </div>
             </div>
           )}
           
           {/* Total Exposures */}
-          {totalMonthlyExposures && totalMonthlyExposures > 0 && (
+          {packageExposures && packageExposures > 0 && (
             <div>
               <div className="text-xl font-bold flex items-baseline gap-2">
-                <span>{formatReachNumber(totalMonthlyExposures)}</span>
+                <span>{formatReachNumber(packageExposures)}</span>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -132,7 +150,7 @@ export function ReachSummary({
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p className="text-xs">
-                        Total touchpoints/exposures accounting for frequency. 
+                        Total touchpoints/exposures {durationLabel} accounting for frequency. 
                         Same person may see your message multiple times.
                       </p>
                     </TooltipContent>
@@ -140,19 +158,19 @@ export function ReachSummary({
                 </TooltipProvider>
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                Total Monthly Exposures (Frequency-Adjusted)
+                Total Exposures {durationDisplay ? `(${durationDisplay})` : '(Frequency-Adjusted)'}
               </div>
             </div>
           )}
           
           {/* Impressions (for pure CPM campaigns) */}
-          {totalMonthlyImpressions && calculationMethod === 'impressions' && (
+          {packageImpressions && calculationMethod === 'impressions' && (
             <div>
               <div className="text-xl font-bold">
-                {totalMonthlyImpressions.toLocaleString()}
+                {packageImpressions.toLocaleString()}
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                Total Monthly Impressions
+                Total Impressions {durationDisplay ? `(${durationDisplay})` : ''}
               </div>
             </div>
           )}

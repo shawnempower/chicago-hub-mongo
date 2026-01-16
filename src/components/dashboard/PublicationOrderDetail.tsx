@@ -709,7 +709,7 @@ export function PublicationOrderDetail() {
   // Calculate campaign duration in months
   const getDurationMonths = () => {
     // Use stored duration if available (already calculated at campaign creation)
-    if (campaignData?.timeline?.durationMonths) {
+    if (campaignData?.timeline?.durationMonths !== undefined) {
       return campaignData.timeline.durationMonths;
     }
     
@@ -719,8 +719,31 @@ export function PublicationOrderDetail() {
     if (!startDate || !endDate) return 1;
     const diffTime = endDate.getTime() - startDate.getTime();
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
-    // Use round instead of ceil to avoid 31 days → 2 months
+    
+    // For sub-month campaigns, return fractional months (e.g., 0.5 for 2 weeks)
+    if (diffDays < 28) {
+      const weeks = Math.ceil(diffDays / 7);
+      return weeks / 4; // e.g., 2 weeks = 0.5 months
+    }
+    
+    // For longer campaigns, round to nearest month (minimum 1)
     return Math.max(1, Math.round(diffDays / 30));
+  };
+
+  // Calculate campaign duration in weeks
+  const getDurationWeeks = () => {
+    // Use stored duration if available
+    if (campaignData?.timeline?.durationWeeks !== undefined) {
+      return campaignData.timeline.durationWeeks;
+    }
+    
+    // Fallback: calculate from dates
+    const startDate = campaignData?.timeline?.startDate ? new Date(campaignData.timeline.startDate) : null;
+    const endDate = campaignData?.timeline?.endDate ? new Date(campaignData.timeline.endDate) : null;
+    if (!startDate || !endDate) return undefined;
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return Math.ceil(diffDays / 7);
   };
 
   // Helper function to get delivery expectations for a placement
@@ -1872,7 +1895,7 @@ export function PublicationOrderDetail() {
                             {/* Execution Instructions for non-digital */}
                             {!isDigital && (
                               <div className="p-2 bg-blue-50/50 rounded border border-blue-100 text-sm">
-                                <span className="text-blue-700">{getExecutionInstructions(item)}</span>
+                                <span className="text-blue-700">{getExecutionInstructions(item, getDurationMonths(), getDurationWeeks())}</span>
                               </div>
                             )}
 
@@ -2311,25 +2334,48 @@ function parseDimensions(dimInput: string | string[] | undefined): string[] {
 // PlacementStatusBadge is now imported from '../orders/PlacementStatusBadge'
 
 // Helper function for execution instructions
-function getExecutionInstructions(item: any): string {
+// Uses campaign duration to provide accurate wording (e.g., "2 issues during campaign" vs "2 issues per month")
+function getExecutionInstructions(item: any, durationMonths?: number, durationWeeks?: number): string {
   const pricingModel = item.itemPricing?.pricingModel;
   const freq = item.currentFrequency || item.quantity || 1;
   
+  // Determine the right time period label based on campaign duration
+  const isSubMonth = durationMonths !== undefined && durationMonths < 1;
+  const periodLabel = isSubMonth 
+    ? 'during campaign' 
+    : durationMonths === 1 
+      ? 'this month' 
+      : 'per month';
+  
+  // For very short campaigns, show total count instead of rate
+  const useTotal = isSubMonth || (durationWeeks !== undefined && durationWeeks <= 4);
+  
   if (pricingModel === 'per_send') {
-    return `Include in ${freq} newsletter${freq > 1 ? 's' : ''} per month`;
+    return useTotal
+      ? `Include in ${freq} newsletter${freq > 1 ? 's' : ''} total`
+      : `Include in ${freq} newsletter${freq > 1 ? 's' : ''} ${periodLabel}`;
   }
   if (pricingModel === 'per_spot') {
-    return item.channel === 'radio' 
-      ? `Air ${freq} spot${freq > 1 ? 's' : ''} per month`
-      : `Run ${freq} time${freq > 1 ? 's' : ''} per month`;
+    if (item.channel === 'radio') {
+      return useTotal
+        ? `Air ${freq} spot${freq > 1 ? 's' : ''} total`
+        : `Air ${freq} spot${freq > 1 ? 's' : ''} ${periodLabel}`;
+    }
+    return useTotal
+      ? `Run ${freq} time${freq > 1 ? 's' : ''} total`
+      : `Run ${freq} time${freq > 1 ? 's' : ''} ${periodLabel}`;
   }
   if (pricingModel === 'per_ad' && item.channel === 'print') {
-    return `Publish in ${freq} issue${freq > 1 ? 's' : ''} per month`;
+    return useTotal
+      ? `Publish in ${freq} issue${freq > 1 ? 's' : ''} total`
+      : `Publish in ${freq} issue${freq > 1 ? 's' : ''} ${periodLabel}`;
   }
   if (pricingModel === 'cpm' || pricingModel === 'cpv') {
     return `Display continuously on ${item.channel}`;
   }
-  return `Run ${freq}× per month as scheduled`;
+  return useTotal
+    ? `Run ${freq}× total as scheduled`
+    : `Run ${freq}× ${periodLabel} as scheduled`;
 }
 
 // Workflow progress component for each placement

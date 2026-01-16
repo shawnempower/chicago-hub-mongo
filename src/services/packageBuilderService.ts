@@ -49,7 +49,8 @@ export interface InventoryItemWithConstraints extends HubPackageInventoryItem {
 export interface BuilderFilters {
   mode: 'budget-first' | 'specification-first';
   budget?: number;
-  duration: number; // months
+  duration: number; // duration value (in weeks or months depending on durationUnit)
+  durationUnit?: 'weeks' | 'months'; // unit for duration (defaults to 'months' for backwards compatibility)
   geography?: string[]; // neighborhoods or coverage areas
   channels: string[]; // ['newsletter', 'print', 'website', etc.]
   publications?: number[]; // Specific publication IDs for specification-first
@@ -66,6 +67,9 @@ export interface BuilderResult {
     monthlyCost: number;
     totalCost: number;
     budgetUsed?: number; // percentage if budget was specified
+    // Duration info for display
+    duration?: number;
+    durationUnit?: 'weeks' | 'months';
     // Reach metrics
     totalMonthlyImpressions?: number;
     totalMonthlyExposures?: number;
@@ -216,11 +220,17 @@ export class PackageBuilderService {
         currentFrequency = 1;
       }
 
-      // Max frequency based on publication type
+      // Detect item-level frequency type (use item's own frequency if available, fallback to publication)
+      // This ensures a weekly newsletter in a daily newspaper still caps at 4x/month
+      const itemPublicationType = itemFrequencyString 
+        ? detectPublicationFrequencyType(itemFrequencyString, undefined)
+        : publicationType;
+
+      // Max frequency based on item's publication type (not parent publication)
       const maxFrequency = 
-        publicationType === 'daily' ? 30 :
-        publicationType === 'weekly' ? 4 :
-        publicationType === 'bi-weekly' ? 2 : 1;
+        itemPublicationType === 'daily' ? 30 :
+        itemPublicationType === 'weekly' ? 4 :
+        itemPublicationType === 'bi-weekly' ? 2 : 1;
 
       const item: any = {
         channel: channel as any,
@@ -229,7 +239,7 @@ export class PackageBuilderService {
         quantity: currentFrequency,
         currentFrequency,
         maxFrequency,
-        publicationFrequencyType: publicationType,
+        publicationFrequencyType: itemPublicationType,
         itemPricing: {
           standardPrice: hubPrice, // Use hub pricing for both
           hubPrice,

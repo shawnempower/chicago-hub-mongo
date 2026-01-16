@@ -54,6 +54,7 @@ interface PackageResultsProps {
   result: BuilderResult;
   budget?: number;
   duration: number;
+  durationUnit?: 'weeks' | 'months';
   onBack: () => void;
   onSave: (packageName: string, approvalStatus: ApprovalStatus) => Promise<void>;
   onExportCSV: () => void;
@@ -67,10 +68,24 @@ interface PackageResultsProps {
   isEditingExistingPackage?: boolean;
 }
 
+// Helper to format duration display
+const formatDuration = (value: number, unit: 'weeks' | 'months'): string => {
+  if (unit === 'weeks') {
+    return value === 1 ? '1 Week' : `${value} Weeks`;
+  }
+  return value === 1 ? '1 Month' : `${value} Months`;
+};
+
+// Helper to calculate duration in months (for pricing calculations)
+const getDurationInMonths = (value: number, unit: 'weeks' | 'months'): number => {
+  return unit === 'weeks' ? value / 4 : value;
+};
+
 export function PackageResults({
   result,
   budget,
   duration,
+  durationUnit = 'months',
   onBack,
   onSave,
   onExportCSV,
@@ -127,6 +142,10 @@ export function PackageResults({
   // Calculate summary stats
   const { summary: originalSummary, publications } = result;
   
+  // Calculate duration in months for pricing
+  const durationInMonths = getDurationInMonths(duration, durationUnit);
+  const durationDisplay = formatDuration(duration, durationUnit);
+  
   // Recalculate monthlyCost from actual items to match the breakdown (excluding excluded items)
   const actualMonthlyCost = publications.reduce((sum, pub) => {
     if (!pub.inventoryItems) return sum;
@@ -137,11 +156,14 @@ export function PackageResults({
       }, 0);
   }, 0);
   
+  // Calculate package price (total for the duration, not monthly)
+  const packagePrice = actualMonthlyCost * durationInMonths;
+  
   // Use recalculated value for summary
   const summary = {
     ...originalSummary,
     monthlyCost: actualMonthlyCost,
-    totalCost: actualMonthlyCost * (duration || 1)
+    totalCost: packagePrice
   };
   
   // Recalculate reach dynamically when publications change (accounts for excluded items and frequency changes)
@@ -149,7 +171,7 @@ export function PackageResults({
     return calculatePackageReach(publications);
   }, [publications]);
   
-  const budgetUsagePercent = budget ? (summary.monthlyCost / budget) * 100 : undefined;
+  const budgetUsagePercent = budget ? (packagePrice / budget) * 100 : undefined;
 
   // Get budget color
   const getBudgetColor = () => {
@@ -516,6 +538,7 @@ export function PackageResults({
         <div className="space-y-2">
           {removedItems.map((item) => {
             const monthlyCost = calculateItemCost(item, item.currentFrequency || item.quantity || 1);
+            const itemPackagePrice = monthlyCost * durationInMonths;
             
             return (
               <div 
@@ -537,7 +560,7 @@ export function PackageResults({
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {formatPrice(monthlyCost)}/month
+                    {formatPrice(itemPackagePrice)} for {durationDisplay.toLowerCase()}
                   </div>
                 </div>
                 <Button
@@ -794,16 +817,16 @@ export function PackageResults({
           {/* Compact Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <Card className="p-3 bg-muted/50">
-              <div className="text-xs text-muted-foreground mb-1">Monthly</div>
+              <div className="text-xs text-muted-foreground mb-1">Package Price</div>
               <div className={`text-lg font-bold ${getBudgetColor()}`}>
-                ${summary.monthlyCost.toLocaleString()}
+                ${packagePrice.toLocaleString()}
             </div>
             </Card>
             
             <Card className="p-3">
-              <div className="text-xs text-muted-foreground mb-1">{duration}-Mo Total</div>
+              <div className="text-xs text-muted-foreground mb-1">Duration</div>
               <div className="text-lg font-bold">
-                ${summary.totalCost.toLocaleString()}
+                {durationDisplay}
               </div>
             </Card>
 
@@ -852,6 +875,8 @@ export function PackageResults({
         overlapFactor={currentReach.overlapFactor}
         publicationsCount={currentReach.publicationsCount}
         channelsCount={currentReach.channelsCount}
+        durationInMonths={durationInMonths}
+        durationDisplay={durationDisplay}
       />
 
       {/* Tabs */}
@@ -900,8 +925,8 @@ export function PackageResults({
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <div className="text-xl font-bold">{formatPrice(data.cost)}</div>
-                              <div className="text-xs text-muted-foreground">per month</div>
+                              <div className="text-xl font-bold">{formatPrice(data.cost * durationInMonths)}</div>
+                              <div className="text-xs text-muted-foreground">for {durationDisplay.toLowerCase()}</div>
                             </div>
                             {isExpanded ? (
                               <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -916,7 +941,7 @@ export function PackageResults({
                             <div className="p-4 space-y-4">
                               {/* Group by Publication */}
                               {Object.entries(itemsByPublication).map(([pubName, items]) => {
-                                const pubTotal = items
+                                const pubMonthlyTotal = items
                                   .filter(item => !item.isExcluded)
                                   .reduce((sum, item) => sum + item.itemCost, 0);
                                 
@@ -943,7 +968,9 @@ export function PackageResults({
                                           const actualItemIndex = pub?.inventoryItems?.findIndex(i => i.itemPath === item.itemPath) ?? itemIndex;
                                           handleToggleExclude(pubId, actualItemIndex);
                                         }}
-                                        totalCost={pubTotal}
+                                        totalCost={pubMonthlyTotal}
+                                        durationInMonths={durationInMonths}
+                                        durationDisplay={durationDisplay}
                                         defaultExpanded={true}
                                       />
                                       
@@ -971,10 +998,10 @@ export function PackageResults({
                                 </div>
                                 <div className="text-right">
                                   <div className="text-2xl font-bold text-primary">
-                                    {formatPrice(data.cost)}
+                                    {formatPrice(data.cost * durationInMonths)}
                                   </div>
                                   <div className="text-sm text-muted-foreground">
-                                    per month
+                                    for {durationDisplay.toLowerCase()}
                                   </div>
                                 </div>
                               </div>
@@ -1045,8 +1072,8 @@ export function PackageResults({
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <div className="text-xl font-bold">{formatPrice(actualPublicationTotal)}</div>
-                              <div className="text-xs text-muted-foreground">per month</div>
+                              <div className="text-xl font-bold">{formatPrice(actualPublicationTotal * durationInMonths)}</div>
+                              <div className="text-xs text-muted-foreground">for {durationDisplay.toLowerCase()}</div>
                             </div>
                             {isExpanded ? (
                               <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -1093,6 +1120,8 @@ export function PackageResults({
                                             handleToggleExclude(pubId, actualItemIndex);
                                           }}
                                           totalCost={channelTotal}
+                                          durationInMonths={durationInMonths}
+                                          durationDisplay={durationDisplay}
                                           defaultExpanded={true}
                                         />
                                         
@@ -1263,7 +1292,7 @@ export function PackageResults({
                       <div className="font-medium">{pub.publicationName}</div>
                       <div className="text-sm text-muted-foreground">
                         {pub.inventoryItems?.length || 0} inventory items • 
-                        ${(pub.publicationTotal || 0).toLocaleString()}/month
+                        ${((pub.publicationTotal || 0) * durationInMonths).toLocaleString()} for {durationDisplay.toLowerCase()}
                       </div>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {[...new Set(pub.inventoryItems?.map(item => item.channel) || [])].map(channel => (

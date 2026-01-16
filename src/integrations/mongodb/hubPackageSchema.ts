@@ -382,7 +382,8 @@ export interface HubPackage {
       creationMethod: 'builder' | 'manual'; // How this package was created
       buildMode?: 'budget-first' | 'specification-first'; // Which builder flow was used
       originalBudget?: number; // Budget constraint if used
-      originalDuration?: number; // Duration in months
+      originalDuration?: number; // Duration value (in weeks or months depending on originalDurationUnit)
+      originalDurationUnit?: 'weeks' | 'months'; // Unit for duration (defaults to 'months' for backwards compatibility)
       filtersUsed?: {
         geography?: string[]; // Geographic filters applied
         channels?: string[]; // Channel filters applied

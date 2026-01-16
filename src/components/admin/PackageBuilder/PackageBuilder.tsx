@@ -116,8 +116,12 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
   const [selectedPublications, setSelectedPublications] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
   
-  // Duration
-  const [duration, setDuration] = useState<string>('6');
+  // Duration - flexible weeks/months
+  const [durationValue, setDurationValue] = useState<number>(6);
+  const [durationUnit, setDurationUnit] = useState<'weeks' | 'months'>('months');
+  
+  // Convert duration to months for pricing calculations
+  const durationInMonths = durationUnit === 'weeks' ? durationValue / 4 : durationValue;
   
   // Geography filters
   const [selectedGeography, setSelectedGeography] = useState<string[]>([]);
@@ -277,7 +281,8 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
 
     const filters: BuilderFilters = {
       mode: 'specification-first',
-      duration: parseInt(duration),
+      duration: durationValue,
+      durationUnit: durationUnit,
       geography: selectedGeography.length > 0 ? selectedGeography : undefined,
       channels: selectedChannels,
       publications: selectedPublications,
@@ -302,7 +307,7 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
       );
     return sum + pubTotal;
   }, 0);
-  const totalCampaign = totalMonthly * (parseInt(duration) || 1);
+  const totalCampaign = totalMonthly * durationInMonths;
   const totalInventoryItems = selectedPubs.reduce((sum, p) => 
     sum + ((p.inventory || []).filter(item => !item.isExcluded).length), 0);
 
@@ -324,50 +329,56 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
           <Card>
             <CardContent className="space-y-4 pt-6">
               {/* Duration */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label htmlFor="duration" className="flex items-center gap-2 text-sm font-medium">
                   <Calendar className="h-4 w-4" />
                   Campaign Duration
                 </Label>
-                <Select value={duration} onValueChange={setDuration}>
-                  <SelectTrigger id="duration">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 month</SelectItem>
-                    <SelectItem value="3">3 months</SelectItem>
-                    <SelectItem value="6">6 months</SelectItem>
-                    <SelectItem value="12">12 months</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
-              {/* Geography Filters */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm font-medium">
-                  <MapPin className="h-4 w-4" />
-                  Target Geography <span className="text-muted-foreground font-normal">(Optional)</span>
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {GEOGRAPHY_OPTIONS.map((geo) => (
-                    <label
-                      key={geo.id}
-                      className={`inline-flex items-center px-3 py-1.5 rounded-md border cursor-pointer transition-colors ${
-                        selectedGeography.includes(geo.id)
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={durationUnit === 'weeks' ? 52 : 24}
+                    value={durationValue}
+                    onChange={(e) => setDurationValue(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-20"
+                  />
+                  <Select value={durationUnit} onValueChange={(value: 'weeks' | 'months') => setDurationUnit(value)}>
+                    <SelectTrigger className="w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="weeks">Weeks</SelectItem>
+                      <SelectItem value="months">Months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Quick Select Buttons */}
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { value: 1, unit: 'weeks' as const, label: '1 Wk' },
+                    { value: 2, unit: 'weeks' as const, label: '2 Wks' },
+                    { value: 4, unit: 'weeks' as const, label: '4 Wks' },
+                    { value: 1, unit: 'months' as const, label: '1 Mo' },
+                    { value: 3, unit: 'months' as const, label: '3 Mo' },
+                    { value: 6, unit: 'months' as const, label: '6 Mo' },
+                    { value: 12, unit: 'months' as const, label: '12 Mo' },
+                  ].map((opt) => (
+                    <button
+                      key={`${opt.value}-${opt.unit}`}
+                      type="button"
+                      onClick={() => {
+                        setDurationValue(opt.value);
+                        setDurationUnit(opt.unit);
+                      }}
+                      className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+                        durationValue === opt.value && durationUnit === opt.unit
                           ? 'bg-primary text-primary-foreground border-primary'
                           : 'bg-background border-input hover:bg-gray-100'
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={selectedGeography.includes(geo.id)}
-                        onChange={() => handleGeographyToggle(geo.id)}
-                        className="sr-only"
-                      />
-                      <span className="text-sm">{geo.label}</span>
-                    </label>
+                      {opt.label}
+                    </button>
                   ))}
                 </div>
               </div>

@@ -45,9 +45,18 @@ export class CampaignsService {
     const diffMs = end.getTime() - start.getTime();
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
     const durationWeeks = Math.ceil(diffDays / 7);
-    // Use Math.round for months to avoid 31 days → 2 months bug
-    // Math.ceil caused 1-month campaigns (31 days) to show as 2 months
-    const durationMonths = Math.max(1, Math.round(diffDays / 30));
+    
+    // Calculate months properly:
+    // - For sub-month campaigns (< 28 days), use fractional months (weeks / 4)
+    // - For 1+ month campaigns, round to nearest whole number
+    let durationMonths: number;
+    if (diffDays < 28) {
+      // Sub-month: calculate as fraction of month (4 weeks = 1 month)
+      durationMonths = durationWeeks / 4;
+    } else {
+      // 1+ month: round to nearest whole number, minimum 1
+      durationMonths = Math.max(1, Math.round(diffDays / 30));
+    }
     
     return { durationWeeks, durationMonths };
   }
