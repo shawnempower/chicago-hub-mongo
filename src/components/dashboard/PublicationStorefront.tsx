@@ -1044,13 +1044,25 @@ export const PublicationStorefront: React.FC = () => {
                   </div>
 
                   <ColorPicker
-                    label="CTA Text Color"
-                    value={storefrontConfig.theme.colors.ctaTextColor}
+                    label="CTA Background"
+                    value={storefrontConfig.theme.colors.ctaBackground}
                     onChange={(color) => handleConfigChange({
                       ...storefrontConfig,
                       theme: {
                         ...storefrontConfig.theme,
-                        colors: { ...storefrontConfig.theme.colors, ctaTextColor: color }
+                        colors: { ...storefrontConfig.theme.colors, ctaBackground: color }
+                      }
+                    })}
+                  />
+
+                  <ColorPicker
+                    label="CTA Text Color"
+                    value={storefrontConfig.theme.colors.ctaForeground}
+                    onChange={(color) => handleConfigChange({
+                      ...storefrontConfig,
+                      theme: {
+                        ...storefrontConfig.theme,
+                        colors: { ...storefrontConfig.theme.colors, ctaForeground: color }
                       }
                     })}
                   />
@@ -1223,7 +1235,70 @@ export const PublicationStorefront: React.FC = () => {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                {Object.entries(storefrontConfig.theme.sectionSettings || {}).map(([sectionName, settings]) => (
+                {/* Navbar Section - Always visible */}
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center gap-6">
+                    {/* Section Name */}
+                    <div className="flex-none w-32">
+                      <h4 className="font-medium">Navbar</h4>
+                    </div>
+                    
+                    {/* Mode Toggle */}
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={storefrontConfig.theme.sectionSettings?.navbar?.mode === 'dark'}
+                        onCheckedChange={(checked) => handleConfigChange({
+                          ...storefrontConfig,
+                          theme: {
+                            ...storefrontConfig.theme,
+                            sectionSettings: {
+                              ...(storefrontConfig.theme.sectionSettings || {}),
+                              navbar: {
+                                ...(storefrontConfig.theme.sectionSettings?.navbar || {}),
+                                mode: checked ? 'dark' : 'light'
+                              }
+                            }
+                          }
+                        })}
+                      />
+                      <span className="text-sm text-muted-foreground min-w-[80px]">
+                        {storefrontConfig.theme.sectionSettings?.navbar?.mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                      </span>
+                    </div>
+                    
+                    {/* Accent Override */}
+                    <div className="flex-1 flex items-center gap-2">
+                      <Label className="text-sm whitespace-nowrap">Accent Override</Label>
+                      <Input
+                        value={storefrontConfig.theme.sectionSettings?.navbar?.accentOverride || ''}
+                        onChange={(e) => handleConfigChange({
+                          ...storefrontConfig,
+                          theme: {
+                            ...storefrontConfig.theme,
+                            sectionSettings: {
+                              ...(storefrontConfig.theme.sectionSettings || {}),
+                              navbar: {
+                                ...(storefrontConfig.theme.sectionSettings?.navbar || {}),
+                                accentOverride: e.target.value || null
+                              }
+                            }
+                          }
+                        })}
+                        placeholder="Leave empty for default"
+                        className="flex-1"
+                      />
+                      {storefrontConfig.theme.sectionSettings?.navbar?.accentOverride && (
+                        <div 
+                          className="w-10 h-10 rounded border flex-none"
+                          style={{ backgroundColor: storefrontConfig.theme.sectionSettings.navbar.accentOverride }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Other Sections */}
+                {Object.entries(storefrontConfig.theme.sectionSettings || {}).filter(([name]) => name !== 'navbar').map(([sectionName, settings]) => (
                   <div key={sectionName} className="border rounded-lg p-4">
                     <div className="flex items-center gap-6">
                       {/* Section Name */}

@@ -17,7 +17,9 @@ export interface StorefrontColors {
   gradEnd?: string;
   angle?: number;
   mode: 'light' | 'dark' | 'auto';
-  ctaTextColor?: string;
+  ctaBackground?: string;
+  ctaForeground?: string;
+  ctaTextColor?: string; // @deprecated - use ctaForeground instead
 }
 
 export interface StorefrontTypography {
