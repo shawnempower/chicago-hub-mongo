@@ -54,6 +54,10 @@ import { StorefrontChatConfigEditor } from './StorefrontChatConfigEditor';
 import { API_BASE_URL } from '@/config/api';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
+import { GOOGLE_FONTS, loadGoogleFont, getFontFamily, getCategoryDisplayName } from '@/utils/googleFonts';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
 
 export const PublicationStorefront: React.FC = () => {
   const { selectedPublication } = usePublication();
@@ -82,6 +86,7 @@ export const PublicationStorefront: React.FC = () => {
   const checkSubdomainTimeoutRef = React.useRef<NodeJS.Timeout | null>(null); // Ref to store timeout ID
   const [originalWebsiteUrl, setOriginalWebsiteUrl] = useState<string | null>(null); // Track the original saved websiteUrl
   const [showActivityLog, setShowActivityLog] = useState(false);
+  const [fontPopoverOpen, setFontPopoverOpen] = useState(false);
   
   // Dialog states
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -109,6 +114,16 @@ export const PublicationStorefront: React.FC = () => {
       loadStorefrontConfig();
     }
   }, [selectedPublication?.publicationId]);
+
+  // Load Google Font when config changes
+  useEffect(() => {
+    const fontName = storefrontConfig?.theme?.typography?.primaryFont;
+    if (fontName) {
+      loadGoogleFont(fontName).catch(err => {
+        console.warn('Failed to load font:', err);
+      });
+    }
+  }, [storefrontConfig?.theme?.typography?.primaryFont]);
 
   const loadStorefrontConfig = async () => {
     if (!selectedPublication?.publicationId) return;
@@ -1104,37 +1119,94 @@ export const PublicationStorefront: React.FC = () => {
               <CardHeader>
                 <CardTitle className="font-sans text-base">Typography</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Configure fonts and text styling.
+                  Configure fonts and text styling. Fonts are loaded from Google Fonts.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                  <div className="space-y-3">
                     <Label htmlFor="primary-font">Primary Font</Label>
-                    <Select
-                      value={storefrontConfig.theme.typography.primaryFont}
-                      onValueChange={(value) => handleConfigChange({
-                        ...storefrontConfig,
-                        theme: {
-                          ...storefrontConfig.theme,
-                          typography: { ...storefrontConfig.theme.typography, primaryFont: value }
-                        }
-                      })}
+                    <Popover open={fontPopoverOpen} onOpenChange={setFontPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={fontPopoverOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          <span style={{ fontFamily: getFontFamily(storefrontConfig.theme.typography.primaryFont) }}>
+                            {storefrontConfig.theme.typography.primaryFont || "Select font..."}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[320px] p-0" align="start">
+                        <Command shouldFilter={true}>
+                          <CommandInput placeholder="Search fonts..." />
+                          <CommandList className="max-h-[400px] overflow-y-auto">
+                            <CommandEmpty>No font found.</CommandEmpty>
+                            {/* Group fonts by category, sorted alphabetically */}
+                            {(['sans-serif', 'serif', 'display', 'monospace'] as const).map((category) => {
+                              const categoryFonts = GOOGLE_FONTS
+                                .filter(f => f.category === category)
+                                .sort((a, b) => a.name.localeCompare(b.name));
+                              
+                              return (
+                                <CommandGroup key={category} heading={getCategoryDisplayName(category)}>
+                                  {categoryFonts.map((font) => (
+                                    <CommandItem
+                                      key={font.name}
+                                      value={font.name}
+                                      onSelect={async () => {
+                                        // Use font.name directly (cmdk lowercases the value param)
+                                        const fontName = font.name;
+                                        // Load the font for preview
+                                        try {
+                                          await loadGoogleFont(fontName);
+                                        } catch (e) {
+                                          console.warn('Failed to load font:', e);
+                                        }
+                                        handleConfigChange({
+                                          ...storefrontConfig,
+                                          theme: {
+                                            ...storefrontConfig.theme,
+                                            typography: { ...storefrontConfig.theme.typography, primaryFont: fontName }
+                                          }
+                                        });
+                                        setFontPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={`mr-2 h-4 w-4 ${
+                                          storefrontConfig.theme.typography.primaryFont === font.name
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        }`}
+                                      />
+                                      <span style={{ fontFamily: getFontFamily(font.name) }}>
+                                        {font.name}
+                                      </span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              );
+                            })}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    
+                    {/* Font Preview */}
+                    <div 
+                      className="p-4 border rounded-md bg-muted/30"
+                      style={{ fontFamily: getFontFamily(storefrontConfig.theme.typography.primaryFont) }}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Inter">Inter</SelectItem>
-                        <SelectItem value="Roboto">Roboto</SelectItem>
-                        <SelectItem value="Open Sans">Open Sans</SelectItem>
-                        <SelectItem value="Lato">Lato</SelectItem>
-                        <SelectItem value="Montserrat">Montserrat</SelectItem>
-                        <SelectItem value="Poppins">Poppins</SelectItem>
-                        <SelectItem value="Source Sans Pro">Source Sans Pro</SelectItem>
-                        <SelectItem value="Nunito">Nunito</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <p className="text-2xl font-bold mb-1">The Quick Brown Fox</p>
+                      <p className="text-base">Jumps over the lazy dog. 0123456789</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {storefrontConfig.theme.typography.primaryFont}
+                      </p>
+                    </div>
                   </div>
 
                   <div>
