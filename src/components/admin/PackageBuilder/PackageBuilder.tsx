@@ -117,7 +117,7 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
   const [error, setError] = useState<string | null>(null);
   
   // Duration - flexible weeks/months
-  const [durationValue, setDurationValue] = useState<number>(6);
+  const [durationValue, setDurationValue] = useState<number>(1);
   const [durationUnit, setDurationUnit] = useState<'weeks' | 'months'>('months');
   
   // Convert duration to months for pricing calculations

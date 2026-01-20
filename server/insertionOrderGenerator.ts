@@ -1118,7 +1118,7 @@ Campaign ID: ${campaign.campaignId}
    */
   async generateHTMLInsertionOrderForPackage(hubPackage: HubPackage): Promise<string> {
     // Calculate duration
-    const duration = hubPackage.metadata?.builderInfo?.originalDuration || 6;
+    const duration = hubPackage.metadata?.builderInfo?.originalDuration || 1;
     const monthlyCost = hubPackage.pricing.breakdown.finalPrice;
     const totalCost = monthlyCost * duration;
 
@@ -1589,7 +1589,7 @@ Campaign ID: ${campaign.campaignId}
    */
   async generateMarkdownInsertionOrderForPackage(hubPackage: HubPackage): Promise<string> {
     // Calculate duration
-    const duration = hubPackage.metadata?.builderInfo?.originalDuration || 6;
+    const duration = hubPackage.metadata?.builderInfo?.originalDuration || 1;
     const monthlyCost = hubPackage.pricing.breakdown.finalPrice;
     const totalCost = monthlyCost * duration;
 

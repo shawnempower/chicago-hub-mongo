@@ -2958,7 +2958,8 @@ export const DashboardInventoryManager = () => {
                           }
                           return null;
                         })()}
-                        {opportunity.adFormat && (
+                        {/* Only show adFormat badge if no format.dimensions exists (legacy fallback) */}
+                        {opportunity.adFormat && !opportunity.format?.dimensions && (
                           <Badge variant="secondary" className="text-xs">
                             {opportunity.adFormat}
                           </Badge>
