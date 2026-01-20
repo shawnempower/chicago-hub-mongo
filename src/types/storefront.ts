@@ -331,6 +331,8 @@ export interface ChatWidget {
   title?: string;
   subtitle?: string;
   initialMessage?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 // Main configuration interface

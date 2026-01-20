@@ -1097,6 +1097,8 @@ export interface StorefrontConfiguration {
     title?: string;
     subtitle?: string;
     initialMessage?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
   };
   isActive?: boolean;
   createdAt: Date;

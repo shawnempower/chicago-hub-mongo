@@ -29,8 +29,10 @@ import {
   AlertCircle,
   RefreshCw,
   Eye,
-  Code
+  Code,
+  Palette
 } from 'lucide-react';
+import { ColorPicker } from '@/components/ui/color-picker';
 import {
   getStorefrontChatConfig,
   saveStorefrontChatConfig,
@@ -55,6 +57,8 @@ const defaultChatWidget: ChatWidget = {
   defaultOpen: false,
   title: '', // Will be set dynamically from publicationName
   subtitle: "Let's get started",
+  primaryColor: '#0077b6',
+  secondaryColor: '#003d5c',
   initialMessage: `Hi! I'm the campaign assistant and I'm here to help you explore advertising opportunities. What are you looking to promote?
 
 <component type="choices">
@@ -686,6 +690,29 @@ export const StorefrontChatConfigEditor: React.FC<StorefrontChatConfigEditorProp
                     Widget will be expanded when visitors arrive
                   </p>
                 </div>
+              </div>
+
+              {/* Widget Colors */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-muted-foreground" />
+                  <Label className="text-sm font-medium">Widget Colors</Label>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ColorPicker
+                    label="Primary Color"
+                    value={localChatWidget.primaryColor ?? '#0077b6'}
+                    onChange={(color) => updateChatWidget({ primaryColor: color })}
+                  />
+                  <ColorPicker
+                    label="Secondary Color"
+                    value={localChatWidget.secondaryColor ?? '#003d5c'}
+                    onChange={(color) => updateChatWidget({ secondaryColor: color })}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Customize the chat widget color scheme to match your brand
+                </p>
               </div>
 
               {/* API Endpoint */}
