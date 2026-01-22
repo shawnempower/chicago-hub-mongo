@@ -406,27 +406,19 @@ export const PublicationStorefront: React.FC = () => {
   const handleSaveConfig = async (config: StorefrontConfiguration) => {
     if (!selectedPublication?.publicationId) return;
     
-    // Check if subdomain is set (required field)
-    if (!config.websiteUrl || config.websiteUrl.trim() === '') {
-      setError('Subdomain is required. Please enter a subdomain before saving.');
-      toast({
-        title: 'Subdomain Required',
-        description: 'Please enter a subdomain (e.g., yourname.localmedia.store) before saving.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    // Validate website URL format
-    if (!validateWebsiteUrl(config.websiteUrl)) {
-      setError(domainError || 'Please fix the website URL before saving');
-      return;
-    }
-    
-    // Check subdomain availability before saving (if it's a new subdomain)
-    if (!originalWebsiteUrl && subdomainAvailable === false) {
-      setError('This subdomain is already taken by another publication');
-      return;
+    // Only validate website URL if one is provided
+    if (config.websiteUrl && config.websiteUrl.trim() !== '') {
+      // Validate website URL format
+      if (!validateWebsiteUrl(config.websiteUrl)) {
+        setError(domainError || 'Please fix the website URL before saving');
+        return;
+      }
+      
+      // Check subdomain availability before saving (if it's a new subdomain)
+      if (!originalWebsiteUrl && subdomainAvailable === false) {
+        setError('This subdomain is already taken by another publication');
+        return;
+      }
     }
     
     try {
@@ -445,10 +437,19 @@ export const PublicationStorefront: React.FC = () => {
         setStorefrontConfig(updatedConfig);
         setOriginalWebsiteUrl(updatedConfig.websiteUrl || null); // Update original URL after save
         setHasChanges(false);
+        toast({
+          title: 'Changes Saved',
+          description: 'Storefront configuration has been saved successfully.',
+        });
       }
     } catch (err) {
       console.error('Error saving storefront configuration:', err);
       setError('Failed to save storefront configuration');
+      toast({
+        title: 'Save Failed',
+        description: 'Failed to save storefront configuration. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setSaving(false);
     }

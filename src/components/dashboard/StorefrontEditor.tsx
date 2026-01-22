@@ -271,7 +271,9 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
         return {
           title: 'Your Target Audience',
           description: 'Learn about the people you can reach',
+          variant: 'default' as const,
           ageDemographics: [],
+          bulletPoints: [],
           statHighlights: []
         };
       case 'testimonials':
@@ -516,133 +518,226 @@ export const StorefrontEditor: React.FC<StorefrontEditorProps> = ({
     </div>
   );
 
-  const renderAudienceEditor = (content: AudienceContent) => (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="audience-title">Title</Label>
-        <Input
-          id="audience-title"
-          value={content.title}
-          onChange={(e) => updateComponentContent('audience', { ...content, title: e.target.value })}
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="audience-description">Description</Label>
-        <Textarea
-          id="audience-description"
-          value={content.description}
-          onChange={(e) => updateComponentContent('audience', { ...content, description: e.target.value })}
-          rows={3}
-        />
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label>Age Demographics</Label>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={() => {
-              const newDemos = [...content.ageDemographics, { label: '', percentage: 0 }];
-              updateComponentContent('audience', { ...content, ageDemographics: newDemos });
-            }}
-          >
-            <Plus className="w-3 h-3 mr-1" />
-            Add Age Group
-          </Button>
+  const renderAudienceEditor = (content: AudienceContent) => {
+    const variant = content.variant || 'default';
+    
+    return (
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="audience-title">Title</Label>
+          <Input
+            id="audience-title"
+            value={content.title}
+            onChange={(e) => updateComponentContent('audience', { ...content, title: e.target.value })}
+          />
         </div>
-        <div className="space-y-2">
-          {(content.ageDemographics || []).map((demo, index) => (
-            <div key={index} className="flex gap-2">
-              <Input
-                value={demo.label}
-                onChange={(e) => {
-                  const newDemos = [...(content.ageDemographics || [])];
-                  newDemos[index] = { ...demo, label: e.target.value };
-                  updateComponentContent('audience', { ...content, ageDemographics: newDemos });
-                }}
-                placeholder="Age range"
-              />
-              <Input
-                type="number"
-                value={demo.percentage}
-                onChange={(e) => {
-                  const newDemos = [...(content.ageDemographics || [])];
-                  newDemos[index] = { ...demo, percentage: parseInt(e.target.value) || 0 };
-                  updateComponentContent('audience', { ...content, ageDemographics: newDemos });
-                }}
-                placeholder="Percentage"
-              />
+        
+        <div>
+          <Label htmlFor="audience-description">Description</Label>
+          <Textarea
+            id="audience-description"
+            value={content.description}
+            onChange={(e) => updateComponentContent('audience', { ...content, description: e.target.value })}
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="audience-variant">Display Variant</Label>
+          <Select
+            value={variant}
+            onValueChange={(value: 'default' | 'bullets') => 
+              updateComponentContent('audience', { ...content, variant: value })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select display variant" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Default (Age Demographics Chart)</SelectItem>
+              <SelectItem value="bullets">Bullets (Bullet Points List)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground mt-1">
+            {variant === 'default' 
+              ? 'Shows age demographics as a visual chart with stat highlights'
+              : 'Shows audience info as a bullet points list with stat highlights'}
+          </p>
+        </div>
+
+        <Separator />
+
+        {variant === 'default' ? (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Age Demographics</Label>
               <Button
                 variant="outline"
                 size="sm"
+                className="text-xs"
                 onClick={() => {
-                  const newDemos = (content.ageDemographics || []).filter((_, i) => i !== index);
+                  const newDemos = [...(content.ageDemographics || []), { label: '', percentage: 0 }];
                   updateComponentContent('audience', { ...content, ageDemographics: newDemos });
                 }}
               >
-                <X className="w-4 h-4" />
+                <Plus className="w-3 h-3 mr-1" />
+                Add Age Group
               </Button>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label>Stat Highlights</Label>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={() => {
-              const newStats = [...content.statHighlights, { key: '', value: '' }];
-              updateComponentContent('audience', { ...content, statHighlights: newStats });
-            }}
-          >
-            <Plus className="w-3 h-3 mr-1" />
-            Add Stat
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {(content.statHighlights || []).map((stat, index) => (
-            <div key={index} className="flex gap-2">
-              <Input
-                value={stat.key}
-                onChange={(e) => {
-                  const newStats = [...(content.statHighlights || [])];
-                  newStats[index] = { ...stat, key: e.target.value };
-                  updateComponentContent('audience', { ...content, statHighlights: newStats });
-                }}
-                placeholder="Stat key"
-              />
-              <Input
-                value={stat.value}
-                onChange={(e) => {
-                  const newStats = [...(content.statHighlights || [])];
-                  newStats[index] = { ...stat, value: e.target.value };
-                  updateComponentContent('audience', { ...content, statHighlights: newStats });
-                }}
-                placeholder="Stat value"
-              />
+            <div className="space-y-2">
+              {(content.ageDemographics || []).map((demo, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={demo.label}
+                    onChange={(e) => {
+                      const newDemos = [...(content.ageDemographics || [])];
+                      newDemos[index] = { ...demo, label: e.target.value };
+                      updateComponentContent('audience', { ...content, ageDemographics: newDemos });
+                    }}
+                    placeholder="Age range"
+                  />
+                  <Input
+                    type="number"
+                    value={demo.percentage}
+                    onChange={(e) => {
+                      const newDemos = [...(content.ageDemographics || [])];
+                      newDemos[index] = { ...demo, percentage: parseInt(e.target.value) || 0 };
+                      updateComponentContent('audience', { ...content, ageDemographics: newDemos });
+                    }}
+                    placeholder="Percentage"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newDemos = (content.ageDemographics || []).filter((_, i) => i !== index);
+                      updateComponentContent('audience', { ...content, ageDemographics: newDemos });
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Bullet Points</Label>
               <Button
                 variant="outline"
                 size="sm"
+                className="text-xs"
                 onClick={() => {
-                  const newStats = (content.statHighlights || []).filter((_, i) => i !== index);
-                  updateComponentContent('audience', { ...content, statHighlights: newStats });
+                  const newBullets = [...(content.bulletPoints || []), { text: '', icon: 'check' as const }];
+                  updateComponentContent('audience', { ...content, bulletPoints: newBullets });
                 }}
               >
-                <X className="w-4 h-4" />
+                <Plus className="w-3 h-3 mr-1" />
+                Add Bullet Point
               </Button>
             </div>
-          ))}
+            <div className="space-y-2">
+              {(content.bulletPoints || []).map((bullet, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={bullet.text}
+                    onChange={(e) => {
+                      const newBullets = [...(content.bulletPoints || [])];
+                      newBullets[index] = { ...bullet, text: e.target.value };
+                      updateComponentContent('audience', { ...content, bulletPoints: newBullets });
+                    }}
+                    placeholder="Bullet point text"
+                    className="flex-1"
+                  />
+                  <Select
+                    value={bullet.icon || 'check'}
+                    onValueChange={(value: 'check' | 'dot') => {
+                      const newBullets = [...(content.bulletPoints || [])];
+                      newBullets[index] = { ...bullet, icon: value };
+                      updateComponentContent('audience', { ...content, bulletPoints: newBullets });
+                    }}
+                  >
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="check">✓ Check</SelectItem>
+                      <SelectItem value="dot">• Dot</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newBullets = (content.bulletPoints || []).filter((_, i) => i !== index);
+                      updateComponentContent('audience', { ...content, bulletPoints: newBullets });
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <Separator />
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label>Stat Highlights</Label>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => {
+                const newStats = [...(content.statHighlights || []), { key: '', value: '' }];
+                updateComponentContent('audience', { ...content, statHighlights: newStats });
+              }}
+            >
+              <Plus className="w-3 h-3 mr-1" />
+              Add Stat
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {(content.statHighlights || []).map((stat, index) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  value={stat.key}
+                  onChange={(e) => {
+                    const newStats = [...(content.statHighlights || [])];
+                    newStats[index] = { ...stat, key: e.target.value };
+                    updateComponentContent('audience', { ...content, statHighlights: newStats });
+                  }}
+                  placeholder="Stat key"
+                />
+                <Input
+                  value={stat.value}
+                  onChange={(e) => {
+                    const newStats = [...(content.statHighlights || [])];
+                    newStats[index] = { ...stat, value: e.target.value };
+                    updateComponentContent('audience', { ...content, statHighlights: newStats });
+                  }}
+                  placeholder="Stat value"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newStats = (content.statHighlights || []).filter((_, i) => i !== index);
+                    updateComponentContent('audience', { ...content, statHighlights: newStats });
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderNavbarEditor = (content: NavbarContent) => (
     <div className="space-y-4">

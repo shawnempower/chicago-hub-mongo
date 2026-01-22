@@ -96,10 +96,19 @@ export interface StatHighlight {
   value: string;
 }
 
+export interface BulletPoint {
+  text: string;
+  icon?: 'check' | 'dot';
+}
+
+export type AudienceVariant = 'default' | 'bullets';
+
 export interface AudienceContent {
   title: string;
   description: string;
+  variant?: AudienceVariant;
   ageDemographics?: AgeDemographic[];
+  bulletPoints?: BulletPoint[];
   statHighlights?: StatHighlight[];
 }
 

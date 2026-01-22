@@ -276,7 +276,7 @@
         },
         "audience": {
           "type": "object",
-          "description": "Audience demographics section",
+          "description": "Audience demographics section with variant support for different display styles",
           "required": ["enabled", "order", "content"],
           "properties": {
             "enabled": {
@@ -298,9 +298,15 @@
                   "type": "string",
                   "description": "Section description"
                 },
+                "variant": {
+                  "type": "string",
+                  "description": "Display variant: 'default' shows age demographics chart, 'bullets' shows bullet points list",
+                  "enum": ["default", "bullets"],
+                  "default": "default"
+                },
                 "ageDemographics": {
                   "type": "array",
-                  "description": "Age distribution data",
+                  "description": "Age distribution data (used when variant is 'default')",
                   "items": {
                     "type": "object",
                     "required": ["label", "percentage"],
@@ -314,6 +320,26 @@
                         "description": "Percentage of audience in this age range",
                         "minimum": 0,
                         "maximum": 100
+                      }
+                    }
+                  }
+                },
+                "bulletPoints": {
+                  "type": "array",
+                  "description": "Bullet points list (used when variant is 'bullets')",
+                  "items": {
+                    "type": "object",
+                    "required": ["text"],
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "description": "Bullet point text"
+                      },
+                      "icon": {
+                        "type": "string",
+                        "description": "Icon style for the bullet point",
+                        "enum": ["check", "dot"],
+                        "default": "check"
                       }
                     }
                   }
