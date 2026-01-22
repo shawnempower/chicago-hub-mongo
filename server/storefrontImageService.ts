@@ -292,13 +292,13 @@ export class StorefrontImageService {
           break;
 
         case 'about':
-          if (!updatedConfig.components.about) {
-            updatedConfig.components.about = { enabled: true, order: 5, content: {} };
+          if (!updatedConfig.components.aboutus) {
+            updatedConfig.components.aboutus = { enabled: true, order: 5, content: {} };
           }
           if (imageUrl) {
-            updatedConfig.components.about.content.imageUrl = imageUrl;
+            updatedConfig.components.aboutus.content.imageUrl = imageUrl;
           } else {
-            delete updatedConfig.components.about.content.imageUrl;
+            delete updatedConfig.components.aboutus.content.imageUrl;
           }
           break;
 

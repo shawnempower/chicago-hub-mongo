@@ -39,7 +39,7 @@ export const StorefrontImageManager: React.FC<StorefrontImageManagerProps> = ({
           (ch: any) => ch.id === channelId
         )?.imageUrl;
       case 'about':
-        return config.components?.about?.content?.imageUrl;
+        return config.components?.aboutus?.content?.imageUrl;
       case 'ogImage':
         return config.seoMetadata?.ogImage;
       case 'favicon':
@@ -95,13 +95,13 @@ export const StorefrontImageManager: React.FC<StorefrontImageManagerProps> = ({
         break;
 
       case 'about':
-        if (!updatedConfig.components.about) {
-          updatedConfig.components.about = { enabled: true, order: 5, content: {} };
+        if (!updatedConfig.components.aboutus) {
+          updatedConfig.components.aboutus = { enabled: true, order: 5, content: {} };
         }
         if (url) {
-          updatedConfig.components.about.content.imageUrl = url;
+          updatedConfig.components.aboutus.content.imageUrl = url;
         } else {
-          delete updatedConfig.components.about.content.imageUrl;
+          delete updatedConfig.components.aboutus.content.imageUrl;
         }
         break;
 
