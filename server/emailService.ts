@@ -540,12 +540,10 @@ export class EmailService {
   }
 
   // User invitation email (for hub/publication access)
+  // NOTE: Invitation emails are critical and always sent regardless of EMAIL_NOTIFICATIONS_ENABLED
   async sendInvitationEmail(data: InvitationEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
-    // Check if notification emails are enabled
-    if (!this.isNotificationEmailEnabled()) {
-      console.log(`📧 [EMAIL DISABLED] Would send invitation email to ${data.recipientEmail} for ${data.resourceName}`);
-      return { success: true, skipped: true };
-    }
+    // Invitation emails are critical - always send them (don't check isNotificationEmailEnabled)
+    console.log(`📧 [INVITATION EMAIL] Sending invitation to ${data.recipientEmail} for ${data.resourceName}`);
 
     const acceptLink = `${this.getBaseUrl()}/accept-invitation/${data.invitationToken}`;
     const resourceTypeLabel = data.resourceType === 'hub' ? 'Hub' : 'Publication';
