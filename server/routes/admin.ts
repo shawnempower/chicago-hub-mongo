@@ -1223,6 +1223,46 @@ router.get('/leads/:leadId/notes', authenticateToken, async (req: any, res: Resp
   }
 });
 
+// Get conversation history for a lead by sessionId (admin or hub user)
+router.get('/leads/:leadId/conversation', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { leadId } = req.params;
+    
+    // Get lead to check permissions and get sessionId
+    const lead = await leadInquiriesService.getById(leadId);
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+    
+    // Check permissions
+    if (!isUserAdmin(req.user)) {
+      if (!lead.hubId || !canAccessHub(req.user, lead.hubId)) {
+        return res.status(403).json({ error: 'Access denied. You do not have access to this hub.' });
+      }
+    }
+    
+    // Get sessionId from lead's conversationContext
+    const sessionId = lead.conversationContext?.sessionId;
+    if (!sessionId) {
+      return res.status(404).json({ error: 'No conversation session found for this lead' });
+    }
+    
+    // Fetch conversation from storefront_conversations collection
+    const { getDatabase } = await import('../integrations/mongodb/client');
+    const db = getDatabase();
+    const conversation = await db.collection('storefront_conversations').findOne({ sessionId });
+    
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+    
+    res.json({ conversation });
+  } catch (error) {
+    console.error('Error fetching conversation:', error);
+    res.status(500).json({ error: 'Failed to fetch conversation' });
+  }
+});
+
 // Add a note to a lead (admin or hub user)
 router.post('/leads/:leadId/notes', authenticateToken, async (req: any, res: Response) => {
   try {

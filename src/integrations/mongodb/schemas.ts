@@ -1363,6 +1363,30 @@ export interface StorefrontChatConfigUpdate extends Partial<Omit<StorefrontChatC
   updatedAt: Date;
 }
 
+// ===== STOREFRONT CONVERSATIONS SCHEMA =====
+// Full chat conversation history from AI chat widget on storefronts
+export interface StorefrontConversationMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: Date;
+}
+
+export interface StorefrontConversation {
+  _id?: string | ObjectId;
+  sessionId: string; // Links to lead's conversationContext.sessionId
+  publicationId: string; // Numeric publication ID
+  messages: StorefrontConversationMessage[];
+  metadata?: {
+    userAgent?: string;
+    ipAddress?: string;
+    leadGenerated?: boolean;
+    leadId?: string;
+    [key: string]: any;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Collection Names
 export const COLLECTIONS = {
   USERS: 'users',
@@ -1403,6 +1427,7 @@ export const COLLECTIONS = {
   ESP_REFERENCE: 'esp_reference', // Email service provider compatibility data
   NOTIFICATIONS: 'notifications', // In-app notifications for users
   STOREFRONT_CHAT_CONFIG: 'storefront_chat_config', // AI chat widget configuration per storefront
+  STOREFRONT_CONVERSATIONS: 'storefront_conversations', // Full chat conversation history from storefronts
 } as const;
 
 // MongoDB Indexes Configuration

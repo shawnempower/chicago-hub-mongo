@@ -138,6 +138,32 @@ export interface LeadStatsResponse {
   };
 }
 
+export interface ConversationMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: string;
+}
+
+export interface Conversation {
+  _id?: string;
+  sessionId: string;
+  publicationId: string;
+  messages: ConversationMessage[];
+  metadata?: {
+    userAgent?: string;
+    ipAddress?: string;
+    leadGenerated?: boolean;
+    leadId?: string;
+    [key: string]: any;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationResponse {
+  conversation: Conversation;
+}
+
 export const leadsApi = {
   // Get all leads with filtering (admin only)
   async getAll(filters?: LeadFilters): Promise<LeadsListResponse> {
@@ -414,6 +440,31 @@ export const leadsApi = {
       return await response.json();
     } catch (error) {
       console.error('Error deleting lead note:', error);
+      throw error;
+    }
+  },
+
+  // Get conversation history for a lead (admin only)
+  async getConversation(leadId: string): Promise<ConversationResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}/conversation`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Access denied. Admin privileges required.');
+        }
+        if (response.status === 404) {
+          throw new Error('Conversation not found.');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching conversation:', error);
       throw error;
     }
   },
