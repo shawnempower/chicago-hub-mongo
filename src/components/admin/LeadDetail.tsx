@@ -12,11 +12,13 @@ import {
   Calendar,
   Globe,
   Mail,
+  MessageSquare,
   Phone,
   User,
   Users,
   Send,
 } from 'lucide-react';
+import { LeadConversationModal } from './LeadConversationModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +42,7 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
   const [loading, setLoading] = useState(true);
   const [currentNote, setCurrentNote] = useState('');
   const [timelineRefreshKey, setTimelineRefreshKey] = useState(0);
+  const [showConversationModal, setShowConversationModal] = useState(false);
   const { toast } = useToast();
 
   const statusOptions = [
@@ -432,9 +435,20 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
           {/* AI Chat Proposal Info */}
           {lead.leadSource === 'ai_chat' && lead.conversationContext && (
             <div className="mt-6 rounded-lg border border-purple-200 bg-purple-50 p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-3">
-                🤖 AI Chat Proposal Details
-              </p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-purple-600">
+                  🤖 AI Chat Proposal Details
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowConversationModal(true)}
+                  className="text-purple-700 border-purple-300 hover:bg-purple-100"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  View Full Conversation
+                </Button>
+              </div>
               <div className="grid gap-3 text-sm">
                 {lead.conversationContext.proposalId && (
                   <div className="flex justify-between">
@@ -520,6 +534,15 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Conversation History Modal */}
+      {lead.leadSource === 'ai_chat' && (
+        <LeadConversationModal
+          lead={lead}
+          isOpen={showConversationModal}
+          onClose={() => setShowConversationModal(false)}
+        />
+      )}
     </div>
   );
 };
