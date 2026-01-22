@@ -21,6 +21,7 @@ export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposal_sent' | '
 export interface Lead {
   _id?: string;
   userId?: string;
+  leadId?: string; // Proposal/reference ID (e.g., "CS-1769115292841")
   
   // Lead Source and Association
   leadSource: LeadSource;
@@ -50,6 +51,26 @@ export interface Lead {
   conversationContext?: {
     formType?: string;
     rawFormData?: Record<string, any>;
+    sessionId?: string;
+    targetAudience?: string;
+    brandInfo?: {
+      name?: string;
+      website?: string;
+      description?: string;
+    };
+    extractedGoals?: string[];
+    proposalId?: string;
+    proposalStatus?: string;
+    proposalValidUntil?: string;
+    proposalNextSteps?: string[];
+    [key: string]: any;
+  };
+  
+  // Metadata
+  metadata?: {
+    submittedAt?: string;
+    emailNotificationsSent?: boolean;
+    proposalGenerated?: boolean;
     [key: string]: any;
   };
   

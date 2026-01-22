@@ -284,19 +284,52 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
             </div>
           </div>
 
+          {/* Lead Source & ID */}
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <Badge 
+              variant="outline" 
+              className={
+                lead.leadSource === 'ai_chat' 
+                  ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                  : lead.leadSource === 'storefront_form'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-slate-50 text-slate-700 border-slate-200'
+              }
+            >
+              {lead.leadSource === 'ai_chat' ? '🤖 AI Chat' : 
+               lead.leadSource === 'storefront_form' ? '📝 Storefront Form' :
+               lead.leadSource === 'manual_entry' ? '✍️ Manual Entry' : lead.leadSource}
+            </Badge>
+            {lead.leadId && (
+              <span className="text-xs text-muted-foreground font-mono">ID: {lead.leadId}</span>
+            )}
+          </div>
+
           {/* Lead Information Grid */}
           <div className="grid gap-6 md:grid-cols-2">
             <div className="grid gap-4 grid-rows-[auto_auto]">
               <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Marketing Goals</p>
                 <div className="mt-3">
-                  {lead.marketingGoals && lead.marketingGoals.length > 0 ? (
+                  {(lead.marketingGoals && lead.marketingGoals.length > 0) || (lead.campaignGoals && (Array.isArray(lead.campaignGoals) ? lead.campaignGoals.length > 0 : lead.campaignGoals)) ? (
                     <div className="flex flex-wrap gap-2">
-                      {lead.marketingGoals.map((goal, index) => (
-                        <Badge key={index} variant="outline" className="rounded-full px-3 py-1 text-xs">
+                      {lead.marketingGoals?.map((goal, index) => (
+                        <Badge key={`mg-${index}`} variant="outline" className="rounded-full px-3 py-1 text-xs">
                           {goal}
                         </Badge>
                       ))}
+                      {Array.isArray(lead.campaignGoals) 
+                        ? lead.campaignGoals.filter(g => !lead.marketingGoals?.includes(g)).map((goal, index) => (
+                            <Badge key={`cg-${index}`} variant="outline" className="rounded-full px-3 py-1 text-xs bg-purple-50">
+                              {goal}
+                            </Badge>
+                          ))
+                        : lead.campaignGoals && !lead.marketingGoals?.includes(lead.campaignGoals) && (
+                            <Badge variant="outline" className="rounded-full px-3 py-1 text-xs bg-purple-50">
+                              {lead.campaignGoals}
+                            </Badge>
+                          )
+                      }
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">No marketing goals provided.</p>
@@ -316,6 +349,16 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
                   <span>{lead.timeline ?? 'No timeline provided.'}</span>
                 </div>
               </div>
+
+              {lead.conversationContext?.targetAudience && (
+                <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Target Audience</p>
+                  <div className="mt-3 text-sm">
+                    <Users className="inline h-4 w-4 text-slate-400 mr-2" />
+                    {lead.conversationContext.targetAudience}
+                  </div>
+                </div>
+              )}
 
               <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Publication</p>
@@ -375,6 +418,67 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
               </div>
             </div>
           </div>
+
+          {/* Message / Conversation Summary */}
+          {lead.message && (
+            <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
+                {lead.leadSource === 'ai_chat' ? 'Conversation Summary' : 'Message'}
+              </p>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">{lead.message}</p>
+            </div>
+          )}
+
+          {/* AI Chat Proposal Info */}
+          {lead.leadSource === 'ai_chat' && lead.conversationContext && (
+            <div className="mt-6 rounded-lg border border-purple-200 bg-purple-50 p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-3">
+                🤖 AI Chat Proposal Details
+              </p>
+              <div className="grid gap-3 text-sm">
+                {lead.conversationContext.proposalId && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Proposal ID:</span>
+                    <span className="font-mono text-slate-700">{lead.conversationContext.proposalId}</span>
+                  </div>
+                )}
+                {lead.conversationContext.proposalStatus && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Status:</span>
+                    <span className="text-slate-700">{lead.conversationContext.proposalStatus}</span>
+                  </div>
+                )}
+                {lead.conversationContext.proposalValidUntil && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Valid Until:</span>
+                    <span className="text-slate-700">{lead.conversationContext.proposalValidUntil}</span>
+                  </div>
+                )}
+                {lead.conversationContext.proposalNextSteps && lead.conversationContext.proposalNextSteps.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-slate-500 block mb-2">Next Steps:</span>
+                    <ul className="list-disc list-inside space-y-1 text-slate-700">
+                      {lead.conversationContext.proposalNextSteps.map((step, index) => (
+                        <li key={index}>{step}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {lead.conversationContext.extractedGoals && lead.conversationContext.extractedGoals.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-slate-500 block mb-2">Extracted Goals:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {lead.conversationContext.extractedGoals.map((goal, index) => (
+                        <Badge key={index} variant="outline" className="bg-white text-purple-700 border-purple-300">
+                          {goal}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
