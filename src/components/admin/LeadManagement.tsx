@@ -310,7 +310,7 @@ export const LeadManagement = () => {
 
   const getPublicationName = (publicationId?: string) => {
     if (!publicationId) return 'Hub-Level Lead';
-    const pub = publications.find(p => p._id?.toString() === publicationId);
+    const pub = publications.find(p => p.publicationId?.toString() === publicationId);
     return pub?.basicInfo?.publicationName || 'Unknown Publication';
   };
 

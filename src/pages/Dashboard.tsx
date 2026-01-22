@@ -56,7 +56,7 @@ export default function Dashboard() {
         {currentTab === 'dashboard' && <DashboardOverview />}
         {currentTab === 'profile' && <PublicationProfile />}
         {currentTab === 'inventory' && <DashboardInventoryManager />}
-        {currentTab === 'leads' && selectedPublication?._id && <PublicationLeads publicationId={selectedPublication._id} />}
+        {currentTab === 'leads' && selectedPublication?.publicationId && <PublicationLeads publicationId={selectedPublication.publicationId.toString()} />}
         {currentTab === 'orders' && <PublicationOrders />}
         {currentTab === 'order-detail' && <PublicationOrderDetail />}
         {currentTab === 'settings' && <PublicationSettings />}

@@ -205,8 +205,8 @@ export interface LeadInquiry {
   leadSource: 'storefront_form' | 'ai_chat' | 'manual_entry' | 'other';
   
   // Hub and Publication Association
-  hubId: string; // Required - which hub this lead belongs to
-  publicationId?: string; // Optional - specific publication if applicable
+  hubId?: string; // Optional - hub this lead belongs to (can be derived from publication if publicationId is set)
+  publicationId?: string; // Optional - numeric publication ID (e.g., "1035"), NOT the MongoDB _id
   
   // Contact Information
   contactName: string;

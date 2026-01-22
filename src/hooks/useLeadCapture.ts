@@ -54,7 +54,7 @@ export const useLeadCapture = () => {
         ...leadData,
         leadSource: leadData.leadSource || 'storefront_form',
         hubId: selectedHubId,
-        publicationId: leadData.publicationId || selectedPublication?._id,
+        publicationId: leadData.publicationId || selectedPublication?.publicationId?.toString(),
         userId: user.id,
       });
 

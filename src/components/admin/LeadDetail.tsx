@@ -83,7 +83,7 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
   };
 
   const getPublicationName = (publicationId: string): string => {
-    const publication = publications.find(p => p._id === publicationId);
+    const publication = publications.find(p => p.publicationId?.toString() === publicationId);
     return publication?.basicInfo?.publicationName ?? 'Unknown Publication';
   };
 

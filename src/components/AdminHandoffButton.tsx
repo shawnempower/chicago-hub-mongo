@@ -43,7 +43,7 @@ export function AdminHandoffButton({ conversationContext, triggerKeywords = [] }
       await leadsApi.create({
         leadSource: 'ai_chat',
         hubId: selectedHubId,
-        publicationId: selectedPublication?._id,
+        publicationId: selectedPublication?.publicationId?.toString(),
         userId: user.id,
         businessName: formData.companyName,
         contactName: formData.contactPerson,

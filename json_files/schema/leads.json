@@ -3,7 +3,7 @@
   "title": "Lead Inquiry Schema",
   "description": "Schema for managing leads from various sources (storefront forms, AI chat, manual entry)",
   "type": "object",
-  "required": ["leadSource", "hubId", "contactName", "contactEmail", "businessName", "createdAt", "updatedAt"],
+  "required": ["leadSource", "contactName", "contactEmail", "businessName", "createdAt", "updatedAt"],
   "properties": {
     "_id": {
       "type": ["string", "object"],
@@ -21,12 +21,12 @@
     },
     "hubId": {
       "type": "string",
-      "description": "Hub identifier this lead belongs to (e.g., 'chicago-hub')",
+      "description": "Optional hub identifier (can be derived from publication if publicationId is set)",
       "examples": ["chicago-hub", "nyc-hub", "la-hub"]
     },
     "publicationId": {
       "type": "string",
-      "description": "Optional MongoDB ObjectId of specific publication if lead is publication-specific"
+      "description": "Optional numeric publication ID (e.g., '1035'), NOT the MongoDB _id"
     },
     "contactName": {
       "type": "string",

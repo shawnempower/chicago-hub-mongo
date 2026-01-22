@@ -24,8 +24,8 @@ export interface Lead {
   
   // Lead Source and Association
   leadSource: LeadSource;
-  hubId: string;
-  publicationId?: string;
+  hubId?: string; // Optional - can be derived from publication if publicationId is set
+  publicationId?: string; // Numeric publication ID (e.g., "1035"), NOT MongoDB _id
   
   // Contact Information
   contactName: string;
