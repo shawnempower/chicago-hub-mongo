@@ -77,7 +77,7 @@ export const PublicationInventory: React.FC = () => {
             type: ad.name || 'Newsletter Ad',
             channel: 'newsletter',
             position: `${newsletter.name || `Newsletter ${newsletterIndex + 1}`} • ${ad.position || 'Standard'}`,
-            size: ad.format?.dimensions || ad.dimensions || 'Standard',
+            size: ad.format?.dimensions || 'Standard',
             price: ad.pricing?.flatRate ? `$${ad.pricing.flatRate} ${ad.pricing.pricingModel === 'per_send' ? '/send' : ''}` : 'Contact for pricing',
             availability: 'Available', // Default since newsletters don't have availability flag
             impressions: newsletter.subscribers ? `${newsletter.subscribers.toLocaleString()}/send` : '-',

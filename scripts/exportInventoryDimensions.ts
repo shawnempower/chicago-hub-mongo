@@ -117,9 +117,9 @@ async function exportInventoryDimensions() {
           const nlName = newsletter.name || 'Newsletter';
           if (newsletter.advertisingOpportunities) {
             for (const ad of newsletter.advertisingOpportunities) {
-              // Get dimensions from top-level or format.dimensions
+              // Get dimensions from format.dimensions only (primary field)
               let dimsList: string[] = [];
-              const rawDims = ad.dimensions || ad.format?.dimensions;
+              const rawDims = ad.format?.dimensions;
               if (rawDims) {
                 if (Array.isArray(rawDims)) {
                   dimsList = rawDims;
@@ -169,9 +169,9 @@ async function exportInventoryDimensions() {
           const printName = print.name || 'Print';
           if (print.advertisingOpportunities) {
             for (const ad of print.advertisingOpportunities) {
-              // Get dimensions from top-level or format.dimensions
+              // Get dimensions from format.dimensions only (primary field)
               let dimsList: string[] = [];
-              const rawDims = ad.dimensions || ad.format?.dimensions;
+              const rawDims = ad.format?.dimensions;
               if (rawDims) {
                 if (Array.isArray(rawDims)) {
                   dimsList = rawDims;

@@ -1696,7 +1696,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         <div>
                           <Label>Dimensions</Label>
                           <Input
-                            value={ad.format?.dimensions || ad.dimensions || ''}
+                            value={ad.format?.dimensions || ''}
                             onChange={(e) => updatePrintAdSpecifications(printIndex, adIndex, 'dimensions', e.target.value)}
                             placeholder='10" x 8.5"'
                           />
