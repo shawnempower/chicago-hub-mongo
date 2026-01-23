@@ -142,12 +142,25 @@ export class EmailService {
     navy: '#2a3642',        // hsl(210 20% 18%) - Primary
     orange: '#ee7623',      // hsl(24 86% 52%) - Accent
     green: '#27AE60',       // hsl(145 63% 42%) - Success
-    cream: '#faf7f2',       // hsl(42 30% 95%) - Background
+    cream: '#faf7f2',       // hsl(42 30% 95%) - Background (matches dashboard)
     lightGray: '#f8f9fa',   // hsl(0 0% 98%) - Muted
     mediumGray: '#6c757d',  // hsl(215 16% 47%) - Muted foreground
     red: '#e74c3c',         // hsl(0 84% 60%) - Destructive
     white: '#ffffff',
-    border: '#e5e7eb'       // hsl(215 20% 90%)
+    border: '#e5e7eb',      // hsl(215 20% 90%)
+    buttonColor: 'rgb(37, 46, 55)', // Standard button color for all emails
+    // Cream variations for info boxes and footer
+    infoBoxCream: '#f5f0e8',      // Slightly darker cream for info box background
+    infoBoxBorderCream: '#e8dcc8', // Stronger cream tone for left border
+    footerCream: '#f0ebe3',        // Darker cream for footer (to stand out from main bg)
+    // Orange for body info boxes and alert boxes
+    lightOrange: '#fff3e0', // Light orange background for info/alert boxes
+    // Light versions for header backgrounds (with dark text)
+    lightNavy: '#e8eaed',   // Light navy background
+    lightOrangeHeader: '#fef4ed', // Light orange background for headers
+    lightGreen: '#e8f5ed',  // Light green background
+    lightRed: '#fdecea',    // Light red background
+    lightGray: '#f5f5f6'    // Light gray background
   };
 
   constructor(config: EmailConfig) {
@@ -201,6 +214,21 @@ export class EmailService {
   }
 
   /**
+   * Get light background and dark text color for header based on primary color
+   */
+  private getHeaderColors(primaryColor: string): { backgroundColor: string; textColor: string } {
+    const colorMap: { [key: string]: { backgroundColor: string; textColor: string } } = {
+      [this.BRAND_COLORS.navy]: { backgroundColor: this.BRAND_COLORS.lightNavy, textColor: this.BRAND_COLORS.navy },
+      [this.BRAND_COLORS.orange]: { backgroundColor: this.BRAND_COLORS.lightOrangeHeader, textColor: this.BRAND_COLORS.orange },
+      [this.BRAND_COLORS.green]: { backgroundColor: this.BRAND_COLORS.lightGreen, textColor: this.BRAND_COLORS.green },
+      [this.BRAND_COLORS.red]: { backgroundColor: this.BRAND_COLORS.lightRed, textColor: this.BRAND_COLORS.red },
+      [this.BRAND_COLORS.mediumGray]: { backgroundColor: this.BRAND_COLORS.lightGray, textColor: this.BRAND_COLORS.mediumGray }
+    };
+
+    return colorMap[primaryColor] || { backgroundColor: this.BRAND_COLORS.lightNavy, textColor: this.BRAND_COLORS.navy };
+  }
+
+  /**
    * Generate standardized email template
    * Uses Chicago Hub brand colors and typography to match the web application
    */
@@ -214,6 +242,7 @@ export class EmailService {
   }): string {
     const { title, preheader, content, headerColor, headerIcon, recipientEmail } = options;
     const primaryColor = headerColor || this.BRAND_COLORS.navy;
+    const { backgroundColor, textColor } = this.getHeaderColors(primaryColor);
 
     return `
       <!DOCTYPE html>
@@ -245,9 +274,9 @@ export class EmailService {
                 
                 <!-- Header -->
                 <tr>
-                  <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
+                  <td style="background-color: ${backgroundColor}; padding: 40px 30px; text-align: center;">
                     ${headerIcon ? `<div style="font-size: 48px; margin-bottom: 16px;">${headerIcon}</div>` : ''}
-                    <h1 style="margin: 0; color: ${this.BRAND_COLORS.white}; font-family: 'Playfair Display', Georgia, serif; font-size: 32px; font-weight: 600; line-height: 1.2;">${title}</h1>
+                    <h1 style="margin: 0; color: ${textColor}; font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 400; line-height: 1.2;">${title}</h1>
                   </td>
                 </tr>
                 
@@ -260,7 +289,7 @@ export class EmailService {
                 
                 <!-- Footer -->
                 <tr>
-                  <td style="background-color: ${this.BRAND_COLORS.lightGray}; padding: 30px; text-align: center; border-top: 1px solid ${this.BRAND_COLORS.border};">
+                  <td style="background-color: ${this.BRAND_COLORS.footerCream}; padding: 30px; text-align: center; border-top: 1px solid ${this.BRAND_COLORS.border};">
                     <p style="margin: 0 0 8px 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray}; line-height: 1.5;">
                       <strong style="color: ${this.BRAND_COLORS.navy};">Chicago Hub</strong> — Your Premier Media Planning Platform
                     </p>
@@ -286,14 +315,14 @@ export class EmailService {
 
   /**
    * Generate a call-to-action button with consistent styling
+   * All buttons use standard dark color and are 2x wider
    */
-  private generateButton(text: string, url: string, color?: string): string {
-    const buttonColor = color || this.BRAND_COLORS.orange;
+  private generateButton(text: string, url: string): string {
     return `
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 24px auto;">
         <tr>
-          <td style="border-radius: 6px; background-color: ${buttonColor};">
-            <a href="${url}" target="_blank" class="button" style="display: inline-block; padding: 14px 32px; color: ${this.BRAND_COLORS.white}; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 6px; background-color: ${buttonColor};">
+          <td style="border-radius: 6px; background-color: ${this.BRAND_COLORS.buttonColor};">
+            <a href="${url}" target="_blank" class="button" style="display: inline-block; padding: 14px 64px; color: ${this.BRAND_COLORS.white}; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 6px; background-color: ${this.BRAND_COLORS.buttonColor};">
               ${text}
             </a>
           </td>
@@ -304,13 +333,13 @@ export class EmailService {
 
   /**
    * Generate an info box with consistent styling
+   * Uses cream background with darker cream left border
    */
-  private generateInfoBox(content: string, color?: string): string {
-    const accentColor = color || this.BRAND_COLORS.orange;
+  private generateInfoBox(content: string): string {
     return `
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
         <tr>
-          <td style="background-color: ${this.BRAND_COLORS.lightGray}; border-left: 4px solid ${accentColor}; padding: 20px; border-radius: 6px;">
+          <td style="background-color: ${this.BRAND_COLORS.infoBoxCream}; border-left: 4px solid ${this.BRAND_COLORS.infoBoxBorderCream}; padding: 20px; border-radius: 6px;">
             ${content}
           </td>
         </tr>
@@ -320,27 +349,16 @@ export class EmailService {
 
   /**
    * Generate an alert/warning box
+   * All alert boxes use light orange background with orange left border
    */
   private generateAlertBox(content: string, type: 'warning' | 'info' | 'success' = 'warning'): string {
-    const colors = {
-      warning: { bg: '#fff3cd', border: '#ffc107', icon: '⚠️' },
-      info: { bg: '#d1ecf1', border: '#0dcaf0', icon: 'ℹ️' },
-      success: { bg: '#d4edda', border: this.BRAND_COLORS.green, icon: '✓' }
-    };
-    const config = colors[type];
-
     return `
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
         <tr>
-          <td style="background-color: ${config.bg}; border: 1px solid ${config.border}; border-radius: 6px; padding: 16px;">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-              <tr>
-                <td width="30" style="vertical-align: top; padding-right: 12px; font-size: 20px;">${config.icon}</td>
-                <td style="color: ${this.BRAND_COLORS.navy}; font-size: 15px; line-height: 1.5;">
-                  ${content}
-                </td>
-              </tr>
-            </table>
+          <td style="background-color: ${this.BRAND_COLORS.lightOrange}; border-left: 4px solid ${this.BRAND_COLORS.orange}; border-radius: 6px; padding: 16px;">
+            <div style="color: ${this.BRAND_COLORS.navy}; font-size: 15px; line-height: 1.5;">
+              ${content}
+            </div>
           </td>
         </tr>
       </table>
@@ -366,10 +384,10 @@ export class EmailService {
         With Chicago Hub, you can:
       </p>
       <ul style="margin: 0 0 24px 0; padding-left: 24px;">
-        <li style="margin-bottom: 8px;">🎯 Discover targeted advertising packages</li>
-        <li style="margin-bottom: 8px;">📊 Access detailed audience demographics</li>
-        <li style="margin-bottom: 8px;">🤝 Connect with local media partners</li>
-        <li style="margin-bottom: 8px;">💡 Get AI-powered media planning recommendations</li>
+        <li style="margin-bottom: 8px;">Discover targeted advertising packages</li>
+        <li style="margin-bottom: 8px;">Access detailed audience demographics</li>
+        <li style="margin-bottom: 8px;">Connect with local media partners</li>
+        <li style="margin-bottom: 8px;">Get AI-powered media planning recommendations</li>
       </ul>
       
       ${verificationLink ? `
@@ -377,7 +395,7 @@ export class EmailService {
           Please verify your email address to get started:
         </p>
         <div style="text-align: center; margin: 24px 0;">
-          ${this.generateButton('Verify Email Address', verificationLink, this.BRAND_COLORS.green)}
+          ${this.generateButton('Verify Email Address', verificationLink)}
         </div>
         <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
           If the button doesn't work, copy and paste this link into your browser:<br>
@@ -404,13 +422,12 @@ export class EmailService {
       preheader: 'Your media planning journey starts here',
       content,
       headerColor: this.BRAND_COLORS.navy,
-      headerIcon: '🎉',
       recipientEmail: data.email
     });
 
     return await this.sendEmail({
       to: data.email,
-      subject: '🎉 Welcome to Chicago Hub!',
+      subject: 'Welcome to Chicago Hub!',
       html
     });
   }
@@ -438,7 +455,7 @@ export class EmailService {
       </p>
       
       <div style="text-align: center; margin: 24px 0;">
-        ${this.generateButton('Reset Password', resetLink, this.BRAND_COLORS.red)}
+        ${this.generateButton('Reset Password', resetLink)}
       </div>
       
       <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
@@ -466,13 +483,12 @@ export class EmailService {
       preheader: 'Reset your Chicago Hub password securely',
       content,
       headerColor: this.BRAND_COLORS.red,
-      headerIcon: '🔐',
       recipientEmail: data.email
     });
 
     return await this.sendEmail({
       to: data.email,
-      subject: '🔐 Reset Your Chicago Hub Password',
+      subject: 'Reset Your Chicago Hub Password',
       html
     });
   }
@@ -495,7 +511,7 @@ export class EmailService {
       </p>
       
       <div style="text-align: center; margin: 24px 0;">
-        ${this.generateButton('Verify Email Address', verificationLink, this.BRAND_COLORS.green)}
+        ${this.generateButton('Verify Email Address', verificationLink)}
       </div>
       
       <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
@@ -507,10 +523,10 @@ export class EmailService {
         Once verified, you'll have full access to:
       </p>
       <ul style="margin: 0 0 24px 0; padding-left: 24px;">
-        <li style="margin-bottom: 8px;">🎯 Personalized advertising recommendations</li>
-        <li style="margin-bottom: 8px;">💾 Save and manage your favorite packages</li>
-        <li style="margin-bottom: 8px;">📊 Access detailed analytics and insights</li>
-        <li style="margin-bottom: 8px;">🤖 AI-powered media planning assistant</li>
+        <li style="margin-bottom: 8px;">Personalized advertising recommendations</li>
+        <li style="margin-bottom: 8px;">Save and manage your favorite packages</li>
+        <li style="margin-bottom: 8px;">Access detailed analytics and insights</li>
+        <li style="margin-bottom: 8px;">AI-powered media planning assistant</li>
       </ul>
       
       <p style="margin: 0 0 24px 0;">
@@ -528,13 +544,12 @@ export class EmailService {
       preheader: 'Complete your Chicago Hub account setup',
       content,
       headerColor: this.BRAND_COLORS.green,
-      headerIcon: '✅',
       recipientEmail: data.email
     });
 
     return await this.sendEmail({
       to: data.email,
-      subject: '✅ Verify Your Chicago Hub Email',
+      subject: 'Verify Your Chicago Hub Email',
       html
     });
   }
@@ -550,9 +565,9 @@ export class EmailService {
 
     const infoBoxContent = `
       <p style="margin: 0; line-height: 1.8; font-size: 15px;">
-        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Resource Type:</strong> ${resourceTypeLabel}<br>
-        <strong style="color: ${this.BRAND_COLORS.navy};">📍 Resource Name:</strong> ${data.resourceName}<br>
-        <strong style="color: ${this.BRAND_COLORS.navy};">👤 Invited By:</strong> ${data.invitedByName}
+        <strong style="color: ${this.BRAND_COLORS.navy};">Resource Type:</strong> ${resourceTypeLabel}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Resource Name:</strong> ${data.resourceName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Invited By:</strong> ${data.invitedByName}
       </p>
     `;
 
@@ -565,7 +580,7 @@ export class EmailService {
         <strong>${data.invitedByName}</strong> has invited you to join <strong>${data.resourceName}</strong> on Chicago Hub.
       </p>
       
-      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.orange)}
+      ${this.generateInfoBox(infoBoxContent)}
       
       <p style="margin: 0 0 16px 0;">
         ${data.isExistingUser 
@@ -587,10 +602,10 @@ export class EmailService {
         What you'll be able to do:
       </p>
       <ul style="margin: 0 0 24px 0; padding-left: 24px;">
-        <li style="margin-bottom: 8px;">✅ Manage ${data.resourceType === 'hub' ? 'hub settings and publications' : 'publication details and content'}</li>
-        <li style="margin-bottom: 8px;">✅ Invite other team members</li>
-        <li style="margin-bottom: 8px;">✅ Access analytics and insights</li>
-        <li style="margin-bottom: 8px;">✅ Collaborate with your team</li>
+        <li style="margin-bottom: 8px;">Manage ${data.resourceType === 'hub' ? 'hub settings and publications' : 'publication details and content'}</li>
+        <li style="margin-bottom: 8px;">Invite other team members</li>
+        <li style="margin-bottom: 8px;">Access analytics and insights</li>
+        <li style="margin-bottom: 8px;">Collaborate with your team</li>
       </ul>
       
       ${this.generateAlertBox(
@@ -609,13 +624,12 @@ export class EmailService {
       preheader: `Join ${data.resourceName} on Chicago Hub`,
       content,
       headerColor: this.BRAND_COLORS.orange,
-      headerIcon: '🎉',
       recipientEmail: data.recipientEmail
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `🎉 You've been invited to ${data.resourceName} on Chicago Hub`,
+      subject: `You've been invited to ${data.resourceName} on Chicago Hub`,
       html
     });
   }
@@ -633,9 +647,9 @@ export class EmailService {
 
     const infoBoxContent = `
       <p style="margin: 0; line-height: 1.8; font-size: 15px;">
-        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Resource Type:</strong> ${resourceTypeLabel}<br>
-        <strong style="color: ${this.BRAND_COLORS.navy};">📍 Resource Name:</strong> ${data.resourceName}<br>
-        <strong style="color: ${this.BRAND_COLORS.navy};">✓ Status:</strong> <span style="color: ${this.BRAND_COLORS.green};">Access Granted</span>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Resource Type:</strong> ${resourceTypeLabel}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Resource Name:</strong> ${data.resourceName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Status:</strong> <span style="color: ${this.BRAND_COLORS.green};">Access Granted</span>
       </p>
     `;
 
@@ -648,14 +662,14 @@ export class EmailService {
         Great news! You now have access to <strong>${data.resourceName}</strong> on Chicago Hub.
       </p>
       
-      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.green)}
+      ${this.generateInfoBox(infoBoxContent)}
       
       <p style="margin: 0 0 16px 0;">
         You can now manage this ${data.resourceType} and collaborate with your team.
       </p>
       
       <div style="text-align: center; margin: 24px 0;">
-        ${this.generateButton('Go to Dashboard', dashboardLink, this.BRAND_COLORS.green)}
+        ${this.generateButton('Go to Dashboard', dashboardLink)}
       </div>
       
       <p style="margin: 24px 0 0 0;">
@@ -673,13 +687,12 @@ export class EmailService {
       preheader: `You now have access to ${data.resourceName}`,
       content,
       headerColor: this.BRAND_COLORS.green,
-      headerIcon: '✅',
       recipientEmail: data.recipientEmail
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `✅ Access Granted to ${data.resourceName}`,
+      subject: `Access Granted to ${data.resourceName}`,
       html
     });
   }
@@ -696,8 +709,8 @@ export class EmailService {
 
     const infoBoxContent = `
       <p style="margin: 0; line-height: 1.8; font-size: 15px;">
-        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Resource Type:</strong> ${resourceTypeLabel}<br>
-        <strong style="color: ${this.BRAND_COLORS.navy};">📍 Resource Name:</strong> ${data.resourceName}
+        <strong style="color: ${this.BRAND_COLORS.navy};">Resource Type:</strong> ${resourceTypeLabel}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Resource Name:</strong> ${data.resourceName}
       </p>
     `;
 
@@ -710,7 +723,7 @@ export class EmailService {
         We're writing to let you know that your access to <strong>${data.resourceName}</strong> has been removed.
       </p>
       
-      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.mediumGray)}
+      ${this.generateInfoBox(infoBoxContent)}
       
       <p style="margin: 0 0 16px 0;">
         If you believe this was done in error or have questions, please contact your team administrator.
@@ -731,7 +744,6 @@ export class EmailService {
       preheader: `Your access to ${data.resourceName} has been updated`,
       content,
       headerColor: this.BRAND_COLORS.mediumGray,
-      headerIcon: '🔒',
       recipientEmail: data.recipientEmail
     });
 
@@ -776,7 +788,7 @@ export class EmailService {
         Your role on <strong>Chicago Hub</strong> has been updated.
       </p>
       
-      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.orange)}
+      ${this.generateInfoBox(infoBoxContent)}
       
       <p style="margin: 0 0 16px 0;">
         This change may affect your permissions and what you can access on the platform. If you have any questions about your new role, please contact your administrator.
@@ -793,13 +805,12 @@ export class EmailService {
       preheader: 'Your Chicago Hub role has been changed',
       content,
       headerColor: this.BRAND_COLORS.navy,
-      headerIcon: '🔄',
       recipientEmail: data.recipientEmail
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: '🔄 Your Chicago Hub Role Has Been Updated',
+      subject: 'Your Chicago Hub Role Has Been Updated',
       html
     });
   }
@@ -844,14 +855,14 @@ export class EmailService {
       </p>
       
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
-        ${generateInfoRow('👤 Contact Name', leadData.contactName)}
-        ${generateInfoRow('📧 Email', `<a href="mailto:${leadData.contactEmail}" style="color: ${this.BRAND_COLORS.orange}; text-decoration: none;">${leadData.contactEmail}</a>`)}
-        ${generateInfoRow('📱 Phone', leadData.contactPhone || '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not provided</span>')}
-        ${generateInfoRow('🏢 Business Name', leadData.businessName)}
-        ${generateInfoRow('🌐 Website', leadData.websiteUrl ? `<a href="${leadData.websiteUrl}" target="_blank" style="color: ${this.BRAND_COLORS.orange}; text-decoration: none;">${leadData.websiteUrl}</a>` : '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not provided</span>')}
-        ${generateInfoRow('💰 Budget Range', leadData.budgetRange || '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not specified</span>')}
-        ${generateInfoRow('📅 Timeline', leadData.timeline || '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not specified</span>')}
-        ${leadData.marketingGoals && leadData.marketingGoals.length > 0 ? generateInfoRow('🎯 Marketing Goals', leadData.marketingGoals.map((goal: string) => `• ${goal}`).join('<br>')) : ''}
+        ${generateInfoRow('Contact Name', leadData.contactName)}
+        ${generateInfoRow('Email', `<a href="mailto:${leadData.contactEmail}" style="color: ${this.BRAND_COLORS.orange}; text-decoration: none;">${leadData.contactEmail}</a>`)}
+        ${generateInfoRow('Phone', leadData.contactPhone || '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not provided</span>')}
+        ${generateInfoRow('Business Name', leadData.businessName)}
+        ${generateInfoRow('Website', leadData.websiteUrl ? `<a href="${leadData.websiteUrl}" target="_blank" style="color: ${this.BRAND_COLORS.orange}; text-decoration: none;">${leadData.websiteUrl}</a>` : '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not provided</span>')}
+        ${generateInfoRow('Budget Range', leadData.budgetRange || '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not specified</span>')}
+        ${generateInfoRow('Timeline', leadData.timeline || '<span style="color: ' + this.BRAND_COLORS.mediumGray + ';">Not specified</span>')}
+        ${leadData.marketingGoals && leadData.marketingGoals.length > 0 ? generateInfoRow('Marketing Goals', leadData.marketingGoals.map((goal: string) => `• ${goal}`).join('<br>')) : ''}
       </table>
       
       ${this.generateAlertBox(
@@ -877,13 +888,12 @@ export class EmailService {
       preheader: `${leadData.businessName} - ${leadData.contactName}`,
       content,
       headerColor: this.BRAND_COLORS.orange,
-      headerIcon: '🎯',
       recipientEmail: adminEmail
     });
 
     return await this.sendEmail({
       to: adminEmail,
-      subject: `🎯 New Lead: ${leadData.businessName} - ${leadData.contactName}`,
+      subject: `New Lead: ${leadData.businessName} - ${leadData.contactName}`,
       html
     });
   }
@@ -898,9 +908,9 @@ export class EmailService {
 
     const infoBoxContent = `
       <p style="margin: 0; line-height: 1.8; font-size: 15px;">
-        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
-        ${data.advertiserName ? `<strong style="color: ${this.BRAND_COLORS.navy};">🏢 Advertiser:</strong> ${data.advertiserName}<br>` : ''}
-        <strong style="color: ${this.BRAND_COLORS.navy};">📦 Assets Ready:</strong> <span style="color: ${this.BRAND_COLORS.green};">${data.assetCount} file${data.assetCount !== 1 ? 's' : ''}</span>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Campaign:</strong> ${data.campaignName}<br>
+        ${data.advertiserName ? `<strong style="color: ${this.BRAND_COLORS.navy};">Advertiser:</strong> ${data.advertiserName}<br>` : ''}
+        <strong style="color: ${this.BRAND_COLORS.navy};">Assets Ready:</strong> <span style="color: ${this.BRAND_COLORS.green};">${data.assetCount} file${data.assetCount !== 1 ? 's' : ''}</span>
       </p>
     `;
 
@@ -913,20 +923,20 @@ export class EmailService {
         Great news! The creative assets for your campaign <strong>"${data.campaignName}"</strong> are now ready for download.
       </p>
       
-      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.green)}
+      ${this.generateInfoBox(infoBoxContent)}
       
       <p style="margin: 0 0 12px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
         You can now:
       </p>
       <ul style="margin: 0 0 24px 0; padding-left: 24px;">
-        <li style="margin-bottom: 8px;">📥 Download print-ready files</li>
-        <li style="margin-bottom: 8px;">📋 Copy tracking scripts for digital placements</li>
-        <li style="margin-bottom: 8px;">👁️ Preview all creative assets</li>
-        <li style="margin-bottom: 8px;">✅ Confirm placement specifications</li>
+        <li style="margin-bottom: 8px;">Download print-ready files</li>
+        <li style="margin-bottom: 8px;">Copy tracking scripts for digital placements</li>
+        <li style="margin-bottom: 8px;">Preview all creative assets</li>
+        <li style="margin-bottom: 8px;">Confirm placement specifications</li>
       </ul>
       
       <div style="text-align: center; margin: 24px 0;">
-        ${this.generateButton('View Order & Download Assets', data.orderUrl, this.BRAND_COLORS.green)}
+        ${this.generateButton('View Order & Download Assets', data.orderUrl)}
       </div>
       
       <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
@@ -950,13 +960,12 @@ export class EmailService {
       preheader: `Download assets for ${data.campaignName}`,
       content,
       headerColor: this.BRAND_COLORS.green,
-      headerIcon: '📦',
       recipientEmail: data.recipientEmail
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `📦 Creative Assets Ready: ${data.campaignName}`,
+      subject: `Creative Assets Ready: ${data.campaignName}`,
       html
     });
   }
@@ -971,11 +980,11 @@ export class EmailService {
 
     const infoBoxContent = `
       <p style="margin: 0; line-height: 1.8; font-size: 15px;">
-        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
-        ${data.advertiserName ? `<strong style="color: ${this.BRAND_COLORS.navy};">🏢 Advertiser:</strong> ${data.advertiserName}<br>` : ''}
-        <strong style="color: ${this.BRAND_COLORS.navy};">📰 Publication:</strong> ${data.publicationName}<br>
-        ${data.flightDates ? `<strong style="color: ${this.BRAND_COLORS.navy};">📅 Flight Dates:</strong> ${data.flightDates}<br>` : ''}
-        ${data.totalValue ? `<strong style="color: ${this.BRAND_COLORS.navy};">💰 Order Value:</strong> $${data.totalValue.toLocaleString()}<br>` : ''}
+        <strong style="color: ${this.BRAND_COLORS.navy};">Campaign:</strong> ${data.campaignName}<br>
+        ${data.advertiserName ? `<strong style="color: ${this.BRAND_COLORS.navy};">Advertiser:</strong> ${data.advertiserName}<br>` : ''}
+        <strong style="color: ${this.BRAND_COLORS.navy};">Publication:</strong> ${data.publicationName}<br>
+        ${data.flightDates ? `<strong style="color: ${this.BRAND_COLORS.navy};">Flight Dates:</strong> ${data.flightDates}<br>` : ''}
+        ${data.totalValue ? `<strong style="color: ${this.BRAND_COLORS.navy};">Order Value:</strong> $${data.totalValue.toLocaleString()}<br>` : ''}
       </p>
     `;
 
@@ -988,20 +997,20 @@ export class EmailService {
         You have received a new insertion order for <strong>"${data.campaignName}"</strong>.
       </p>
       
-      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.orange)}
+      ${this.generateInfoBox(infoBoxContent)}
       
       <p style="margin: 0 0 12px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
         Please review and:
       </p>
       <ul style="margin: 0 0 24px 0; padding-left: 24px;">
-        <li style="margin-bottom: 8px;">📋 Review the order details and placements</li>
-        <li style="margin-bottom: 8px;">✅ Accept or reject individual placements</li>
-        <li style="margin-bottom: 8px;">💬 Send any questions via the messaging system</li>
-        <li style="margin-bottom: 8px;">📥 Download creative assets when available</li>
+        <li style="margin-bottom: 8px;">Review the order details and placements</li>
+        <li style="margin-bottom: 8px;">Accept or reject individual placements</li>
+        <li style="margin-bottom: 8px;">Send any questions via the messaging system</li>
+        <li style="margin-bottom: 8px;">Download creative assets when available</li>
       </ul>
       
       <div style="text-align: center; margin: 24px 0;">
-        ${this.generateButton('View Order Details', data.orderUrl, this.BRAND_COLORS.orange)}
+        ${this.generateButton('View Order Details', data.orderUrl)}
       </div>
       
       <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
@@ -1025,13 +1034,12 @@ export class EmailService {
       preheader: `New order received for ${data.campaignName}`,
       content,
       headerColor: this.BRAND_COLORS.orange,
-      headerIcon: '📋',
       recipientEmail: data.recipientEmail
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `📋 New Insertion Order: ${data.campaignName}`,
+      subject: `New Insertion Order: ${data.campaignName}`,
       html
     });
   }
@@ -1058,10 +1066,10 @@ export class EmailService {
 
     const infoBoxContent = `
       <p style="margin: 0; line-height: 1.8; font-size: 15px;">
-        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
-        ${data.advertiserName ? `<strong style="color: ${this.BRAND_COLORS.navy};">🏢 Advertiser:</strong> ${data.advertiserName}<br>` : ''}
-        <strong style="color: ${this.BRAND_COLORS.navy};">📰 Publication:</strong> ${data.publicationName}<br>
-        <strong style="color: ${this.BRAND_COLORS.navy};">✅ Confirmed:</strong> <span style="color: ${this.BRAND_COLORS.green};">${confirmedDate}</span>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Campaign:</strong> ${data.campaignName}<br>
+        ${data.advertiserName ? `<strong style="color: ${this.BRAND_COLORS.navy};">Advertiser:</strong> ${data.advertiserName}<br>` : ''}
+        <strong style="color: ${this.BRAND_COLORS.navy};">Publication:</strong> ${data.publicationName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Confirmed:</strong> <span style="color: ${this.BRAND_COLORS.green};">${confirmedDate}</span>
       </p>
     `;
 
@@ -1074,14 +1082,14 @@ export class EmailService {
         Great news! <strong>${data.publicationName}</strong> has confirmed their order for <strong>"${data.campaignName}"</strong>.
       </p>
       
-      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.green)}
+      ${this.generateInfoBox(infoBoxContent)}
       
       <p style="margin: 0 0 16px 0;">
         The publication has reviewed and accepted the order. You can now proceed with the next steps of your campaign.
       </p>
       
       <div style="text-align: center; margin: 24px 0;">
-        ${this.generateButton('View Campaign', data.campaignUrl, this.BRAND_COLORS.green)}
+        ${this.generateButton('View Campaign', data.campaignUrl)}
       </div>
       
       <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
@@ -1100,13 +1108,12 @@ export class EmailService {
       preheader: `${data.publicationName} confirmed order for ${data.campaignName}`,
       content,
       headerColor: this.BRAND_COLORS.green,
-      headerIcon: '✅',
       recipientEmail: data.recipientEmail
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `✅ Order Confirmed: ${data.publicationName} - ${data.campaignName}`,
+      subject: `Order Confirmed: ${data.publicationName} - ${data.campaignName}`,
       html
     });
   }
@@ -1121,10 +1128,10 @@ export class EmailService {
 
     const infoBoxContent = `
       <p style="margin: 0; line-height: 1.8; font-size: 15px;">
-        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
-        <strong style="color: ${this.BRAND_COLORS.navy};">📰 Publication:</strong> ${data.publicationName}<br>
-        <strong style="color: ${this.BRAND_COLORS.navy};">❌ Rejected Placement:</strong> <span style="color: ${this.BRAND_COLORS.red};">${data.placementName}</span>
-        ${data.rejectionReason ? `<br><strong style="color: ${this.BRAND_COLORS.navy};">📝 Reason:</strong> ${data.rejectionReason}` : ''}
+        <strong style="color: ${this.BRAND_COLORS.navy};">Campaign:</strong> ${data.campaignName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Publication:</strong> ${data.publicationName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Rejected Placement:</strong> <span style="color: ${this.BRAND_COLORS.red};">${data.placementName}</span>
+        ${data.rejectionReason ? `<br><strong style="color: ${this.BRAND_COLORS.navy};">Reason:</strong> ${data.rejectionReason}` : ''}
       </p>
     `;
 
@@ -1137,19 +1144,19 @@ export class EmailService {
         <strong>${data.publicationName}</strong> has rejected a placement for <strong>"${data.campaignName}"</strong>.
       </p>
       
-      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.red)}
+      ${this.generateInfoBox(infoBoxContent)}
       
       <p style="margin: 0 0 12px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
         Recommended next steps:
       </p>
       <ul style="margin: 0 0 24px 0; padding-left: 24px;">
-        <li style="margin-bottom: 8px;">💬 Contact the publication to understand the rejection</li>
-        <li style="margin-bottom: 8px;">🔄 Consider alternative placements or publications</li>
-        <li style="margin-bottom: 8px;">📝 Update the campaign if needed</li>
+        <li style="margin-bottom: 8px;">Contact the publication to understand the rejection</li>
+        <li style="margin-bottom: 8px;">Consider alternative placements or publications</li>
+        <li style="margin-bottom: 8px;">Update the campaign if needed</li>
       </ul>
       
       <div style="text-align: center; margin: 24px 0;">
-        ${this.generateButton('View Campaign', data.campaignUrl, this.BRAND_COLORS.orange)}
+        ${this.generateButton('View Campaign', data.campaignUrl)}
       </div>
       
       <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
@@ -1168,13 +1175,12 @@ export class EmailService {
       preheader: `${data.publicationName} rejected "${data.placementName}" for ${data.campaignName}`,
       content,
       headerColor: this.BRAND_COLORS.red,
-      headerIcon: '❌',
       recipientEmail: data.recipientEmail
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `❌ Placement Rejected: ${data.placementName} - ${data.campaignName}`,
+      subject: `Placement Rejected: ${data.placementName} - ${data.campaignName}`,
       html
     });
   }
@@ -1189,9 +1195,9 @@ export class EmailService {
 
     const infoBoxContent = `
       <p style="margin: 0; line-height: 1.8; font-size: 15px;">
-        <strong style="color: ${this.BRAND_COLORS.navy};">📋 Campaign:</strong> ${data.campaignName}<br>
-        <strong style="color: ${this.BRAND_COLORS.navy};">📰 Publication:</strong> ${data.publicationName}<br>
-        <strong style="color: ${this.BRAND_COLORS.navy};">👤 From:</strong> ${data.senderName}
+        <strong style="color: ${this.BRAND_COLORS.navy};">Campaign:</strong> ${data.campaignName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">Publication:</strong> ${data.publicationName}<br>
+        <strong style="color: ${this.BRAND_COLORS.navy};">From:</strong> ${data.senderName}
       </p>
     `;
 
@@ -1216,7 +1222,7 @@ export class EmailService {
         You have a new message from <strong>${data.senderName}</strong> regarding <strong>"${data.campaignName}"</strong>.
       </p>
       
-      ${this.generateInfoBox(infoBoxContent, this.BRAND_COLORS.orange)}
+      ${this.generateInfoBox(infoBoxContent)}
       
       ${messagePreviewHtml}
       
@@ -1225,7 +1231,7 @@ export class EmailService {
       </p>
       
       <div style="text-align: center; margin: 24px 0;">
-        ${this.generateButton('View Conversation', data.orderUrl, this.BRAND_COLORS.orange)}
+        ${this.generateButton('View Conversation', data.orderUrl)}
       </div>
       
       <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
@@ -1244,13 +1250,12 @@ export class EmailService {
       preheader: `${data.senderName} sent you a message about ${data.campaignName}`,
       content,
       headerColor: this.BRAND_COLORS.navy,
-      headerIcon: '💬',
       recipientEmail: data.recipientEmail
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `💬 New Message: ${data.campaignName}`,
+      subject: `New Message: ${data.campaignName}`,
       html
     });
   }
