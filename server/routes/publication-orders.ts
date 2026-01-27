@@ -552,6 +552,10 @@ router.post('/:campaignId/:publicationId/confirm', async (req: any, res: Respons
         const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
         const campaign = await campaignsService.getByCampaignId(campaignId) || await campaignsService.getById(campaignId);
         
+        // Get hub for branding
+        const hub = await db.collection(COLLECTIONS.HUBS).findOne({ hubId: order.hubId });
+        const hubName = hub?.basicInfo?.name;
+        
         // Find hub admins from permissions
         const hubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
           'hubAccess.hubId': order.hubId,
@@ -595,7 +599,8 @@ router.post('/:campaignId/:publicationId/confirm', async (req: any, res: Respons
                 campaignName: order.campaignName,
                 advertiserName: campaign?.basicInfo?.advertiserName,
                 confirmedAt: new Date(),
-                campaignUrl
+                campaignUrl,
+                hubName
               });
             }
           }
@@ -819,8 +824,13 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
           const { getDatabase } = await import('../../src/integrations/mongodb/client');
           const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
           
+          // Get hub name for email branding
+          const db = getDatabase();
+          const hub = order.hubId ? await db.collection(COLLECTIONS.HUBS).findOne({ hubId: order.hubId }) : null;
+          const hubName = hub?.basicInfo?.name;
+          
           // Find users with publication access
-          const permissions = await getDatabase().collection(COLLECTIONS.USER_PERMISSIONS).find({
+          const permissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
             'publications.publicationId': parseInt(publicationId)
           }).toArray();
           
@@ -838,7 +848,7 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
             
             // Send email notification
             if (emailService) {
-              const user = await getDatabase().collection(COLLECTIONS.USERS).findOne({ _id: perm.userId });
+              const user = await db.collection(COLLECTIONS.USERS).findOne({ _id: perm.userId });
               if (user?.email) {
                 await emailService.sendMessageNotificationEmail({
                   recipientEmail: user.email,
@@ -847,7 +857,8 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
                   campaignName: order.campaignName,
                   publicationName: order.publicationName,
                   messagePreview: content.trim().slice(0, 100),
-                  orderUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?tab=order-detail&campaignId=${campaignId}&publicationId=${publicationId}`
+                  orderUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?tab=order-detail&campaignId=${campaignId}&publicationId=${publicationId}`,
+                  hubName
                 });
               }
             }
@@ -857,6 +868,10 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
           const { getDatabase } = await import('../../src/integrations/mongodb/client');
           const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
           const db = getDatabase();
+          
+          // Get hub name for email branding
+          const hub = order.hubId ? await db.collection(COLLECTIONS.HUBS).findOne({ hubId: order.hubId }) : null;
+          const hubName = hub?.basicInfo?.name;
           
           // Find hub admin users from permissions
           const hubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
@@ -898,7 +913,8 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
                   campaignName: order.campaignName,
                   publicationName: order.publicationName,
                   messagePreview: content.trim().slice(0, 100),
-                  orderUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?tab=order-detail&campaignId=${campaignId}&publicationId=${publicationId}`
+                  orderUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?tab=order-detail&campaignId=${campaignId}&publicationId=${publicationId}`,
+                  hubName
                 });
               }
             }
@@ -1093,6 +1109,10 @@ router.put('/:campaignId/:publicationId/placement-status', async (req: any, res:
         const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
         const campaign = await campaignsService.getByCampaignId(campaignId) || await campaignsService.getById(campaignId);
         
+        // Get hub for email branding
+        const hub = await db.collection(COLLECTIONS.HUBS).findOne({ hubId: order.hubId });
+        const hubName = hub?.basicInfo?.name;
+        
         // Find hub admins from permissions
         const hubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
           'hubAccess.hubId': order.hubId,
@@ -1154,7 +1174,8 @@ router.put('/:campaignId/:publicationId/placement-status', async (req: any, res:
                   placementName,
                   campaignName: order.campaignName,
                   rejectionReason: notes,
-                  campaignUrl
+                  campaignUrl,
+                  hubName
                 });
               }
             }

@@ -8,8 +8,8 @@ dotenv.config();
 // Force enable notifications for this test
 process.env.EMAIL_NOTIFICATIONS_ENABLED = 'true';
 
-const TEST_EMAIL = 'daniel@laylinedesign.com';
-const TEST_NAME = 'Daniel';
+const TEST_EMAIL = 'shawn@empowerlocal.com';
+const TEST_NAME = 'Shawn';
 
 async function testAllEmails() {
   try {
@@ -35,7 +35,7 @@ async function testAllEmails() {
     
     // Skip auth emails (already sent), start with notification emails
     
-    // 1. Invitation Email (New User)
+    // 1. Invitation Email (New User) - Using National Hub branding
     console.log('1/10 Sending Invitation Email (New User)...');
     const inviteNew = await emailService.sendInvitationEmail({
       invitedByName: 'John Smith',
@@ -45,12 +45,13 @@ async function testAllEmails() {
       resourceType: 'publication',
       resourceName: 'Chicago Tribune',
       invitationToken: 'test-invite-token-new',
-      isExistingUser: false
+      isExistingUser: false,
+      hubName: 'National Hub'  // Testing dynamic hub branding
     });
     results.push({ name: 'Invitation (New User)', ...inviteNew });
     await delay(1500);
     
-    // 2. Invitation Email (Existing User)
+    // 2. Invitation Email (Existing User) - Using Chicago Hub branding
     console.log('2/10 Sending Invitation Email (Existing User)...');
     const inviteExisting = await emailService.sendInvitationEmail({
       invitedByName: 'Jane Doe',
@@ -60,48 +61,52 @@ async function testAllEmails() {
       resourceType: 'hub',
       resourceName: 'Chicago Media Hub',
       invitationToken: 'test-invite-token-existing',
-      isExistingUser: true
+      isExistingUser: true,
+      hubName: 'Chicago Media Hub'
     });
     results.push({ name: 'Invitation (Existing User)', ...inviteExisting });
     await delay(1500);
     
-    // 3. Access Granted Email
+    // 3. Access Granted Email - Using Denver Hub branding
     console.log('3/10 Sending Access Granted Email...');
     const accessGranted = await emailService.sendAccessGrantedEmail({
       recipientEmail: TEST_EMAIL,
       recipientName: TEST_NAME,
       resourceType: 'publication',
       resourceName: 'Sun-Times Media',
-      grantedBy: 'Admin User'
+      grantedBy: 'Admin User',
+      hubName: 'Denver Hub'  // Testing different hub
     });
     results.push({ name: 'Access Granted', ...accessGranted });
     await delay(1500);
     
-    // 4. Access Revoked Email
+    // 4. Access Revoked Email - Using Atlanta Hub branding
     console.log('4/10 Sending Access Revoked Email...');
     const accessRevoked = await emailService.sendAccessRevokedEmail({
       recipientEmail: TEST_EMAIL,
       recipientName: TEST_NAME,
       resourceType: 'publication',
       resourceName: 'Daily Herald',
-      revokedBy: 'Admin User'
+      revokedBy: 'Admin User',
+      hubName: 'Atlanta Hub'  // Testing different hub
     });
     results.push({ name: 'Access Revoked', ...accessRevoked });
     await delay(1500);
     
-    // 5. Role Change Email
+    // 5. Role Change Email - Using Chicago Hub branding
     console.log('5/10 Sending Role Change Email...');
     const roleChange = await emailService.sendRoleChangeEmail({
       recipientEmail: TEST_EMAIL,
       recipientName: TEST_NAME,
       oldRole: 'publication_user',
       newRole: 'admin',
-      changedBy: 'Super Admin'
+      changedBy: 'Super Admin',
+      hubName: 'Chicago Hub'
     });
     results.push({ name: 'Role Change', ...roleChange });
     await delay(1500);
     
-    // 6. Lead Notification Email
+    // 6. Lead Notification Email - Using Chicago Hub branding
     console.log('6/10 Sending Lead Notification Email...');
     const leadNotif = await emailService.sendLeadNotificationEmail({
       contactName: 'Robert Martinez',
@@ -111,7 +116,8 @@ async function testAllEmails() {
       websiteUrl: 'https://martinezauto.com',
       budgetRange: '$10,000 - $25,000',
       timeline: 'Q1 2025',
-      marketingGoals: ['Brand Awareness', 'Lead Generation', 'Local Reach']
+      marketingGoals: ['Brand Awareness', 'Lead Generation', 'Local Reach'],
+      hubName: 'Chicago Hub'
     });
     results.push({ name: 'Lead Notification', ...leadNotif });
     await delay(1500);
@@ -147,7 +153,7 @@ async function testAllEmails() {
     results.push({ name: 'Order Sent', ...orderSent });
     await delay(1500);
     
-    // 9. Order Confirmed Email
+    // 9. Order Confirmed Email - Using Chicago Media Hub branding
     console.log('9/10 Sending Order Confirmed Email...');
     const orderConfirmed = await emailService.sendOrderConfirmedEmail({
       recipientEmail: TEST_EMAIL,
@@ -156,12 +162,13 @@ async function testAllEmails() {
       campaignName: 'Fall Promotion 2025',
       advertiserName: 'Local Business LLC',
       confirmedAt: new Date(),
-      campaignUrl: 'http://localhost:5173/campaigns/test789'
+      campaignUrl: 'http://localhost:5173/campaigns/test789',
+      hubName: 'Chicago Media Hub'
     });
     results.push({ name: 'Order Confirmed', ...orderConfirmed });
     await delay(1500);
     
-    // 10. Placement Rejected Email
+    // 10. Placement Rejected Email - Using National Hub branding
     console.log('10/10 Sending Placement Rejected Email...');
     const placementRejected = await emailService.sendPlacementRejectedEmail({
       recipientEmail: TEST_EMAIL,
@@ -170,7 +177,8 @@ async function testAllEmails() {
       placementName: 'Full Page Print Ad',
       campaignName: 'Holiday Special 2025',
       rejectionReason: 'Placement no longer available for selected dates',
-      campaignUrl: 'http://localhost:5173/campaigns/test-abc'
+      campaignUrl: 'http://localhost:5173/campaigns/test-abc',
+      hubName: 'National Hub'
     });
     results.push({ name: 'Placement Rejected', ...placementRejected });
     

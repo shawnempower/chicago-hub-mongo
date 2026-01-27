@@ -275,7 +275,8 @@ router.delete('/revoke/hub', authenticateToken, async (req: any, res: Response) 
           recipientName: user.firstName,
           resourceType: 'hub',
           resourceName: hub.basicInfo?.name || hubId,
-          revokedBy: req.user.email
+          revokedBy: req.user.email,
+          hubName: hub.basicInfo?.name
         });
       }
     }
@@ -321,12 +322,20 @@ router.delete('/revoke/publication', authenticateToken, async (req: any, res: Re
       });
       
       if (emailService && publication) {
+        // Try to get hub name if publication belongs to a hub
+        let hubName: string | undefined;
+        if (publication.hubIds && publication.hubIds.length > 0) {
+          const hub = await db.collection(COLLECTIONS.HUBS).findOne({ hubId: publication.hubIds[0] });
+          hubName = hub?.basicInfo?.name;
+        }
+        
         await emailService.sendAccessRevokedEmail({
           recipientEmail: user.email,
           recipientName: user.firstName,
           resourceType: 'publication',
           resourceName: publication.basicInfo?.publicationName || publicationId,
-          revokedBy: req.user.email
+          revokedBy: req.user.email,
+          hubName
         });
       }
     }

@@ -171,6 +171,25 @@ export class InvitationsService {
       if (emailService) {
         console.log(`📧 [INVITATIONS SERVICE] Sending invitation email to ${invitedEmail}`);
         logger.info(`Sending invitation email to ${invitedEmail}`);
+        
+        // Get hub name for email branding
+        let hubName: string | undefined;
+        if (resourceType === 'hub') {
+          // For hub invitations, resourceName is the hub name
+          hubName = resourceName;
+        } else if (resourceType === 'publication') {
+          // For publication invitations, look up the publication's hub
+          const publication = await getDatabase().collection(COLLECTIONS.PUBLICATIONS).findOne({
+            publicationId: parseInt(resourceId)
+          });
+          if (publication?.hubIds && publication.hubIds.length > 0) {
+            const hub = await getDatabase().collection(COLLECTIONS.HUBS).findOne({
+              hubId: publication.hubIds[0]
+            });
+            hubName = hub?.basicInfo?.name;
+          }
+        }
+        
         const emailResult = await emailService.sendInvitationEmail({
           invitedByName,
           invitedByEmail: inviterEmail,
@@ -179,7 +198,8 @@ export class InvitationsService {
           resourceType,
           resourceName,
           invitationToken,
-          isExistingUser: !!existingUser
+          isExistingUser: !!existingUser,
+          hubName
         });
         
         console.log(`📧 [INVITATIONS SERVICE] Email result:`, emailResult);

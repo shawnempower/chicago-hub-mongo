@@ -5,8 +5,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-const TEST_EMAIL = 'daniel@laylinedesign.com';
-const TEST_NAME = 'Daniel';
+const TEST_EMAIL = 'shawn@empowerlocal.com';
+const TEST_NAME = 'Shawn';
 
 async function testAllEmails() {
   try {

@@ -24,6 +24,7 @@ interface EmailData {
   subject: string;
   html: string;
   text?: string;
+  fromName?: string; // Optional override for hub-specific branding
 }
 
 interface WelcomeEmailData {
@@ -53,6 +54,7 @@ interface InvitationEmailData {
   resourceName: string;
   invitationToken: string;
   isExistingUser: boolean; // true if user exists, false if new
+  hubName?: string; // Hub name for branding
 }
 
 interface AccessGrantedEmailData {
@@ -61,6 +63,7 @@ interface AccessGrantedEmailData {
   resourceType: 'hub' | 'publication';
   resourceName: string;
   grantedBy: string;
+  hubName?: string; // Hub name for branding
 }
 
 interface AccessRevokedEmailData {
@@ -69,6 +72,7 @@ interface AccessRevokedEmailData {
   resourceType: 'hub' | 'publication';
   resourceName: string;
   revokedBy: string;
+  hubName?: string; // Hub name for branding
 }
 
 interface RoleChangeEmailData {
@@ -77,6 +81,7 @@ interface RoleChangeEmailData {
   oldRole: string;
   newRole: string;
   changedBy: string;
+  hubName?: string; // Hub name for branding
 }
 
 interface AssetsReadyEmailData {
@@ -110,6 +115,7 @@ interface OrderConfirmedEmailData {
   advertiserName?: string;
   confirmedAt?: Date;
   campaignUrl: string;
+  hubName?: string; // Hub name for branding
 }
 
 interface PlacementRejectedEmailData {
@@ -120,6 +126,7 @@ interface PlacementRejectedEmailData {
   campaignName: string;
   rejectionReason?: string;
   campaignUrl: string;
+  hubName?: string; // Hub name for branding
 }
 
 interface MessageNotificationEmailData {
@@ -160,7 +167,7 @@ export class EmailService {
     lightOrangeHeader: '#fef4ed', // Light orange background for headers
     lightGreen: '#e8f5ed',  // Light green background
     lightRed: '#fdecea',    // Light red background
-    lightGray: '#f5f5f6'    // Light gray background
+    lightGrayHeader: '#f5f5f6'    // Light gray background for headers
   };
 
   constructor(config: EmailConfig) {
@@ -184,8 +191,10 @@ export class EmailService {
 
   private async sendEmail(emailData: EmailData): Promise<{ success: boolean; error?: string }> {
     try {
+      // Use hub-specific fromName if provided, otherwise fall back to config
+      const senderName = emailData.fromName || this.config.fromName;
       const data = {
-        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        from: `${senderName} <${this.config.fromEmail}>`,
         to: emailData.to,
         subject: emailData.subject,
         html: emailData.html,
@@ -230,7 +239,8 @@ export class EmailService {
 
   /**
    * Generate standardized email template
-   * Uses Chicago Hub brand colors and typography to match the web application
+   * Uses brand colors and typography to match the web application
+   * @param hubName - Optional hub name for branding (defaults to MAILGUN_FROM_NAME)
    */
   private generateEmailTemplate(options: {
     title: string;
@@ -239,10 +249,13 @@ export class EmailService {
     headerColor?: string;
     headerIcon?: string;
     recipientEmail: string;
+    hubName?: string; // Hub name for footer branding
   }): string {
-    const { title, preheader, content, headerColor, headerIcon, recipientEmail } = options;
+    const { title, preheader, content, headerColor, headerIcon, recipientEmail, hubName } = options;
     const primaryColor = headerColor || this.BRAND_COLORS.navy;
     const { backgroundColor, textColor } = this.getHeaderColors(primaryColor);
+    // Use hubName if provided, otherwise fall back to config fromName
+    const brandName = hubName || this.config.fromName;
 
     return `
       <!DOCTYPE html>
@@ -291,10 +304,10 @@ export class EmailService {
                 <tr>
                   <td style="background-color: ${this.BRAND_COLORS.footerCream}; padding: 30px; text-align: center; border-top: 1px solid ${this.BRAND_COLORS.border};">
                     <p style="margin: 0 0 8px 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray}; line-height: 1.5;">
-                      <strong style="color: ${this.BRAND_COLORS.navy};">Chicago Hub</strong> — Your Premier Media Planning Platform
+                      <strong style="color: ${this.BRAND_COLORS.navy};">${brandName}</strong>
                     </p>
                     <p style="margin: 0 0 16px 0; font-size: 13px; color: ${this.BRAND_COLORS.mediumGray};">
-                      © ${new Date().getFullYear()} Chicago Hub. All rights reserved.
+                      © ${new Date().getFullYear()} ${brandName}. All rights reserved.
                     </p>
                     <p style="margin: 0; font-size: 12px; color: ${this.BRAND_COLORS.mediumGray};">
                       This email was sent to <a href="mailto:${recipientEmail}" style="color: ${this.BRAND_COLORS.orange}; text-decoration: none;">${recipientEmail}</a>
@@ -377,11 +390,11 @@ export class EmailService {
       </h2>
       
       <p style="margin: 0 0 16px 0;">
-        Thank you for joining <strong>Chicago Hub</strong>, your premier platform for media planning and advertising opportunities in the Chicago area.
+        Thank you for joining <strong>${this.config.fromName}</strong>, your premier platform for media planning and advertising opportunities.
       </p>
       
       <p style="margin: 0 0 12px 0; font-weight: 600; color: ${this.BRAND_COLORS.navy};">
-        With Chicago Hub, you can:
+        With ${this.config.fromName}, you can:
       </p>
       <ul style="margin: 0 0 24px 0; padding-left: 24px;">
         <li style="margin-bottom: 8px;">Discover targeted advertising packages</li>
@@ -413,12 +426,12 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Welcome aboard!<br>
-        <strong>The Chicago Hub Team</strong>
+        <strong>The ${this.config.fromName} Team</strong>
       </p>
     `;
 
     const html = this.generateEmailTemplate({
-      title: 'Welcome to Chicago Hub!',
+      title: `Welcome to ${this.config.fromName}!`,
       preheader: 'Your media planning journey starts here',
       content,
       headerColor: this.BRAND_COLORS.navy,
@@ -427,7 +440,7 @@ export class EmailService {
 
     return await this.sendEmail({
       to: data.email,
-      subject: 'Welcome to Chicago Hub!',
+      subject: `Welcome to ${this.config.fromName}!`,
       html
     });
   }
@@ -442,7 +455,7 @@ export class EmailService {
       </h2>
       
       <p style="margin: 0 0 16px 0;">
-        We received a request to reset your password for your Chicago Hub account.
+        We received a request to reset your password for your ${this.config.fromName} account.
       </p>
       
       ${this.generateAlertBox(
@@ -474,13 +487,13 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Best regards,<br>
-        <strong>The Chicago Hub Team</strong>
+        <strong>The ${this.config.fromName} Team</strong>
       </p>
     `;
 
     const html = this.generateEmailTemplate({
       title: 'Password Reset Request',
-      preheader: 'Reset your Chicago Hub password securely',
+      preheader: `Reset your ${this.config.fromName} password securely`,
       content,
       headerColor: this.BRAND_COLORS.red,
       recipientEmail: data.email
@@ -488,7 +501,7 @@ export class EmailService {
 
     return await this.sendEmail({
       to: data.email,
-      subject: 'Reset Your Chicago Hub Password',
+      subject: `Reset Your ${this.config.fromName} Password`,
       html
     });
   }
@@ -503,7 +516,7 @@ export class EmailService {
       </h2>
       
       <p style="margin: 0 0 16px 0;">
-        Please verify your email address to complete your <strong>Chicago Hub</strong> account setup.
+        Please verify your email address to complete your <strong>${this.config.fromName}</strong> account setup.
       </p>
       
       <p style="margin: 0 0 8px 0;">
@@ -530,18 +543,18 @@ export class EmailService {
       </ul>
       
       <p style="margin: 0 0 24px 0;">
-        Thanks for joining Chicago Hub!
+        Thanks for joining ${this.config.fromName}!
       </p>
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Best regards,<br>
-        <strong>The Chicago Hub Team</strong>
+        <strong>The ${this.config.fromName} Team</strong>
       </p>
     `;
 
     const html = this.generateEmailTemplate({
       title: 'Verify Your Email',
-      preheader: 'Complete your Chicago Hub account setup',
+      preheader: `Complete your ${this.config.fromName} account setup`,
       content,
       headerColor: this.BRAND_COLORS.green,
       recipientEmail: data.email
@@ -549,7 +562,7 @@ export class EmailService {
 
     return await this.sendEmail({
       to: data.email,
-      subject: 'Verify Your Chicago Hub Email',
+      subject: `Verify Your ${this.config.fromName} Email`,
       html
     });
   }
@@ -577,15 +590,15 @@ export class EmailService {
       </h2>
       
       <p style="margin: 0 0 20px 0;">
-        <strong>${data.invitedByName}</strong> has invited you to join <strong>${data.resourceName}</strong> on Chicago Hub.
+        <strong>${data.invitedByName}</strong> has invited you to join <strong>${data.resourceName}</strong> on ${data.hubName || this.config.fromName}.
       </p>
       
       ${this.generateInfoBox(infoBoxContent)}
       
       <p style="margin: 0 0 16px 0;">
         ${data.isExistingUser 
-          ? 'Since you already have a Chicago Hub account, simply click the button below to accept this invitation and gain access:'
-          : 'To get started, you\'ll need to create your Chicago Hub account. Click the button below to accept this invitation and set up your account:'
+          ? `Since you already have a ${data.hubName || this.config.fromName} account, simply click the button below to accept this invitation and gain access:`
+          : `To get started, you'll need to create your ${data.hubName || this.config.fromName} account. Click the button below to accept this invitation and set up your account:`
         }
       </p>
       
@@ -615,22 +628,25 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Welcome to the team!<br>
-        <strong>The Chicago Hub Team</strong>
+        <strong>The ${data.hubName || this.config.fromName} Team</strong>
       </p>
     `;
 
+    const hubBrandName = data.hubName || this.config.fromName;
     const html = this.generateEmailTemplate({
       title: 'You\'re Invited!',
-      preheader: `Join ${data.resourceName} on Chicago Hub`,
+      preheader: `Join ${data.resourceName} on ${hubBrandName}`,
       content,
       headerColor: this.BRAND_COLORS.orange,
-      recipientEmail: data.recipientEmail
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `You've been invited to ${data.resourceName} on Chicago Hub`,
-      html
+      subject: `You've been invited to ${data.resourceName} on ${hubBrandName}`,
+      html,
+      fromName: data.hubName
     });
   }
 
@@ -659,7 +675,7 @@ export class EmailService {
       </h2>
       
       <p style="margin: 0 0 20px 0;">
-        Great news! You now have access to <strong>${data.resourceName}</strong> on Chicago Hub.
+        Great news! You now have access to <strong>${data.resourceName}</strong> on ${data.hubName || this.config.fromName}.
       </p>
       
       ${this.generateInfoBox(infoBoxContent)}
@@ -678,22 +694,25 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Best regards,<br>
-        <strong>The Chicago Hub Team</strong>
+        <strong>The ${data.hubName || this.config.fromName} Team</strong>
       </p>
     `;
 
+    const hubBrandName = data.hubName || this.config.fromName;
     const html = this.generateEmailTemplate({
       title: 'Access Granted!',
       preheader: `You now have access to ${data.resourceName}`,
       content,
       headerColor: this.BRAND_COLORS.green,
-      recipientEmail: data.recipientEmail
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `Access Granted to ${data.resourceName}`,
-      html
+      subject: `[${hubBrandName}] Access Granted to ${data.resourceName}`,
+      html,
+      fromName: data.hubName
     });
   }
 
@@ -735,22 +754,25 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Best regards,<br>
-        <strong>The Chicago Hub Team</strong>
+        <strong>The ${data.hubName || this.config.fromName} Team</strong>
       </p>
     `;
 
+    const hubBrandName = data.hubName || this.config.fromName;
     const html = this.generateEmailTemplate({
       title: 'Access Update',
       preheader: `Your access to ${data.resourceName} has been updated`,
       content,
       headerColor: this.BRAND_COLORS.mediumGray,
-      recipientEmail: data.recipientEmail
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `Access Update for ${data.resourceName}`,
-      html
+      subject: `[${hubBrandName}] Access Update for ${data.resourceName}`,
+      html,
+      fromName: data.hubName
     });
   }
 
@@ -785,7 +807,7 @@ export class EmailService {
       </h2>
       
       <p style="margin: 0 0 20px 0;">
-        Your role on <strong>Chicago Hub</strong> has been updated.
+        Your role on <strong>${data.hubName || this.config.fromName}</strong> has been updated.
       </p>
       
       ${this.generateInfoBox(infoBoxContent)}
@@ -796,22 +818,25 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Best regards,<br>
-        <strong>The Chicago Hub Team</strong>
+        <strong>The ${data.hubName || this.config.fromName} Team</strong>
       </p>
     `;
 
+    const hubBrandName = data.hubName || this.config.fromName;
     const html = this.generateEmailTemplate({
       title: 'Role Updated',
-      preheader: 'Your Chicago Hub role has been changed',
+      preheader: `Your ${hubBrandName} role has been changed`,
       content,
       headerColor: this.BRAND_COLORS.navy,
-      recipientEmail: data.recipientEmail
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: 'Your Chicago Hub Role Has Been Updated',
-      html
+      subject: `Your ${hubBrandName} Role Has Been Updated`,
+      html,
+      fromName: data.hubName
     });
   }
 
@@ -851,7 +876,7 @@ export class EmailService {
       </h2>
       
       <p style="margin: 0 0 20px 0; font-size: 15px;">
-        A new lead inquiry has been submitted through Chicago Hub. Review the details below and follow up promptly!
+        A new lead inquiry has been submitted through ${leadData.hubName || this.config.fromName}. Review the details below and follow up promptly!
       </p>
       
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
@@ -883,18 +908,21 @@ export class EmailService {
       </p>
     `;
 
+    const hubBrandName = leadData.hubName || this.config.fromName;
     const html = this.generateEmailTemplate({
       title: 'New Lead Inquiry',
       preheader: `${leadData.businessName} - ${leadData.contactName}`,
       content,
       headerColor: this.BRAND_COLORS.orange,
-      recipientEmail: adminEmail
+      recipientEmail: adminEmail,
+      hubName: leadData.hubName
     });
 
     return await this.sendEmail({
       to: adminEmail,
-      subject: `New Lead: ${leadData.businessName} - ${leadData.contactName}`,
-      html
+      subject: `[${hubBrandName}] New Lead: ${leadData.businessName} - ${leadData.contactName}`,
+      html,
+      fromName: leadData.hubName
     });
   }
 
@@ -951,22 +979,28 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Best regards,<br>
-        <strong>${data.hubName || 'The Chicago Hub Team'}</strong>
+        <strong>The ${data.hubName} Team</strong>
       </p>
     `;
 
+    if (!data.hubName) {
+      console.warn('⚠️ [EMAIL] sendAssetsReadyEmail called without hubName - hub branding will be missing');
+    }
+    const hubBrandName = data.hubName || this.config.fromName;
     const html = this.generateEmailTemplate({
       title: 'Creative Assets Ready!',
       preheader: `Download assets for ${data.campaignName}`,
       content,
       headerColor: this.BRAND_COLORS.green,
-      recipientEmail: data.recipientEmail
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `Creative Assets Ready: ${data.campaignName}`,
-      html
+      subject: `[${hubBrandName}] Creative Assets Ready: ${data.campaignName}`,
+      html,
+      fromName: data.hubName
     });
   }
 
@@ -1025,22 +1059,28 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Best regards,<br>
-        <strong>${data.hubName || 'The Chicago Hub Team'}</strong>
+        <strong>The ${data.hubName} Team</strong>
       </p>
     `;
 
+    if (!data.hubName) {
+      console.warn('⚠️ [EMAIL] sendOrderSentEmail called without hubName - hub branding will be missing');
+    }
+    const hubBrandName = data.hubName || this.config.fromName;
     const html = this.generateEmailTemplate({
       title: 'New Insertion Order',
       preheader: `New order received for ${data.campaignName}`,
       content,
       headerColor: this.BRAND_COLORS.orange,
-      recipientEmail: data.recipientEmail
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `New Insertion Order: ${data.campaignName}`,
-      html
+      subject: `[${hubBrandName}] New Insertion Order: ${data.campaignName}`,
+      html,
+      fromName: data.hubName
     });
   }
 
@@ -1099,22 +1139,25 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Best regards,<br>
-        <strong>The Chicago Hub Team</strong>
+        <strong>The ${data.hubName || this.config.fromName} Team</strong>
       </p>
     `;
 
+    const hubBrandName = data.hubName || this.config.fromName;
     const html = this.generateEmailTemplate({
       title: 'Order Confirmed!',
       preheader: `${data.publicationName} confirmed order for ${data.campaignName}`,
       content,
       headerColor: this.BRAND_COLORS.green,
-      recipientEmail: data.recipientEmail
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `Order Confirmed: ${data.publicationName} - ${data.campaignName}`,
-      html
+      subject: `[${hubBrandName}] Order Confirmed: ${data.publicationName} - ${data.campaignName}`,
+      html,
+      fromName: data.hubName
     });
   }
 
@@ -1166,22 +1209,25 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Best regards,<br>
-        <strong>The Chicago Hub Team</strong>
+        <strong>The ${data.hubName || this.config.fromName} Team</strong>
       </p>
     `;
 
+    const hubBrandName = data.hubName || this.config.fromName;
     const html = this.generateEmailTemplate({
       title: 'Placement Rejected',
       preheader: `${data.publicationName} rejected "${data.placementName}" for ${data.campaignName}`,
       content,
       headerColor: this.BRAND_COLORS.red,
-      recipientEmail: data.recipientEmail
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `Placement Rejected: ${data.placementName} - ${data.campaignName}`,
-      html
+      subject: `[${hubBrandName}] Placement Rejected: ${data.placementName} - ${data.campaignName}`,
+      html,
+      fromName: data.hubName
     });
   }
 
@@ -1241,22 +1287,28 @@ export class EmailService {
       
       <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
         Best regards,<br>
-        <strong>${data.hubName || 'The Chicago Hub Team'}</strong>
+        <strong>The ${data.hubName} Team</strong>
       </p>
     `;
 
+    if (!data.hubName) {
+      console.warn('⚠️ [EMAIL] sendMessageNotificationEmail called without hubName - hub branding will be missing');
+    }
+    const hubBrandName = data.hubName || this.config.fromName;
     const html = this.generateEmailTemplate({
       title: 'New Message',
       preheader: `${data.senderName} sent you a message about ${data.campaignName}`,
       content,
       headerColor: this.BRAND_COLORS.navy,
-      recipientEmail: data.recipientEmail
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName
     });
 
     return await this.sendEmail({
       to: data.recipientEmail,
-      subject: `New Message: ${data.campaignName}`,
-      html
+      subject: `[${hubBrandName}] New Message: ${data.campaignName}`,
+      html,
+      fromName: data.hubName
     });
   }
 }
