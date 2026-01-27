@@ -493,23 +493,23 @@ router.delete('/:id', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// Permanently delete campaign and ALL related records (admin only)
+// Permanently delete campaign and ALL related records (admin or hub user with access)
 router.delete('/:id/permanent', authenticateToken, async (req: any, res: Response) => {
   try {
     const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
     const { ObjectId } = await import('mongodb');
     const { id } = req.params;
     
-    // Admin only
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required for permanent deletion' });
-    }
-    
-    // Find the campaign
+    // Find the campaign first
     const campaign = await campaignsService.getById(id);
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // Check if user has access (admin or hub user with access to this campaign)
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!canAccessCampaign(req.user, campaign, profile)) {
+      return res.status(403).json({ error: 'Access denied - admin or hub user access required for permanent deletion' });
     }
     
     const db = getDatabase();

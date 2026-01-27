@@ -68,11 +68,11 @@ const annualRevenue = calculateRevenue(ad, 'year', frequency);
 
 The production environment is the live system serving real users and data.
 
-- **Frontend**: https://main.dbn59dj42j2z3.amplifyapp.com
+- **Frontend**: https://admin.localmedia.store
   - Hosted on AWS Amplify
   - Manual deployment (auto-deploy disabled)
   
-- **API**: https://hubapi.empowerlocal.co
+- **API**: https://api.localmedia.store
   - Hosted on AWS ECS Fargate
   - Service: `chicago-hub-service`
   - Container port: 3001
@@ -96,11 +96,11 @@ The production environment is the live system serving real users and data.
 
 The staging environment is an isolated testing environment that mirrors production configuration.
 
-- **Frontend**: https://staging.d3wvz0v8d4a1r.amplifyapp.com
+- **Frontend**: https://staging-admin.localmedia.store
   - Hosted on AWS Amplify (separate app)
   - Manual deployment only
   
-- **API**: https://hubapi-staging.empowerlocal.co
+- **API**: https://staging-api.localmedia.store
   - Hosted on AWS ECS Fargate
   - Service: `chicago-hub-service-staging`
   - Image tag: `:staging` (vs `:latest` for production)
@@ -223,8 +223,8 @@ See `env.template` for required environment variables:
 
 The frontend automatically detects the environment:
 - **Development**: Uses `http://localhost:3001/api`
-- **Staging**: Uses `https://hubapi-staging.empowerlocal.co/api`
-- **Production**: Uses `https://hubapi.empowerlocal.co/api`
+- **Staging**: Uses `https://staging-api.localmedia.store/api`
+- **Production**: Uses `https://api.localmedia.store/api`
 
 The API endpoint is configured via the `VITE_API_BASE_URL` environment variable in Amplify.
 

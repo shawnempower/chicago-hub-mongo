@@ -2,7 +2,7 @@ version: 1
 # Deploy with custom domain API configuration
 frontend:
   environmentVariables:
-    VITE_API_BASE_URL: 'https://hubapi.empowerlocal.co'
+    VITE_API_BASE_URL: 'https://api.localmedia.store'
   phases:
     preBuild:
       commands:

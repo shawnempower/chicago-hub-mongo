@@ -28,7 +28,7 @@
         },
         {
           "name": "FRONTEND_URL",
-          "value": "https://staging.d3wvz0v8d4a1r.amplifyapp.com"
+          "value": "https://staging-admin.localmedia.store"
         }
       ],
       "secrets": [

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:prod": "VITE_API_BASE_URL=https://hubapi.empowerlocal.co vite build",
+    "build:prod": "VITE_API_BASE_URL=https://api.localmedia.store vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",

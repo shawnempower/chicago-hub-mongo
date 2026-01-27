@@ -3,7 +3,7 @@ version: 1
 # Deploy manually to staging Amplify app
 frontend:
   environmentVariables:
-    VITE_API_BASE_URL: 'https://hubapi-staging.empowerlocal.co'
+    VITE_API_BASE_URL: 'https://staging-api.localmedia.store'
   phases:
     preBuild:
       commands:

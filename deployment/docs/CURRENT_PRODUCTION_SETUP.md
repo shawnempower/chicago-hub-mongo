@@ -6,9 +6,9 @@ This document describes the current production configuration for the Chicago Hub
 ## Architecture
 
 ### Frontend (AWS Amplify)
-- **Domain**: `https://main.dbn59dj42j2z3.amplifyapp.com`
+- **Domain**: `https://admin.localmedia.store`
 - **Configuration**: `deployment/aws/amplify.yml` with environment variable `VITE_API_BASE_URL`
-- **API Endpoint**: `https://hubapi.empowerlocal.co/api`
+- **API Endpoint**: `https://api.localmedia.store/api`
 
 ### Backend (AWS ECS)
 - **Service**: `chicago-hub-service`
@@ -18,8 +18,8 @@ This document describes the current production configuration for the Chicago Hub
 
 ### Load Balancer (AWS ALB)
 - **Name**: `chicago-hub-api-clean`
-- **Domain**: `https://hubapi.empowerlocal.co`
-- **SSL Certificate**: `*.empowerlocal.co` (AWS Certificate Manager)
+- **Domain**: `https://api.localmedia.store`
+- **SSL Certificate**: `*.localmedia.store` (AWS Certificate Manager)
 - **Target Group**: `chicago-hub-api-direct`
 
 ### Database
@@ -44,12 +44,12 @@ This document describes the current production configuration for the Chicago Hub
 ## Security Configuration
 
 ### CORS
-- **Origin**: `https://main.dbn59dj42j2z3.amplifyapp.com`
+- **Origin**: `https://admin.localmedia.store`
 - **Credentials**: `true`
 - **Methods**: All standard HTTP methods
 
 ### SSL/TLS
-- **Certificate**: `*.empowerlocal.co` from AWS Certificate Manager
+- **Certificate**: `*.localmedia.store` from AWS Certificate Manager
 - **Protocol**: TLS 1.2
 - **Port**: 443 (HTTPS only)
 
@@ -65,8 +65,8 @@ This document describes the current production configuration for the Chicago Hub
 - **Security Groups**: Configured for port 3001 and HTTPS
 
 ### DNS
-- **Route 53**: CNAME record `hubapi.empowerlocal.co` → ALB DNS name
-- **Certificate**: Wildcard certificate for `*.empowerlocal.co`
+- **Route 53**: CNAME record `api.localmedia.store` → ALB DNS name
+- **Certificate**: Wildcard certificate for `*.localmedia.store`
 
 ## Monitoring
 
@@ -120,7 +120,7 @@ aws ecs describe-services --cluster empowerlocal-api-cluster --services chicago-
 aws elbv2 describe-target-health --target-group-arn arn:aws:elasticloadbalancing:us-east-2:947442015939:targetgroup/chicago-hub-api-direct/3d3a625170dc84fc
 
 # Test API directly
-curl https://hubapi.empowerlocal.co/health
+curl https://api.localmedia.store/health
 
 # Check logs
 aws logs get-log-events --log-group-name /ecs/chicago-hub-api --log-stream-name ecs/chicago-hub-api/task-id

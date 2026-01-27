@@ -76,7 +76,7 @@ This will:
 ./deployment/deploy-frontend-production.sh
 ```
 - **Manual deployment** (auto-deploy from GitHub is disabled)
-- **App URL:** https://main.dbn59dj42j2z3.amplifyapp.com
+- **App URL:** https://admin.localmedia.store
 - **Documentation:** [`docs/AMPLIFY_DEPLOYMENT_GUIDE.md`](./docs/AMPLIFY_DEPLOYMENT_GUIDE.md)
 
 #### Backend Only (AWS ECS)
@@ -84,7 +84,7 @@ This will:
 ./deployment/deploy-backend-production.sh
 # Or use legacy script: ./deployment/deploy-to-ecs.sh
 ```
-- **API URL:** https://hubapi.empowerlocal.co
+- **API URL:** https://api.localmedia.store
 - **Documentation:** [`docs/PRODUCTION_DEPLOYMENT_GUIDE.md`](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md)
 
 ---
@@ -116,14 +116,14 @@ This will:
 ./deployment/deploy-frontend-staging.sh
 ```
 - **Manual deployment** (no auto-deploy)
-- **App URL:** https://staging.d3wvz0v8d4a1r.amplifyapp.com
+- **App URL:** https://staging-admin.localmedia.store
 
 #### Backend Only (AWS ECS)
 ```bash
 ./deployment/deploy-backend-staging.sh
 # Or use: ./deployment/deploy-staging.sh
 ```
-- **API URL:** https://hubapi-staging.empowerlocal.co
+- **API URL:** https://staging-api.localmedia.store
 
 **First-time Setup:** See [`docs/STAGING_SETUP_GUIDE.md`](./docs/STAGING_SETUP_GUIDE.md) for complete staging environment setup instructions.
 
@@ -196,9 +196,9 @@ Same parameter names, but under `/chicago-hub-staging/*` namespace with staging-
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  Frontend (AWS Amplify)                                      │
-│  └─ https://main.dbn59dj42j2z3.amplifyapp.com              │
+│  └─ https://admin.localmedia.store                          │
 │     │                                                         │
-│     └──> API calls to: https://hubapi.empowerlocal.co       │
+│     └──> API calls to: https://api.localmedia.store         │
 │                         │                                     │
 │                         ▼                                     │
 │  Backend (AWS ECS Fargate)                                   │
