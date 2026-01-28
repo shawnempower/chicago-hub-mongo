@@ -529,7 +529,7 @@ export const RadioShowEditor = forwardRef<{ openShowDialog: (show: RadioShow) =>
                                     conditionalFields={[
                                       {
                                         key: 'frequency',
-                                        label: 'Frequency',
+                                        label: 'Buy Frequency',
                                         type: 'text',
                                         showWhen: ['per_spot'],
                                         placeholder: 'e.g., 1x, 4x, 12x',

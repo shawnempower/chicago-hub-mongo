@@ -5348,7 +5348,7 @@ export const DashboardInventoryManager = () => {
                     conditionalFields={[
                       {
                         key: 'frequency',
-                        label: 'Frequency',
+                        label: 'Buy Frequency',
                         type: 'text',
                         showWhen: ['per_send'],
                         placeholder: 'e.g., 1x, 2x, 3x, etc',
@@ -5517,7 +5517,7 @@ export const DashboardInventoryManager = () => {
                     conditionalFields={[
                       {
                         key: 'frequency',
-                        label: 'Frequency',
+                        label: 'Buy Frequency',
                         type: 'text',
                         showWhen: ['per_ad', 'per_line'],
                         placeholder: 'e.g., 1x, 2x, 3x, etc',
@@ -5689,7 +5689,7 @@ export const DashboardInventoryManager = () => {
                     conditionalFields={[
                       {
                         key: 'frequency',
-                        label: 'Frequency',
+                        label: 'Buy Frequency',
                         type: 'text',
                         showWhen: ['cpd', 'cpm', 'per_episode'],
                         placeholder: 'e.g., 1x, 2x, 3x, etc',
@@ -5819,7 +5819,7 @@ export const DashboardInventoryManager = () => {
                     conditionalFields={[
                       {
                         key: 'frequency',
-                        label: 'Frequency',
+                        label: 'Buy Frequency',
                         type: 'text',
                         showWhen: ['per_spot'],
                         placeholder: 'e.g., 1x, 2x, 3x, etc',
@@ -6203,7 +6203,7 @@ export const DashboardInventoryManager = () => {
                     conditionalFields={[
                       {
                         key: 'frequency',
-                        label: 'Frequency',
+                        label: 'Buy Frequency',
                         type: 'text',
                         showWhen: ['per_spot'],
                         placeholder: 'e.g., 1x, 2x, 3x, etc',

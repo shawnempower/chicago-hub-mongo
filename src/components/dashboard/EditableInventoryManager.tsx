@@ -1816,6 +1816,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <FrequencyInput
                             value={ad.pricing?.frequency || ''}
                             onChange={(value) => updatePrintAdPricing(printIndex, adIndex, 'frequency', value)}
+                            label="Buy Frequency"
                             showQuickOptions={false}
                           />
                         </div>

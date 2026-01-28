@@ -31,7 +31,7 @@ interface FrequencyInputProps {
 export const FrequencyInput: React.FC<FrequencyInputProps> = ({
   value,
   onChange,
-  label = 'Frequency',
+  label = 'Buy Frequency',
   placeholder = 'e.g., 1x, 2x, 3x',
   className = '',
   showQuickOptions = true,
