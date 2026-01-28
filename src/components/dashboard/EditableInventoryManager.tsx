@@ -13,6 +13,7 @@ import { AdFormatSelector } from '@/components/AdFormatSelector';
 import { NewsletterAdFormat, getAdDimensions } from '@/types/newsletterAdFormat';
 import { WebsiteAdFormatSelector } from '@/components/WebsiteAdFormatSelector';
 import { RadioShowEditor } from '@/components/admin/RadioShowEditor';
+import { FrequencyInput } from '@/components/dashboard/FrequencyInput';
 import { 
   Globe, 
   Mail, 
@@ -58,8 +59,62 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
     );
   }
 
+  // Validate pricing.frequency values - must be in format "1x", "4x", "12x", etc.
+  const validatePricingFrequencies = (): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    const FREQUENCY_PATTERN = /^\d+x$/;
+    const channels = formData.distributionChannels;
+    
+    // Helper to check frequency value
+    const checkFrequency = (freq: string | undefined, location: string) => {
+      if (freq && !FREQUENCY_PATTERN.test(freq)) {
+        errors.push(`${location}: "${freq}" should be in format like "1x", "4x", "12x"`);
+      }
+    };
+    
+    // Check print ads
+    const printChannels = Array.isArray(channels?.print) ? channels.print : channels?.print ? [channels.print] : [];
+    printChannels.forEach((print: any, pi: number) => {
+      print.advertisingOpportunities?.forEach((ad: any, ai: number) => {
+        if (Array.isArray(ad.pricing)) {
+          ad.pricing.forEach((tier: any, ti: number) => {
+            checkFrequency(tier.pricing?.frequency || tier.frequency, `Print ${pi + 1} - ${ad.name || `Ad ${ai + 1}`} - Tier ${ti + 1}`);
+          });
+        } else {
+          checkFrequency(ad.pricing?.frequency, `Print ${pi + 1} - ${ad.name || `Ad ${ai + 1}`}`);
+        }
+      });
+    });
+    
+    // Check newsletter ads
+    channels?.newsletters?.forEach((newsletter: any, ni: number) => {
+      newsletter.advertisingOpportunities?.forEach((ad: any, ai: number) => {
+        if (Array.isArray(ad.pricing)) {
+          ad.pricing.forEach((tier: any, ti: number) => {
+            checkFrequency(tier.pricing?.frequency || tier.frequency, `Newsletter "${newsletter.name}" - ${ad.name || `Ad ${ai + 1}`} - Tier ${ti + 1}`);
+          });
+        } else {
+          checkFrequency(ad.pricing?.frequency, `Newsletter "${newsletter.name}" - ${ad.name || `Ad ${ai + 1}`}`);
+        }
+      });
+    });
+    
+    return { valid: errors.length === 0, errors };
+  };
+
   const handleSave = async () => {
     if (!selectedPublication?._id) return;
+
+    // Validate pricing frequencies before saving
+    const validation = validatePricingFrequencies();
+    if (!validation.valid) {
+      toast({
+        title: "Validation Error",
+        description: `Invalid pricing frequency format:\n${validation.errors.slice(0, 3).join('\n')}${validation.errors.length > 3 ? `\n...and ${validation.errors.length - 3} more` : ''}`,
+        variant: "destructive"
+      });
+      return;
+    }
 
     setSaving(true);
     try {
@@ -1758,11 +1813,10 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </div>
                         
                         <div>
-                          <Label>Frequency</Label>
-                          <Input
+                          <FrequencyInput
                             value={ad.pricing?.frequency || ''}
-                            onChange={(e) => updatePrintAdPricing(printIndex, adIndex, 'frequency', e.target.value)}
-                            placeholder="One time, 4x, 12x, etc."
+                            onChange={(value) => updatePrintAdPricing(printIndex, adIndex, 'frequency', value)}
+                            showQuickOptions={false}
                           />
                         </div>
                       </div>
