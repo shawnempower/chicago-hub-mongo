@@ -415,7 +415,7 @@ function groupRequirementsForCSV(requirements: CreativeRequirement[]): GroupedAs
 
 /**
  * Generate CSV content for creative asset specifications
- * Organized by unique dimension and inventory type (channel)
+ * Lists each placement individually with publication name
  */
 function generateSpecSheetCSV(requirements: CreativeRequirement[], campaignInfo?: CampaignInfo): string {
   const rows: string[][] = [];
@@ -441,59 +441,54 @@ function generateSpecSheetCSV(requirements: CreativeRequirement[], campaignInfo?
     }
   }
   
-  // Group requirements by unique specs
-  const groupedSpecs = groupRequirementsForCSV(requirements);
-  
-  rows.push(['Total Unique Assets Needed:', String(groupedSpecs.length)]);
-  rows.push(['Total Placements Covered:', String(requirements.length)]);
-  rows.push([]);
-  rows.push(['Note:', 'Assets are ordered by impact - creating higher priority assets first will cover the most placements.']);
+  rows.push(['Total Placements:', String(requirements.length)]);
   rows.push([]);
   rows.push(['Generated:', new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })]);
   rows.push([]);
   rows.push([]);
   
-  // CSV Header for asset table - organized by unique specs (most impactful first)
+  // CSV Header for asset table - one row per placement
   rows.push([
-    'Priority',
+    'Publication Name',
     'Inventory Type',
     'Dimensions / Size',
     'Accepted Formats',
-    'Max File Size',
     'Color Space',
     'Resolution',
-    'Duration (sec)',
-    'Bleed',
-    'Trim',
-    'Placements Covered',
-    'Placement Types',
-    'Notes'
+    'Duration (sec)'
   ]);
 
-  // Add rows for each unique asset spec
-  groupedSpecs.forEach((spec, index) => {
-    // Format placement names (limit to avoid overly long cells)  
-    const placementsList = spec.placementNames.length <= 3
-      ? spec.placementNames.join('; ')
-      : `${spec.placementNames.slice(0, 2).join('; ')}; +${spec.placementNames.length - 2} more`;
+  // Sort requirements by publication name, then by channel
+  const channelOrder = ['website', 'newsletter', 'print', 'radio', 'podcast', 'streaming', 'social', 'events'];
+  const sortedRequirements = [...requirements].sort((a, b) => {
+    // Primary sort: by publication name
+    const pubCompare = (a.publicationName || '').localeCompare(b.publicationName || '');
+    if (pubCompare !== 0) return pubCompare;
     
-    // Combine additional notes
-    const notes = spec.additionalNotes.join(' | ');
+    // Secondary sort: by channel order
+    const aChannelIdx = channelOrder.indexOf((a.channel || '').toLowerCase());
+    const bChannelIdx = channelOrder.indexOf((b.channel || '').toLowerCase());
+    const aOrder = aChannelIdx === -1 ? 999 : aChannelIdx;
+    const bOrder = bChannelIdx === -1 ? 999 : bChannelIdx;
+    return aOrder - bOrder;
+  });
+
+  // Add rows for each placement
+  sortedRequirements.forEach((req) => {
+    const channel = (req.channel || 'general').toLowerCase();
+    const recommendedSpecs = getChannelRecommendedSpecs(channel);
+    const dimensions = Array.isArray(req.dimensions) 
+      ? req.dimensions.join(', ') 
+      : (req.dimensions || '');
     
     rows.push([
-      String(index + 1),
-      capitalizeFirst(spec.channel),
-      spec.dimensions,
-      spec.fileFormats,
-      spec.maxFileSize,
-      spec.colorSpace,
-      spec.resolution,
-      spec.duration,
-      spec.bleed,
-      spec.trim,
-      String(spec.placementCount),
-      placementsList,
-      notes
+      req.publicationName || '',
+      capitalizeFirst(channel),
+      dimensions,
+      req.fileFormats?.join(', ') || recommendedSpecs.formats,
+      req.colorSpace || recommendedSpecs.colorSpace,
+      req.resolution || recommendedSpecs.resolution,
+      req.duration ? String(req.duration) : ''
     ]);
   });
 
@@ -503,14 +498,11 @@ function generateSpecSheetCSV(requirements: CreativeRequirement[], campaignInfo?
   rows.push(['SUMMARY BY INVENTORY TYPE']);
   rows.push([]);
   
-  const channelOrder = ['website', 'newsletter', 'print', 'radio', 'podcast', 'streaming', 'social', 'events'];
-  const channelSummary = new Map<string, { assets: number; placements: number }>();
+  const channelSummary = new Map<string, number>();
   
-  groupedSpecs.forEach(spec => {
-    const existing = channelSummary.get(spec.channel) || { assets: 0, placements: 0 };
-    existing.assets++;
-    existing.placements += spec.placementCount;
-    channelSummary.set(spec.channel, existing);
+  requirements.forEach(req => {
+    const channel = (req.channel || 'general').toLowerCase();
+    channelSummary.set(channel, (channelSummary.get(channel) || 0) + 1);
   });
   
   const sortedChannels = Array.from(channelSummary.keys()).sort((a, b) => {
@@ -522,10 +514,10 @@ function generateSpecSheetCSV(requirements: CreativeRequirement[], campaignInfo?
     return aIdx - bIdx;
   });
   
-  rows.push(['Inventory Type', 'Unique Assets', 'Total Placements']);
+  rows.push(['Inventory Type', 'Placements']);
   sortedChannels.forEach(channel => {
-    const summary = channelSummary.get(channel)!;
-    rows.push([capitalizeFirst(channel), String(summary.assets), String(summary.placements)]);
+    const count = channelSummary.get(channel)!;
+    rows.push([capitalizeFirst(channel), String(count)]);
   });
 
   // Add format guidelines section at the bottom
