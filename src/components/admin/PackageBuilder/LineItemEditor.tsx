@@ -154,6 +154,10 @@ export function LineItemEditor({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="1">1%</SelectItem>
+              <SelectItem value="2">2%</SelectItem>
+              <SelectItem value="3">3%</SelectItem>
+              <SelectItem value="4">4%</SelectItem>
               <SelectItem value="5">5%</SelectItem>
               <SelectItem value="10">10%</SelectItem>
               <SelectItem value="15">15%</SelectItem>
@@ -285,7 +289,7 @@ export function LineItemEditor({
     const isExcluded = item.isExcluded || false;
     
     return (
-      <div className={`flex items-start justify-between p-3 bg-background rounded-lg border group hover:border-primary/50 transition-colors ${isExcluded ? 'opacity-30' : ''}`}>
+      <div className={`flex items-start justify-between p-3 rounded-lg border group hover:border-primary/50 transition-colors ${isExcluded ? 'bg-background opacity-80' : 'bg-[#eaeaea]'}`}>
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`font-medium text-sm ${isExcluded ? 'line-through' : ''}`}>
@@ -361,7 +365,7 @@ export function LineItemEditor({
   const isExcluded = item.isExcluded || false;
   
   return (
-    <div className={`border rounded-lg p-4 space-y-3 ${isExcluded ? 'opacity-30' : ''}`}>
+    <div className={`border rounded-lg p-4 space-y-3 ${isExcluded ? 'opacity-80' : 'bg-[#eaeaea]'}`}>
       {/* Item Header */}
       <div className="flex items-start justify-between">
         <div className="flex-1">

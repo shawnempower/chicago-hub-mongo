@@ -257,7 +257,7 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
     };
 
     return (
-      <div key={`${pub.publicationId}-${itemIndex}`} className={`border rounded-lg p-4 space-y-3 ${isExcluded ? 'opacity-30 bg-gray-50' : ''}`}>
+      <div key={`${pub.publicationId}-${itemIndex}`} className={`border rounded-lg p-4 space-y-3 ${isExcluded ? 'bg-gray-50 opacity-80' : 'bg-[#eaeaea]'}`}>
         {/* Item Header */}
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -306,6 +306,10 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="1">1%</SelectItem>
+                    <SelectItem value="2">2%</SelectItem>
+                    <SelectItem value="3">3%</SelectItem>
+                    <SelectItem value="4">4%</SelectItem>
                     <SelectItem value="5">5%</SelectItem>
                     <SelectItem value="10">10%</SelectItem>
                     <SelectItem value="15">15%</SelectItem>

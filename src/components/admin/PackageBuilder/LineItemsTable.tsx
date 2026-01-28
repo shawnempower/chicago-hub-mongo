@@ -179,6 +179,10 @@ export function LineItemsTable({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="1">1%</SelectItem>
+              <SelectItem value="2">2%</SelectItem>
+              <SelectItem value="3">3%</SelectItem>
+              <SelectItem value="4">4%</SelectItem>
               <SelectItem value="5">5%</SelectItem>
               <SelectItem value="10">10%</SelectItem>
               <SelectItem value="15">15%</SelectItem>
@@ -308,7 +312,7 @@ export function LineItemsTable({
             return (
               <tr 
                 key={item.itemPath || itemIndex} 
-                className={`border-t hover:bg-gray-50 ${isExcluded ? 'opacity-30' : ''}`}
+                className={`border-t hover:bg-gray-50 ${isExcluded ? 'opacity-80' : 'bg-[#eaeaea]'}`}
               >
                 {/* Item Name & Non-Pricing Specs */}
                 <td className="px-4 py-3">

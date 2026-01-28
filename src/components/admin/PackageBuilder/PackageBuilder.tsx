@@ -647,7 +647,7 @@ export function PackageBuilder({ onAnalyze, loading, onBack }: PackageBuilderPro
                                                   return (
                                                     <div 
                                                       key={`${item.itemPath}-${idx}`}
-                                                      className={`flex items-center gap-4 p-3 bg-muted/30 rounded-lg text-sm ${isExcluded ? 'opacity-30' : ''}`}
+                                                      className={`flex items-center gap-4 p-3 rounded-lg text-sm ${isExcluded ? 'bg-muted/30 opacity-80' : 'bg-[#eaeaea]'}`}
                                                     >
                                                       {/* Left Section: Item Name & Specs */}
                                                       <div className="flex-1 flex items-center gap-3 flex-wrap">
