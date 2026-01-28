@@ -256,25 +256,41 @@ function syncSocialMetrics(socialMedia: any[]): any[] {
 
 /**
  * Sync performance metrics for website ad opportunities
- * Website uses monthlyVisitors as audience (not impressions-based recalculation
- * since websites often have their own CPM impression tracking)
+ * 
+ * IMPORTANT: Website metrics (monthlyVisitors, monthlyPageViews) are already MONTHLY aggregates,
+ * NOT daily values. We should NOT multiply by 30.
+ * 
+ * For impressions:
+ * - Use monthlyPageViews if available (this is the best proxy for total ad impressions capacity)
+ * - Fall back to monthlyVisitors if page views not available
+ * - occurrencesPerMonth = 1 because the metric is already monthly
+ * 
+ * For audience size, we use monthlyVisitors as that represents unique reach.
  */
 function syncWebsiteMetrics(website: any): any {
   if (!website || !website.advertisingOpportunities) return website;
   
+  // Audience size is monthly unique visitors (reach)
   const audienceSize = website.metrics?.monthlyVisitors || 0;
-  // Websites are "always on" - treat as daily presence
-  const occurrencesPerMonth = 30;
+  
+  // For impressions, use page views (already a monthly total) or fall back to visitors
+  // Page views is the better metric as it represents total ad impression capacity
+  const monthlyImpressions = website.metrics?.monthlyPageViews || website.metrics?.monthlyVisitors || 0;
+  
+  // occurrencesPerMonth = 1 because our base metric (pageViews/visitors) is already monthly
+  const occurrencesPerMonth = 1;
   
   return {
     ...website,
     advertisingOpportunities: website.advertisingOpportunities.map((ad: any) => ({
       ...ad,
-      performanceMetrics: calculatePerformanceMetrics(
+      performanceMetrics: {
         audienceSize,
         occurrencesPerMonth,
-        ad.performanceMetrics
-      )
+        // Use monthly impressions directly (not audienceSize * occurrences)
+        impressionsPerMonth: monthlyImpressions,
+        guaranteed: ad.performanceMetrics?.guaranteed ?? true
+      }
     }))
   };
 }
