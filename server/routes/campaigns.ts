@@ -285,11 +285,12 @@ router.patch('/:id/status', authenticateToken, async (req: any, res: Response) =
   }
 });
 
-// Generate/regenerate insertion order
+// Generate/regenerate insertion order (advertiser agreement)
 router.post('/:id/insertion-order', authenticateToken, async (req: any, res: Response) => {
   try {
     const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
     const { insertionOrderGenerator } = await import('../insertionOrderGenerator');
+    const { HubsService } = await import('../../src/integrations/mongodb/hubService');
     const { id } = req.params;
     const { format = 'html' } = req.body;
     
@@ -304,10 +305,15 @@ router.post('/:id/insertion-order', authenticateToken, async (req: any, res: Res
       return res.status(403).json({ error: 'Access denied' });
     }
     
-    // Generate insertion order
+    // Fetch hub data to get advertiser agreement terms
+    const hub = campaign.hubId 
+      ? await HubsService.getHubBySlug(campaign.hubId)
+      : null;
+    
+    // Generate insertion order (advertiser agreement)
     const content = format === 'markdown' 
       ? await insertionOrderGenerator.generateMarkdownInsertionOrder(campaign)
-      : await insertionOrderGenerator.generateHTMLInsertionOrder(campaign);
+      : await insertionOrderGenerator.generateHTMLInsertionOrder(campaign, hub);
     
     const insertionOrder = {
       generatedAt: new Date(),

@@ -9,6 +9,7 @@
 import { ObjectId } from 'mongodb';
 
 // Advertising Terms interface - used in Hub and for type safety
+// These terms apply to publication insertion orders
 export interface HubAdvertisingTerms {
   standardTerms: {
     leadTime?: string;           // e.g., "10 business days"
@@ -20,6 +21,24 @@ export interface HubAdvertisingTerms {
   };
   legalDisclaimer?: string;      // Boilerplate legal text
   customTerms?: string;          // Additional custom terms (free text)
+}
+
+// Advertiser Agreement Terms interface
+// These terms appear on advertiser-facing contracts/agreements (separate from publication insertion orders)
+export interface AdvertiserAgreementTerms {
+  paymentTerms?: {
+    netDays?: number;              // e.g., 30 for "Net 30"
+    lateFeePercent?: number;       // e.g., 1.5 for 1.5% per month
+  };
+  cancellationPolicy?: {
+    noticeDays?: number;           // e.g., 10 business days
+    feePercent?: number;           // e.g., 50 for 50% cancellation fee
+  };
+  creativeDeadlineDays?: number;   // e.g., 5 business days before start
+  performanceDisclaimer?: string;  // Custom performance disclaimer text
+  liabilityClause?: string;        // Custom limitation of liability text
+  contentStandards?: string;       // Custom content standards text
+  customTerms?: string;            // Additional free-form terms
 }
 
 export interface Hub {
@@ -75,6 +94,10 @@ export interface Hub {
   // Advertising Terms and Conditions
   // These terms apply to all insertion orders sent to publications from this hub
   advertisingTerms?: HubAdvertisingTerms;
+  
+  // Advertiser Agreement Terms
+  // These terms appear on advertiser-facing contracts/agreements
+  advertiserAgreementTerms?: AdvertiserAgreementTerms;
   
   // Status and Metadata
   status: 'active' | 'inactive' | 'pending' | 'archived';

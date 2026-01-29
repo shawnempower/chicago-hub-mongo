@@ -6,7 +6,29 @@
 
 import { Campaign } from '../src/integrations/mongodb/campaignSchema';
 import { HubPackage } from '../src/integrations/mongodb/hubPackageSchema';
+import { Hub, AdvertiserAgreementTerms } from '../src/integrations/mongodb/hubSchema';
 import { calculateItemCost } from '../src/utils/inventoryPricing';
+
+// Default advertiser agreement terms (used when not configured in hub)
+const DEFAULT_AGREEMENT_TERMS: Required<{
+  paymentNetDays: number;
+  lateFeePercent: number;
+  cancellationNoticeDays: number;
+  cancellationFeePercent: number;
+  creativeDeadlineDays: number;
+  performanceDisclaimer: string;
+  liabilityClause: string;
+  contentStandards: string;
+}> = {
+  paymentNetDays: 30,
+  lateFeePercent: 1.5,
+  cancellationNoticeDays: 10,
+  cancellationFeePercent: 50,
+  creativeDeadlineDays: 5,
+  performanceDisclaimer: 'Performance estimates provided are based on historical data and industry benchmarks. Actual results may vary. Media Provider does not guarantee specific performance outcomes.',
+  liabilityClause: "Media Provider's liability shall be limited to the cost of the advertising space purchased. Media Provider shall not be liable for any indirect, incidental, or consequential damages.",
+  contentStandards: 'Each publication reserves the right to reject or require modification of advertising that does not meet their editorial and advertising standards.',
+};
 
 class InsertionOrderGenerator {
   
@@ -94,18 +116,40 @@ class InsertionOrderGenerator {
   }
 
   /**
-   * Generate HTML Insertion Order
+   * Get agreement terms with defaults
    */
-  async generateHTMLInsertionOrder(campaign: Campaign): Promise<string> {
+  private getAgreementTerms(hub?: Hub | null) {
+    const terms = hub?.advertiserAgreementTerms;
+    return {
+      paymentNetDays: terms?.paymentTerms?.netDays ?? DEFAULT_AGREEMENT_TERMS.paymentNetDays,
+      lateFeePercent: terms?.paymentTerms?.lateFeePercent ?? DEFAULT_AGREEMENT_TERMS.lateFeePercent,
+      cancellationNoticeDays: terms?.cancellationPolicy?.noticeDays ?? DEFAULT_AGREEMENT_TERMS.cancellationNoticeDays,
+      cancellationFeePercent: terms?.cancellationPolicy?.feePercent ?? DEFAULT_AGREEMENT_TERMS.cancellationFeePercent,
+      creativeDeadlineDays: terms?.creativeDeadlineDays ?? DEFAULT_AGREEMENT_TERMS.creativeDeadlineDays,
+      performanceDisclaimer: terms?.performanceDisclaimer || DEFAULT_AGREEMENT_TERMS.performanceDisclaimer,
+      liabilityClause: terms?.liabilityClause || DEFAULT_AGREEMENT_TERMS.liabilityClause,
+      contentStandards: terms?.contentStandards || DEFAULT_AGREEMENT_TERMS.contentStandards,
+      customTerms: terms?.customTerms || null,
+    };
+  }
+
+  /**
+   * Generate HTML Insertion Order (Advertiser Agreement)
+   */
+  async generateHTMLInsertionOrder(campaign: Campaign, hub?: Hub | null): Promise<string> {
     // PHASE 5: Ensure pre-calculated values exist (calculate if missing)
     campaign = await this.ensureCampaignCalculations(campaign);
+    
+    // Get agreement terms with defaults
+    const agreementTerms = this.getAgreementTerms(hub);
+    
     const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Insertion Order - ${campaign.basicInfo.name}</title>
+    <title>Advertising Agreement - ${campaign.basicInfo.name}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -327,13 +371,26 @@ class InsertionOrderGenerator {
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>Media Insertion Order</h1>
-            <div class="campaign-id">Campaign ID: ${campaign.campaignId}</div>
+            <h1>Advertising Agreement</h1>
+            <div class="campaign-id">Agreement ID: ${campaign.campaignId}</div>
         </div>
 
-        <!-- Campaign Information -->
+        <!-- Agreement Preamble -->
+        <div class="section" style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <p style="margin: 0; line-height: 1.8;">
+                This Advertising Agreement ("Agreement") is entered into as of the date signed below, 
+                by and between <strong>${campaign.hubName || 'Chicago Hub'}</strong> ("Media Provider") and 
+                <strong>${campaign.basicInfo.advertiserName}</strong> ("Advertiser"), collectively referred to as the "Parties."
+            </p>
+            <p style="margin: 15px 0 0 0; line-height: 1.8;">
+                The Advertiser agrees to purchase advertising services from the Media Provider according to the terms 
+                and conditions set forth in this Agreement. The advertising placements, schedule, and pricing are detailed below.
+            </p>
+        </div>
+
+        <!-- Campaign Details -->
         <div class="section">
-            <h2>Campaign Information</h2>
+            <h2>Campaign Details</h2>
             <div class="info-grid">
                 <div class="info-item">
                     <div class="info-label">Campaign Name</div>
@@ -433,9 +490,9 @@ class InsertionOrderGenerator {
         </div>
         ` : ''}
 
-        <!-- Selected Publications and Inventory -->
+        <!-- Schedule of Advertising Placements -->
         <div class="section">
-            <h2>Selected Publications & Inventory</h2>
+            <h2>Schedule of Advertising Placements</h2>
             <p style="color: #64748b; margin-bottom: 20px;">
                 ${campaign.selectedInventory?.publications?.length || 0} publications • 
                 ${campaign.selectedInventory?.publications?.reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0) || 0} ad placements
@@ -553,33 +610,134 @@ class InsertionOrderGenerator {
         <!-- Terms and Conditions -->
         <div class="section">
             <h2>Terms & Conditions</h2>
-            <ul class="terms-list">
-                <li>This insertion order is valid for the dates specified above</li>
-                <li>All advertising materials must be submitted according to each publication's specifications</li>
-                <li>Creative assets must be delivered at least 5 business days before campaign start date</li>
-                <li>Payment terms: Net 30 days from invoice date</li>
-                <li>Cancellation policy: Cancellations must be made at least 10 business days prior to campaign start</li>
-                <li>All pricing reflects Chicago Hub discounted rates</li>
-                <li>Performance estimates are based on historical data and are not guaranteed</li>
-                <li>Each publication reserves the right to reject advertising that doesn't meet their standards</li>
-            </ul>
+            
+            <h3 style="font-size: 14px; margin-top: 15px;">1. Advertising Services</h3>
+            <p style="font-size: 13px; margin-left: 15px;">
+                Media Provider agrees to provide the advertising placements detailed above during the campaign period. 
+                Advertiser agrees to pay the Total Campaign Investment as specified in this Agreement.
+            </p>
+            
+            <h3 style="font-size: 14px; margin-top: 15px;">2. Creative Materials</h3>
+            <p style="font-size: 13px; margin-left: 15px;">
+                Advertiser shall provide all creative materials according to each publication's specifications. 
+                Creative assets must be delivered at least ${agreementTerms.creativeDeadlineDays} business days before the campaign start date.
+            </p>
+            
+            <h3 style="font-size: 14px; margin-top: 15px;">3. Payment Terms</h3>
+            <p style="font-size: 13px; margin-left: 15px;">
+                Payment is due Net ${agreementTerms.paymentNetDays} days from the invoice date. Late payments may be subject to a service charge 
+                of ${agreementTerms.lateFeePercent}% per month on the outstanding balance.
+            </p>
+            
+            <h3 style="font-size: 14px; margin-top: 15px;">4. Cancellation Policy</h3>
+            <p style="font-size: 13px; margin-left: 15px;">
+                Cancellations must be submitted in writing at least ${agreementTerms.cancellationNoticeDays} business days prior to the campaign start date. 
+                Cancellations made after this period may be subject to a cancellation fee of up to ${agreementTerms.cancellationFeePercent}% of the total campaign value.
+            </p>
+            
+            <h3 style="font-size: 14px; margin-top: 15px;">5. Performance Disclaimer</h3>
+            <p style="font-size: 13px; margin-left: 15px;">
+                ${agreementTerms.performanceDisclaimer}
+            </p>
+            
+            <h3 style="font-size: 14px; margin-top: 15px;">6. Content Standards</h3>
+            <p style="font-size: 13px; margin-left: 15px;">
+                ${agreementTerms.contentStandards}
+            </p>
+            
+            <h3 style="font-size: 14px; margin-top: 15px;">7. Limitation of Liability</h3>
+            <p style="font-size: 13px; margin-left: 15px;">
+                ${agreementTerms.liabilityClause}
+            </p>
+            
+            ${agreementTerms.customTerms ? `
+            <h3 style="font-size: 14px; margin-top: 15px;">8. Additional Terms</h3>
+            <p style="font-size: 13px; margin-left: 15px;">
+                ${agreementTerms.customTerms}
+            </p>
+            ` : ''}
+        </div>
+
+        <!-- Signature Section -->
+        <div class="section" style="margin-top: 40px; page-break-inside: avoid;">
+            <h2>Agreement Acceptance</h2>
+            <p style="margin-bottom: 30px;">
+                By signing below, the Parties agree to all terms and conditions set forth in this Advertising Agreement.
+            </p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 30px;">
+                <!-- Advertiser Signature -->
+                <div style="border: 1px solid #e2e8f0; padding: 25px; border-radius: 8px;">
+                    <h3 style="margin: 0 0 20px 0; color: #475569; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Advertiser</h3>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <div style="border-bottom: 1px solid #333; margin-bottom: 5px; min-height: 40px;"></div>
+                        <div style="font-size: 12px; color: #64748b;">Signature</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <div style="border-bottom: 1px solid #333; margin-bottom: 5px; min-height: 25px;">
+                            <span style="color: #333;">${campaign.basicInfo.advertiserContact?.name || ''}</span>
+                        </div>
+                        <div style="font-size: 12px; color: #64748b;">Printed Name</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <div style="border-bottom: 1px solid #333; margin-bottom: 5px; min-height: 25px;">
+                            <span style="color: #333;">${campaign.basicInfo.advertiserName}</span>
+                        </div>
+                        <div style="font-size: 12px; color: #64748b;">Company</div>
+                    </div>
+                    
+                    <div>
+                        <div style="border-bottom: 1px solid #333; margin-bottom: 5px; min-height: 25px;"></div>
+                        <div style="font-size: 12px; color: #64748b;">Date</div>
+                    </div>
+                </div>
+                
+                <!-- Media Provider Signature -->
+                <div style="border: 1px solid #e2e8f0; padding: 25px; border-radius: 8px;">
+                    <h3 style="margin: 0 0 20px 0; color: #475569; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Media Provider</h3>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <div style="border-bottom: 1px solid #333; margin-bottom: 5px; min-height: 40px;"></div>
+                        <div style="font-size: 12px; color: #64748b;">Signature</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <div style="border-bottom: 1px solid #333; margin-bottom: 5px; min-height: 25px;"></div>
+                        <div style="font-size: 12px; color: #64748b;">Printed Name</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <div style="border-bottom: 1px solid #333; margin-bottom: 5px; min-height: 25px;">
+                            <span style="color: #333;">${campaign.hubName || 'Chicago Hub'}</span>
+                        </div>
+                        <div style="font-size: 12px; color: #64748b;">Company</div>
+                    </div>
+                    
+                    <div>
+                        <div style="border-bottom: 1px solid #333; margin-bottom: 5px; min-height: 25px;"></div>
+                        <div style="font-size: 12px; color: #64748b;">Date</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Contact Information -->
-        <div class="section">
+        <div class="section" style="margin-top: 30px;">
             <h2>Questions or Changes?</h2>
-            <p>For questions about this insertion order or to make changes to your campaign, please contact:</p>
+            <p>For questions about this agreement or to request changes to your campaign, please contact:</p>
             <div class="info-item" style="margin-top: 15px;">
-                <div class="info-label">Chicago Hub Campaign Management</div>
-                <div class="info-value">Email: campaigns@chicagohub.media</div>
-                <div class="info-value">Campaign ID: ${campaign.campaignId}</div>
+                <div class="info-label">${campaign.hubName || 'Chicago Hub'} Campaign Management</div>
+                <div class="info-value">Agreement ID: ${campaign.campaignId}</div>
             </div>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            <p>Generated on ${this.formatDate(new Date())}</p>
-            <p>Chicago Hub • Supporting Local Journalism • Press Forward Initiative</p>
+            <p>Document generated on ${this.formatDate(new Date())}</p>
+            <p>${campaign.hubName || 'Chicago Hub'} • Supporting Local Journalism • Press Forward Initiative</p>
         </div>
     </div>
 </body>
@@ -897,9 +1055,9 @@ Campaign ID: ${campaign.campaignId}
             ${publication.publicationName}
         </div>
 
-        <!-- Campaign Information -->
+        <!-- Campaign Details -->
         <div class="section">
-            <h2>Campaign Information</h2>
+            <h2>Campaign Details</h2>
             <div class="info-grid">
                 <div class="info-item">
                     <div class="info-label">Campaign Name</div>

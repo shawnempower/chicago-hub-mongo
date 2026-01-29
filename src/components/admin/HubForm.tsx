@@ -1,7 +1,7 @@
 /**
  * HubForm Component
  * 
- * Form for creating and editing hubs
+ * Form for creating and editing hubs with tabbed interface
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,11 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Hub, HubInsert, HubUpdate, HubAdvertisingTerms, validateHubId } from '@/integrations/mongodb/hubSchema';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Hub, HubInsert, HubUpdate, HubAdvertisingTerms, AdvertiserAgreementTerms, validateHubId } from '@/integrations/mongodb/hubSchema';
 import { hubsApi } from '@/api/hubs';
 import { toast } from 'sonner';
-import { Loader2, FileText } from 'lucide-react';
+import { Loader2, FileText, Handshake, Building2, Palette, MapPin } from 'lucide-react';
 
 interface HubFormProps {
   hub?: Hub | null;
@@ -41,7 +41,7 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
     region: '',
     primaryCity: '',
     state: '',
-    // Advertising Terms
+    // Advertising Terms (for publication insertion orders)
     leadTime: '',
     materialDeadline: '',
     paymentTerms: '',
@@ -50,6 +50,16 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
     modificationPolicy: '',
     legalDisclaimer: '',
     customTerms: '',
+    // Advertiser Agreement Terms (for advertiser contracts)
+    agreementPaymentNetDays: '',
+    agreementLateFeePercent: '',
+    agreementCancellationNoticeDays: '',
+    agreementCancellationFeePercent: '',
+    agreementCreativeDeadlineDays: '',
+    agreementPerformanceDisclaimer: '',
+    agreementLiabilityClause: '',
+    agreementContentStandards: '',
+    agreementCustomTerms: '',
   });
 
   useEffect(() => {
@@ -65,7 +75,7 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
         region: hub.geography?.region || '',
         primaryCity: hub.geography?.primaryCity || '',
         state: hub.geography?.state || '',
-        // Advertising Terms
+        // Advertising Terms (for publication insertion orders)
         leadTime: hub.advertisingTerms?.standardTerms?.leadTime || '',
         materialDeadline: hub.advertisingTerms?.standardTerms?.materialDeadline || '',
         paymentTerms: hub.advertisingTerms?.standardTerms?.paymentTerms || '',
@@ -74,6 +84,16 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
         modificationPolicy: hub.advertisingTerms?.standardTerms?.modificationPolicy || '',
         legalDisclaimer: hub.advertisingTerms?.legalDisclaimer || '',
         customTerms: hub.advertisingTerms?.customTerms || '',
+        // Advertiser Agreement Terms (for advertiser contracts)
+        agreementPaymentNetDays: hub.advertiserAgreementTerms?.paymentTerms?.netDays?.toString() || '',
+        agreementLateFeePercent: hub.advertiserAgreementTerms?.paymentTerms?.lateFeePercent?.toString() || '',
+        agreementCancellationNoticeDays: hub.advertiserAgreementTerms?.cancellationPolicy?.noticeDays?.toString() || '',
+        agreementCancellationFeePercent: hub.advertiserAgreementTerms?.cancellationPolicy?.feePercent?.toString() || '',
+        agreementCreativeDeadlineDays: hub.advertiserAgreementTerms?.creativeDeadlineDays?.toString() || '',
+        agreementPerformanceDisclaimer: hub.advertiserAgreementTerms?.performanceDisclaimer || '',
+        agreementLiabilityClause: hub.advertiserAgreementTerms?.liabilityClause || '',
+        agreementContentStandards: hub.advertiserAgreementTerms?.contentStandards || '',
+        agreementCustomTerms: hub.advertiserAgreementTerms?.customTerms || '',
       });
     }
   }, [hub]);
@@ -108,6 +128,28 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
         customTerms: formData.customTerms || undefined,
       } : undefined;
 
+      // Build advertiser agreement terms object only if any terms are set
+      const hasAgreementTerms = formData.agreementPaymentNetDays || formData.agreementLateFeePercent ||
+        formData.agreementCancellationNoticeDays || formData.agreementCancellationFeePercent ||
+        formData.agreementCreativeDeadlineDays || formData.agreementPerformanceDisclaimer ||
+        formData.agreementLiabilityClause || formData.agreementContentStandards || formData.agreementCustomTerms;
+
+      const advertiserAgreementTerms: AdvertiserAgreementTerms | undefined = hasAgreementTerms ? {
+        paymentTerms: (formData.agreementPaymentNetDays || formData.agreementLateFeePercent) ? {
+          netDays: formData.agreementPaymentNetDays ? parseInt(formData.agreementPaymentNetDays) : undefined,
+          lateFeePercent: formData.agreementLateFeePercent ? parseFloat(formData.agreementLateFeePercent) : undefined,
+        } : undefined,
+        cancellationPolicy: (formData.agreementCancellationNoticeDays || formData.agreementCancellationFeePercent) ? {
+          noticeDays: formData.agreementCancellationNoticeDays ? parseInt(formData.agreementCancellationNoticeDays) : undefined,
+          feePercent: formData.agreementCancellationFeePercent ? parseFloat(formData.agreementCancellationFeePercent) : undefined,
+        } : undefined,
+        creativeDeadlineDays: formData.agreementCreativeDeadlineDays ? parseInt(formData.agreementCreativeDeadlineDays) : undefined,
+        performanceDisclaimer: formData.agreementPerformanceDisclaimer || undefined,
+        liabilityClause: formData.agreementLiabilityClause || undefined,
+        contentStandards: formData.agreementContentStandards || undefined,
+        customTerms: formData.agreementCustomTerms || undefined,
+      } : undefined;
+
       const hubData: HubInsert | Partial<HubUpdate> = {
         hubId: formData.hubId,
         basicInfo: {
@@ -126,6 +168,7 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
           state: formData.state || undefined,
         } : undefined,
         advertisingTerms,
+        advertiserAgreementTerms,
       };
 
       if (hub) {
@@ -152,91 +195,156 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Basic Information</CardTitle>
-          <CardDescription>Core hub details and identification</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="hubId">
-                Hub ID <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="hubId"
-                value={formData.hubId}
-                onChange={(e) => setFormData({ ...formData, hubId: e.target.value })}
-                placeholder="chicago-hub"
-                disabled={!!hub} // Can't change ID after creation
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Lowercase, alphanumeric with hyphens (cannot be changed after creation)
-              </p>
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="general" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            <span className="hidden sm:inline">General</span>
+          </TabsTrigger>
+          <TabsTrigger value="branding" className="flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            <span className="hidden sm:inline">Branding</span>
+          </TabsTrigger>
+          <TabsTrigger value="publication-terms" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Publication Terms</span>
+          </TabsTrigger>
+          <TabsTrigger value="advertiser-terms" className="flex items-center gap-2">
+            <Handshake className="h-4 w-4" />
+            <span className="hidden sm:inline">Agreement Terms</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* General Tab */}
+        <TabsContent value="general" className="space-y-6 mt-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium">Basic Information</h3>
+              <p className="text-sm text-muted-foreground">Core hub details and identification</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="hubId">
+                  Hub ID <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="hubId"
+                  value={formData.hubId}
+                  onChange={(e) => setFormData({ ...formData, hubId: e.target.value })}
+                  placeholder="chicago-hub"
+                  disabled={!!hub}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Lowercase, alphanumeric with hyphens (cannot be changed after creation)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  Hub Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Chicago Hub"
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">
-                Hub Name <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="tagline">Tagline</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Chicago Hub"
-                required
+                id="tagline"
+                value={formData.tagline}
+                onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
+                placeholder="Reaching Chicago's diverse neighborhoods and communities"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="The Chicago Hub connects advertisers with trusted local media outlets..."
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">
+                Status <span className="text-destructive">*</span>
+              </Label>
+              <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tagline">Tagline</Label>
-            <Input
-              id="tagline"
-              value={formData.tagline}
-              onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-              placeholder="Reaching Chicago's diverse neighborhoods and communities"
-            />
-          </div>
+          <div className="border-t pt-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <h3 className="text-lg font-medium">Geography</h3>
+                <p className="text-sm text-muted-foreground">Regional information</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="region">Region</Label>
+                <Input
+                  id="region"
+                  value={formData.region}
+                  onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                  placeholder="Midwest"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="The Chicago Hub connects advertisers with trusted local media outlets..."
-              rows={3}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="primaryCity">Primary City</Label>
+                <Input
+                  id="primaryCity"
+                  value={formData.primaryCity}
+                  onChange={(e) => setFormData({ ...formData, primaryCity: e.target.value })}
+                  placeholder="Chicago"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="status">
-              Status <span className="text-destructive">*</span>
-            </Label>
-            <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Input
+                  id="state"
+                  value={formData.state}
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  placeholder="Illinois"
+                />
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Branding</CardTitle>
-          <CardDescription>Visual customization options</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        {/* Branding Tab */}
+        <TabsContent value="branding" className="space-y-6 mt-6">
+          <div>
+            <h3 className="text-lg font-medium">Brand Colors</h3>
+            <p className="text-sm text-muted-foreground">Visual customization options for this hub</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="primaryColor">Primary Color</Label>
               <div className="flex gap-2">
@@ -253,6 +361,9 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
                   placeholder="#0066cc"
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Main brand color for buttons, links, and accents
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -271,62 +382,39 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
                   placeholder="#666666"
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Secondary brand color for supporting elements
+              </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Geography</CardTitle>
-          <CardDescription>Regional information</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="region">Region</Label>
-              <Input
-                id="region"
-                value={formData.region}
-                onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                placeholder="Midwest"
+          <div className="bg-muted/50 rounded-lg p-4 mt-6">
+            <h4 className="text-sm font-medium mb-2">Color Preview</h4>
+            <div className="flex gap-4 items-center">
+              <div 
+                className="w-16 h-16 rounded-lg shadow-sm border" 
+                style={{ backgroundColor: formData.primaryColor }}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="primaryCity">Primary City</Label>
-              <Input
-                id="primaryCity"
-                value={formData.primaryCity}
-                onChange={(e) => setFormData({ ...formData, primaryCity: e.target.value })}
-                placeholder="Chicago"
+              <div 
+                className="w-16 h-16 rounded-lg shadow-sm border" 
+                style={{ backgroundColor: formData.secondaryColor || '#666666' }}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
-              <Input
-                id="state"
-                value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                placeholder="Illinois"
-              />
+              <div className="text-sm text-muted-foreground">
+                These colors will be used throughout the hub interface
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Advertising Terms & Conditions
-          </CardTitle>
-          <CardDescription>
-            Standard terms that apply to all insertion orders sent to publications from this hub
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        {/* Publication Terms Tab */}
+        <TabsContent value="publication-terms" className="space-y-6 mt-6">
+          <div>
+            <h3 className="text-lg font-medium">Publication Insertion Order Terms</h3>
+            <p className="text-sm text-muted-foreground">
+              Standard terms that apply to all insertion orders sent to publications from this hub
+            </p>
+          </div>
+          
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="leadTime">Lead Time</Label>
@@ -431,13 +519,162 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
               rows={3}
             />
             <p className="text-xs text-muted-foreground">
-              Any other terms or conditions for advertisers
+              Any other terms or conditions for publications
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      <div className="flex justify-end gap-2">
+        {/* Advertiser Agreement Terms Tab */}
+        <TabsContent value="advertiser-terms" className="space-y-6 mt-6">
+          <div>
+            <h3 className="text-lg font-medium">Advertiser Agreement Terms</h3>
+            <p className="text-sm text-muted-foreground">
+              Terms that appear on advertiser-facing contracts and agreements. Leave blank to use defaults.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="agreementPaymentNetDays">Payment Net Days</Label>
+              <Input
+                id="agreementPaymentNetDays"
+                type="number"
+                min="0"
+                value={formData.agreementPaymentNetDays}
+                onChange={(e) => setFormData({ ...formData, agreementPaymentNetDays: e.target.value })}
+                placeholder="30"
+              />
+              <p className="text-xs text-muted-foreground">
+                Days until payment is due (default: 30)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agreementLateFeePercent">Late Fee Percent</Label>
+              <Input
+                id="agreementLateFeePercent"
+                type="number"
+                min="0"
+                step="0.1"
+                value={formData.agreementLateFeePercent}
+                onChange={(e) => setFormData({ ...formData, agreementLateFeePercent: e.target.value })}
+                placeholder="1.5"
+              />
+              <p className="text-xs text-muted-foreground">
+                Monthly late fee percentage (default: 1.5%)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agreementCancellationNoticeDays">Cancellation Notice Days</Label>
+              <Input
+                id="agreementCancellationNoticeDays"
+                type="number"
+                min="0"
+                value={formData.agreementCancellationNoticeDays}
+                onChange={(e) => setFormData({ ...formData, agreementCancellationNoticeDays: e.target.value })}
+                placeholder="10"
+              />
+              <p className="text-xs text-muted-foreground">
+                Business days notice required for cancellation (default: 10)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agreementCancellationFeePercent">Cancellation Fee Percent</Label>
+              <Input
+                id="agreementCancellationFeePercent"
+                type="number"
+                min="0"
+                max="100"
+                value={formData.agreementCancellationFeePercent}
+                onChange={(e) => setFormData({ ...formData, agreementCancellationFeePercent: e.target.value })}
+                placeholder="50"
+              />
+              <p className="text-xs text-muted-foreground">
+                Fee for late cancellations as % of total (default: 50%)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agreementCreativeDeadlineDays">Creative Deadline Days</Label>
+              <Input
+                id="agreementCreativeDeadlineDays"
+                type="number"
+                min="0"
+                value={formData.agreementCreativeDeadlineDays}
+                onChange={(e) => setFormData({ ...formData, agreementCreativeDeadlineDays: e.target.value })}
+                placeholder="5"
+              />
+              <p className="text-xs text-muted-foreground">
+                Days before start that creative is due (default: 5)
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t pt-6 space-y-4">
+            <h4 className="text-sm font-medium">Legal Clauses</h4>
+            
+            <div className="space-y-2">
+              <Label htmlFor="agreementPerformanceDisclaimer">Performance Disclaimer</Label>
+              <Textarea
+                id="agreementPerformanceDisclaimer"
+                value={formData.agreementPerformanceDisclaimer}
+                onChange={(e) => setFormData({ ...formData, agreementPerformanceDisclaimer: e.target.value })}
+                placeholder="Custom performance disclaimer text... (leave blank for default)"
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Disclaimer about performance estimates
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agreementLiabilityClause">Limitation of Liability</Label>
+              <Textarea
+                id="agreementLiabilityClause"
+                value={formData.agreementLiabilityClause}
+                onChange={(e) => setFormData({ ...formData, agreementLiabilityClause: e.target.value })}
+                placeholder="Custom liability limitation text... (leave blank for default)"
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Liability limitation clause
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agreementContentStandards">Content Standards</Label>
+              <Textarea
+                id="agreementContentStandards"
+                value={formData.agreementContentStandards}
+                onChange={(e) => setFormData({ ...formData, agreementContentStandards: e.target.value })}
+                placeholder="Custom content standards text... (leave blank for default)"
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Content and editorial standards
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agreementCustomTerms">Additional Agreement Terms</Label>
+              <Textarea
+                id="agreementCustomTerms"
+                value={formData.agreementCustomTerms}
+                onChange={(e) => setFormData({ ...formData, agreementCustomTerms: e.target.value })}
+                placeholder="Any additional terms to include in advertiser agreements..."
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Custom terms appended to the agreement
+              </p>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <div className="flex justify-end gap-2 pt-4 border-t">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
