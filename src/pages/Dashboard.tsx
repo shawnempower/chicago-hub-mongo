@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/CustomAuthContext";
 import { Navigate, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { usePublication } from "@/contexts/PublicationContext";
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
   Newspaper, 
@@ -22,14 +24,16 @@ import {
   Settings, 
   Store, 
   FileText,
-  Users
+  Users,
+  Mail,
+  RefreshCw
 } from "lucide-react";
 
 // Main Dashboard Component
 export default function Dashboard() {
   const [isSurveyOpen, setIsSurveyOpen] = useState(false);
   const { user, loading: authLoading } = useAuth();
-  const { selectedPublication, loading: publicationLoading } = usePublication();
+  const { selectedPublication, availablePublications, loading: publicationLoading } = usePublication();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const currentTab = searchParams.get('tab') || 'dashboard';
@@ -129,11 +133,48 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-semibold mb-4">Select a Publication</h2>
-            <p className="text-muted-foreground">
-              Choose a publication from the dropdown in the navbar to view its dashboard and manage its content.
-            </p>
+          <div className="flex items-center justify-center py-12">
+            <Card className="w-full max-w-md">
+              <CardHeader className="text-center">
+                {availablePublications.length > 0 ? (
+                  <>
+                    <Newspaper className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                    <CardTitle>Select a Publication</CardTitle>
+                    <CardDescription>
+                      Choose a publication from the dropdown in the navbar to view its dashboard and manage its content.
+                    </CardDescription>
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                    <CardTitle>No Publications Available</CardTitle>
+                    <CardDescription>
+                      You don't have access to any publications yet. If you were recently invited, your access may still be loading.
+                    </CardDescription>
+                  </>
+                )}
+              </CardHeader>
+              {availablePublications.length === 0 && (
+                <CardContent className="space-y-4">
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p className="font-medium">What you can do:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Check your email for pending invitations</li>
+                      <li>Contact your administrator for access</li>
+                      <li>Try refreshing the page</li>
+                    </ul>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => window.location.reload()}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh Page
+                  </Button>
+                </CardContent>
+              )}
+            </Card>
           </div>
         )}
       </main>

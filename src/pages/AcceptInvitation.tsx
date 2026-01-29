@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/CustomAuthContext';
 import { permissionsAPI } from '@/api/permissions';
 import { CheckCircle2, XCircle, Building2, FileText } from 'lucide-react';
@@ -102,7 +101,10 @@ export default function AcceptInvitation() {
       
       if (acceptResult.success) {
         // Refresh user data to get updated permissions
-        await refreshUser();
+        const refreshResult = await refreshUser();
+        if (!refreshResult.success) {
+          console.warn('Failed to refresh user after signup:', refreshResult.error);
+        }
         
         setSuccess(true);
         setTimeout(() => {
@@ -112,6 +114,7 @@ export default function AcceptInvitation() {
         setFormError(acceptResult.error || 'Failed to accept invitation');
       }
     } catch (err) {
+      console.error('Error during signup:', err);
       setFormError('An error occurred during signup');
     }
     
@@ -146,7 +149,10 @@ export default function AcceptInvitation() {
       
       if (acceptResult.success) {
         // Refresh user data to get updated permissions
-        await refreshUser();
+        const refreshResult = await refreshUser();
+        if (!refreshResult.success) {
+          console.warn('Failed to refresh user after signin:', refreshResult.error);
+        }
         
         setSuccess(true);
         setTimeout(() => {
@@ -156,6 +162,7 @@ export default function AcceptInvitation() {
         setFormError(acceptResult.error || 'Failed to accept invitation');
       }
     } catch (err) {
+      console.error('Error during sign in:', err);
       setFormError('An error occurred during sign in');
     }
     
@@ -166,18 +173,30 @@ export default function AcceptInvitation() {
     if (!token) return;
 
     setAccepting(true);
-    const result = await permissionsAPI.acceptInvitation(token);
+    
+    try {
+      const result = await permissionsAPI.acceptInvitation(token);
 
-    setAccepting(false);
-
-    if (result.success) {
-      setSuccess(true);
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
-    } else {
-      setError(result.error || 'Failed to accept invitation');
+      if (result.success) {
+        // Refresh user data to get updated permissions
+        const refreshResult = await refreshUser();
+        if (!refreshResult.success) {
+          console.warn('Failed to refresh user after invite acceptance:', refreshResult.error);
+        }
+        
+        setSuccess(true);
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 2000);
+      } else {
+        setError(result.error || 'Failed to accept invitation');
+      }
+    } catch (err) {
+      console.error('Error accepting invitation:', err);
+      setError('An error occurred while accepting the invitation');
     }
+    
+    setAccepting(false);
   };
 
   if (loading) {
@@ -240,7 +259,31 @@ export default function AcceptInvitation() {
   }
 
   if (!invitation) {
-    return null;
+    // Show a fallback UI instead of blank screen
+    return (
+      <div className="container mx-auto flex items-center justify-center min-h-[60vh]">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <XCircle className="h-8 w-8 text-destructive" />
+              <CardTitle>Unable to Load Invitation</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="destructive">
+              <AlertDescription>
+                We couldn't load the invitation details. The invitation may have expired or the link may be invalid.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={() => navigate('/')} className="w-full">
+              Go to Dashboard
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
   }
 
   const resourceIcon = invitation.resourceType === 'hub' ? Building2 : FileText;
@@ -330,14 +373,17 @@ export default function AcceptInvitation() {
     );
   }
 
-  // Not signed in - show signup/signin forms
+  // Not signed in - show the appropriate form based on whether user exists
   return (
     <div className="container mx-auto flex items-center justify-center min-h-[60vh] py-8">
       <Card className="w-full max-w-lg">
         <CardHeader>
           <CardTitle>You've Been Invited!</CardTitle>
           <CardDescription>
-            Create an account or sign in to accept this invitation
+            {invitation.isExistingUser 
+              ? 'Sign in to accept this invitation'
+              : 'Create an account to accept this invitation'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -361,125 +407,115 @@ export default function AcceptInvitation() {
             </Alert>
           )}
 
-          {/* Signup/Signin Tabs */}
-          <Tabs defaultValue={invitation.isExistingUser ? "signin" : "signup"} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signup">Create Account</TabsTrigger>
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-            </TabsList>
-            
-            {/* Signup Tab */}
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4" autoComplete="off">
+          {/* Show Sign In form for existing users */}
+          {invitation.isExistingUser ? (
+            <form onSubmit={handleSignIn} className="space-y-4" autoComplete="off">
+              <div className="space-y-2">
+                <Label htmlFor="signin-email">Email</Label>
+                <Input
+                  id="signin-email"
+                  type="email"
+                  value={invitation.invitedEmail}
+                  disabled
+                  className="bg-muted"
+                  autoComplete="email"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="signin-password">Password</Label>
+                <Input
+                  id="signin-password"
+                  name="current-password"
+                  type="password"
+                  value={signInPassword}
+                  onChange={(e) => setSignInPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+              
+              <Button type="submit" className="w-full" disabled={accepting}>
+                {accepting ? <Spinner size="sm" /> : 'Sign In & Accept'}
+              </Button>
+            </form>
+          ) : (
+            /* Show Create Account form for new users */
+            <form onSubmit={handleSignUp} className="space-y-4" autoComplete="off">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={invitation.invitedEmail}
+                  disabled
+                  className="bg-muted"
+                  autoComplete="email"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="firstName">First Name</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    value={invitation.invitedEmail}
-                    disabled
-                    className="bg-muted"
-                    autoComplete="email"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="John"
-                      autoComplete="given-name"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Doe"
-                      autoComplete="family-name"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="new-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 6 characters"
-                    autoComplete="new-password"
+                    id="firstName"
+                    name="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="John"
+                    autoComplete="given-name"
                     required
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Label htmlFor="lastName">Last Name</Label>
                   <Input
-                    id="confirmPassword"
-                    name="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    autoComplete="new-password"
+                    id="lastName"
+                    name="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Doe"
+                    autoComplete="family-name"
                     required
                   />
                 </div>
-                
-                <Button type="submit" className="w-full" disabled={accepting}>
-                  {accepting ? <Spinner size="sm" /> : 'Create Account & Accept'}
-                </Button>
-              </form>
-            </TabsContent>
-            
-            {/* Signin Tab */}
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4" autoComplete="off">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    value={invitation.invitedEmail}
-                    disabled
-                    className="bg-muted"
-                    autoComplete="email"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    name="current-password"
-                    type="password"
-                    value={signInPassword}
-                    onChange={(e) => setSignInPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                    required
-                  />
-                </div>
-                
-                <Button type="submit" className="w-full" disabled={accepting}>
-                  {accepting ? <Spinner size="sm" /> : 'Sign In & Accept'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  name="new-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  autoComplete="new-password"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  autoComplete="new-password"
+                  required
+                />
+              </div>
+              
+              <Button type="submit" className="w-full" disabled={accepting}>
+                {accepting ? <Spinner size="sm" /> : 'Create Account & Accept'}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

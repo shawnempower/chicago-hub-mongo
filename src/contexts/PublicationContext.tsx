@@ -73,12 +73,21 @@ export const PublicationProvider: React.FC<PublicationProviderProps> = ({ childr
     });
   }, [allPublications, user]);
 
+  // Create a stable reference for user permissions to detect changes
+  const userPermissionsKey = useMemo(() => {
+    if (!user?.permissions) return '';
+    const pubIds = user.permissions.assignedPublicationIds?.sort().join(',') || '';
+    const hubIds = user.permissions.assignedHubIds?.sort().join(',') || '';
+    return `${pubIds}|${hubIds}`;
+  }, [user?.permissions?.assignedPublicationIds, user?.permissions?.assignedHubIds]);
+
   // Wait for auth to be ready before loading publications
+  // Also reload when user permissions change (e.g., after accepting an invite)
   useEffect(() => {
     if (!authLoading) {
       loadPublications();
     }
-  }, [authLoading]);
+  }, [authLoading, userPermissionsKey]);
 
   // Ensure selected publication is in the available list after filtering
   useEffect(() => {

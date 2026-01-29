@@ -39,6 +39,20 @@ export const HubProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   }, [loading, error, allHubs.length, selectedHubId, user]);
 
+  // Create a stable reference for user hub permissions to detect changes
+  const userHubPermissionsKey = useMemo(() => {
+    if (!user?.permissions?.assignedHubIds) return '';
+    return user.permissions.assignedHubIds.sort().join(',');
+  }, [user?.permissions?.assignedHubIds]);
+
+  // Refetch hubs when user permissions change (e.g., after accepting an invite)
+  useEffect(() => {
+    if (userHubPermissionsKey && refetch) {
+      console.log('🔄 HubContext: User hub permissions changed, refetching hubs');
+      refetch();
+    }
+  }, [userHubPermissionsKey, refetch]);
+
   // Filter hubs based on user permissions (if not admin)
   const hubs = useMemo(() => {
     // Admins see all hubs
