@@ -262,10 +262,6 @@ export function HubOrderDetail() {
     }
   };
 
-  const handleViewPrint = () => {
-    window.open(`${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/print`, '_blank');
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -312,6 +308,94 @@ export function HubOrderDetail() {
     placementStats.pending = placementStats.total;
   }
 
+  // Helper to format numbers
+  const formatNumber = (num: number) => num?.toLocaleString() || '0';
+
+  // Helper to get campaign duration in months
+  const getDurationMonths = () => {
+    if (!campaign?.timeline?.startDate || !campaign?.timeline?.endDate) return 1;
+    const start = new Date(campaign.timeline.startDate);
+    const end = new Date(campaign.timeline.endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(1, Math.round(diffDays / 30));
+  };
+
+  // Helper to get delivery instructions for an inventory item
+  const getDeliveryInstructions = (item: any): string[] => {
+    if (!item) return [];
+    
+    const instructions: string[] = [];
+    const ch = (item.channel || '').toLowerCase();
+    const metrics = item.audienceMetrics || {};
+    const perfMetrics = item.performanceMetrics || {};
+    const frequency = item.currentFrequency || item.quantity || 1;
+    const durationMonths = getDurationMonths();
+    
+    if (ch === 'website' || ch === 'display') {
+      // Website: Impressions are the unit
+      if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
+        const monthlyImpressions = item.monthlyImpressions || perfMetrics.impressionsPerMonth;
+        const pricingModel = item.itemPricing?.pricingModel || 'flat';
+        
+        // For CPM/CPV/CPC, frequency is percentage share (25, 50, 75, 100)
+        let actualMonthlyImpressions = monthlyImpressions;
+        if (['cpm', 'cpv', 'cpc'].includes(pricingModel)) {
+          actualMonthlyImpressions = Math.round(monthlyImpressions * (frequency / 100));
+        }
+        
+        const totalImpressions = actualMonthlyImpressions * durationMonths;
+        instructions.push(`Deliver: ${formatNumber(totalImpressions)} impressions`);
+      }
+      if (metrics.monthlyVisitors) {
+        instructions.push(`Audience: ${formatNumber(metrics.monthlyVisitors)} visitors/mo`);
+      }
+    } else if (ch.includes('newsletter')) {
+      // Newsletter: Sends are the unit
+      instructions.push(`Sends: ${frequency} newsletter${frequency > 1 ? 's' : ''}`);
+      if (metrics.subscribers) {
+        instructions.push(`Subscribers: ${formatNumber(metrics.subscribers)}`);
+      }
+    } else if (ch === 'print') {
+      // Print: Insertions are the unit
+      instructions.push(`Insertions: ${frequency} issue${frequency > 1 ? 's' : ''}`);
+      if (metrics.circulation) {
+        instructions.push(`Circulation: ${formatNumber(metrics.circulation)}/issue`);
+      }
+    } else if (ch === 'radio') {
+      // Radio: Spots are the unit
+      instructions.push(`Spots: ${frequency} airing${frequency > 1 ? 's' : ''}`);
+      if (metrics.listeners) {
+        instructions.push(`Est. Listeners: ${formatNumber(metrics.listeners)}/spot`);
+      }
+    } else if (ch === 'podcast') {
+      // Podcast: Episodes are the unit
+      instructions.push(`Episodes: ${frequency} episode${frequency > 1 ? 's' : ''}`);
+      if (metrics.listeners || perfMetrics.audienceSize) {
+        instructions.push(`Downloads: ${formatNumber(metrics.listeners || perfMetrics.audienceSize)}/ep`);
+      }
+    } else if (ch === 'streaming') {
+      // Streaming: Views are the unit
+      if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
+        instructions.push(`Deliver: ${formatNumber(item.monthlyImpressions || perfMetrics.impressionsPerMonth)} views`);
+      }
+    } else if (ch === 'events') {
+      // Events: Sponsorships
+      instructions.push(`Event: ${frequency} sponsorship${frequency > 1 ? 's' : ''}`);
+      if (metrics.expectedAttendees || metrics.averageAttendance) {
+        instructions.push(`Attendance: ${formatNumber(metrics.expectedAttendees || metrics.averageAttendance)}`);
+      }
+    } else if (ch === 'social_media' || ch === 'social') {
+      // Social: Posts are the unit
+      instructions.push(`Posts: ${frequency} post${frequency > 1 ? 's' : ''}`);
+      if (metrics.followers) {
+        instructions.push(`Followers: ${formatNumber(metrics.followers)}`);
+      }
+    }
+    
+    return instructions;
+  };
+
   return (
     <div className="space-y-6">
       {/* Breadcrumbs and Controls */}
@@ -323,10 +407,6 @@ export function HubOrderDetail() {
           onBackClick={() => navigate('/hubcentral?tab=orders')}
         />
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleViewPrint}>
-            <FileText className="h-4 w-4 mr-2" />
-            View Printable
-          </Button>
           {!hasLivePlacements() && (
             <Button 
               variant="outline" 
@@ -486,36 +566,51 @@ export function HubOrderDetail() {
                   {publication.inventoryItems.map((item: any, idx: number) => {
                     const placementId = item.itemPath || item.sourcePath || `placement-${idx}`;
                     const status = order.placementStatuses?.[placementId] || 'pending';
+                    const deliveryInstructions = getDeliveryInstructions(item);
                     
                     return (
                       <div 
                         key={idx}
-                        className="flex items-center justify-between p-3 border rounded-lg"
+                        className="p-3 border rounded-lg"
                       >
-                        <div>
-                          <p className="font-medium text-sm">{item.itemName}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {item.channel}
-                            </Badge>
-                            {item.format?.dimensions && (
-                              <span className="text-xs text-muted-foreground">
-                                {item.format.dimensions}
-                              </span>
-                            )}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{item.itemName}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {item.channel}
+                              </Badge>
+                              {item.format?.dimensions && (
+                                <span className="text-xs text-muted-foreground">
+                                  {item.format.dimensions}
+                                </span>
+                              )}
+                            </div>
                           </div>
+                          <Badge
+                            className={
+                              status === 'delivered' ? 'bg-purple-50 text-purple-700 border border-purple-200 pointer-events-none' :
+                              status === 'in_production' ? 'bg-blue-50 text-blue-700 border border-blue-200 pointer-events-none' :
+                              status === 'accepted' ? 'bg-green-50 text-green-700 border border-green-200 pointer-events-none' :
+                              status === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200 pointer-events-none' :
+                              'bg-yellow-50 text-yellow-700 border border-yellow-200 pointer-events-none'
+                            }
+                          >
+                            {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
+                          </Badge>
                         </div>
-                        <Badge
-                          className={
-                            status === 'delivered' ? 'bg-purple-50 text-purple-700 border border-purple-200 pointer-events-none' :
-                            status === 'in_production' ? 'bg-blue-50 text-blue-700 border border-blue-200 pointer-events-none' :
-                            status === 'accepted' ? 'bg-green-50 text-green-700 border border-green-200 pointer-events-none' :
-                            status === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200 pointer-events-none' :
-                            'bg-yellow-50 text-yellow-700 border border-yellow-200 pointer-events-none'
-                          }
-                        >
-                          {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
-                        </Badge>
+                        {/* Delivery Instructions */}
+                        {deliveryInstructions.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-dashed">
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                              {deliveryInstructions.map((instruction, i) => (
+                                <span key={i} className="whitespace-nowrap">
+                                  {instruction}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

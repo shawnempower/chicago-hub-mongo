@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useCampaign, useUpdateCampaignStatus, useDeleteCampaign, useGeneratePublicationOrders } from '@/hooks/useCampaigns';
+import { useCampaign, useUpdateCampaignStatus, useDeleteCampaign, useGeneratePublicationOrders, useGenerateInsertionOrder } from '@/hooks/useCampaigns';
 import { format } from 'date-fns';
 import { 
   FileText, 
@@ -100,6 +100,7 @@ export default function CampaignDetail() {
   const { generateOrders, generating: generatingOrders } = useGeneratePublicationOrders();
   const { updateStatus, updating } = useUpdateCampaignStatus();
   const { deleteCampaign, deleting } = useDeleteCampaign();
+  const { generate: generateAgreement, generating: generatingAgreement } = useGenerateInsertionOrder();
   const [uploadedAssets, setUploadedAssets] = useState<Map<string, any>>(new Map());
   const [publicationOrders, setPublicationOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -346,6 +347,86 @@ export default function CampaignDetail() {
     }
   };
 
+  const handleViewAgreement = async () => {
+    if (!id) return;
+    
+    try {
+      const result = await generateAgreement(id, 'html');
+      const content = result.insertionOrder?.content || '';
+      
+      if (!content) {
+        throw new Error('No content generated');
+      }
+      
+      // Add print-friendly styles and open in new window for PDF printing
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Advertising Agreement - ${campaign?.basicInfo?.name || 'Campaign'}</title>
+          <style>
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .no-print { display: none !important; }
+            }
+            body { font-family: 'Helvetica Neue', Arial, sans-serif; }
+            .print-actions { 
+              position: fixed; 
+              top: 10px; 
+              right: 10px; 
+              background: #2563eb; 
+              color: white; 
+              padding: 10px 20px; 
+              border-radius: 6px; 
+              cursor: pointer;
+              font-weight: 500;
+              z-index: 1000;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            }
+            .print-actions:hover { background: #1d4ed8; }
+          </style>
+        </head>
+        <body>
+          <button class="print-actions no-print" onclick="window.print()">
+            Save as PDF / Print
+          </button>
+          ${content}
+        </body>
+        </html>
+      `;
+      
+      // Open in new window for print/PDF
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+      } else {
+        // Fallback: download if popup blocked
+        const blob = new Blob([printContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `agreement-${campaign?.basicInfo?.name?.replace(/\s+/g, '-').toLowerCase() || 'campaign'}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      toast({
+        title: 'Agreement Generated',
+        description: 'Use your browser\'s Print function to save as PDF',
+      });
+    } catch (error) {
+      console.error('Generate agreement error:', error);
+      toast({
+        title: 'Generation Failed',
+        description: error instanceof Error ? error.message : 'Failed to generate agreement. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <ProtectedRoute>
@@ -471,6 +552,22 @@ export default function CampaignDetail() {
                   </div>
                   
                   <div className="flex items-center gap-3">
+                    {/* View Agreement Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleViewAgreement}
+                      disabled={generatingAgreement}
+                      className="gap-2"
+                    >
+                      {generatingAgreement ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileText className="h-4 w-4" />
+                      )}
+                      View Agreement
+                    </Button>
+                    
                     {/* Edit Campaign Button */}
                     <Button
                       variant="outline"
