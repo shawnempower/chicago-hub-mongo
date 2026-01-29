@@ -45,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { PublicationInsertionOrderDocument } from '@/integrations/mongodb/insertionOrderSchema';
 import { TrackingScript } from '@/integrations/mongodb/trackingScriptSchema';
 import { HubAdvertisingTerms } from '@/integrations/mongodb/hubSchema';
@@ -60,6 +61,7 @@ export function PublicationOrderDetail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { selectedPublication } = usePublication();
+  const { isAdmin } = useAdminAuth();
   const campaignId = searchParams.get('campaignId');
   const publicationId = searchParams.get('publicationId');
   
@@ -142,8 +144,26 @@ export function PublicationOrderDetail() {
       fetchFreshAssets();
       fetchTrackingScripts();
       fetchPerformanceData();
+      markOrderAsViewed();
     }
   }, [campaignId, publicationId]);
+  
+  // Mark the order as viewed by publication user (clears unread indicator)
+  const markOrderAsViewed = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      await fetch(
+        `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/mark-viewed`,
+        {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+    } catch (error) {
+      // Silently fail - not critical
+      console.error('Error marking order as viewed:', error);
+    }
+  };
 
   // Re-fetch performance data when switching to placements tab (in case user just reported)
   useEffect(() => {
@@ -265,18 +285,6 @@ export function PublicationOrderDetail() {
     }
   };
 
-  const handleCopyAllScripts = async () => {
-    const allScripts = trackingScripts.map(s =>
-      `<!-- ${s.creative.name} (${s.creative.width}x${s.creative.height}) -->\n${s.tags.fullTag}`
-    ).join('\n\n');
-    try {
-      await navigator.clipboard.writeText(allScripts);
-      toast({ title: 'All Scripts Copied!', description: `${trackingScripts.length} tracking scripts copied to clipboard` });
-    } catch (error) {
-      toast({ title: 'Copy Failed', description: 'Could not copy to clipboard', variant: 'destructive' });
-    }
-  };
-
   const handleTestScript = async (script: TrackingScript) => {
     setTestingScript(script);
     setTestResults({
@@ -330,14 +338,142 @@ export function PublicationOrderDetail() {
   };
 
   const handleDownloadAllScripts = () => {
-    // Group scripts by size
-    const sizeGroups: Record<string, typeof trackingScripts> = {};
+    // Get campaign and inventory data for trafficking instructions
+    const campaignDataForDownload = (order as any)?.campaignData;
+    const publicationForDownload = campaignDataForDownload?.selectedInventory?.publications?.find(
+      (pub: any) => pub.publicationId === order?.publicationId
+    );
+    const inventoryItemsForDownload = publicationForDownload?.inventoryItems || [];
+    
+    // Get campaign dates
+    const campaignStartDate = campaignDataForDownload?.timeline?.startDate 
+      ? new Date(campaignDataForDownload.timeline.startDate) : null;
+    const campaignEndDate = campaignDataForDownload?.timeline?.endDate 
+      ? new Date(campaignDataForDownload.timeline.endDate) : null;
+    const formatDate = (date: Date | null) => date 
+      ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+      : 'TBD';
+    
+    // Helper to find matching inventory item for a script
+    const findInventoryItem = (script: TrackingScript) => {
+      const scriptItemPath = script.itemPath || '';
+      // Scripts may have _dim suffix, match base path
+      const baseItemPath = scriptItemPath.replace(/_dim\d+$/, '');
+      return inventoryItemsForDownload.find((item: any) => {
+        const itemPath = item.itemPath || item.sourcePath || '';
+        return itemPath === baseItemPath || itemPath === scriptItemPath;
+      });
+    };
+    
+    // Helper to get trafficking instructions for an inventory item
+    // Uses same logic as getDeliveryExpectations in the UI
+    const getTraffickingInstructions = (item: any, channel: string): string => {
+      if (!item) return '';
+      
+      const instructions: string[] = [];
+      const ch = channel.toLowerCase();
+      const metrics = item.audienceMetrics || {};
+      const perfMetrics = item.performanceMetrics || {};
+      const frequency = item.currentFrequency || item.quantity || 1;
+      const durationMonths = getDurationMonths();
+      
+      // Calculate earnings using existing utility
+      const earnings = calculateItemCost(item, frequency, durationMonths);
+      
+      // Campaign dates
+      instructions.push(`<strong>Campaign Period:</strong> ${formatDate(campaignStartDate)} - ${formatDate(campaignEndDate)}`);
+      
+      // Add earnings (important for publications)
+      if (earnings > 0) {
+        instructions.push(`<strong>Earn:</strong> ${formatCurrency(earnings)}`);
+      }
+      
+      if (ch === 'website' || ch === 'display') {
+        // Website: Impressions are the unit
+        if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
+          const monthlyImpressions = item.monthlyImpressions || perfMetrics.impressionsPerMonth;
+          const pricingModel = item.itemPricing?.pricingModel || 'flat';
+          
+          // For CPM/CPV/CPC, frequency is percentage share (25, 50, 75, 100)
+          let actualMonthlyImpressions = monthlyImpressions;
+          if (['cpm', 'cpv', 'cpc'].includes(pricingModel)) {
+            const percentageShare = frequency;
+            actualMonthlyImpressions = Math.round(monthlyImpressions * (percentageShare / 100));
+          }
+          
+          const totalImpressions = actualMonthlyImpressions * durationMonths;
+          instructions.push(`<strong>Deliver:</strong> ${formatNumber(totalImpressions)} impressions (${formatNumber(actualMonthlyImpressions)}/mo × ${durationMonths} mo)`);
+        }
+        if (metrics.monthlyVisitors) {
+          instructions.push(`<strong>Audience:</strong> ${formatNumber(metrics.monthlyVisitors)} visitors/mo`);
+        }
+      } else if (ch.includes('newsletter')) {
+        // Newsletter: Sends are the unit
+        instructions.push(`<strong>Sends:</strong> ${frequency} newsletter${frequency > 1 ? 's' : ''}`);
+        if (metrics.subscribers) {
+          instructions.push(`<strong>Subscribers:</strong> ${formatNumber(metrics.subscribers)}`);
+        }
+        if (item.openRate) {
+          instructions.push(`<strong>Open Rate:</strong> ${item.openRate}%`);
+        }
+      } else if (ch === 'print') {
+        // Print: Insertions are the unit
+        instructions.push(`<strong>Insertions:</strong> ${frequency} issue${frequency > 1 ? 's' : ''}`);
+        if (metrics.circulation) {
+          instructions.push(`<strong>Circulation:</strong> ${formatNumber(metrics.circulation)}/issue`);
+          const totalCirculation = metrics.circulation * frequency;
+          instructions.push(`<strong>Total Reach:</strong> ~${formatNumber(totalCirculation * 2.5)} readers`);
+        }
+      } else if (ch === 'radio') {
+        // Radio: Spots are the unit
+        instructions.push(`<strong>Spots:</strong> ${frequency} airing${frequency > 1 ? 's' : ''}`);
+        if (metrics.listeners) {
+          instructions.push(`<strong>Est. Listeners:</strong> ${formatNumber(metrics.listeners)}/spot`);
+        }
+      } else if (ch === 'podcast') {
+        // Podcast: Episodes are the unit
+        instructions.push(`<strong>Episodes:</strong> ${frequency} episode${frequency > 1 ? 's' : ''}`);
+        if (metrics.listeners || perfMetrics.audienceSize) {
+          instructions.push(`<strong>Downloads:</strong> ${formatNumber(metrics.listeners || perfMetrics.audienceSize)}/ep`);
+        }
+      } else if (ch === 'streaming') {
+        // Streaming: Views are the unit
+        if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
+          instructions.push(`<strong>Deliver:</strong> ${formatNumber(item.monthlyImpressions || perfMetrics.impressionsPerMonth)} views`);
+        }
+        if (metrics.subscribers) {
+          instructions.push(`<strong>Subscribers:</strong> ${formatNumber(metrics.subscribers)}`);
+        }
+      } else if (ch === 'events') {
+        // Events: Sponsorships
+        instructions.push(`<strong>Event:</strong> ${frequency} sponsorship${frequency > 1 ? 's' : ''}`);
+        if (metrics.expectedAttendees || metrics.averageAttendance) {
+          instructions.push(`<strong>Attendance:</strong> ${formatNumber(metrics.expectedAttendees || metrics.averageAttendance)}`);
+        }
+      } else if (ch === 'social_media' || ch === 'social') {
+        // Social: Posts are the unit
+        instructions.push(`<strong>Posts:</strong> ${frequency} post${frequency > 1 ? 's' : ''}`);
+        if (metrics.followers) {
+          instructions.push(`<strong>Followers:</strong> ${formatNumber(metrics.followers)}`);
+        }
+      }
+      
+      return instructions.length > 0 
+        ? `<div class="trafficking-info">${instructions.join('<br>')}</div>` 
+        : '';
+    };
+    
+    // Group scripts by placement (base itemPath without _dim suffix)
+    const placementGroups: Record<string, { item: any; scripts: typeof trackingScripts }> = {};
     trackingScripts.forEach(script => {
-      const size = script.creative.width && script.creative.height
-        ? `${script.creative.width}x${script.creative.height}`
-        : 'auto';
-      if (!sizeGroups[size]) sizeGroups[size] = [];
-      sizeGroups[size].push(script);
+      const scriptItemPath = script.itemPath || '';
+      const baseItemPath = scriptItemPath.replace(/_dim\d+$/, '') || 'default';
+      
+      if (!placementGroups[baseItemPath]) {
+        const item = findInventoryItem(script);
+        placementGroups[baseItemPath] = { item, scripts: [] };
+      }
+      placementGroups[baseItemPath].scripts.push(script);
     });
 
     // Generate HTML file content
@@ -378,39 +514,53 @@ export function PublicationOrderDetail() {
     let htmlContent = `<!DOCTYPE html>
 <html>
 <head>
-  <title>Tracking Tags - ${campaignName} - ${pubName}</title>
+  <title>Creative Assets - ${campaignName} - ${pubName}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
     h1 { color: #1e40af; }
     h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-top: 32px; }
-    h3 { color: #6b7280; }
+    h3 { color: #6b7280; margin-top: 16px; }
     .meta { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
-    .tag-block { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0; }
-    .tag-name { font-weight: 600; margin-bottom: 8px; }
+    .placement-block { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .asset-block { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; margin: 8px 0; }
+    .asset-name { font-weight: 600; margin-bottom: 4px; font-size: 14px; }
+    .asset-size { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
     pre { background: #1f2937; color: #f3f4f6; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
-    .url-section { margin-top: 12px; }
-    .url-label { font-size: 12px; color: #6b7280; font-weight: 500; }
     .instructions { background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 16px; margin: 24px 0; }
+    .trafficking-info { background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 13px; line-height: 1.6; }
   </style>
 </head>
 <body>
-  <h1>Tracking Tags</h1>
+  <h1>Creative Assets</h1>
   <div class="meta">
     <strong>Campaign:</strong> ${campaignName}<br>
     <strong>Publication:</strong> ${pubName}<br>
     <strong>Generated:</strong> ${dateStr}<br>
-    <strong>Total Tags:</strong> ${trackingScripts.length}
+    <strong>Total Creative:</strong> ${trackingScripts.length}
   </div>
 
   ${instructionsHtml}
 `;
 
-    // Add each size group
-    Object.entries(sizeGroups).forEach(([size, scripts]) => {
-      htmlContent += `\n  <h2>${size}</h2>\n`;
+    // Add each placement group
+    Object.entries(placementGroups).forEach(([_placementPath, { item, scripts }]) => {
+      // Get placement name and channel from first script or item
+      const placementName = item?.itemName || item?.sourceName || scripts[0]?.placementName || 'Ad Placement';
+      const channel = scripts[0]?.channel || 'website';
+      const traffickingHtml = getTraffickingInstructions(item, channel);
+      
+      htmlContent += `
+  <div class="placement-block">
+    <h2 style="margin-top:0;border:none;padding:0;">${placementName}</h2>
+    ${traffickingHtml}
+    <h3>Creative Assets (${scripts.length})</h3>
+`;
 
       scripts.forEach(script => {
         const isNewsletter = script.channel?.includes('newsletter');
+        const size = script.creative.width && script.creative.height
+          ? `${script.creative.width}x${script.creative.height}`
+          : 'auto';
         
         // Transform tag based on publication settings
         let transformedTag = script.tags.fullTag;
@@ -421,28 +571,15 @@ export function PublicationOrderDetail() {
         }
         
         htmlContent += `
-  <div class="tag-block">
-    <div class="tag-name">${script.creative.name}</div>
-    <h3>Full Tag${adServer || esp ? ` (${isNewsletter && esp ? getESPName(esp) : adServer ? getAdServerName(adServer) : 'Base'} format)` : ''}</h3>
-    <pre>${transformedTag.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
-
-    <div class="url-section">
-      <div class="url-label">Impression Pixel:</div>
-      <pre>${script.urls.impressionPixel}</pre>
+    <div class="asset-block">
+      <div class="asset-name">${script.creative.name}</div>
+      <div class="asset-size">${size}${adServer || esp ? ` • ${isNewsletter && esp ? getESPName(esp) : adServer ? getAdServerName(adServer) : 'Base'} format` : ''}</div>
+      <pre>${transformedTag.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
     </div>
-
-    <div class="url-section">
-      <div class="url-label">Click Tracker:</div>
-      <pre>${script.urls.clickTracker}</pre>
-    </div>
-
-    <div class="url-section">
-      <div class="url-label">Creative URL:</div>
-      <pre>${script.urls.creativeUrl}</pre>
-    </div>
-  </div>
 `;
       });
+
+      htmlContent += `  </div>\n`;
     });
 
     htmlContent += `
@@ -454,7 +591,7 @@ export function PublicationOrderDetail() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `tracking-tags-${pubName.toLowerCase().replace(/\s+/g, '-')}-${dateStr.replace(/\//g, '-')}.html`;
+    link.download = `creative-assets-${pubName.toLowerCase().replace(/\s+/g, '-')}-${dateStr.replace(/\//g, '-')}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -462,7 +599,7 @@ export function PublicationOrderDetail() {
 
     toast({ 
       title: 'Downloaded!', 
-      description: `${trackingScripts.length} tracking tags saved to HTML file` 
+      description: `${trackingScripts.length} creative assets saved to HTML file` 
     });
   };
 
@@ -764,8 +901,7 @@ export function PublicationOrderDetail() {
       expectations.push({
         label: 'Earn',
         value: formatCurrency(earnings),
-        icon: <DollarSign className="h-3.5 w-3.5 text-green-600" />,
-        highlight: true
+        icon: <DollarSign className="h-3.5 w-3.5 text-green-600" />
       });
     }
     
@@ -1326,9 +1462,9 @@ export function PublicationOrderDetail() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={handleCopyAllScripts} variant="outline" size="sm">
-                      <Copy className="h-4 w-4 mr-1" />
-                      Copy All
+                    <Button onClick={handleDownloadAllScripts} variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-1" />
+                      Download All Creative
                     </Button>
                     <Button 
                       onClick={handleRefreshScripts} 
@@ -1339,26 +1475,24 @@ export function PublicationOrderDetail() {
                       <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
                       {refreshingScripts ? 'Refreshing...' : 'Refresh'}
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={handleDownloadAllScripts}>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download All Scripts
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => trackingScripts.length > 0 && handleTestScript(trackingScripts[0])}
-                          disabled={trackingScripts.length === 0}
-                        >
-                          <Target className="h-4 w-4 mr-2" />
-                          Test Tags
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {isAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => trackingScripts.length > 0 && handleTestScript(trackingScripts[0])}
+                            disabled={trackingScripts.length === 0}
+                          >
+                            <Target className="h-4 w-4 mr-2" />
+                            Test Tags
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -1562,13 +1696,19 @@ export function PublicationOrderDetail() {
                                 {deliveryExpectations.map((exp, i) => (
                                   <div 
                                     key={i} 
-                                    className="flex items-center gap-1.5"
+                                    className={cn(
+                                      "flex items-center gap-1.5",
+                                      exp.highlight && "bg-blue-100 border border-blue-300 rounded-md px-3 py-1.5 shadow-sm"
+                                    )}
                                   >
                                     {exp.icon}
-                                    <span className="text-slate-500">{exp.label}:</span>
+                                    <span className={cn(
+                                      exp.highlight ? "text-blue-700 font-semibold" : "text-slate-500"
+                                    )}>{exp.label}:</span>
                                     <span className={cn(
                                       "font-medium",
-                                      exp.label === 'Earn' ? "text-green-700" : "text-slate-700"
+                                      exp.label === 'Earn' ? "text-green-700" : 
+                                      exp.highlight ? "text-blue-900 font-bold text-sm" : "text-slate-700"
                                     )}>
                                       {exp.value}
                                     </span>

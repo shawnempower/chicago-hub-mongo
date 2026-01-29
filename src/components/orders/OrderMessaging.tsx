@@ -304,7 +304,7 @@ export function OrderMessaging({
                   multiple
                   className="hidden"
                   onChange={handleFileSelect}
-                  accept="image/*,.pdf,.doc,.docx,.txt"
+                  accept="image/*,.pdf,.doc,.docx,.txt,.html,.htm"
                 />
                 <Button
                   type="button"

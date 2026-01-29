@@ -8,6 +8,7 @@ import empowerLogo from "@/assets/empower-logo.png";
 import { PublicationSelector } from "@/components/PublicationSelector";
 import { HubSelector } from "@/components/HubSelector";
 import { NotificationBell } from "@/components/NotificationBell";
+import { MessageBell } from "@/components/MessageBell";
 
 interface HeaderProps {
   onSurveyClick?: () => void;
@@ -118,7 +119,9 @@ export function Header({ showDashboardNav = false }: HeaderProps) {
         </div>
         
         <div className="flex items-center space-x-4">
-          {/* Notification Bell - only show for logged in users */}
+          {/* Message Bell - shows unread order messages */}
+          {user && <MessageBell />}
+          {/* Notification Bell - shows system notifications */}
           {user && <NotificationBell />}
           
           {user ? (

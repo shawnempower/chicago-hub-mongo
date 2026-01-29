@@ -116,6 +116,310 @@ router.get('/', async (req: any, res: Response) => {
 });
 
 /**
+ * GET /api/publication-orders/unread-message-count
+ * Get count of orders with unread messages for the current user
+ * - Hub users: count of orders where latest publication message > lastViewedByHub
+ * - Publication users: count of orders where latest hub message > lastViewedByPublication
+ */
+router.get('/unread-message-count', async (req: any, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
+    const { getDatabase } = await import('../../src/integrations/mongodb/client');
+    const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+    
+    const profile = await userProfilesService.getByUserId(userId);
+    const db = getDatabase();
+    
+    // Determine if hub or publication user
+    let isHubUser = false;
+    let hubId: string | null = null;
+    let publicationIds: number[] = [];
+    
+    if (profile?.isAdmin) {
+      isHubUser = true;
+      // For admins, get their hub context (first hub they have access to, or all if super admin)
+      const userHubs = await permissionsService.getUserHubs(userId);
+      hubId = userHubs.length > 0 ? userHubs[0] : null;
+    } else {
+      const userHubs = await permissionsService.getUserHubs(userId);
+      if (userHubs.length > 0) {
+        isHubUser = true;
+        hubId = userHubs[0];
+      } else {
+        // Get publications from permissions service (same as main orders endpoint)
+        try {
+          const pubIds = await permissionsService.getUserPublications(userId);
+          publicationIds = pubIds.map((id: string) => parseInt(id));
+        } catch (err) {
+          console.warn('Could not get user publications from permissions service:', err);
+        }
+        
+        // Fallback to profile.publicationId if permissions service returned nothing
+        if (publicationIds.length === 0 && profile?.publicationId) {
+          const pubId = typeof profile.publicationId === 'number' 
+            ? profile.publicationId 
+            : parseInt(profile.publicationId.toString());
+          publicationIds = [pubId];
+        }
+      }
+    }
+
+    let count = 0;
+    
+    if (isHubUser) {
+      // Hub user: count orders with unread publication messages
+      const pipeline: any[] = [
+        { $match: { deletedAt: { $exists: false } } }
+      ];
+      
+      // Filter by hub if not super admin
+      if (hubId) {
+        pipeline[0].$match.hubId = hubId;
+      }
+      
+      pipeline.push(
+        // Unwind messages to find latest from publication
+        { $unwind: { path: '$messages', preserveNullAndEmptyArrays: false } },
+        { $match: { 'messages.sender': 'publication' } },
+        // Group by order to get latest publication message
+        {
+          $group: {
+            _id: { campaignId: '$campaignId', publicationId: '$publicationId' },
+            lastViewedByHub: { $first: '$lastViewedByHub' },
+            latestPubMessage: { $max: '$messages.timestamp' }
+          }
+        },
+        // Filter to only unread (pub message newer than last viewed, or never viewed)
+        {
+          $match: {
+            $or: [
+              { lastViewedByHub: null },
+              { $expr: { $gt: ['$latestPubMessage', '$lastViewedByHub'] } }
+            ]
+          }
+        },
+        { $count: 'total' }
+      );
+      
+      const result = await db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS)
+        .aggregate(pipeline)
+        .toArray();
+      
+      count = result.length > 0 ? result[0].total : 0;
+    } else if (publicationIds.length > 0) {
+      // Publication user: count orders with unread hub messages
+      const pipeline = [
+        { 
+          $match: { 
+            publicationId: { $in: publicationIds },
+            deletedAt: { $exists: false }
+          } 
+        },
+        { $unwind: { path: '$messages', preserveNullAndEmptyArrays: false } },
+        { $match: { 'messages.sender': 'hub' } },
+        {
+          $group: {
+            _id: { campaignId: '$campaignId', publicationId: '$publicationId' },
+            lastViewedByPublication: { $first: '$lastViewedByPublication' },
+            latestHubMessage: { $max: '$messages.timestamp' }
+          }
+        },
+        {
+          $match: {
+            $or: [
+              { lastViewedByPublication: null },
+              { $expr: { $gt: ['$latestHubMessage', '$lastViewedByPublication'] } }
+            ]
+          }
+        },
+        { $count: 'total' }
+      ];
+      
+      const result = await db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS)
+        .aggregate(pipeline)
+        .toArray();
+      
+      count = result.length > 0 ? result[0].total : 0;
+    }
+
+    res.json({ count });
+  } catch (error) {
+    console.error('Error getting unread message count:', error);
+    res.status(500).json({ error: 'Failed to get unread message count' });
+  }
+});
+
+/**
+ * GET /api/publication-orders/with-recent-messages
+ * Get list of orders with recent messages (both read and unread)
+ * Returns minimal data for dropdown display with isUnread flag
+ */
+router.get('/with-recent-messages', async (req: any, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
+    const { getDatabase } = await import('../../src/integrations/mongodb/client');
+    const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+    
+    const profile = await userProfilesService.getByUserId(userId);
+    const db = getDatabase();
+    
+    // Determine if hub or publication user
+    let isHubUser = false;
+    let hubId: string | null = null;
+    let publicationIds: number[] = [];
+    
+    if (profile?.isAdmin) {
+      isHubUser = true;
+      const userHubs = await permissionsService.getUserHubs(userId);
+      hubId = userHubs.length > 0 ? userHubs[0] : null;
+    } else {
+      const userHubs = await permissionsService.getUserHubs(userId);
+      if (userHubs.length > 0) {
+        isHubUser = true;
+        hubId = userHubs[0];
+      } else {
+        // Get publications from permissions service (same as main orders endpoint)
+        try {
+          const pubIds = await permissionsService.getUserPublications(userId);
+          publicationIds = pubIds.map((id: string) => parseInt(id));
+        } catch (err) {
+          console.warn('Could not get user publications from permissions service:', err);
+        }
+        
+        // Fallback to profile.publicationId if permissions service returned nothing
+        if (publicationIds.length === 0 && profile?.publicationId) {
+          const pubId = typeof profile.publicationId === 'number' 
+            ? profile.publicationId 
+            : parseInt(profile.publicationId.toString());
+          publicationIds = [pubId];
+        }
+      }
+    }
+
+    let orders: any[] = [];
+    
+    if (isHubUser) {
+      // Hub user: get orders with messages from publications (recent, not just unread)
+      const pipeline: any[] = [
+        { 
+          $match: { 
+            deletedAt: { $exists: false },
+            messages: { $exists: true, $ne: [] }
+          } 
+        }
+      ];
+      
+      if (hubId) {
+        pipeline[0].$match.hubId = hubId;
+      }
+      
+      pipeline.push(
+        // Filter to messages from publication and get the latest
+        { $unwind: { path: '$messages', preserveNullAndEmptyArrays: false } },
+        { $match: { 'messages.sender': 'publication' } },
+        { $sort: { 'messages.timestamp': -1 } },
+        {
+          $group: {
+            _id: { campaignId: '$campaignId', publicationId: '$publicationId' },
+            campaignName: { $first: '$campaignName' },
+            publicationName: { $first: '$publicationName' },
+            lastViewedByHub: { $first: '$lastViewedByHub' },
+            latestMessage: { $first: '$messages' }
+          }
+        },
+        // Sort by latest message timestamp
+        { $sort: { 'latestMessage.timestamp': -1 } },
+        { $limit: 20 }
+      );
+      
+      const results = await db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS)
+        .aggregate(pipeline)
+        .toArray();
+      
+      orders = results.map(r => {
+        const lastViewed = r.lastViewedByHub ? new Date(r.lastViewedByHub) : null;
+        const messageTime = r.latestMessage?.timestamp ? new Date(r.latestMessage.timestamp) : null;
+        const isUnread = !lastViewed || (messageTime && messageTime > lastViewed);
+        
+        return {
+          campaignId: r._id.campaignId,
+          publicationId: r._id.publicationId,
+          campaignName: r.campaignName,
+          publicationName: r.publicationName,
+          latestMessagePreview: r.latestMessage?.content?.substring(0, 100) || '(attachment)',
+          latestMessageSender: r.latestMessage?.senderName,
+          latestMessageTimestamp: r.latestMessage?.timestamp,
+          isUnread
+        };
+      });
+    } else if (publicationIds.length > 0) {
+      // Publication user: get orders with messages from hub (recent, not just unread)
+      const pipeline = [
+        { 
+          $match: { 
+            publicationId: { $in: publicationIds },
+            deletedAt: { $exists: false },
+            messages: { $exists: true, $ne: [] }
+          } 
+        },
+        { $unwind: { path: '$messages', preserveNullAndEmptyArrays: false } },
+        { $match: { 'messages.sender': 'hub' } },
+        { $sort: { 'messages.timestamp': -1 } },
+        {
+          $group: {
+            _id: { campaignId: '$campaignId', publicationId: '$publicationId' },
+            campaignName: { $first: '$campaignName' },
+            publicationName: { $first: '$publicationName' },
+            lastViewedByPublication: { $first: '$lastViewedByPublication' },
+            latestMessage: { $first: '$messages' }
+          }
+        },
+        { $sort: { 'latestMessage.timestamp': -1 } },
+        { $limit: 20 }
+      ];
+      
+      const results = await db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS)
+        .aggregate(pipeline)
+        .toArray();
+      
+      orders = results.map(r => {
+        const lastViewed = r.lastViewedByPublication ? new Date(r.lastViewedByPublication) : null;
+        const messageTime = r.latestMessage?.timestamp ? new Date(r.latestMessage.timestamp) : null;
+        const isUnread = !lastViewed || (messageTime && messageTime > lastViewed);
+        
+        return {
+          campaignId: r._id.campaignId,
+          publicationId: r._id.publicationId,
+          campaignName: r.campaignName,
+          publicationName: r.publicationName,
+          latestMessagePreview: r.latestMessage?.content?.substring(0, 100) || '(attachment)',
+          latestMessageSender: r.latestMessage?.senderName,
+          latestMessageTimestamp: r.latestMessage?.timestamp,
+          isUnread
+        };
+      });
+    }
+
+    res.json({ orders, userType: isHubUser ? 'hub' : 'publication' });
+  } catch (error) {
+    console.error('Error getting orders with unread messages:', error);
+    res.status(500).json({ error: 'Failed to get orders with unread messages' });
+  }
+});
+
+/**
  * GET /api/publication-orders/:campaignId/:publicationId
  * Get a specific insertion order
  */
@@ -739,8 +1043,9 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
     const { campaignId, publicationId } = req.params;
     const { content, attachments } = req.body;
 
-    if (!content || !content.trim()) {
-      return res.status(400).json({ error: 'Message content is required' });
+    // Require either message content or attachments
+    if ((!content || !content.trim()) && (!attachments || attachments.length === 0)) {
+      return res.status(400).json({ error: 'Message content or attachments required' });
     }
 
     // Get user profile and auth user to determine sender type and name
@@ -983,29 +1288,53 @@ router.get('/:campaignId/:publicationId/messages', async (req: any, res: Respons
 
 /**
  * PUT /api/publication-orders/:campaignId/:publicationId/mark-viewed
- * Mark the order as viewed by hub user (updates lastViewedByHub timestamp)
+ * Mark the order as viewed by the current user (hub or publication)
+ * - Hub users: updates lastViewedByHub timestamp
+ * - Publication users: updates lastViewedByPublication timestamp
  */
 router.put('/:campaignId/:publicationId/mark-viewed', async (req: any, res: Response) => {
   try {
     const userId = req.user.id;
     const { campaignId, publicationId } = req.params;
 
-    // Only hub users can mark as viewed (not publication users)
     const { userProfilesService } = await import('../../src/integrations/mongodb/allServices');
-    const profile = await userProfilesService.getByUserId(userId);
+    const { getDatabase } = await import('../../src/integrations/mongodb/client');
+    const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
     
-    if (!profile?.isAdmin) {
+    const profile = await userProfilesService.getByUserId(userId);
+    const db = getDatabase();
+    
+    // Determine if hub or publication user
+    let isHubUser = false;
+    let hasAccess = false;
+    
+    if (profile?.isAdmin) {
+      isHubUser = true;
+      hasAccess = true;
+    } else {
       // Check if user has hub access
       const userHasHubAccess = await permissionsService.getUserHubs(userId);
-      if (userHasHubAccess.length === 0) {
-        return res.status(403).json({ error: 'Only hub users can mark orders as viewed' });
+      if (userHasHubAccess.length > 0) {
+        isHubUser = true;
+        hasAccess = true;
+      } else {
+        // Check if publication user has access to this order
+        try {
+          hasAccess = await permissionsService.canAccessPublication(userId, publicationId);
+        } catch (err) {
+          if (profile?.publicationId && profile.publicationId.toString() === publicationId) {
+            hasAccess = true;
+          }
+        }
       }
     }
 
-    // Update the lastViewedByHub timestamp
-    const { getDatabase } = await import('../../src/integrations/mongodb/client');
-    const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
-    const db = getDatabase();
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Update the appropriate lastViewed timestamp based on user type
+    const updateField = isHubUser ? 'lastViewedByHub' : 'lastViewedByPublication';
     
     const result = await db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS).updateOne(
       {
@@ -1015,7 +1344,7 @@ router.put('/:campaignId/:publicationId/mark-viewed', async (req: any, res: Resp
       },
       {
         $set: {
-          lastViewedByHub: new Date(),
+          [updateField]: new Date(),
           updatedAt: new Date()
         }
       }
@@ -1025,7 +1354,7 @@ router.put('/:campaignId/:publicationId/mark-viewed', async (req: any, res: Resp
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.json({ success: true });
+    res.json({ success: true, userType: isHubUser ? 'hub' : 'publication' });
   } catch (error) {
     console.error('Error marking order as viewed:', error);
     res.status(500).json({ error: 'Failed to mark order as viewed' });

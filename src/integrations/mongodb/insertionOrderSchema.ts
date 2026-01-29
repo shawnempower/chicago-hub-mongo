@@ -131,6 +131,9 @@ export interface PublicationInsertionOrderDocument {
   // Timestamp when hub last viewed this order's messages
   lastViewedByHub?: Date;
   
+  // Timestamp when publication last viewed this order's messages
+  lastViewedByPublication?: Date;
+  
   // Asset references - used to dynamically load current assets
   // Each placement needs an asset; this tracks which specGroupId maps to which placement
   assetReferences?: OrderAssetReference[];
