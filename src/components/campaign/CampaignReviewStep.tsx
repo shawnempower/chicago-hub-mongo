@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Download, Eye, FileText, Pencil } from 'lucide-react';
+import { CheckCircle2, Eye, FileText, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { CampaignAnalysisResponse } from '@/integrations/mongodb/campaignSchema';
 import { CreativeRequirementsChecklist } from './CreativeRequirementsChecklist';
@@ -23,7 +23,6 @@ interface CampaignReviewStepProps {
     contactEmail: string;
     primaryGoal: string;
     targetAudience: string;
-    budget: number;
     channels: string[];
     startDate: Date | null;
     endDate: Date | null;
@@ -32,12 +31,12 @@ interface CampaignReviewStepProps {
   result: CampaignAnalysisResponse | null;
   campaignId: string | null;
   selectedPackageData?: any;
-  onGenerateIO?: () => void;
+  onGenerateContract?: () => void;
   onViewCampaign?: () => void;
   onNavigateToStep?: (step: number) => void;
 }
 
-export function CampaignReviewStep({ formData, result, campaignId, selectedPackageData, onGenerateIO, onViewCampaign, onNavigateToStep }: CampaignReviewStepProps) {
+export function CampaignReviewStep({ formData, result, campaignId, selectedPackageData, onGenerateContract, onViewCampaign, onNavigateToStep }: CampaignReviewStepProps) {
   // Calculate reach from package publications using the same calculation used elsewhere in the app
   // This ensures consistent reach numbers across package builder, campaign review, and campaign detail
   const calculatedPackageReach = useMemo(() => {
@@ -132,20 +131,6 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
                     className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
                   >
                     Add primary goal
-                    <Pencil className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-              <div>
-                <p className="text-muted-foreground font-sans">Estimated Budget</p>
-                {formData.budget > 0 ? (
-                  <p className="font-semibold font-sans">${formData.budget.toLocaleString()}</p>
-                ) : (
-                  <button 
-                    onClick={() => onNavigateToStep?.(2)}
-                    className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
-                  >
-                    Add estimated budget
                     <Pencil className="h-3 w-3" />
                   </button>
                 )}
@@ -315,13 +300,13 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
             <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <FileText className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h4 className="font-semibold text-blue-900 mb-1">Generate Insertion Order</h4>
+                <h4 className="font-semibold text-blue-900 mb-1">Generate Contract</h4>
                 <p className="text-sm text-blue-800 mb-3">
-                  Create a professional insertion order document to share with stakeholders or submit to publications.
+                  Create a professional advertising agreement to share with the advertiser for review and signature.
                 </p>
-                <Button size="sm" variant="outline" onClick={onGenerateIO}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Generate IO
+                <Button size="sm" variant="outline" onClick={onGenerateContract}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  View Agreement (PDF)
                 </Button>
               </div>
             </div>
@@ -343,9 +328,9 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
             <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
               <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h4 className="font-semibold text-green-900 mb-1">Ready for Orders</h4>
+                <h4 className="font-semibold text-green-900 mb-1">Ready for Activation</h4>
                 <p className="text-sm text-green-800">
-                  Generate insertion orders to activate the campaign and notify publications.
+                  Once the contract is signed, you can activate the campaign and begin execution.
                 </p>
               </div>
             </div>
@@ -356,7 +341,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
       {/* Additional Info */}
       <div className="bg-gray-50 border rounded-lg p-4 text-sm text-muted-foreground">
         <p>
-          <strong>Note:</strong> You can edit campaign details anytime before generating orders. 
+          <strong>Note:</strong> You can edit campaign details anytime before the contract is signed. 
           All selected inventory is subject to availability at time of final booking.
         </p>
       </div>

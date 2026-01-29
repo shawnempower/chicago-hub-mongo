@@ -1,12 +1,12 @@
 /**
  * Campaign Objectives Step - Step 2 of Campaign Builder
  * 
- * Collects campaign goals, budget, targeting, and channel preferences
+ * Collects campaign goals, targeting, and channel preferences
+ * Budget is derived from the selected package price
  */
 
 import { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -36,19 +36,11 @@ const AVAILABLE_CHANNELS = [
   { value: 'streaming', label: 'Streaming Video', description: 'Video ads' },
 ];
 
-const BILLING_CYCLES = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'quarterly', label: 'Quarterly' },
-  { value: 'one-time', label: 'One-time' },
-];
-
 interface CampaignObjectivesStepProps {
   formData: {
     primaryGoal: string;
     targetAudience: string;
     geographicTarget: string[];
-    budget: number;
-    billingCycle: 'monthly' | 'one-time' | 'quarterly';
     channels: string[];
     includeAllOutlets: boolean;
     algorithm?: string;
@@ -212,49 +204,6 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
         <p className="text-sm text-muted-foreground">
           Example: "Small business owners in Chicago, ages 30-55, interested in local commerce"
         </p>
-      </div>
-
-      {/* Estimated Budget */}
-      <div className="space-y-4 pt-4 border-t">
-        <h3 className="text-base font-semibold font-sans">Estimated Budget</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="budget">Estimated Budget Amount <span className="text-red-500">*</span></Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-              <Input
-                id="budget"
-                type="number"
-                min="0"
-                step="1000"
-                placeholder="50000"
-                className="pl-7"
-                value={formData.budget || ''}
-                onChange={(e) => updateFormData({ budget: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="billingCycle">Billing Cycle</Label>
-            <Select
-              value={formData.billingCycle}
-              onValueChange={(value: any) => updateFormData({ billingCycle: value })}
-            >
-              <SelectTrigger id="billingCycle">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BILLING_CYCLES.map(cycle => (
-                  <SelectItem key={cycle.value} value={cycle.value}>
-                    {cycle.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
       </div>
 
       {/* Channels - Only show for AI selection */}

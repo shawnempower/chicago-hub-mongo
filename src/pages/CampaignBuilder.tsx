@@ -42,8 +42,6 @@ interface CampaignFormData {
   primaryGoal: string;
   targetAudience: string;
   geographicTarget: string[];
-  budget: number;
-  billingCycle: 'monthly' | 'one-time' | 'quarterly';
   channels: string[];
   includeAllOutlets: boolean;
   algorithm?: string;
@@ -66,8 +64,6 @@ const INITIAL_FORM_DATA: CampaignFormData = {
   primaryGoal: 'brand awareness',
   targetAudience: '',
   geographicTarget: [],
-  budget: 0,
-  billingCycle: 'monthly',
   channels: [],
   includeAllOutlets: true,
   algorithm: 'all-inclusive',
@@ -183,10 +179,10 @@ export default function CampaignBuilder() {
         
       case 2:
         // Validation depends on inventory selection method
-        if (!formData.targetAudience || formData.budget <= 0) {
+        if (!formData.targetAudience) {
           toast({
             title: 'Missing Information',
-            description: 'Please fill in target audience and estimated budget',
+            description: 'Please fill in target audience',
             variant: 'destructive',
           });
           return false;
@@ -296,9 +292,10 @@ export default function CampaignBuilder() {
         targetAudience: formData.targetAudience,
         geographicTarget: formData.geographicTarget,
         budget: {
-          totalBudget: formData.budget,
+          // For AI mode, budget would need to be set elsewhere (AI mode is currently disabled)
+          totalBudget: 50000, // Default budget for AI analysis
           currency: 'USD',
-          billingCycle: formData.billingCycle,
+          billingCycle: 'monthly',
         },
         channels: formData.channels,
       },
@@ -349,9 +346,10 @@ export default function CampaignBuilder() {
           targetAudience: formData.targetAudience,
           geographicTarget: formData.geographicTarget,
           budget: {
-            totalBudget: formData.budget,
+            // Use pricing from analysis result
+            totalBudget: analysisResult.pricing?.finalPrice || 50000,
             currency: 'USD',
-            billingCycle: formData.billingCycle,
+            billingCycle: 'monthly',
           },
           channels: formData.channels,
         },
@@ -564,9 +562,10 @@ export default function CampaignBuilder() {
         targetAudience: formData.targetAudience,
         geographicTarget: formData.geographicTarget,
         budget: {
-          totalBudget: formData.budget,
+          // Use package price as budget for package-based campaigns
+          totalBudget: pricing?.finalPrice || 0,
           currency: 'USD',
-          billingCycle: formData.billingCycle,
+          billingCycle: 'monthly',
         },
         channels: formData.inventorySelectionMethod === 'ai' ? formData.channels : [],
       },
@@ -604,7 +603,7 @@ export default function CampaignBuilder() {
     }
   };
 
-  const handleGenerateIO = async () => {
+  const handleGenerateContract = async () => {
     if (!createdCampaignId) {
       toast({
         title: 'No Campaign',
@@ -624,26 +623,70 @@ export default function CampaignBuilder() {
         throw new Error('No content generated');
       }
       
-      // Create a downloadable link
-      const blob = new Blob([content], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `insertion-order-${formData.name.replace(/\s+/g, '-').toLowerCase()}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Add print-friendly styles and open in new window for PDF printing
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Advertising Agreement - ${formData.name}</title>
+          <style>
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .no-print { display: none !important; }
+            }
+            body { font-family: 'Helvetica Neue', Arial, sans-serif; }
+            .print-actions { 
+              position: fixed; 
+              top: 10px; 
+              right: 10px; 
+              background: #2563eb; 
+              color: white; 
+              padding: 10px 20px; 
+              border-radius: 6px; 
+              cursor: pointer;
+              font-weight: 500;
+              z-index: 1000;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            }
+            .print-actions:hover { background: #1d4ed8; }
+          </style>
+        </head>
+        <body>
+          <button class="print-actions no-print" onclick="window.print()">
+            Save as PDF / Print
+          </button>
+          ${content}
+        </body>
+        </html>
+      `;
+      
+      // Open in new window for print/PDF
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+      } else {
+        // Fallback: download if popup blocked
+        const blob = new Blob([printContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `agreement-${formData.name.replace(/\s+/g, '-').toLowerCase()}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
 
       toast({
-        title: 'Success',
-        description: 'Insertion order generated and downloaded',
+        title: 'Agreement Generated',
+        description: 'Use your browser\'s Print function to save as PDF',
       });
     } catch (error) {
-      console.error('Generate IO error:', error);
+      console.error('Generate contract error:', error);
       toast({
         title: 'Generation Failed',
-        description: error instanceof Error ? error.message : 'Failed to generate insertion order. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to generate agreement. Please try again.',
         variant: 'destructive',
       });
     }
@@ -860,7 +903,7 @@ export default function CampaignBuilder() {
                   result={result}
                   campaignId={createdCampaignId}
                   selectedPackageData={selectedPackageData}
-                  onGenerateIO={handleGenerateIO}
+                  onGenerateContract={handleGenerateContract}
                   onViewCampaign={handleViewCampaign}
                   onNavigateToStep={setCurrentStep}
                 />
