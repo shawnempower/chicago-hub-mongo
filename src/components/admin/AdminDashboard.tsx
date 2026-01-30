@@ -7,6 +7,7 @@ import SurveyManagement from './SurveyManagement';
 import { HubManagement } from './HubManagement';
 import { AlgorithmManagement } from './AlgorithmManagement';
 import { ActivityLog } from './ActivityLog';
+import { PlatformBillingDashboard } from './PlatformBillingDashboard';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useHubContext } from '@/contexts/HubContext';
 
@@ -24,9 +25,10 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="hubs">Hubs</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
           <TabsTrigger value="surveys">Surveys</TabsTrigger>
           <TabsTrigger value="algorithms">Algorithms</TabsTrigger>
           <TabsTrigger value="import">Import</TabsTrigger>
@@ -41,6 +43,12 @@ export const AdminDashboard = () => {
         <TabsContent value="hubs">
           <ErrorBoundary>
             <HubManagement />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="billing">
+          <ErrorBoundary>
+            <PlatformBillingDashboard />
           </ErrorBoundary>
         </TabsContent>
 

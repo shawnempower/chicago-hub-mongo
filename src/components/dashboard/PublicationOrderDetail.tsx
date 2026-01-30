@@ -138,6 +138,16 @@ export function PublicationOrderDetail() {
   
   // Hub advertising terms
   const [hubTerms, setHubTerms] = useState<HubAdvertisingTerms | null>(null);
+  
+  // Earnings data for this order
+  const [orderEarnings, setOrderEarnings] = useState<{
+    estimatedTotal: number;
+    actualTotal: number;
+    amountPaid: number;
+    amountOwed: number;
+    paymentStatus: 'pending' | 'partially_paid' | 'paid';
+    deliveryPercent: number;
+  } | null>(null);
 
   useEffect(() => {
     if (campaignId && publicationId) {
@@ -148,6 +158,13 @@ export function PublicationOrderDetail() {
       markOrderAsViewed();
     }
   }, [campaignId, publicationId]);
+  
+  // Fetch earnings when order loads
+  useEffect(() => {
+    if (order?._id) {
+      fetchOrderEarnings();
+    }
+  }, [order?._id]);
   
   // Mark the order as viewed by publication user (clears unread indicator)
   const markOrderAsViewed = async () => {
@@ -272,6 +289,38 @@ export function PublicationOrderDetail() {
       }
     } catch (error) {
       console.error('Error fetching performance data:', error);
+    }
+  };
+  
+  // Fetch earnings data for this specific order
+  const fetchOrderEarnings = async () => {
+    if (!order?._id) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/earnings/order/${order._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.earnings) {
+          const e = data.earnings;
+          // Calculate delivery percent based on actual vs estimated
+          const deliveryPercent = e.estimatedTotal > 0 
+            ? Math.min(100, Math.round((e.actualTotal / e.estimatedTotal) * 100))
+            : 0;
+          setOrderEarnings({
+            estimatedTotal: e.estimatedTotal || 0,
+            actualTotal: e.actualTotal || 0,
+            amountPaid: e.amountPaid || 0,
+            amountOwed: e.amountOwed || 0,
+            paymentStatus: e.paymentStatus || 'pending',
+            deliveryPercent,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching order earnings:', error);
     }
   };
 
@@ -1299,7 +1348,7 @@ export function PublicationOrderDetail() {
             
             return (
               <div className="space-y-6">
-                {/* Potential Earnings Card */}
+                {/* Earnings Overview Card */}
                 <div className="rounded-xl border bg-gradient-to-r from-emerald-50 to-green-50 overflow-hidden">
                   <div className="px-6 py-5">
                     <div className="flex items-center justify-between">
@@ -1320,6 +1369,72 @@ export function PublicationOrderDetail() {
                         )}
                       </div>
                     </div>
+                    
+                    {/* Earnings Progress Section */}
+                    {orderEarnings && (
+                      <div className="mt-4 pt-4 border-t border-emerald-200/50 space-y-3">
+                        {/* Delivery Progress */}
+                        <div>
+                          <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-emerald-700 font-medium">Delivery Progress</span>
+                            <span className="text-emerald-600">{orderEarnings.deliveryPercent}%</span>
+                          </div>
+                          <div className="h-2 bg-emerald-200/50 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                              style={{ width: `${orderEarnings.deliveryPercent}%` }}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Actual Earnings */}
+                        <div className="grid grid-cols-3 gap-4 pt-2">
+                          <div>
+                            <p className="text-xs text-emerald-600 mb-0.5">Earned</p>
+                            <p className="text-lg font-semibold text-emerald-700">
+                              ${orderEarnings.actualTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-emerald-600 mb-0.5">Paid</p>
+                            <p className="text-lg font-semibold text-emerald-700">
+                              ${orderEarnings.amountPaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-emerald-600 mb-0.5">Status</p>
+                            <Badge 
+                              variant="outline" 
+                              className={cn(
+                                "text-xs",
+                                orderEarnings.paymentStatus === 'paid' && "bg-green-100 text-green-700 border-green-300",
+                                orderEarnings.paymentStatus === 'partially_paid' && "bg-amber-100 text-amber-700 border-amber-300",
+                                orderEarnings.paymentStatus === 'pending' && "bg-slate-100 text-slate-600 border-slate-300"
+                              )}
+                            >
+                              {orderEarnings.paymentStatus === 'partially_paid' ? 'Partial' : 
+                               orderEarnings.paymentStatus.charAt(0).toUpperCase() + orderEarnings.paymentStatus.slice(1)}
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        {/* Payment Progress Bar */}
+                        {orderEarnings.actualTotal > 0 && (
+                          <div>
+                            <div className="flex items-center justify-between text-xs text-emerald-600 mb-1">
+                              <span>Payment Progress</span>
+                              <span>{Math.round((orderEarnings.amountPaid / orderEarnings.actualTotal) * 100)}%</span>
+                            </div>
+                            <div className="h-1.5 bg-emerald-200/50 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-green-500 rounded-full transition-all duration-500"
+                                style={{ width: `${Math.min(100, (orderEarnings.amountPaid / orderEarnings.actualTotal) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

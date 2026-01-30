@@ -17,10 +17,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Hub, HubInsert, HubUpdate, HubAdvertisingTerms, AdvertiserAgreementTerms, validateHubId } from '@/integrations/mongodb/hubSchema';
+import { Hub, HubInsert, HubUpdate, HubAdvertisingTerms, AdvertiserAgreementTerms, HubPlatformBilling, validateHubId } from '@/integrations/mongodb/hubSchema';
 import { hubsApi } from '@/api/hubs';
 import { toast } from 'sonner';
-import { Loader2, FileText, Handshake, Building2, Palette, MapPin } from 'lucide-react';
+import { Loader2, FileText, Handshake, Building2, Palette, MapPin, DollarSign } from 'lucide-react';
 
 interface HubFormProps {
   hub?: Hub | null;
@@ -60,6 +60,15 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
     agreementLiabilityClause: '',
     agreementContentStandards: '',
     agreementCustomTerms: '',
+    // Platform Billing (hub fees owed to platform)
+    billingRevenueSharePercent: '',
+    billingPlatformCpmRate: '',
+    billingCycle: 'monthly' as 'monthly' | 'quarterly' | 'campaign-end',
+    billingContactEmail: '',
+    billingContactName: '',
+    billingContactPhone: '',
+    billingEffectiveDate: '',
+    billingNotes: '',
   });
 
   useEffect(() => {
@@ -94,6 +103,15 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
         agreementLiabilityClause: hub.advertiserAgreementTerms?.liabilityClause || '',
         agreementContentStandards: hub.advertiserAgreementTerms?.contentStandards || '',
         agreementCustomTerms: hub.advertiserAgreementTerms?.customTerms || '',
+        // Platform Billing (hub fees owed to platform)
+        billingRevenueSharePercent: hub.platformBilling?.revenueSharePercent?.toString() || '',
+        billingPlatformCpmRate: hub.platformBilling?.platformCpmRate?.toString() || '',
+        billingCycle: hub.platformBilling?.billingCycle || 'monthly',
+        billingContactEmail: hub.platformBilling?.billingContact?.email || '',
+        billingContactName: hub.platformBilling?.billingContact?.name || '',
+        billingContactPhone: hub.platformBilling?.billingContact?.phone || '',
+        billingEffectiveDate: hub.platformBilling?.effectiveDate ? new Date(hub.platformBilling.effectiveDate).toISOString().split('T')[0] : '',
+        billingNotes: hub.platformBilling?.notes || '',
       });
     }
   }, [hub]);
@@ -150,6 +168,24 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
         customTerms: formData.agreementCustomTerms || undefined,
       } : undefined;
 
+      // Build platform billing object only if any billing fields are set
+      const hasPlatformBilling = formData.billingRevenueSharePercent || formData.billingPlatformCpmRate ||
+        formData.billingContactEmail || formData.billingContactName || formData.billingContactPhone ||
+        formData.billingEffectiveDate || formData.billingNotes;
+
+      const platformBilling: HubPlatformBilling | undefined = hasPlatformBilling ? {
+        revenueSharePercent: formData.billingRevenueSharePercent ? parseFloat(formData.billingRevenueSharePercent) : 0,
+        platformCpmRate: formData.billingPlatformCpmRate ? parseFloat(formData.billingPlatformCpmRate) : 0,
+        billingCycle: formData.billingCycle,
+        billingContact: (formData.billingContactEmail || formData.billingContactName || formData.billingContactPhone) ? {
+          email: formData.billingContactEmail || '',
+          name: formData.billingContactName || undefined,
+          phone: formData.billingContactPhone || undefined,
+        } : undefined,
+        effectiveDate: formData.billingEffectiveDate ? new Date(formData.billingEffectiveDate) : undefined,
+        notes: formData.billingNotes || undefined,
+      } : undefined;
+
       const hubData: HubInsert | Partial<HubUpdate> = {
         hubId: formData.hubId,
         basicInfo: {
@@ -169,6 +205,7 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
         } : undefined,
         advertisingTerms,
         advertiserAgreementTerms,
+        platformBilling,
       };
 
       if (hub) {
@@ -196,7 +233,7 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">General</span>
@@ -207,11 +244,15 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
           </TabsTrigger>
           <TabsTrigger value="publication-terms" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Publication Terms</span>
+            <span className="hidden sm:inline">Pub Terms</span>
           </TabsTrigger>
           <TabsTrigger value="advertiser-terms" className="flex items-center gap-2">
             <Handshake className="h-4 w-4" />
-            <span className="hidden sm:inline">Agreement Terms</span>
+            <span className="hidden sm:inline">Agreement</span>
+          </TabsTrigger>
+          <TabsTrigger value="platform-billing" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            <span className="hidden sm:inline">Billing</span>
           </TabsTrigger>
         </TabsList>
 
@@ -668,6 +709,175 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
               />
               <p className="text-xs text-muted-foreground">
                 Custom terms appended to the agreement
+              </p>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Platform Billing Tab */}
+        <TabsContent value="platform-billing" className="space-y-6 mt-6">
+          <div>
+            <h3 className="text-lg font-medium">Platform Billing Configuration</h3>
+            <p className="text-sm text-muted-foreground">
+              Configure how this hub is charged by the platform. These fees apply to publisher payouts and tracked digital impressions.
+            </p>
+          </div>
+          
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              <strong>Platform Fee Structure:</strong> Hubs pay the platform based on (1) a percentage of all publisher payouts, plus (2) a CPM rate on system-tracked digital impressions.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="billingRevenueSharePercent">
+                Revenue Share Percentage <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="billingRevenueSharePercent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={formData.billingRevenueSharePercent}
+                  onChange={(e) => setFormData({ ...formData, billingRevenueSharePercent: e.target.value })}
+                  placeholder="15"
+                  className="pr-8"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Percentage of publisher payouts owed to the platform (e.g., 15 for 15%)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billingPlatformCpmRate">
+                Platform CPM Rate <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="billingPlatformCpmRate"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.billingPlatformCpmRate}
+                  onChange={(e) => setFormData({ ...formData, billingPlatformCpmRate: e.target.value })}
+                  placeholder="0.50"
+                  className="pl-7"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                CPM rate for system-tracked digital impressions (e.g., $0.50 per 1,000 impressions)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billingCycle">Billing Cycle</Label>
+              <Select 
+                value={formData.billingCycle} 
+                onValueChange={(value: 'monthly' | 'quarterly' | 'campaign-end') => setFormData({ ...formData, billingCycle: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="campaign-end">Campaign End</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                When platform invoices are generated for this hub
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billingEffectiveDate">Effective Date</Label>
+              <Input
+                id="billingEffectiveDate"
+                type="date"
+                value={formData.billingEffectiveDate}
+                onChange={(e) => setFormData({ ...formData, billingEffectiveDate: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                When these billing terms took effect
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t pt-6 space-y-4">
+            <h4 className="text-sm font-medium">Billing Contact</h4>
+            <p className="text-sm text-muted-foreground">
+              Contact information for platform billing inquiries and invoices
+            </p>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="billingContactEmail">Email</Label>
+                <Input
+                  id="billingContactEmail"
+                  type="email"
+                  value={formData.billingContactEmail}
+                  onChange={(e) => setFormData({ ...formData, billingContactEmail: e.target.value })}
+                  placeholder="billing@example.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="billingContactName">Contact Name</Label>
+                <Input
+                  id="billingContactName"
+                  value={formData.billingContactName}
+                  onChange={(e) => setFormData({ ...formData, billingContactName: e.target.value })}
+                  placeholder="Jane Smith"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="billingContactPhone">Phone</Label>
+                <Input
+                  id="billingContactPhone"
+                  type="tel"
+                  value={formData.billingContactPhone}
+                  onChange={(e) => setFormData({ ...formData, billingContactPhone: e.target.value })}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="billingNotes">Internal Notes</Label>
+            <Textarea
+              id="billingNotes"
+              value={formData.billingNotes}
+              onChange={(e) => setFormData({ ...formData, billingNotes: e.target.value })}
+              placeholder="Internal notes about billing arrangement, special terms, etc."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Private notes visible only to platform admins
+            </p>
+          </div>
+
+          <div className="bg-muted/50 rounded-lg p-4">
+            <h4 className="text-sm font-medium mb-2">Fee Calculation Preview</h4>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>
+                <strong>Revenue Share:</strong> {formData.billingRevenueSharePercent || '0'}% of all publisher payouts
+              </p>
+              <p>
+                <strong>Platform CPM:</strong> ${formData.billingPlatformCpmRate || '0.00'} per 1,000 tracked digital impressions
+              </p>
+              <p className="text-xs mt-2 italic">
+                Example: If publishers earn $10,000 and 500,000 impressions are tracked, platform fees would be:
+                ${((parseFloat(formData.billingRevenueSharePercent) || 0) / 100 * 10000).toFixed(2)} (revenue share) + 
+                ${((parseFloat(formData.billingPlatformCpmRate) || 0) * 500).toFixed(2)} (CPM) = 
+                ${(((parseFloat(formData.billingRevenueSharePercent) || 0) / 100 * 10000) + ((parseFloat(formData.billingPlatformCpmRate) || 0) * 500)).toFixed(2)} total
               </p>
             </div>
           </div>

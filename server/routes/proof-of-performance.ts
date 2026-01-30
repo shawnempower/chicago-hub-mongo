@@ -21,6 +21,7 @@ import {
 } from '../../src/integrations/mongodb/proofOfPerformanceSchema';
 import { fileStorage } from '../storage/fileStorage';
 import { placementCompletionService } from '../../src/services/placementCompletionService';
+import { earningsService } from '../../src/services/earningsService';
 
 const router = Router();
 
@@ -449,6 +450,21 @@ router.put('/:id/verify', async (req: any, res: Response) => {
     
     // Update order proof status
     await updateOrderProofStatus(existing.orderId);
+    
+    // Update publisher earnings when proof is verified (offline channel delivery)
+    if (status === 'verified') {
+      try {
+        await earningsService.updatePublisherActualEarnings(existing.orderId);
+        // Also update hub billing
+        const order = await db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS)
+          .findOne({ _id: existing.orderId });
+        if (order?.campaignId) {
+          await earningsService.updateHubBillingActual(order.campaignId);
+        }
+      } catch (err) {
+        console.error('Error updating earnings after proof verification:', err);
+      }
+    }
 
     res.json({ success: true, proof: result });
   } catch (error) {

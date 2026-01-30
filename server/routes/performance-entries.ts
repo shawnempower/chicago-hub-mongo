@@ -18,6 +18,7 @@ import {
   PerformanceChannel
 } from '../../src/integrations/mongodb/performanceEntrySchema';
 import { placementCompletionService } from '../../src/services/placementCompletionService';
+import { earningsService } from '../../src/services/earningsService';
 
 const router = Router();
 
@@ -258,6 +259,22 @@ router.post('/', async (req: any, res: Response) => {
       }
     }
     
+    // Update publisher earnings based on new performance data
+    try {
+      await earningsService.updatePublisherActualEarnings(entryData.orderId);
+      // Also update hub billing if this is a digital channel with tracked impressions
+      if (entryData.metrics?.impressions) {
+        const order = await db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS)
+          .findOne({ _id: entryData.orderId });
+        if (order?.campaignId) {
+          await earningsService.updateHubBillingActual(order.campaignId);
+        }
+      }
+    } catch (err) {
+      // Don't fail the request if earnings update fails
+      console.error('Error updating earnings:', err);
+    }
+    
     res.status(201).json({ 
       success: true, 
       entry: { ...entryData, _id: result.insertedId }
@@ -333,6 +350,19 @@ router.put('/:id', async (req: any, res: Response) => {
 
     // Update order delivery summary
     await updateOrderDeliverySummary(existing.orderId);
+    
+    // Update publisher earnings
+    try {
+      await earningsService.updatePublisherActualEarnings(existing.orderId);
+      // Also update hub billing
+      const order = await db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS)
+        .findOne({ _id: existing.orderId });
+      if (order?.campaignId) {
+        await earningsService.updateHubBillingActual(order.campaignId);
+      }
+    } catch (err) {
+      console.error('Error updating earnings:', err);
+    }
 
     res.json({ success: true, entry: result });
   } catch (error) {

@@ -41,6 +41,21 @@ export interface AdvertiserAgreementTerms {
   customTerms?: string;            // Additional free-form terms
 }
 
+// Platform Billing Configuration interface
+// Defines how this hub is charged by the platform for using the system
+export interface HubPlatformBilling {
+  revenueSharePercent: number;     // Percentage of publisher payouts owed to platform (e.g., 15 for 15%)
+  platformCpmRate: number;         // CPM rate for system-tracked digital impressions (e.g., 0.50 for $0.50 CPM)
+  billingCycle: 'monthly' | 'quarterly' | 'campaign-end';  // When platform invoices the hub
+  billingContact?: {
+    email: string;
+    name?: string;
+    phone?: string;
+  };
+  effectiveDate?: Date;            // When these billing terms took effect
+  notes?: string;                  // Internal notes about billing arrangement
+}
+
 export interface Hub {
   _id?: string | ObjectId;
   hubId: string; // Unique slug identifier (e.g., "chicago-hub")
@@ -98,6 +113,10 @@ export interface Hub {
   // Advertiser Agreement Terms
   // These terms appear on advertiser-facing contracts/agreements
   advertiserAgreementTerms?: AdvertiserAgreementTerms;
+  
+  // Platform Billing Configuration
+  // Defines how this hub is charged by the platform (revenue share + CPM on tracked impressions)
+  platformBilling?: HubPlatformBilling;
   
   // Status and Metadata
   status: 'active' | 'inactive' | 'pending' | 'archived';

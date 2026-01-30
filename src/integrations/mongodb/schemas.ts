@@ -605,7 +605,7 @@ export interface Publication {
       printSchedule?: string;
       advertisingOpportunities?: Array<{
         name?: string;
-        adFormat?: 'tall full page' | 'tall portrait full page' | 'upper portrait full page' | 'square full page' | 'narrow full page' | 'half page horizontal' | 'half page vertical' | 'quarter page' | 'eighth page' | 'business card' | 'classified' | 'insert';
+        adFormat?: 'tall full page' | 'tall portrait full page' | 'upper portrait full page' | 'square full page' | 'narrow full page' | 'half v tall' | 'half v standard' | 'half v slim' | 'half v mid' | 'half v compact' | 'half h tall' | 'half h standard' | 'half h wide' | 'half h mid' | 'half h compact' | 'quarter page' | 'eighth page' | 'business card' | 'classified' | 'insert';
         color?: 'color' | 'black and white' | 'both';
         location?: string;
         pricing?: {
@@ -1392,6 +1392,157 @@ export interface StorefrontConversation {
   updatedAt: Date;
 }
 
+// ===== PUBLICATION EARNINGS SCHEMA =====
+// Tracks what each publication earns from campaigns based on actual delivery
+
+export interface PublicationEarningsItem {
+  itemPath: string;                // Path to inventory item (e.g., "distributionChannels.website.advertisingOpportunities[0]")
+  itemName: string;                // Display name (e.g., "728x90 Leaderboard")
+  channel: string;                 // website, newsletter, print, radio, podcast, social, events, streaming
+  plannedDelivery: number;         // Expected impressions, frequency, or occurrences
+  deliveryType: 'impressions' | 'occurrences';  // How delivery is measured
+  pricingModel: string;            // cpm, flat, per_send, per_spot, per_episode, etc.
+  rate: number;                    // Hub price rate used for calculation
+  estimatedEarnings: number;       // Planned earnings based on expected delivery
+  actualDelivery?: number;         // Actual delivered amount
+  actualEarnings?: number;         // Actual earnings based on delivery
+  lastUpdated?: Date;              // When actual was last recalculated
+}
+
+export interface PublicationEarningsPayment {
+  amount: number;
+  date: Date;
+  reference?: string;              // Check number, wire reference, etc.
+  method?: 'check' | 'ach' | 'wire' | 'other';
+  notes?: string;
+  recordedBy?: string;             // User ID who recorded the payment
+  recordedAt: Date;
+}
+
+export interface PublicationEarnings {
+  _id?: string | ObjectId;
+  orderId: string;                 // FK to publication_insertion_orders
+  campaignId: string;
+  campaignName?: string;           // Denormalized for display
+  publicationId: number;
+  publicationName: string;
+  hubId: string;
+  
+  // Estimated earnings (calculated at campaign confirmation)
+  estimated: {
+    total: number;
+    byChannel: Record<string, number>;
+    byItem: PublicationEarningsItem[];
+  };
+  
+  // Actual earnings (updated as performance comes in)
+  actual: {
+    total: number;
+    byChannel: Record<string, number>;
+    byItem: Array<{
+      itemPath: string;
+      actualDelivery: number;
+      actualEarnings: number;
+      lastUpdated: Date;
+    }>;
+  };
+  
+  // Digital impressions tracked by the system (for platform CPM calculation)
+  trackedDigitalImpressions: {
+    estimated: number;             // Planned digital impressions
+    actual: number;                // Actual tracked impressions
+  };
+  
+  // Comparison metrics
+  variance: {
+    amount: number;                // actual.total - estimated.total
+    percentage: number;            // ((actual.total / estimated.total) - 1) * 100
+  };
+  
+  // Payment tracking
+  paymentStatus: 'pending' | 'partially_paid' | 'paid';
+  amountPaid: number;              // Total amount paid so far
+  amountOwed: number;              // actual.total - amountPaid
+  paymentHistory: PublicationEarningsPayment[];
+  
+  // Timestamps and status
+  createdAt: Date;
+  updatedAt: Date;
+  campaignStartDate?: Date;
+  campaignEndDate?: Date;
+  finalized: boolean;              // True after campaign ends and final reconciliation
+  finalizedAt?: Date;
+}
+
+// ===== HUB BILLING SCHEMA =====
+// Tracks platform fees owed by hubs (revenue share + CPM on tracked impressions)
+
+export interface HubBillingPayment {
+  amount: number;
+  date: Date;
+  reference?: string;
+  method?: 'ach' | 'wire' | 'check' | 'credit_card' | 'other';
+  invoiceNumber?: string;
+  notes?: string;
+  recordedAt: Date;
+}
+
+export interface HubBilling {
+  _id?: string | ObjectId;
+  hubId: string;
+  hubName?: string;                // Denormalized for display
+  campaignId: string;
+  campaignName?: string;           // Denormalized for display
+  
+  // Publisher payout summary (for revenue share calculation)
+  publisherPayouts: {
+    estimated: number;             // Sum of all publisher estimated earnings
+    actual: number;                // Sum of all publisher actual earnings
+    publicationCount: number;      // Number of publications in this campaign
+  };
+  
+  // Revenue share fee (% of publisher payouts)
+  revenueShareFee: {
+    rate: number;                  // The % rate used (from hub config)
+    estimated: number;             // publisherPayouts.estimated * (rate / 100)
+    actual: number;                // publisherPayouts.actual * (rate / 100)
+  };
+  
+  // Platform CPM fee (digital impressions only, system-tracked)
+  platformCpmFee: {
+    rate: number;                  // CPM rate used (from hub config)
+    trackedImpressions: {
+      estimated: number;           // Planned digital impressions
+      actual: number;              // Actual tracked impressions
+    };
+    estimated: number;             // (estimated impressions / 1000) * rate
+    actual: number;                // (actual impressions / 1000) * rate
+  };
+  
+  // Totals
+  totalFees: {
+    estimated: number;             // revenueShareFee.estimated + platformCpmFee.estimated
+    actual: number;                // revenueShareFee.actual + platformCpmFee.actual
+  };
+  
+  // Payment tracking
+  paymentStatus: 'pending' | 'invoiced' | 'partially_paid' | 'paid';
+  invoiceNumber?: string;
+  invoiceDate?: Date;
+  dueDate?: Date;
+  amountPaid: number;
+  amountOwed: number;              // totalFees.actual - amountPaid
+  paymentHistory: HubBillingPayment[];
+  
+  // Timestamps and status
+  createdAt: Date;
+  updatedAt: Date;
+  campaignStartDate?: Date;
+  campaignEndDate?: Date;
+  finalized: boolean;              // True after campaign ends and final reconciliation
+  finalizedAt?: Date;
+}
+
 // Collection Names
 export const COLLECTIONS = {
   USERS: 'users',
@@ -1433,6 +1584,8 @@ export const COLLECTIONS = {
   NOTIFICATIONS: 'notifications', // In-app notifications for users
   STOREFRONT_CHAT_CONFIG: 'storefront_chat_config', // AI chat widget configuration per storefront
   STOREFRONT_CONVERSATIONS: 'storefront_conversations', // Full chat conversation history from storefronts
+  PUBLICATION_EARNINGS: 'publication_earnings', // Publication earnings per campaign/order
+  HUB_BILLING: 'hub_billing', // Platform fees owed by hubs
 } as const;
 
 // MongoDB Indexes Configuration
@@ -1679,5 +1832,23 @@ export const INDEXES = {
   storefront_chat_config: [
     { publicationId: 1 },                  // Unique lookup by publicationId
     { updatedAt: -1 }                      // Sort by last update
+  ],
+  publication_earnings: [
+    { orderId: 1 },                        // Unique - one earnings record per order
+    { campaignId: 1 },                     // Get all earnings for a campaign
+    { publicationId: 1, createdAt: -1 },   // Publication's earnings history
+    { hubId: 1, createdAt: -1 },           // Hub's publisher earnings
+    { paymentStatus: 1, finalized: 1 },    // Filter by payment/finalization status
+    { 'actual.total': -1 },                // Sort by earnings amount
+    { finalized: 1, finalizedAt: -1 }      // Recently finalized
+  ],
+  hub_billing: [
+    { hubId: 1, campaignId: 1 },           // Compound - unique billing per hub/campaign
+    { hubId: 1, createdAt: -1 },           // Hub's billing history
+    { campaignId: 1 },                     // Get billing for a campaign
+    { paymentStatus: 1, finalized: 1 },    // Filter by payment/finalization status
+    { invoiceNumber: 1 },                  // Invoice lookup
+    { dueDate: 1, paymentStatus: 1 },      // Overdue billing
+    { finalized: 1, finalizedAt: -1 }      // Recently finalized
   ]
 };

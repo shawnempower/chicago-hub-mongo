@@ -76,6 +76,8 @@ import trackingScriptsRouter from './routes/tracking-scripts';
 import notificationsRouter from './routes/notifications';
 import webAnalyticsRouter from './routes/web-analytics';
 import storefrontChatConfigRouter from './routes/storefront-chat-config';
+import earningsRouter from './routes/earnings';
+import hubBillingRouter from './routes/hub-billing';
 import { authenticateToken } from './middleware/authenticate';
 import { activityTrackingMiddleware } from './middleware/activityTracking';
 import { createLogger } from '../src/utils/logger';
@@ -199,6 +201,8 @@ app.use('/api/tracking-scripts', activityTrackingMiddleware, trackingScriptsRout
 app.use('/api/notifications', notificationsRouter); // User notifications
 app.use('/api/web-analytics', webAnalyticsRouter); // Real-time web analytics from DynamoDB
 app.use('/api/storefront-chat-config', activityTrackingMiddleware, storefrontChatConfigRouter); // Storefront AI chat configuration
+app.use('/api/earnings', activityTrackingMiddleware, earningsRouter); // Publication earnings and payouts
+app.use('/api/hub-billing', activityTrackingMiddleware, hubBillingRouter); // Hub platform billing
 
 // ===== STANDALONE ROUTES =====
 // Health check

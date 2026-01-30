@@ -11,6 +11,7 @@ import { PublicationStorefront } from "@/components/dashboard/PublicationStorefr
 import { PublicationFullSummary } from "@/components/dashboard/PublicationFullSummary";
 import { PublicationOrders } from "@/components/dashboard/PublicationOrders";
 import { PublicationOrderDetail } from "@/components/dashboard/PublicationOrderDetail";
+import { PublicationEarnings } from "@/components/dashboard/PublicationEarnings";
 import { useAuth } from "@/contexts/CustomAuthContext";
 import { Navigate, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { usePublication } from "@/contexts/PublicationContext";
@@ -26,7 +27,8 @@ import {
   FileText,
   Users,
   Mail,
-  RefreshCw
+  RefreshCw,
+  DollarSign
 } from "lucide-react";
 
 // Main Dashboard Component
@@ -48,6 +50,7 @@ export default function Dashboard() {
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'orders', label: 'Orders', icon: FileText },
+    { id: 'earnings', label: 'Earnings', icon: DollarSign },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'storefront', label: 'Storefront', icon: Store },
   ];
@@ -63,10 +66,11 @@ export default function Dashboard() {
         {currentTab === 'leads' && selectedPublication?.publicationId && <PublicationLeads publicationId={selectedPublication.publicationId.toString()} />}
         {currentTab === 'orders' && <PublicationOrders />}
         {currentTab === 'order-detail' && <PublicationOrderDetail />}
+        {currentTab === 'earnings' && selectedPublication?.publicationId && <PublicationEarnings publicationId={selectedPublication.publicationId} />}
         {currentTab === 'settings' && <PublicationSettings />}
         {currentTab === 'storefront' && <PublicationStorefront />}
         {currentTab === 'summary' && <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />}
-        {!['dashboard', 'profile', 'inventory', 'leads', 'orders', 'order-detail', 'settings', 'storefront', 'summary'].includes(currentTab) && <DashboardOverview />}
+        {!['dashboard', 'profile', 'inventory', 'leads', 'orders', 'order-detail', 'earnings', 'settings', 'storefront', 'summary'].includes(currentTab) && <DashboardOverview />}
       </>
     );
   };
