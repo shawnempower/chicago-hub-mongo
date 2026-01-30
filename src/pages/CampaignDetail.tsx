@@ -875,6 +875,7 @@ export default function CampaignDetail() {
                   startDate: campaign?.timeline?.startDate,
                   endDate: campaign?.timeline?.endDate,
                 }}
+                hasOrders={publicationOrders.length > 0}
               />
             </TabsContent>
 

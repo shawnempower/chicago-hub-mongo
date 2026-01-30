@@ -13,7 +13,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -39,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   RadioGroup,
@@ -123,6 +123,7 @@ interface CreativeAssetsManagerProps {
   onAssetsChange: (assets: Map<string, UploadedAssetWithSpecs>) => void;
   campaignId?: string;
   campaignInfo?: CampaignInfo;
+  hasOrders?: boolean; // True when insertion orders exist - locks assets from removal
 }
 
 interface PendingFile {
@@ -638,10 +639,10 @@ export function CreativeAssetsManager({
   uploadedAssets,
   onAssetsChange,
   campaignId,
-  campaignInfo
+  campaignInfo,
+  hasOrders = false
 }: CreativeAssetsManagerProps) {
   const { toast } = useToast();
-  const [activeView, setActiveView] = useState<'checklist' | 'uploaded'>('checklist');
   const [activeChannel, setActiveChannel] = useState<string>('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [pendingFiles, setPendingFiles] = useState<Map<string, PendingFile>>(new Map());
@@ -676,6 +677,16 @@ export function CreativeAssetsManager({
   
   // Track the most recently split spec for auto-assignment
   const [recentlySplitSpecId, setRecentlySplitSpecId] = useState<string | null>(null);
+  
+  // Split asset assignment dialog - shows after file selection for split specs
+  const [splitAssetDialogOpen, setSplitAssetDialogOpen] = useState(false);
+  const [splitAssetData, setSplitAssetData] = useState<{
+    file: File;
+    previewUrl?: string;
+    specGroupId: string;
+    specGroup: GroupedCreativeRequirement;
+    clickUrl: string;
+  } | null>(null);
 
   // Channel configuration with icons and accepted file types
   const channelConfig: Record<string, { 
@@ -862,6 +873,10 @@ export function CreativeAssetsManager({
           
           const newAssetsMap = new Map<string, UploadedAssetWithSpecs>();
           data.assets.forEach((asset: any) => {
+            // Extract digital ad properties (clickUrl, altText, etc.)
+            // Note: digitalAdProperties is stored at root level, not in metadata
+            const digitalAdProps = asset.digitalAdProperties || {};
+            
             const reconstructedAsset: UploadedAssetWithSpecs = {
               specGroupId: asset.metadata.specGroupId || `library_${asset._id}`,
               fileName: asset.metadata.fileName,
@@ -884,6 +899,12 @@ export function CreativeAssetsManager({
               },
               appliesTo: asset.associations?.placements || [],
               assetType: asset.metadata.assetType || 'placement',
+              // Restore digital ad properties
+              clickUrl: digitalAdProps.clickUrl,
+              altText: digitalAdProps.altText,
+              headline: digitalAdProps.headline,
+              body: digitalAdProps.body,
+              ctaText: digitalAdProps.ctaText,
             };
             newAssetsMap.set(reconstructedAsset.specGroupId, reconstructedAsset);
           });
@@ -943,9 +964,14 @@ export function CreativeAssetsManager({
       };
     });
 
-    // Apply sorting
-    if (sortConfig) {
-      specs.sort((a, b) => {
+    // Apply sorting - publication-specific items always come first
+    specs.sort((a, b) => {
+      // Publication-specific (duplicated/excluded) items always sort to top
+      if (a.isPublicationSpecific && !b.isPublicationSpecific) return -1;
+      if (!a.isPublicationSpecific && b.isPublicationSpecific) return 1;
+      
+      // Then apply user-selected sort if configured
+      if (sortConfig) {
         let comparison = 0;
         
         switch (sortConfig.key) {
@@ -967,22 +993,13 @@ export function CreativeAssetsManager({
         }
         
         return sortConfig.direction === 'asc' ? comparison : -comparison;
-      });
-    }
+      }
+      
+      return 0;
+    });
 
     return specs;
   }, [currentChannelSpecs, uploadedAssets, sortConfig]);
-
-  // Get uploaded assets list for table
-  const uploadedAssetsList = useMemo(() => 
-    Array.from(uploadedAssets.entries())
-      .filter(([_, asset]) => asset.uploadStatus === 'uploaded')
-      .map(([specGroupId, asset]) => {
-        const spec = groupedSpecs.find(s => s.specGroupId === specGroupId);
-        return { specGroupId, asset, spec };
-      }),
-    [uploadedAssets, groupedSpecs]
-  );
   
   // Find merge candidates for publication-specific specs
   const mergeCandidates = useMemo(() => {
@@ -1120,18 +1137,18 @@ export function CreativeAssetsManager({
         }
       }
       
-      // Track duplicates from ZIP
+      // Track duplicates from ZIP (warn but allow)
       const duplicateFiles: string[] = [];
 
       // Process each extracted file
       for (const processedFile of result.processedFiles) {
-        // Check for duplicate content
+        // Check for duplicate content - warn but allow upload
         const fingerprint = await getFileFingerprint(processedFile.file);
         const existingLocation = existingFingerprints.get(fingerprint);
         if (existingLocation) {
-          console.log(`[ZIP] Skipping duplicate: ${processedFile.fileName} (same content in ${existingLocation})`);
+          console.log(`[ZIP] Duplicate detected: ${processedFile.fileName} (same content in ${existingLocation}) - allowing upload`);
           duplicateFiles.push(processedFile.fileName);
-          continue;
+          // Continue processing instead of skipping
         }
         // Add to fingerprints to catch duplicates within the ZIP
         existingFingerprints.set(fingerprint, 'this ZIP');
@@ -1212,13 +1229,13 @@ export function CreativeAssetsManager({
         });
       }
       
-      // Show toast for skipped duplicates from ZIP
+      // Show toast warning for duplicate files from ZIP (but they were allowed)
       if (duplicateFiles.length > 0) {
         toast({
-          title: 'Duplicates skipped from ZIP',
+          title: 'Duplicate files detected',
           description: duplicateFiles.length === 1 
-            ? `"${duplicateFiles[0]}" is already uploaded`
-            : `${duplicateFiles.length} files already uploaded: ${duplicateFiles.slice(0, 3).join(', ')}${duplicateFiles.length > 3 ? '...' : ''}`,
+            ? `"${duplicateFiles[0]}" may already be uploaded`
+            : `${duplicateFiles.length} files may already be uploaded: ${duplicateFiles.slice(0, 3).join(', ')}${duplicateFiles.length > 3 ? '...' : ''}`,
           variant: 'default',
         });
       }
@@ -1285,26 +1302,38 @@ export function CreativeAssetsManager({
         }
       }
       
+      // Find the spec group to get placement info for appliesTo
+      const specGroup = groupedSpecs.find(s => s.specGroupId === replacingSpecGroupId) 
+        || customSpecGroups.get(replacingSpecGroupId);
+      
+      // Build appliesTo from the spec's placements
+      const appliesTo = specGroup?.placements?.map(p => ({
+        placementId: p.placementId,
+        publicationId: p.publicationId,
+        publicationName: p.publicationName
+      })) || [];
+      
       // Set the new file as pending for this spec group
       const newAssetsMap = new Map(uploadedAssets);
       newAssetsMap.set(replacingSpecGroupId, {
+        specGroupId: replacingSpecGroupId,
         file,
         previewUrl,
         uploadStatus: 'pending',
-        detectedSpecs
+        detectedSpecs,
+        appliesTo
       });
-      setUploadedAssets(newAssetsMap);
       
       // Clear replacement mode
       setReplacingSpecGroupId(null);
       
       toast({
-        title: 'Asset Replaced',
-        description: `"${file.name}" is ready to upload. Click "Upload All" to save.`
+        title: 'File Attached',
+        description: `"${file.name}" is ready to upload. Click "Save All to Server" to save.`
       });
       
-      // Call the callback if provided
-      onAssetsChange?.(newAssetsMap);
+      // Update the assets via callback
+      onAssetsChange(newAssetsMap);
       
       return; // Exit early - don't process as regular upload
     }
@@ -1373,19 +1402,19 @@ export function CreativeAssetsManager({
     
     console.log(`[Upload] Built fingerprint cache with ${existingFingerprints.size} existing files`);
     
-    // Track duplicates to show single toast
+    // Track duplicates to show warning toast (but allow upload)
     const duplicateFiles: string[] = [];
     
     for (const file of fileArray) {
       // Generate fingerprint for this file
       const fingerprint = await getFileFingerprint(file);
       
-      // Check for duplicate content
+      // Check for duplicate content - warn but allow upload
       const existingLocation = existingFingerprints.get(fingerprint);
       if (existingLocation) {
-        console.log(`[Upload] Skipping duplicate file: ${file.name} (same content already in ${existingLocation})`);
+        console.log(`[Upload] Duplicate detected: ${file.name} (same content already in ${existingLocation}) - allowing upload`);
         duplicateFiles.push(file.name);
-        continue;
+        // Continue processing instead of skipping
       }
       
       // Add this file's fingerprint to prevent duplicates within same batch
@@ -1432,42 +1461,33 @@ export function CreativeAssetsManager({
         let bestMatch = matches.length > 0 ? matches[0] : null;
         let matchConfidence = bestMatch ? bestMatch.matchScore : 0;
         
-        // Check if we have a recently split spec - prioritize auto-assigning to it
+        // Check if we have a recently split spec - show dialog to confirm assignment with URL
         // But only if it matches the current channel filter
         if (recentlySplitSpecId) {
-          const splitSpec = groupedSpecs.find(g => g.specGroupId === recentlySplitSpecId);
-          // Only auto-assign if on "all" tab OR the split spec's channel matches the active channel
+          // Look in both groupedSpecs AND customSpecGroups (in case React hasn't re-rendered yet)
+          let splitSpec = groupedSpecs.find(g => g.specGroupId === recentlySplitSpecId);
+          if (!splitSpec) {
+            splitSpec = customSpecGroups.get(recentlySplitSpecId);
+          }
+          
+          // Only handle if on "all" tab OR the split spec's channel matches the active channel
           if (splitSpec && (activeChannel === 'all' || splitSpec.channel === activeChannel)) {
-            console.log(`✅ Auto-assigning ${file.name} to recently split spec → ${recentlySplitSpecId}`);
+            console.log(`📋 Opening assignment dialog for split spec → ${recentlySplitSpecId}`);
             
-            // Add to uploadedAssets
-            const updatedAssets = new Map(uploadedAssets);
-            updatedAssets.set(splitSpec.specGroupId, {
-              specGroupId: splitSpec.specGroupId,
+            // Show the split asset assignment dialog instead of auto-assigning
+            setSplitAssetData({
               file,
               previewUrl,
-              uploadStatus: 'pending',
-              appliesTo: splitSpec.placements.map(p => ({
-                placementId: p.placementId,
-                publicationId: p.publicationId,
-                publicationName: p.publicationName
-              }))
+              specGroupId: splitSpec.specGroupId,
+              specGroup: splitSpec,
+              clickUrl: ''
             });
-            onAssetsChange(updatedAssets);
+            setSplitAssetDialogOpen(true);
             
-            // Clear the recently split spec ID
+            // Clear the recently split spec ID (dialog will handle the rest)
             setRecentlySplitSpecId(null);
             
-            // Remove from pending files since it's auto-assigned
-            setPendingFiles(prev => {
-              const next = new Map(prev);
-              next.delete(fileId);
-              return next;
-            });
-            
-            console.log(`   ✅ Successfully auto-assigned to split requirement!`);
-            
-            // Don't add to pending files
+            // Don't add to pending files - dialog will handle assignment
             continue;
           }
         }
@@ -1547,17 +1567,17 @@ export function CreativeAssetsManager({
       }
     }
     
-    // Show toast for skipped duplicate files
+    // Show toast warning for duplicate files (but they were allowed)
     if (duplicateFiles.length > 0) {
       toast({
-        title: 'Duplicate files skipped',
+        title: 'Duplicate file detected',
         description: duplicateFiles.length === 1 
-          ? `"${duplicateFiles[0]}" is already uploaded`
-          : `${duplicateFiles.length} files already uploaded: ${duplicateFiles.slice(0, 3).join(', ')}${duplicateFiles.length > 3 ? '...' : ''}`,
+          ? `"${duplicateFiles[0]}" may already be uploaded`
+          : `${duplicateFiles.length} files may already be uploaded: ${duplicateFiles.slice(0, 3).join(', ')}${duplicateFiles.length > 3 ? '...' : ''}`,
         variant: 'default',
       });
     }
-  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile, recentlySplitSpecId, pendingFiles, toast, replacingSpecGroupId]);
+  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile, recentlySplitSpecId, customSpecGroups, pendingFiles, toast, replacingSpecGroupId]);
 
   // Dropzone
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
@@ -1777,6 +1797,115 @@ export function CreativeAssetsManager({
     }
   };
 
+  // Upload a single pending asset to server
+  const handleUploadSingle = async (specGroupId: string) => {
+    const asset = uploadedAssets.get(specGroupId);
+    if (!asset || asset.uploadStatus !== 'pending' || !asset.file) return;
+    
+    // Get the spec group
+    const specGroup = groupedSpecs.find(g => g.specGroupId === specGroupId) 
+      || customSpecGroups.get(specGroupId);
+    
+    // Validate click URL for digital assets
+    const isDigitalChannel = specGroup && ['website', 'newsletter', 'streaming'].includes(specGroup.channel || '');
+    if (isDigitalChannel && !asset.clickUrl?.trim()) {
+      toast({
+        title: 'Click-Through URL Required',
+        description: 'Please add a click-through URL for this digital asset before saving.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Mark as uploading
+    const updatingMap = new Map(uploadedAssets);
+    updatingMap.set(specGroupId, { ...asset, uploadStatus: 'uploading' });
+    onAssetsChange(updatingMap);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', asset.file);
+      formData.append('campaignId', campaignId || '');
+      formData.append('specGroupId', specGroupId);
+      formData.append('metadata', JSON.stringify({
+        fileName: asset.file.name,
+        detectedDimensions: asset.detectedSpecs?.dimensions?.formatted,
+        detectedColorSpace: asset.detectedSpecs?.colorSpace,
+        fileExtension: asset.detectedSpecs?.fileExtension,
+        fileSize: asset.detectedSpecs?.fileSize,
+      }));
+      
+      // Send placement links
+      if (specGroup?.placements && specGroup.placements.length > 0) {
+        const placements = specGroup.placements.map(p => ({
+          publicationId: p.publicationId,
+          placementId: p.placementId,
+          placementName: p.placementName,
+          channel: specGroup.channel
+        }));
+        formData.append('placements', JSON.stringify(placements));
+      }
+      
+      // Include digital ad properties
+      if (asset.clickUrl || asset.altText || asset.headline || asset.body || asset.ctaText) {
+        formData.append('digitalAdProperties', JSON.stringify({
+          clickUrl: asset.clickUrl,
+          altText: asset.altText,
+          headline: asset.headline,
+          body: asset.body,
+          ctaText: asset.ctaText,
+        }));
+      }
+
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/creative-assets/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const result = await response.json();
+
+      // Update asset status
+      const finalMap = new Map(uploadedAssets);
+      finalMap.set(specGroupId, {
+        ...asset,
+        uploadStatus: 'uploaded',
+        assetId: result.assetId,
+        uploadedUrl: result.fileUrl,
+        previewUrl: result.fileUrl,
+      });
+      onAssetsChange(finalMap);
+      
+      toast({
+        title: 'Asset Saved',
+        description: `"${asset.file.name}" uploaded successfully.`,
+      });
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      
+      // Mark as error
+      const errorMap = new Map(uploadedAssets);
+      errorMap.set(specGroupId, {
+        ...asset,
+        uploadStatus: 'error',
+        errorMessage: 'Upload failed',
+      });
+      onAssetsChange(errorMap);
+      
+      toast({
+        title: 'Upload Failed',
+        description: 'Failed to save asset. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Delete asset
   const handleDeleteAssetClick = (assetId: string, specGroupId: string, fileName: string) => {
     setAssetToDelete({ assetId, specGroupId, fileName });
@@ -1934,6 +2063,121 @@ export function CreativeAssetsManager({
     setTimeout(() => {
       openFileDialog();
     }, 500);
+  };
+  
+  // Handle confirming split asset assignment (from the dialog) - uploads immediately
+  const [splitAssetUploading, setSplitAssetUploading] = useState(false);
+  
+  const handleConfirmSplitAsset = async () => {
+    if (!splitAssetData) return;
+    
+    const { file, previewUrl, specGroupId, specGroup, clickUrl } = splitAssetData;
+    
+    setSplitAssetUploading(true);
+    
+    try {
+      // Build form data for upload
+      const formData = new FormData();
+      formData.append('file', file);
+      if (campaignId) {
+        formData.append('campaignId', campaignId);
+      }
+      formData.append('assetType', 'placement');
+      formData.append('specGroupId', specGroupId);
+      
+      // Include specifications
+      const specifications = {
+        channel: specGroup.channel,
+        dimensions: specGroup.dimensions,
+        fileFormats: specGroup.fileFormats,
+        maxFileSize: specGroup.maxFileSize,
+        colorSpace: specGroup.colorSpace,
+        resolution: specGroup.resolution,
+        additionalRequirements: specGroup.additionalRequirements,
+        placementCount: specGroup.placementCount,
+        publicationCount: specGroup.publicationCount,
+        publications: specGroup.placements.map(p => p.publicationName).filter((v, i, a) => a.indexOf(v) === i),
+        placements: specGroup.placements,
+        isPublicationSpecific: true, // Mark as publication-specific
+      };
+      formData.append('specifications', JSON.stringify(specifications));
+      
+      // Include placement links for publication order lookup
+      const placements = specGroup.placements.map(p => ({
+        publicationId: p.publicationId,
+        placementId: p.placementId,
+        placementName: p.placementName,
+        channel: specGroup.channel
+      }));
+      formData.append('placements', JSON.stringify(placements));
+      
+      // Include digital ad properties if available
+      if (clickUrl) {
+        formData.append('digitalAdProperties', JSON.stringify({
+          clickUrl: clickUrl,
+        }));
+      }
+      
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/creative-assets/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) throw new Error('Upload failed');
+      
+      const result = await response.json();
+      
+      // Update uploadedAssets with the uploaded asset
+      const updatedAssets = new Map(uploadedAssets);
+      updatedAssets.set(specGroupId, {
+        specGroupId,
+        file,
+        previewUrl: result.fileUrl || previewUrl,
+        uploadStatus: 'uploaded',
+        assetId: result.assetId,
+        uploadedUrl: result.fileUrl,
+        clickUrl: clickUrl || undefined,
+        appliesTo: specGroup.placements.map(p => ({
+          placementId: p.placementId,
+          publicationId: p.publicationId,
+          publicationName: p.publicationName
+        }))
+      });
+      onAssetsChange(updatedAssets);
+      
+      // Close dialog and clear state
+      setSplitAssetDialogOpen(false);
+      setSplitAssetData(null);
+      
+      toast({
+        title: 'Asset Uploaded',
+        description: `"${file.name}" uploaded and assigned to ${specGroup.placements[0]?.publicationName || 'publication'}.`,
+      });
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Upload Failed',
+        description: 'Failed to upload asset. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSplitAssetUploading(false);
+    }
+  };
+  
+  // Handle canceling split asset assignment
+  const handleCancelSplitAsset = () => {
+    // Revoke preview URL if exists
+    if (splitAssetData?.previewUrl) {
+      URL.revokeObjectURL(splitAssetData.previewUrl);
+    }
+    setSplitAssetDialogOpen(false);
+    setSplitAssetData(null);
   };
   
   // Handle merge request
@@ -2393,9 +2637,12 @@ export function CreativeAssetsManager({
                                 
                                 return sortedChannels.map(channel => {
                                   // Sort specs within each channel
-                                  // For print: sort by width then height
-                                  // For others: sort by dimension string or placement count
+                                  // Publication-specific items first, then by dimensions/placement count
                                   const sortedSpecs = [...byChannel[channel]].sort((a, b) => {
+                                    // Publication-specific (duplicated/excluded) items always sort to top
+                                    if (a.isPublicationSpecific && !b.isPublicationSpecific) return -1;
+                                    if (!a.isPublicationSpecific && b.isPublicationSpecific) return 1;
+                                    
                                     if (channel === 'print') {
                                       // Extract numbers from dimension strings for print
                                       const extractNums = (dims: string | string[] | undefined): { w: number; h: number } => {
@@ -2444,8 +2691,8 @@ export function CreativeAssetsManager({
                             </SelectContent>
                           </Select>
                           
-                          {/* Click URL input for digital channels */}
-                          {['website', 'newsletter', 'streaming'].includes(activeChannel) && (
+                          {/* Click URL input for digital channels (also show when viewing 'all' channels) */}
+                          {(activeChannel === 'all' || ['website', 'newsletter', 'streaming'].includes(activeChannel)) && (
                             <div className="flex items-center gap-2">
                               {fileData.clickUrl ? (
                                 <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
@@ -2454,7 +2701,7 @@ export function CreativeAssetsManager({
                               )}
                               <Input
                                 type="url"
-                                placeholder="Click-through URL (required)"
+                                placeholder="Click-through URL (required for digital)"
                                 className={`h-7 text-xs ${fileData.clickUrl ? 'border-green-300 bg-green-50/50' : ''}`}
                                 value={fileData.clickUrl || ''}
                                 onChange={(e) => {
@@ -2565,26 +2812,8 @@ export function CreativeAssetsManager({
           </Card>
         </div>
 
-        {/* ==================== VIEW TOGGLE + TABLE ==================== */}
-        <Tabs value={activeView} onValueChange={(v) => setActiveView(v as 'checklist' | 'uploaded')}>
-          <TabsList>
-            <TabsTrigger value="checklist" className="gap-2">
-              <FolderOpen className="h-4 w-4" />
-              Checklist
-            </TabsTrigger>
-            <TabsTrigger value="uploaded" className="gap-2">
-              <CheckCircle2 className="h-4 w-4" />
-              Uploaded Assets
-              {metrics.uploaded > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  {metrics.uploaded}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          {/* CHECKLIST VIEW */}
-          <TabsContent value="checklist" className="mt-0 p-0">
+        {/* ==================== CHECKLIST TABLE ==================== */}
+        <div>
             <div className="w-full border-t">
               <Table className="w-full">
                 <TableHeader>
@@ -2977,26 +3206,36 @@ export function CreativeAssetsManager({
                                                 <Link className="h-3 w-3" />
                                                 Click-Through URL
                                               </Label>
-                                              <div className="flex items-center gap-1">
-                                                <Input
-                                                  type="url"
-                                                  placeholder="https://advertiser.com/landing"
-                                                  className="h-7 text-xs flex-1"
-                                                  value={asset.clickUrl || ''}
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  onChange={(e) => {
-                                                    const newAssetsMap = new Map(uploadedAssets);
-                                                    const existingAsset = newAssetsMap.get(spec.specGroupId);
-                                                    if (existingAsset) {
-                                                      newAssetsMap.set(spec.specGroupId, {
-                                                        ...existingAsset,
-                                                        clickUrl: e.target.value
-                                                      });
-                                                      onAssetsChange(newAssetsMap);
-                                                    }
-                                                  }}
-                                                />
-                                                {asset.clickUrl && (
+                                              {/* Editable for pending assets, read-only for uploaded */}
+                                              {asset.uploadStatus === 'pending' ? (
+                                                <div className="flex items-center gap-1">
+                                                  <Input
+                                                    type="url"
+                                                    placeholder="https://advertiser.com/landing"
+                                                    className="h-7 text-xs flex-1"
+                                                    value={asset.clickUrl || ''}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onChange={(e) => {
+                                                      const newAssetsMap = new Map(uploadedAssets);
+                                                      const existingAsset = newAssetsMap.get(spec.specGroupId);
+                                                      if (existingAsset) {
+                                                        newAssetsMap.set(spec.specGroupId, {
+                                                          ...existingAsset,
+                                                          clickUrl: e.target.value
+                                                        });
+                                                        onAssetsChange(newAssetsMap);
+                                                      }
+                                                    }}
+                                                  />
+                                                </div>
+                                              ) : asset.clickUrl ? (
+                                                <div className="flex items-center gap-1">
+                                                  <span 
+                                                    className="text-xs text-foreground truncate flex-1 py-1" 
+                                                    title={asset.clickUrl}
+                                                  >
+                                                    {asset.clickUrl}
+                                                  </span>
                                                   <Button
                                                     size="sm"
                                                     variant="ghost"
@@ -3008,11 +3247,10 @@ export function CreativeAssetsManager({
                                                   >
                                                     <ExternalLink className="h-3 w-3" />
                                                   </Button>
-                                                )}
-                                              </div>
-                                              {!asset.clickUrl && (
+                                                </div>
+                                              ) : (
                                                 <p className="text-xs text-amber-600">
-                                                  ⚠️ Required for tracking scripts
+                                                  ⚠️ No URL set - required for tracking
                                                 </p>
                                               )}
                                             </div>
@@ -3020,6 +3258,36 @@ export function CreativeAssetsManager({
                                           
                                           {/* Actions */}
                                           <div className="pt-1 flex flex-wrap gap-1">
+                                            {/* Save Button - for pending assets (or uploading) */}
+                                            {(asset.uploadStatus === 'pending' || (asset.uploadStatus as string) === 'uploading') && (
+                                              <Button
+                                                size="sm"
+                                                variant="default"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleUploadSingle(spec.specGroupId);
+                                                }}
+                                                className="h-7 px-3 text-xs"
+                                                disabled={
+                                                  (asset.uploadStatus as string) === 'uploading' ||
+                                                  (['website', 'newsletter', 'streaming'].includes(spec.channel || '') && 
+                                                  !asset.clickUrl?.trim())
+                                                }
+                                              >
+                                                {(asset.uploadStatus as string) === 'uploading' ? (
+                                                  <>
+                                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                                    Saving...
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <Upload className="h-3 w-3 mr-1" />
+                                                    Save
+                                                  </>
+                                                )}
+                                              </Button>
+                                            )}
+                                            
                                             {/* Preview Button - works for images, PDFs, and opens in new tab for all types */}
                                             {(asset.previewUrl || asset.uploadedUrl) && (
                                               <Button
@@ -3068,33 +3336,35 @@ export function CreativeAssetsManager({
                                               </Button>
                                             )}
                                             
-                                            {/* Remove Button */}
-                                            {asset.uploadStatus === 'uploaded' && asset.assetId ? (
-                                              <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleDeleteAssetClick(asset.assetId!, spec.specGroupId, asset.file?.name || asset.fileName || 'asset');
-                                                }}
-                                                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                                              >
-                                                <Trash2 className="h-3 w-3 mr-1" />
-                                                Remove
-                                              </Button>
-                                            ) : (
-                                              <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleRemoveAsset(spec.specGroupId);
-                                                }}
-                                                className="h-7 px-2 text-xs"
-                                              >
-                                                <X className="h-3 w-3 mr-1" />
-                                                Remove
-                                              </Button>
+                                            {/* Remove Button - hidden when insertion orders exist */}
+                                            {!hasOrders && (
+                                              asset.uploadStatus === 'uploaded' && asset.assetId ? (
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteAssetClick(asset.assetId!, spec.specGroupId, asset.file?.name || asset.fileName || 'asset');
+                                                  }}
+                                                  className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                                >
+                                                  <Trash2 className="h-3 w-3 mr-1" />
+                                                  Remove
+                                                </Button>
+                                              ) : (
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRemoveAsset(spec.specGroupId);
+                                                  }}
+                                                  className="h-7 px-2 text-xs"
+                                                >
+                                                  <X className="h-3 w-3 mr-1" />
+                                                  Remove
+                                                </Button>
+                                              )
                                             )}
                                           </div>
                                         </div>
@@ -3111,6 +3381,8 @@ export function CreativeAssetsManager({
                                         <Button
                                           onClick={(e) => {
                                             e.stopPropagation();
+                                            // Set replacement mode so the file gets assigned to this specific spec group
+                                            setReplacingSpecGroupId(spec.specGroupId);
                                             openFileDialog();
                                           }}
                                           className="mt-2"
@@ -3243,226 +3515,7 @@ export function CreativeAssetsManager({
               </TableBody>
               </Table>
             </div>
-          </TabsContent>
-
-          {/* UPLOADED ASSETS VIEW */}
-          <TabsContent value="uploaded" className="mt-0 p-0">
-            <div className="w-full border-t">
-              <Table className="w-full">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[80px]">Preview</TableHead>
-                  <TableHead className="w-[25%]">File Name</TableHead>
-                  <TableHead className="w-[15%]">Dimensions</TableHead>
-                  <TableHead className="w-[30%]">Assigned To</TableHead>
-                  <TableHead className="w-[15%]">Coverage</TableHead>
-                  <TableHead className="w-[10%] text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {uploadedAssetsList.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No assets uploaded yet
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  uploadedAssetsList.map(({ specGroupId, asset, spec }) => (
-                    <TableRow key={specGroupId}>
-                      <TableCell>
-                        {(() => {
-                          // Determine file type for appropriate icon/preview
-                          const fileType = asset.file?.type || asset.detectedSpecs?.fileType || '';
-                          const fileName = asset.file?.name || asset.fileName || '';
-                          const fileExt = fileName.toLowerCase().split('.').pop() || '';
-                          
-                          // Text files
-                          if (asset.detectedSpecs?.isTextAsset || fileType.startsWith('text/')) {
-                            return (
-                              <div className="w-12 h-12 rounded border bg-amber-50 flex flex-col items-center justify-center">
-                                <FileText className="h-5 w-5 text-amber-600" />
-                                <span className="text-[8px] text-amber-700 font-medium mt-0.5">
-                                  {asset.detectedSpecs?.fileExtension || fileExt.toUpperCase()}
-                                </span>
-                              </div>
-                            );
-                          }
-                          
-                          // Audio files
-                          if (asset.detectedSpecs?.isAudioAsset || fileType.startsWith('audio/') || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(fileExt)) {
-                            return (
-                              <div className="w-12 h-12 rounded border bg-purple-50 flex flex-col items-center justify-center">
-                                <FileText className="h-5 w-5 text-purple-600" />
-                                <span className="text-[8px] text-purple-700 font-medium mt-0.5">
-                                  {asset.detectedSpecs?.audioFormat || fileExt.toUpperCase()}
-                                </span>
-                              </div>
-                            );
-                          }
-                          
-                          // Video files
-                          if (asset.detectedSpecs?.isVideoAsset || fileType.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(fileExt)) {
-                            return (
-                              <div className="w-12 h-12 rounded border bg-blue-50 flex flex-col items-center justify-center">
-                                <FileText className="h-5 w-5 text-blue-600" />
-                                <span className="text-[8px] text-blue-700 font-medium mt-0.5">
-                                  {asset.detectedSpecs?.videoFormat || fileExt.toUpperCase()}
-                                </span>
-                              </div>
-                            );
-                          }
-                          
-                          // PDF files
-                          if (fileType === 'application/pdf' || fileExt === 'pdf') {
-                            return (
-                              <div className="w-12 h-12 rounded border bg-red-50 flex flex-col items-center justify-center">
-                                <FileText className="h-5 w-5 text-red-600" />
-                                <span className="text-[8px] text-red-700 font-medium mt-0.5">
-                                  PDF
-                                </span>
-                              </div>
-                            );
-                          }
-                          
-                          // Images - show actual preview
-                          if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExt)) {
-                            if (asset.previewUrl) {
-                              return (
-                                <button
-                                  type="button"
-                                  onClick={() => setPreviewAsset({ 
-                                    url: asset.previewUrl!, 
-                                    fileName: asset.file?.name || asset.fileName || 'Asset' 
-                                  })}
-                                  className="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
-                                >
-                                  <img 
-                                    src={asset.previewUrl} 
-                                    alt={asset.fileName || 'Asset preview'}
-                                    className="w-12 h-12 object-contain rounded border bg-muted"
-                                    onError={(e) => {
-                                      // If image fails to load, show icon instead
-                                      const target = e.target as HTMLImageElement;
-                                      target.style.display = 'none';
-                                      const parent = target.parentElement;
-                                      if (parent) {
-                                        parent.innerHTML = `<div class="w-12 h-12 rounded border bg-muted flex items-center justify-center"><svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>`;
-                                      }
-                                    }}
-                                  />
-                                </button>
-                              );
-                            }
-                          }
-                          
-                          // Default fallback - generic file icon
-                          return (
-                            <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center">
-                              <FileImage className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                          );
-                        })()}
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium text-sm">
-                          {asset.file?.name || asset.fileName}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {asset.detectedSpecs?.isTextAsset ? (
-                          // Show word count for text files
-                          <span className="text-amber-700">
-                            {asset.detectedSpecs.wordCount || '—'} words
-                          </span>
-                        ) : (
-                          asset.detectedSpecs?.dimensions?.formatted || '—'
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {spec ? (
-                          <span>
-                            {getSpecDisplayName(spec)}
-                          </span>
-                        ) : (
-                          <Badge variant="outline">Unassigned</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {spec ? (
-                          <span>{spec.placementCount} placements</span>
-                        ) : (
-                          '—'
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {/* Preview option */}
-                            {(asset.uploadedUrl || asset.previewUrl) && (
-                              <DropdownMenuItem 
-                                onClick={() => {
-                                  const url = asset.uploadedUrl || asset.previewUrl;
-                                  if (url) {
-                                    window.open(url, '_blank');
-                                  }
-                                }}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Preview file
-                              </DropdownMenuItem>
-                            )}
-                            
-                            {/* Download option */}
-                            {(asset.uploadedUrl || asset.previewUrl) && (
-                              <DropdownMenuItem 
-                                onClick={() => {
-                                  const url = asset.uploadedUrl || asset.previewUrl;
-                                  const fileName = asset.file?.name || asset.fileName || 'download';
-                                  if (url) {
-                                    const link = document.createElement('a');
-                                    link.href = url;
-                                    link.download = fileName;
-                                    link.target = '_blank';
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    document.body.removeChild(link);
-                                  }
-                                }}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Download file
-                              </DropdownMenuItem>
-                            )}
-                            
-                            <DropdownMenuItem 
-                              onClick={() => handleReplaceAssetClick(specGroupId)}
-                            >
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Replace asset
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => handleDeleteAssetClick(asset.assetId!, specGroupId, asset.file?.name || asset.fileName || 'asset')}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete asset
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -3517,6 +3570,95 @@ export function CreativeAssetsManager({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Split Asset Assignment Dialog - shows after file selection for split specs */}
+      <Dialog open={splitAssetDialogOpen} onOpenChange={(open) => {
+        if (!open) handleCancelSplitAsset();
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Asset to Publication</DialogTitle>
+            <DialogDescription>
+              {splitAssetData && (
+                <>
+                  Assign this asset to <strong>{splitAssetData.specGroup.placements[0]?.publicationName}</strong>'s 
+                  {' '}{formatDimensions(splitAssetData.specGroup.dimensions, splitAssetData.specGroup.channel, splitAssetData.specGroup.fileFormats)} requirement.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {splitAssetData && (
+            <div className="space-y-4">
+              {/* File Preview */}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+                {splitAssetData.previewUrl ? (
+                  <img 
+                    src={splitAssetData.previewUrl} 
+                    alt="Preview"
+                    className="w-16 h-16 object-cover rounded border"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
+                    <FileText className="h-8 w-8 text-gray-400" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{splitAssetData.file.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(splitAssetData.file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              </div>
+              
+              {/* Click-Through URL - show for digital channels */}
+              {['website', 'newsletter', 'streaming'].includes(splitAssetData.specGroup.channel || '') && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <Link className="h-4 w-4" />
+                    Click-Through URL
+                    <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    type="url"
+                    placeholder="https://advertiser.com/landing-page"
+                    value={splitAssetData.clickUrl}
+                    onChange={(e) => setSplitAssetData(prev => prev ? { ...prev, clickUrl: e.target.value } : null)}
+                    className={splitAssetData.clickUrl ? 'border-green-300' : ''}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Required for tracking scripts to work properly.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelSplitAsset} disabled={splitAssetUploading}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmSplitAsset}
+              disabled={
+                splitAssetUploading ||
+                (splitAssetData && 
+                ['website', 'newsletter', 'streaming'].includes(splitAssetData.specGroup.channel || '') && 
+                !splitAssetData.clickUrl?.trim())
+              }
+            >
+              {splitAssetUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                'Save & Assign'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Merge Selection Modal */}
       <Dialog open={mergeSelectionOpen} onOpenChange={setMergeSelectionOpen}>
