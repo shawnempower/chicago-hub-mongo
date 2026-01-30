@@ -719,6 +719,84 @@ export function PublicationOrderDetail() {
   };
 
   /**
+   * Accept all pending placements within a specific channel/inventory type.
+   * This allows publishers to quickly accept all placements at once instead of one by one.
+   */
+  const handleAcceptAllInChannel = async (channelItems: any[]) => {
+    // Get all pending placements in this channel
+    const pendingItems = channelItems.filter(item => {
+      const itemPath = item.itemPath || item.sourcePath || `placement-${item._idx}`;
+      const status = placementStatuses[itemPath] || 'pending';
+      return status === 'pending';
+    });
+
+    if (pendingItems.length === 0) {
+      toast({ title: 'No pending placements', description: 'All placements in this channel have already been processed.' });
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      const token = localStorage.getItem('auth_token');
+      let orderConfirmed = false;
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Process all pending placements
+      for (const item of pendingItems) {
+        const itemPath = item.itemPath || item.sourcePath || `placement-${item._idx}`;
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/placement-status`,
+            {
+              method: 'PUT',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ placementId: itemPath, status: 'accepted', autoConfirmIfAllAccepted: true })
+            }
+          );
+          
+          if (response.ok) {
+            const result = await response.json();
+            setPlacementStatuses(prev => ({ ...prev, [itemPath]: 'accepted' }));
+            successCount++;
+            if (result.orderConfirmed) {
+              orderConfirmed = true;
+            }
+          } else {
+            errorCount++;
+          }
+        } catch {
+          errorCount++;
+        }
+      }
+
+      // Show appropriate feedback
+      if (orderConfirmed) {
+        toast({ 
+          title: 'Order Confirmed!', 
+          description: `All ${successCount} placements accepted. You can now access scripts and report performance.` 
+        });
+        setOrder(prev => prev ? { ...prev, status: 'confirmed' } : prev);
+      } else if (errorCount === 0) {
+        toast({ 
+          title: 'All placements accepted', 
+          description: `Successfully accepted ${successCount} placement${successCount !== 1 ? 's' : ''}.` 
+        });
+      } else {
+        toast({ 
+          title: 'Partially completed', 
+          description: `Accepted ${successCount} placement${successCount !== 1 ? 's' : ''}, ${errorCount} failed.`,
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to accept placements', variant: 'destructive' });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  /**
    * Handle "Complete" button for non-digital (self-reported) placements.
    * Shows a prompt to report proof of performance before completing,
    * unless performance data already exists for this placement.
@@ -1538,6 +1616,12 @@ export function PublicationOrderDetail() {
               const config = getChannelConfig(channel);
               const isDigital = config.isDigital;
               const colors = channelColors[channel] || channelColors.other;
+              
+              // Count pending placements in this channel
+              const pendingCount = items.filter((item: any) => {
+                const itemPath = item.itemPath || item.sourcePath || `placement-${item._idx}`;
+                return (placementStatuses[itemPath] || 'pending') === 'pending';
+              }).length;
 
               return (
                 <Card key={channel} className={cn("border-l-4 shadow-none overflow-hidden", colors.border)}>
@@ -1555,7 +1639,25 @@ export function PublicationOrderDetail() {
                         </div>
                         {config.label}
                       </CardTitle>
-                      <Badge className={cn("font-medium", colors.badge)}>{items.length} placement{items.length !== 1 ? 's' : ''}</Badge>
+                      <div className="flex items-center gap-2">
+                        {/* Accept All button - only show when there are pending placements */}
+                        {pendingCount > 0 && (
+                          <Button
+                            onClick={() => handleAcceptAllInChannel(items)}
+                            disabled={updating}
+                            size="sm"
+                            className="h-7 text-xs bg-green-600 hover:bg-green-700"
+                          >
+                            {updating ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3 mr-1" />
+                            )}
+                            Accept All ({pendingCount})
+                          </Button>
+                        )}
+                        <Badge className={cn("font-medium", colors.badge)}>{items.length} placement{items.length !== 1 ? 's' : ''}</Badge>
+                      </div>
                     </div>
                     
                     {/* Implementation Instructions */}
