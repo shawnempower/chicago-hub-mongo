@@ -163,7 +163,8 @@ function extractFromInventoryItem(
     itemPath,
   };
 
-  // Extract dimensions from multiple possible locations
+  // Extract dimensions from canonical locations
+  // Note: top-level item.dimensions is deprecated - use format.dimensions
   if (item.format?.dimensions) {
     requirement.dimensions = item.format.dimensions;
   } else if (item.specifications?.dimensions) {
@@ -171,8 +172,6 @@ function extractFromInventoryItem(
     requirement.dimensions = item.specifications.dimensions;
   } else if (item.sizes && Array.isArray(item.sizes)) {
     requirement.dimensions = item.sizes;
-  } else if (item.dimensions) {
-    requirement.dimensions = item.dimensions;
   } else {
     // Try to infer dimensions from item name
     const inferredDimensions = inferDimensionsFromName(itemName || '', channel);

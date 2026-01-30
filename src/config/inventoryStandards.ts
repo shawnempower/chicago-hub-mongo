@@ -1647,7 +1647,6 @@ export function isTextOnlyPlacement(dimensions?: string | string[]): boolean {
  */
 export function findPrintStandardByFormat(adFormat: string): InventoryTypeStandard | null {
   const formatMap: Record<string, string> = {
-    'full page': 'FULL_PAGE',
     'tall full page': 'FULL_PAGE',
     'tall portrait full page': 'FULL_PAGE',
     'upper portrait full page': 'FULL_PAGE',

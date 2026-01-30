@@ -186,15 +186,14 @@ export function getDefaultDimensionForFormat(adFormat?: string): string {
   const format = adFormat.toLowerCase();
   
   const defaults: Record<string, string> = {
-    'full page': '10" x 13"',
     'tall full page': '10" x 15.5"',
     'tall portrait full page': '10.5" x 13.5"',
     'upper portrait full page': '10" x 12.75"',
     'square full page': '10" x 10"',
     'narrow full page': '8.5" x 10.85"',
-    'half page horizontal': '10" x 6.5"',
-    'half page vertical': '5" x 13"',
-    'quarter page': '5" x 6.5"',
+    'half page horizontal': '10" x 5"',
+    'half page vertical': '5" x 10"',
+    'quarter page': '5" x 5"',
     'eighth page': '5" x 3.25"',
     'business card': '3.5" x 2"',
     'classified': '2" x 2"',

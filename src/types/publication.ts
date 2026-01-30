@@ -273,8 +273,7 @@ export interface PublicationFrontend {
       printSchedule?: string;
       advertisingOpportunities?: Array<{
         name?: string;
-        adFormat?: 'full page' | 'tall full page' | 'tall portrait full page' | 'upper portrait full page' | 'square full page' | 'narrow full page' | 'half page horizontal' | 'half page vertical' | 'quarter page' | 'eighth page' | 'business card' | 'classified' | 'insert';
-        dimensions?: string;
+        adFormat?: 'tall full page' | 'tall portrait full page' | 'upper portrait full page' | 'square full page' | 'narrow full page' | 'half page horizontal' | 'half page vertical' | 'quarter page' | 'eighth page' | 'business card' | 'classified' | 'insert';
         color?: 'color' | 'black and white' | 'both';
         location?: string;
         pricing?: {
@@ -286,6 +285,12 @@ export interface PublicationFrontend {
           twentySixTimes?: number;
           fiftyTwoTimes?: number;
           openRate?: number;
+        };
+        format?: {
+          dimensions?: string;
+          fileFormats?: string[];
+          resolution?: string;
+          colorSpace?: string;
         };
         specifications?: {
           format?: string;

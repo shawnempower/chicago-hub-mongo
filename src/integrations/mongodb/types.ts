@@ -11,7 +11,7 @@ export type PricingModel = "cpm" | "flat" | "cpc" | "cpa" | "contact";
 export type NewsletterFrequency = "daily" | "weekly" | "bi-weekly" | "monthly" | "irregular";
 export type NewsletterPosition = "header" | "footer" | "inline" | "dedicated";
 export type PrintFrequency = "daily" | "weekly" | "bi-weekly" | "monthly" | "quarterly";
-export type PrintAdFormat = "full page" | "tall full page" | "tall portrait full page" | "upper portrait full page" | "square full page" | "narrow full page" | "half page horizontal" | "half page vertical" | "quarter page" | "eighth page" | "business card" | "classified" | "insert";
+export type PrintAdFormat = "tall full page" | "tall portrait full page" | "upper portrait full page" | "square full page" | "narrow full page" | "half page horizontal" | "half page vertical" | "quarter page" | "eighth page" | "business card" | "classified" | "insert";
 export type ColorOption = "color" | "black and white" | "both";
 export type SponsorshipLevel = "title" | "presenting" | "supporting" | "vendor" | "booth";
 export type OwnershipType = "independent" | "chain" | "nonprofit" | "public" | "private" | "family-owned";
@@ -146,7 +146,6 @@ export interface PrintChannel {
   advertisingOpportunities?: {
     name?: string;
     adFormat?: PrintAdFormat;
-    dimensions?: string;
     color?: ColorOption;
     location?: string;
     pricing?: {
@@ -154,6 +153,12 @@ export interface PrintChannel {
       fourTimes?: number;
       twelveTimes?: number;
       openRate?: number;
+    };
+    format?: {
+      dimensions?: string;
+      fileFormats?: string[];
+      resolution?: string;
+      colorSpace?: string;
     };
     specifications?: {
       format?: string;

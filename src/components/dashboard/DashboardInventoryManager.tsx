@@ -53,6 +53,22 @@ import { useWebAnalytics } from '@/hooks/useWebAnalytics';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
+// Standard print format defaults - maps adFormat to default dimensions
+const PRINT_FORMAT_DEFAULTS: Record<string, string> = {
+  'tall full page': '10" x 15.5"',
+  'tall portrait full page': '10.5" x 13.5"',
+  'upper portrait full page': '10" x 12.75"',
+  'square full page': '10" x 10"',
+  'narrow full page': '8.5" x 10.85"',
+  'half page horizontal': '10" x 5"',
+  'half page vertical': '5" x 10"',
+  'quarter page': '5" x 5"',
+  'eighth page': '5" x 3.25"',
+  'business card': '3.5" x 2"',
+  'classified': '2" x 2"',
+  'insert': 'Variable',
+};
+
 // Helper function to validate inventory item data
 const validateInventoryItem = (item: any, type: string): boolean => {
   if (!item) return false;
@@ -1486,8 +1502,7 @@ export const DashboardInventoryManager = () => {
     // Create template for new opportunity
     const newOpportunity = {
       name: '',
-      adFormat: 'full page' as const,
-      dimensions: '',
+      adFormat: 'tall full page' as const,
       color: 'color' as const,
       location: '',
       pricing: {
@@ -1495,6 +1510,7 @@ export const DashboardInventoryManager = () => {
         pricingModel: 'flat' as const
       },
       format: {
+        dimensions: PRINT_FORMAT_DEFAULTS['tall full page'], // Auto-populate from default
         fileFormats: ['PDF'],
         resolution: '300dpi',
         colorSpace: 'CMYK'
@@ -5383,22 +5399,32 @@ export const DashboardInventoryManager = () => {
                     <div>
                       <Label htmlFor="adFormat">Ad Format</Label>
                       <Select
-                        value={editingItem.adFormat || 'full page'}
-                        onValueChange={(value) => setEditingItem({ ...editingItem, adFormat: value })}
+                        value={editingItem.adFormat || 'tall full page'}
+                        onValueChange={(value) => {
+                          // Auto-populate dimensions when adFormat changes
+                          const defaultDimensions = PRINT_FORMAT_DEFAULTS[value] || '';
+                          setEditingItem({ 
+                            ...editingItem, 
+                            adFormat: value,
+                            format: {
+                              ...editingItem.format,
+                              dimensions: defaultDimensions
+                            }
+                          });
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select format" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="full page">Full Page (10" x 13")</SelectItem>
                           <SelectItem value="tall full page">Tall Full Page (10" x 15.5")</SelectItem>
                           <SelectItem value="tall portrait full page">Tall Portrait Full Page (10.5" x 13.5")</SelectItem>
                           <SelectItem value="upper portrait full page">Upper Portrait Full Page (10" x 12.75")</SelectItem>
                           <SelectItem value="square full page">Square/Short Full Page (10" x 10")</SelectItem>
                           <SelectItem value="narrow full page">Narrow Full Page (8.5" x 10.85")</SelectItem>
-                          <SelectItem value="half page horizontal">Half Page Horizontal (10" x 6.5")</SelectItem>
-                          <SelectItem value="half page vertical">Half Page Vertical (5" x 13")</SelectItem>
-                          <SelectItem value="quarter page">Quarter Page (5" x 6.5")</SelectItem>
+                          <SelectItem value="half page horizontal">Half Page Horizontal (10" x 5")</SelectItem>
+                          <SelectItem value="half page vertical">Half Page Vertical (5" x 10")</SelectItem>
+                          <SelectItem value="quarter page">Quarter Page (5" x 5")</SelectItem>
                           <SelectItem value="eighth page">Eighth Page (5" x 3.25")</SelectItem>
                           <SelectItem value="business card">Business Card (3.5" x 2")</SelectItem>
                           <SelectItem value="classified">Classified</SelectItem>
@@ -5412,66 +5438,43 @@ export const DashboardInventoryManager = () => {
                     <div>
                       <Label htmlFor="dimensions">
                         Dimensions *
-                        {editingItem.dimensions && (() => {
+                        {editingItem.format?.dimensions && (() => {
                           // Validate dimension format
-                          const isValid = /^\d+(?:\.\d+)?["']?\s*[x×]\s*\d+(?:\.\d+)?["']?/.test(editingItem.dimensions);
+                          const isValid = /^\d+(?:\.\d+)?["']?\s*[x×]\s*\d+(?:\.\d+)?["']?/.test(editingItem.format.dimensions);
                           return isValid ? (
                             <span className="ml-2 text-xs text-green-600">✓ Valid</span>
                           ) : (
-                            <span className="ml-2 text-xs text-amber-600">⚠️ Check format</span>
+                            <span className="ml-2 text-xs text-amber-600">Check format</span>
                           );
                         })()}
                       </Label>
                       <div className="space-y-2">
-                        <Select
-                          value={editingItem.dimensions || 'custom'}
-                          onValueChange={(value) => {
-                            if (value !== 'custom') {
-                              setEditingItem({ ...editingItem, dimensions: value });
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select standard size or custom" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="custom">Custom size (enter below)</SelectItem>
-                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                              Full Page
-                            </div>
-                            <SelectItem value='8.5" x 11"'>Letter - 8.5" x 11"</SelectItem>
-                            <SelectItem value='10" x 12.625"'>Tabloid - 10" x 12.625"</SelectItem>
-                            <SelectItem value='10.5" x 13.5"'>Broadsheet - 10.5" x 13.5"</SelectItem>
-                            <SelectItem value='9.75" x 9.875"'>Compact - 9.75" x 9.875"</SelectItem>
-                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-1">
-                              Half Page
-                            </div>
-                            <SelectItem value='8.5" x 5.5"'>Horizontal - 8.5" x 5.5"</SelectItem>
-                            <SelectItem value='4.25" x 11"'>Vertical - 4.25" x 11"</SelectItem>
-                            <SelectItem value='10" x 6"'>Tabloid Half - 10" x 6"</SelectItem>
-                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-1">
-                              Quarter Page
-                            </div>
-                            <SelectItem value='4.25" x 5.5"'>Standard - 4.25" x 5.5"</SelectItem>
-                            <SelectItem value='5" x 6"'>Square - 5" x 6"</SelectItem>
-                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-1">
-                              Other
-                            </div>
-                            <SelectItem value='4.25" x 2.75"'>Eighth Page - 4.25" x 2.75"</SelectItem>
-                            <SelectItem value='3.5" x 2"'>Business Card - 3.5" x 2"</SelectItem>
-                            <SelectItem value='2" x 2"'>Classified - 2" x 2"</SelectItem>
-                          </SelectContent>
-                        </Select>
                         <Input
                           id="dimensions"
-                          value={editingItem.dimensions || ''}
-                          onChange={(e) => setEditingItem({ ...editingItem, dimensions: e.target.value })}
+                          value={editingItem.format?.dimensions || ''}
+                          onChange={(e) => setEditingItem({ 
+                            ...editingItem, 
+                            format: { ...editingItem.format, dimensions: e.target.value }
+                          })}
                           placeholder='Example: 10.5" x 13.5" or 8.5 x 11'
-                          className={!editingItem.dimensions ? 'border-amber-300' : ''}
+                          className={!editingItem.format?.dimensions ? 'border-amber-300' : ''}
                         />
                         <p className="text-xs text-muted-foreground">
                           Format: Width x Height with units (e.g., 8.5" x 11" or 10 x 12.625 inches)
                         </p>
+                        {/* Custom size warning */}
+                        {editingItem.format?.dimensions && 
+                         editingItem.adFormat && 
+                         PRINT_FORMAT_DEFAULTS[editingItem.adFormat] &&
+                         editingItem.format.dimensions !== PRINT_FORMAT_DEFAULTS[editingItem.adFormat] && (
+                          <Alert variant="default" className="py-2 bg-amber-50 border-amber-200">
+                            <AlertTriangle className="h-4 w-4 text-amber-600" />
+                            <AlertDescription className="text-xs text-amber-800">
+                              Custom dimensions may limit this inventory's availability for campaigns. 
+                              Standard sizes are preferred for campaign matching.
+                            </AlertDescription>
+                          </Alert>
+                        )}
                       </div>
                     </div>
                     <div>
