@@ -29,6 +29,7 @@ import {
 import { calculateRevenue } from '@/utils/pricingCalculations';
 import { PublicationDataQuality, calculateDataQuality } from '@/components/admin/PublicationDataQuality';
 import { PublicationActionCenter } from './PublicationActionCenter';
+import { PublicationDeliveryProgress } from './PublicationDeliveryProgress';
 import { useMemo, useRef, useState, useEffect } from "react";
 import { getPublicationActivities, UserInteraction } from '@/api/activities';
 import { formatDistanceToNow } from 'date-fns';
@@ -582,6 +583,9 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delivery Progress - Aggregated across all active orders */}
+      <PublicationDeliveryProgress publicationId={selectedPublication.publicationId} />
 
       {/* Action Center - What do you need to do? */}
       <Card>
