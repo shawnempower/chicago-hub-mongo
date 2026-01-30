@@ -617,6 +617,7 @@ export interface Publication {
         performanceMetrics?: PerformanceMetrics;
         format?: {
           dimensions?: string;
+          customDimensions?: string; // Publisher-specific dimensions if different from standard
           fileFormats?: string[];
           resolution?: string;
           colorSpace?: string;

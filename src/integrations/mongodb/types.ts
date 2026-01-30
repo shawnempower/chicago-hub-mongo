@@ -156,6 +156,7 @@ export interface PrintChannel {
     };
     format?: {
       dimensions?: string;
+      customDimensions?: string;
       fileFormats?: string[];
       resolution?: string;
       colorSpace?: string;

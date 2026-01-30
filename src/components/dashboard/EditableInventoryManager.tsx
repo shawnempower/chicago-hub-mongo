@@ -102,6 +102,9 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
     return { valid: errors.length === 0, errors };
   };
 
+  // Regex for validating dimension format (e.g., 10" x 8.5", 8.5 x 11)
+  const DIMENSION_FORMAT_REGEX = /^\d+(?:\.\d+)?["']?\s*[x×]\s*\d+(?:\.\d+)?["']?$/;
+
   const handleSave = async () => {
     if (!selectedPublication?._id) return;
 
@@ -114,6 +117,21 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
         variant: "destructive"
       });
       return;
+    }
+
+    // Validate custom dimensions format for print ads
+    const printAds = formData.distributionChannels?.print || [];
+    for (const printPub of printAds) {
+      for (const ad of printPub.advertisingOpportunities || []) {
+        if (ad.format?.customDimensions && !DIMENSION_FORMAT_REGEX.test(ad.format.customDimensions)) {
+          toast({
+            title: "Validation Error",
+            description: `Invalid custom dimensions format for "${ad.name || 'print ad'}". Use format like: 10" x 8.5" or 8.5 x 11`,
+            variant: "destructive"
+          });
+          return;
+        }
+      }
     }
 
     setSaving(true);
@@ -1756,12 +1774,25 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </div>
                         
                         <div>
-                          <Label>Dimensions</Label>
+                          <Label>Standard Dimensions</Label>
                           <Input
                             value={ad.format?.dimensions || ''}
-                            onChange={(e) => updatePrintAdSpecifications(printIndex, adIndex, 'dimensions', e.target.value)}
-                            placeholder='10" x 8.5"'
+                            disabled
+                            className="bg-gray-50 text-gray-600"
+                            placeholder='Auto-populated from Ad Format'
                           />
+                        </div>
+                        
+                        <div>
+                          <Label>Custom Dimensions</Label>
+                          <Input
+                            value={ad.format?.customDimensions || ''}
+                            onChange={(e) => updatePrintAdSpecifications(printIndex, adIndex, 'customDimensions', e.target.value)}
+                            placeholder='Leave blank for standard'
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            For informational use only. Standard dimensions are used for campaigns.
+                          </p>
                         </div>
                         
                         <div>

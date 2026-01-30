@@ -77,24 +77,34 @@ const PRINT_FORMAT_DEFAULTS: Record<string, string> = {
   'insert': 'Variable',
 };
 
-// Helper function to validate inventory item data
-const validateInventoryItem = (item: any, type: string): boolean => {
-  if (!item) return false;
+// Regex for validating dimension format (e.g., 10" x 8.5", 8.5 x 11)
+const DIMENSION_FORMAT_REGEX = /^\d+(?:\.\d+)?["']?\s*[x×]\s*\d+(?:\.\d+)?["']?$/;
+
+// Helper function to validate inventory item data - returns error message or null if valid
+const validateInventoryItem = (item: any, type: string): string | null => {
+  if (!item) return "Item data is missing";
   
   // Basic validation for all types
   if (type.includes('-container')) {
-    return true; // Container validation is less strict
+    return null; // Container validation is less strict
   }
   
   // Validate advertising opportunities
   // Event sponsorships use 'level' field instead of 'name' or 'title'
   if (type === 'event') {
-    if (!item.level) return false;
+    if (!item.level) return "Please select a sponsorship level";
   } else {
-    if (!item.name && !item.title) return false;
+    if (!item.name && !item.title) return "Please provide a name for this item";
   }
   
-  return true;
+  // Validate custom dimensions format for print ads
+  if ((type === 'print' || type === 'print-ad') && item.format?.customDimensions) {
+    if (!DIMENSION_FORMAT_REGEX.test(item.format.customDimensions)) {
+      return 'Invalid custom dimensions format. Use format like: 10" x 8.5" or 8.5 x 11';
+    }
+  }
+  
+  return null;
 };
 
 export const DashboardInventoryManager = () => {
@@ -848,17 +858,19 @@ export const DashboardInventoryManager = () => {
     });
 
     // Validate the item before saving
-    if (!validateInventoryItem(editingItem, editingType)) {
+    const validationError = validateInventoryItem(editingItem, editingType);
+    if (validationError) {
       console.error('❌ Validation failed:', {
         editingType,
         editingItem,
+        validationError,
         hasLevel: editingItem.level,
         hasName: editingItem.name,
         hasTitle: editingItem.title
       });
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields before saving.",
+        description: validationError,
         variant: "destructive"
       });
       return;
@@ -5452,11 +5464,24 @@ export const DashboardInventoryManager = () => {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="dimensions">
-                        Dimensions *
-                        {editingItem.format?.dimensions && (() => {
-                          // Validate dimension format
-                          const isValid = /^\d+(?:\.\d+)?["']?\s*[x×]\s*\d+(?:\.\d+)?["']?/.test(editingItem.format.dimensions);
+                      <Label htmlFor="dimensions">Standard Dimensions</Label>
+                      <div className="space-y-2">
+                        <Input
+                          id="dimensions"
+                          value={editingItem.format?.dimensions || ''}
+                          disabled
+                          className="bg-gray-50 text-gray-600"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Auto-populated from selected Ad Format
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="customDimensions">
+                        Custom Dimensions
+                        {editingItem.format?.customDimensions && (() => {
+                          const isValid = /^\d+(?:\.\d+)?["']?\s*[x×]\s*\d+(?:\.\d+)?["']?/.test(editingItem.format.customDimensions);
                           return isValid ? (
                             <span className="ml-2 text-xs text-green-600">✓ Valid</span>
                           ) : (
@@ -5466,33 +5491,30 @@ export const DashboardInventoryManager = () => {
                       </Label>
                       <div className="space-y-2">
                         <Input
-                          id="dimensions"
-                          value={editingItem.format?.dimensions || ''}
+                          id="customDimensions"
+                          value={editingItem.format?.customDimensions || ''}
                           onChange={(e) => setEditingItem({ 
                             ...editingItem, 
-                            format: { ...editingItem.format, dimensions: e.target.value }
+                            format: { ...editingItem.format, customDimensions: e.target.value }
                           })}
-                          placeholder='Example: 10.5" x 13.5" or 8.5 x 11'
-                          className={!editingItem.format?.dimensions ? 'border-amber-300' : ''}
+                          placeholder='Leave blank to use standard dimensions'
                         />
                         <p className="text-xs text-muted-foreground">
-                          Format: Width x Height with units (e.g., 8.5" x 11" or 10 x 12.625 inches)
+                          Optional: Enter if your print specs differ from standard (e.g., 9.5" x 6")
                         </p>
-                        {/* Custom size warning */}
-                        {editingItem.format?.dimensions && 
-                         editingItem.adFormat && 
-                         PRINT_FORMAT_DEFAULTS[editingItem.adFormat] &&
-                         editingItem.format.dimensions !== PRINT_FORMAT_DEFAULTS[editingItem.adFormat] && (
-                          <Alert variant="default" className="py-2 bg-amber-50 border-amber-200">
-                            <AlertTriangle className="h-4 w-4 text-amber-600" />
-                            <AlertDescription className="text-xs text-amber-800">
-                              Custom dimensions may limit this inventory's availability for campaigns. 
-                              Standard sizes are preferred for campaign matching.
+                        {editingItem.format?.customDimensions && (
+                          <Alert variant="default" className="py-2 bg-blue-50 border-blue-200">
+                            <AlertTriangle className="h-4 w-4 text-blue-600" />
+                            <AlertDescription className="text-xs text-blue-800">
+                              Standard dimensions will be used for all campaigns. Custom dimensions are for informational use only.
                             </AlertDescription>
                           </Alert>
                         )}
                       </div>
                     </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="color">Color Options</Label>
                       <Select
