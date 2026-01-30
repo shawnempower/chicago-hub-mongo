@@ -60,8 +60,16 @@ const PRINT_FORMAT_DEFAULTS: Record<string, string> = {
   'upper portrait full page': '10" x 12.75"',
   'square full page': '10" x 10"',
   'narrow full page': '8.5" x 10.85"',
-  'half page horizontal': '10" x 5"',
-  'half page vertical': '5" x 10"',
+  'half v tall': '6.75" x 11.5"',
+  'half v standard': '4.8" x 9.75"',
+  'half v slim': '5" x 12.75"',
+  'half v mid': '4.25" x 10.85"',
+  'half v compact': '3.7" x 9.9"',
+  'half h tall': '10" x 8"',
+  'half h standard': '9.75" x 6.25"',
+  'half h wide': '9.75" x 5"',
+  'half h mid': '8.5" x 5.5"',
+  'half h compact': '7.5" x 4.9"',
   'quarter page': '5" x 5"',
   'eighth page': '5" x 3.25"',
   'business card': '3.5" x 2"',
@@ -5422,8 +5430,16 @@ export const DashboardInventoryManager = () => {
                           <SelectItem value="upper portrait full page">Upper Portrait Full Page (10" x 12.75")</SelectItem>
                           <SelectItem value="square full page">Square/Short Full Page (10" x 10")</SelectItem>
                           <SelectItem value="narrow full page">Narrow Full Page (8.5" x 10.85")</SelectItem>
-                          <SelectItem value="half page horizontal">Half Page Horizontal (10" x 5")</SelectItem>
-                          <SelectItem value="half page vertical">Half Page Vertical (5" x 10")</SelectItem>
+                          <SelectItem value="half v tall">Half V Tall (6.75" x 11.5")</SelectItem>
+                          <SelectItem value="half v standard">Half V Standard (4.8" x 9.75")</SelectItem>
+                          <SelectItem value="half v slim">Half V Slim (5" x 12.75")</SelectItem>
+                          <SelectItem value="half v mid">Half V Mid (4.25" x 10.85")</SelectItem>
+                          <SelectItem value="half v compact">Half V Compact (3.7" x 9.9")</SelectItem>
+                          <SelectItem value="half h tall">Half H Tall (10" x 8")</SelectItem>
+                          <SelectItem value="half h standard">Half H Standard (9.75" x 6.25")</SelectItem>
+                          <SelectItem value="half h wide">Half H Wide (9.75" x 5")</SelectItem>
+                          <SelectItem value="half h mid">Half H Mid (8.5" x 5.5")</SelectItem>
+                          <SelectItem value="half h compact">Half H Compact (7.5" x 4.9")</SelectItem>
                           <SelectItem value="quarter page">Quarter Page (5" x 5")</SelectItem>
                           <SelectItem value="eighth page">Eighth Page (5" x 3.25")</SelectItem>
                           <SelectItem value="business card">Business Card (3.5" x 2")</SelectItem>

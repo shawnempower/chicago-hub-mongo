@@ -273,7 +273,7 @@ export interface PublicationFrontend {
       printSchedule?: string;
       advertisingOpportunities?: Array<{
         name?: string;
-        adFormat?: 'tall full page' | 'tall portrait full page' | 'upper portrait full page' | 'square full page' | 'narrow full page' | 'half page horizontal' | 'half page vertical' | 'quarter page' | 'eighth page' | 'business card' | 'classified' | 'insert';
+        adFormat?: 'tall full page' | 'tall portrait full page' | 'upper portrait full page' | 'square full page' | 'narrow full page' | 'half v tall' | 'half v standard' | 'half v slim' | 'half v mid' | 'half v compact' | 'half h tall' | 'half h standard' | 'half h wide' | 'half h mid' | 'half h compact' | 'quarter page' | 'eighth page' | 'business card' | 'classified' | 'insert';
         color?: 'color' | 'black and white' | 'both';
         location?: string;
         pricing?: {
