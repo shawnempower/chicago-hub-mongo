@@ -9,6 +9,7 @@ import { ObjectId } from 'mongodb';
 import { authenticateToken } from '../middleware/authenticate';
 // import { insertionOrderService } from '../../src/services/insertionOrderService'; // Temporarily disabled
 import { permissionsService } from '../../src/integrations/mongodb/permissionsService';
+import { placementCompletionService } from '../../src/services/placementCompletionService';
 
 const router = Router();
 
@@ -610,6 +611,28 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
       }
     }
     
+    // Check if any digital placements should auto-complete (campaign ended)
+    // This runs lazily when order detail is loaded
+    try {
+      const completionCheck = await placementCompletionService.checkDigitalPlacementsForCampaignEnd(
+        order._id.toString()
+      );
+      if (completionCheck.completed > 0) {
+        console.log(`[Order Load] Auto-completed ${completionCheck.completed} digital placements (campaign ended)`);
+        // Re-fetch order to get updated placement statuses
+        const updatedOrder = await insertionOrderService.getOrderByCampaignAndPublication(
+          campaignId,
+          parseInt(publicationId)
+        );
+        if (updatedOrder) {
+          Object.assign(order, { placementStatuses: updatedOrder.placementStatuses });
+        }
+      }
+    } catch (err) {
+      // Don't fail the request if completion check fails
+      console.error('Error checking digital placements for campaign end:', err);
+    }
+
     // Include campaign data with inventory for ad specs
     const orderWithCampaignData = {
       ...order,

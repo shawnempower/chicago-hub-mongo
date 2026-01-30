@@ -32,6 +32,15 @@ export interface ProofRequirement {
   attestationFields?: string[];
 }
 
+/**
+ * Completion criteria for automatic placement completion
+ */
+export interface CompletionCriteria {
+  type: 'impressions_or_end_date' | 'proof_count';
+  usesFrequency?: boolean;  // If true, expected count comes from item.currentFrequency
+  description: string;
+}
+
 export interface ChannelConfig {
   id: string;
   label: string;
@@ -51,6 +60,8 @@ export interface ChannelConfig {
   metricDefinitions?: MetricDefinition[];
   // Proof of performance requirements
   proofRequirement?: ProofRequirement;
+  // Automatic completion criteria (how placements are auto-completed)
+  completionCriteria?: CompletionCriteria;
   // Display order (lower = first)
   order: number;
 }
@@ -73,6 +84,10 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
       proofTypes: ['screenshot', 'analytics_report'],
     },
     metrics: ['impressions', 'clicks', 'ctr', 'viewability'],
+    completionCriteria: {
+      type: 'impressions_or_end_date',
+      description: 'Auto-completes when impressions goal met or campaign ends',
+    },
     order: 1,
   },
 
@@ -94,6 +109,10 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
       proofTypes: ['screenshot', 'esp_report'],
     },
     metrics: ['impressions', 'clicks', 'ctr', 'sends', 'opens'],
+    completionCriteria: {
+      type: 'impressions_or_end_date',
+      description: 'Auto-completes when impressions goal met or campaign ends',
+    },
     order: 2,
   },
 
@@ -115,6 +134,10 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
       proofTypes: ['screenshot', 'video_clip', 'analytics_report'],
     },
     metrics: ['impressions', 'videoViews', 'completionRate', 'clicks'],
+    completionCriteria: {
+      type: 'impressions_or_end_date',
+      description: 'Auto-completes when impressions goal met or campaign ends',
+    },
     order: 3,
   },
 
@@ -182,6 +205,11 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
       ],
       attestationFields: ['publicationDate', 'pageNumber', 'section', 'adSize'],
     },
+    completionCriteria: {
+      type: 'proof_count',
+      usesFrequency: true,
+      description: 'Auto-completes when all tear sheets uploaded',
+    },
     order: 4,
   },
 
@@ -248,6 +276,11 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
         },
       ],
       attestationFields: ['dateRange', 'spotsAired', 'dayparts', 'estimatedReach'],
+    },
+    completionCriteria: {
+      type: 'proof_count',
+      usesFrequency: true,
+      description: 'Auto-completes when all affidavits uploaded',
     },
     order: 5,
   },
@@ -321,6 +354,11 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
       ],
       attestationFields: ['episodeDate', 'episodeName', 'downloads', 'adPosition'],
     },
+    completionCriteria: {
+      type: 'proof_count',
+      usesFrequency: true,
+      description: 'Auto-completes when all episode proofs uploaded',
+    },
     order: 6,
   },
 
@@ -342,6 +380,11 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
       proofTypes: ['screenshot', 'analytics_report'],
     },
     metrics: ['impressions', 'reach', 'engagements', 'shares', 'clicks'],
+    completionCriteria: {
+      type: 'proof_count',
+      usesFrequency: true,
+      description: 'Auto-completes when all post proofs uploaded',
+    },
     order: 7,
   },
 
@@ -363,6 +406,11 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
       proofTypes: ['screenshot', 'report', 'other'],
     },
     metrics: ['attendance', 'impressions', 'leads'],
+    completionCriteria: {
+      type: 'proof_count',
+      usesFrequency: false,  // Events typically have single report
+      description: 'Auto-completes when event report uploaded',
+    },
     order: 8,
   },
 
@@ -383,6 +431,11 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
       proofTypes: ['screenshot', 'report', 'other'],
     },
     metrics: ['impressions', 'reach'],
+    completionCriteria: {
+      type: 'proof_count',
+      usesFrequency: false,
+      description: 'Auto-completes when proof uploaded',
+    },
     order: 99,
   },
 };

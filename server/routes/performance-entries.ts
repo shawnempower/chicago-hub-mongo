@@ -17,6 +17,7 @@ import {
   computeCTR,
   PerformanceChannel
 } from '../../src/integrations/mongodb/performanceEntrySchema';
+import { placementCompletionService } from '../../src/services/placementCompletionService';
 
 const router = Router();
 
@@ -239,6 +240,23 @@ router.post('/', async (req: any, res: Response) => {
     
     // Update order delivery summary
     await updateOrderDeliverySummary(entryData.orderId);
+    
+    // Check if this placement should auto-complete
+    if (entryData.itemPath && entryData.channel) {
+      try {
+        const completionResult = await placementCompletionService.checkAndCompleteIfReady(
+          entryData.orderId,
+          entryData.itemPath,
+          entryData.channel
+        );
+        if (completionResult.completed) {
+          console.log(`[Performance Entry] Auto-completed placement ${entryData.itemPath}: ${completionResult.reason}`);
+        }
+      } catch (err) {
+        // Don't fail the request if completion check fails
+        console.error('Error checking placement completion:', err);
+      }
+    }
     
     res.status(201).json({ 
       success: true, 

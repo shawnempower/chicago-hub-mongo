@@ -92,13 +92,14 @@ export function PublicationOrderDetail() {
   const [rejectingPlacementId, setRejectingPlacementId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   
-  // Proof prompt state - shown when completing self-reported placements
-  const [proofPromptOpen, setProofPromptOpen] = useState(false);
-  const [proofPromptPlacement, setProofPromptPlacement] = useState<{
-    itemPath: string;
-    itemName: string;
-    channel: string;
-  } | null>(null);
+  // Proof prompt state - REMOVED: Manual completion is now automated
+  // See PlacementCompletionService for auto-completion logic
+  // const [proofPromptOpen, setProofPromptOpen] = useState(false);
+  // const [proofPromptPlacement, setProofPromptPlacement] = useState<{
+  //   itemPath: string;
+  //   itemName: string;
+  //   channel: string;
+  // } | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [copiedScriptId, setCopiedScriptId] = useState<string | null>(null);
   
@@ -653,28 +654,10 @@ export function PublicationOrderDetail() {
 
   // isDigitalChannel is now imported from config/inventoryChannels
 
-  const handleUpdateStatus = async (newStatus: OrderStatus) => {
-    if (!order) return;
-    try {
-      setUpdating(true);
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(
-        `${API_BASE_URL}/publication-orders/${campaignId}/${publicationId}/status`,
-        {
-          method: 'PUT',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: newStatus })
-        }
-      );
-      if (!response.ok) throw new Error('Failed to update status');
-      toast({ title: 'Success', description: 'Status updated successfully' });
-      fetchOrderDetail();
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
-    } finally {
-      setUpdating(false);
-    }
-  };
+  // REMOVED: Manual order status updates - order status is now derived from placement statuses
+  // Order becomes 'in_production' when any placement is in_production
+  // Order becomes 'delivered' when all placements are delivered (auto-completed)
+  // const handleUpdateStatus = async (newStatus: OrderStatus) => { ... };
 
   const handlePlacementAction = async (
     placementId: string, 
@@ -797,34 +780,18 @@ export function PublicationOrderDetail() {
   };
 
   /**
-   * Handle "Complete" button for non-digital (self-reported) placements.
-   * Shows a prompt to report proof of performance before completing,
-   * unless performance data already exists for this placement.
+   * DEPRECATED: Manual completion removed - placements auto-complete based on inventory type:
+   * - Digital (website, newsletter, streaming): Impressions goal achieved OR campaign ends
+   * - Offline (print, radio, podcast, etc.): All expected proofs uploaded
+   * 
+   * The PlacementCompletionService handles auto-completion when:
+   * - Performance entries are submitted
+   * - Proofs of performance are uploaded
+   * - Order detail is loaded (checks campaign end date for digital)
    */
-  const handleCompleteClick = (itemPath: string, itemName: string, channel: string) => {
-    const config = getChannelConfig(channel);
-    
-    // Digital placements don't need self-reporting - complete directly
-    if (config.isDigital) {
-      handlePlacementAction(itemPath, 'delivered');
-      return;
-    }
-    
-    // Check if performance data already exists for this placement
-    // Match by itemPath directly or by placementId field
-    const hasPerformanceData = performanceEntries.some(entry => 
-      entry.itemPath === itemPath || entry.placementId === itemPath
-    );
-    
-    if (hasPerformanceData) {
-      // Already reported - allow completion
-      handlePlacementAction(itemPath, 'delivered');
-    } else {
-      // No performance data yet - prompt user
-      setProofPromptPlacement({ itemPath, itemName, channel });
-      setProofPromptOpen(true);
-    }
-  };
+  // const handleCompleteClick = (itemPath: string, itemName: string, channel: string) => {
+  //   // Removed - completion is now automatic
+  // };
 
   const handleSendMessage = async (content: string, attachments?: Array<{ fileName: string; fileUrl: string; fileType: string; fileSize?: number }>) => {
     try {
@@ -2166,15 +2133,34 @@ export function PublicationOrderDetail() {
                                 </>
                               )}
 
-                              {/* Accepted: Mark In Production - only if has script (digital) or asset (offline) */}
+                              {/* Accepted: Mark In Production - requires assets/scripts AND within campaign window */}
                               {placementStatus === 'accepted' && (() => {
                                 const hasRequiredAsset = isDigital ? scripts.length > 0 : placementAssets.length > 0;
                                 const missingText = isDigital ? 'Needs tracking script' : 'Needs creative asset';
+                                
+                                // Check campaign start date (allow 7-day grace period before start)
+                                const campaignStart = campaignData?.timeline?.startDate 
+                                  ? new Date(campaignData.timeline.startDate) : null;
+                                const gracePeriodDays = 7;
+                                const now = new Date();
+                                const earliestAllowedDate = campaignStart 
+                                  ? new Date(campaignStart.getTime() - (gracePeriodDays * 24 * 60 * 60 * 1000))
+                                  : null;
+                                const withinCampaignWindow = !earliestAllowedDate || now >= earliestAllowedDate;
                                 
                                 if (!hasRequiredAsset) {
                                   return (
                                     <span className="flex items-center gap-1 text-xs text-amber-600">
                                       <AlertCircle className="h-3.5 w-3.5" /> {missingText}
+                                    </span>
+                                  );
+                                }
+                                
+                                if (!withinCampaignWindow && campaignStart) {
+                                  const daysUntilStart = Math.ceil((earliestAllowedDate!.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+                                  return (
+                                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <Clock className="h-3.5 w-3.5" /> Available in {daysUntilStart} days
                                     </span>
                                   );
                                 }
@@ -2202,14 +2188,36 @@ export function PublicationOrderDetail() {
                                   >
                                     <BarChart3 className="h-3 w-3 mr-1" /> Report
                                   </Button>
-                                  <Button
-                                    onClick={() => handleCompleteClick(itemPath, item.itemName || item.sourceName || 'Placement', item.channel)}
-                                    disabled={updating}
-                                    className="bg-purple-600 hover:bg-purple-700 h-7 text-xs px-3"
-                                    size="sm"
-                                  >
-                                    <CheckCircle2 className="h-3 w-3 mr-1" /> Complete
-                                  </Button>
+                                  {/* Completion progress indicator - replaces manual Complete button */}
+                                  {(() => {
+                                    const config = getChannelConfig(item.channel);
+                                    if (config.isDigital) {
+                                      // Digital: show impressions progress or campaign end info
+                                      const goal = item.performanceMetrics?.impressionsPerMonth || 0;
+                                      const delivered = order.deliverySummary?.byChannel?.[item.channel?.toLowerCase()]?.delivered || 0;
+                                      const percent = goal > 0 ? Math.min(100, Math.round((delivered / goal) * 100)) : 0;
+                                      return (
+                                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                          <Timer className="h-3 w-3" />
+                                          {goal > 0 ? (
+                                            <span>{percent}% of impressions</span>
+                                          ) : (
+                                            <span>Completes at campaign end</span>
+                                          )}
+                                        </span>
+                                      );
+                                    } else {
+                                      // Offline: show proof count vs expected
+                                      const expected = item.currentFrequency || item.quantity || 1;
+                                      const proofCount = order.proofCount || 0;
+                                      return (
+                                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                          <FileText className="h-3 w-3" />
+                                          <span>{proofCount}/{expected} proofs</span>
+                                        </span>
+                                      );
+                                    }
+                                  })()}
                                 </>
                               )}
 
@@ -2239,34 +2247,10 @@ export function PublicationOrderDetail() {
             });
           })()}
 
-          {/* Update Status Actions */}
-          {(order.status === 'confirmed' || order.status === 'in_production') && (
-            <Card className="shadow-none">
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Update Order Status</p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.status === 'confirmed' && 'Mark as in production when you start running ads'}
-                      {order.status === 'in_production' && 'Mark as delivered when the campaign is complete'}
-                    </p>
-                  </div>
-                  {order.status === 'confirmed' && (
-                    <Button onClick={() => handleUpdateStatus('in_production')} disabled={updating}>
-                      <Loader2 className={cn("h-4 w-4 mr-2", updating && "animate-spin")} />
-                      Mark In Production
-                    </Button>
-                  )}
-                  {order.status === 'in_production' && (
-                    <Button onClick={() => handleUpdateStatus('delivered')} disabled={updating}>
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Mark Delivered
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Order Status Actions - REMOVED: Status is now derived from placement statuses
+              - Order becomes 'in_production' when any placement is in_production
+              - Order becomes 'delivered' when all placements are delivered
+              - Placements auto-complete via PlacementCompletionService based on inventory type */}
         </TabsContent>
 
         {/* PERFORMANCE TAB */}
@@ -2346,78 +2330,11 @@ export function PublicationOrderDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Proof Required Prompt Dialog - for self-reported placements */}
-      <Dialog open={proofPromptOpen} onOpenChange={setProofPromptOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-purple-600" />
-              Report Performance First?
-            </DialogTitle>
-            <DialogDescription>
-              This placement requires self-reported performance data. You haven't submitted any metrics yet.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {proofPromptPlacement && (
-            <div className="space-y-4">
-              {/* Placement Info */}
-              <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <p className="text-sm font-medium text-purple-900">{proofPromptPlacement.itemName}</p>
-                <p className="text-xs text-purple-700 capitalize">
-                  {getChannelConfig(proofPromptPlacement.channel).label} • Self-Reported
-                </p>
-              </div>
-              
-              {/* Explanation */}
-              <div className="text-sm text-muted-foreground space-y-2">
-                <p>
-                  <strong>Why report?</strong> Self-reported placements (like {getChannelConfig(proofPromptPlacement.channel).label.toLowerCase()}) 
-                  don't have automatic tracking. Reporting helps demonstrate value to the campaign.
-                </p>
-                <p>
-                  You can still mark as complete without reporting, but we recommend submitting metrics first.
-                </p>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setProofPromptOpen(false);
-                setProofPromptPlacement(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (proofPromptPlacement) {
-                  handlePlacementAction(proofPromptPlacement.itemPath, 'delivered');
-                }
-                setProofPromptOpen(false);
-                setProofPromptPlacement(null);
-              }}
-            >
-              Skip & Complete Anyway
-            </Button>
-            <Button
-              className="bg-purple-600 hover:bg-purple-700"
-              onClick={() => {
-                setProofPromptOpen(false);
-                setProofPromptPlacement(null);
-                setActiveTab('performance');
-              }}
-            >
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Report Performance
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Proof Required Prompt Dialog - REMOVED: Manual completion is now automated
+          Placements auto-complete based on inventory type:
+          - Digital: When impressions goal met OR campaign ends
+          - Offline: When all expected proofs are uploaded
+          See PlacementCompletionService for auto-completion logic */}
 
       {/* Tag Test Dialog */}
       <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
@@ -2633,6 +2550,7 @@ interface PlacementWorkflowProps {
   onMarkDelivered: () => void;
   onReportPerformance: () => void;
   updating: boolean;
+  campaignStartDate?: Date | null;  // For validation
 }
 
 function PlacementWorkflow({
@@ -2646,7 +2564,20 @@ function PlacementWorkflow({
   onMarkDelivered,
   onReportPerformance,
   updating,
+  campaignStartDate,
 }: PlacementWorkflowProps) {
+  // Check if within campaign window (7-day grace period before start)
+  const gracePeriodDays = 7;
+  const now = new Date();
+  const earliestAllowedDate = campaignStartDate 
+    ? new Date(campaignStartDate.getTime() - (gracePeriodDays * 24 * 60 * 60 * 1000))
+    : null;
+  const withinCampaignWindow = !earliestAllowedDate || now >= earliestAllowedDate;
+  
+  // Determine if "Go Live" action should be available
+  const hasRequiredAssets = isDigital ? hasScripts : hasAssets;
+  const canGoLive = placementStatus === 'accepted' && hasRequiredAssets && withinCampaignWindow;
+  
   // Determine step completion
   const steps = [
     {
@@ -2666,8 +2597,8 @@ function PlacementWorkflow({
       label: 'Go Live',
       done: ['in_production', 'delivered'].includes(placementStatus),
       icon: PlayCircle,
-      // Only allow marking live if placement is accepted AND has required assets/scripts
-      action: placementStatus === 'accepted' && (isDigital ? hasScripts : hasAssets) ? onMarkInProduction : undefined,
+      // Only allow marking live if placement is accepted AND has required assets/scripts AND within campaign window
+      action: canGoLive ? onMarkInProduction : undefined,
       actionLabel: 'Mark Live',
     },
     {

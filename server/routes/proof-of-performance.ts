@@ -20,6 +20,7 @@ import {
   MAX_FILE_SIZE
 } from '../../src/integrations/mongodb/proofOfPerformanceSchema';
 import { fileStorage } from '../storage/fileStorage';
+import { placementCompletionService } from '../../src/services/placementCompletionService';
 
 const router = Router();
 
@@ -264,6 +265,23 @@ router.post('/', async (req: any, res: Response) => {
     
     // Update proof count on order
     await updateOrderProofCount(orderId);
+
+    // Check if this placement should auto-complete (for offline channels)
+    if (channel && itemPath) {
+      try {
+        const completionResult = await placementCompletionService.checkAndCompleteIfReady(
+          orderId,
+          itemPath,
+          channel
+        );
+        if (completionResult.completed) {
+          console.log(`[Proof Upload] Auto-completed placement ${itemPath}: ${completionResult.reason}`);
+        }
+      } catch (err) {
+        // Don't fail the request if completion check fails
+        console.error('Error checking placement completion:', err);
+      }
+    }
 
     res.status(201).json({
       success: true, 
