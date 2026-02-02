@@ -758,13 +758,13 @@ export class EarningsService {
     createdAt: Date;
     campaignEndDate?: Date;
   } | null> {
-    // Get the order
-    const order = await this.ordersCollection.findOne({
-      $or: [
-        { _id: new ObjectId(orderId) },
-        { _id: orderId }
-      ]
-    });
+    // Get the order - handle different ID formats
+    const orderQuery: any[] = [{ _id: orderId }];
+    // Only add ObjectId query if orderId is a valid 24-char hex string
+    if (orderId && /^[a-fA-F0-9]{24}$/.test(orderId)) {
+      orderQuery.unshift({ _id: new ObjectId(orderId) });
+    }
+    const order = await this.ordersCollection.findOne({ $or: orderQuery });
     
     if (!order) return null;
     
@@ -773,14 +773,16 @@ export class EarningsService {
       return null;
     }
     
-    // Get campaign info
-    const campaign = await this.campaignsCollection.findOne({
-      $or: [
-        { _id: new ObjectId(order.campaignId) },
-        { _id: order.campaignId },
-        { campaignId: order.campaignId }
-      ]
-    });
+    // Get campaign info - handle different ID formats
+    const campaignQuery: any[] = [
+      { _id: order.campaignId },
+      { campaignId: order.campaignId }
+    ];
+    // Only add ObjectId query if campaignId is a valid 24-char hex string
+    if (order.campaignId && /^[a-fA-F0-9]{24}$/.test(order.campaignId)) {
+      campaignQuery.unshift({ _id: new ObjectId(order.campaignId) });
+    }
+    const campaign = await this.campaignsCollection.findOne({ $or: campaignQuery });
     
     // Get existing earnings record for payment info (if exists)
     const existingEarnings = await this.earningsCollection.findOne({ orderId: orderId.toString() });
@@ -795,16 +797,32 @@ export class EarningsService {
       .find({ orderId: orderId.toString(), status: 'verified' })
       .toArray();
     
-    // Calculate estimated earnings from order items
+    // Calculate estimated earnings from campaign inventory for this publication
     const estimatedByChannel: Record<string, number> = {};
     let estimatedTotal = 0;
     
-    const items = order.items || order.inventory || [];
+    // Get items from the campaign's selectedInventory.publications for this publication
+    // Structure: campaign.selectedInventory.publications[].inventoryItems (HubPackageInventoryItem[])
+    // Also has publications[].publicationTotal for the pre-calculated total
+    let items: any[] = [];
+    let pubInventory: any = null;
+    
+    if (campaign?.selectedInventory?.publications) {
+      pubInventory = campaign.selectedInventory.publications.find(
+        (p: any) => p.publicationId === order.publicationId
+      );
+      if (pubInventory) {
+        items = pubInventory.inventoryItems || [];
+        // Use the pre-calculated publicationTotal for estimated earnings
+        estimatedTotal = pubInventory.publicationTotal || 0;
+      }
+    }
+    
+    // Calculate channel breakdown from inventory items
     for (const item of items) {
       const channel = item.channel || 'other';
-      const itemCost = item.itemPricing?.totalCost || item.itemPricing?.hubPrice || 0;
+      const itemCost = item.itemPricing?.totalCost || item.campaignCost || 0;
       estimatedByChannel[channel] = (estimatedByChannel[channel] || 0) + itemCost;
-      estimatedTotal += itemCost;
     }
     
     // Calculate actual earnings from performance entries
@@ -822,7 +840,8 @@ export class EarningsService {
       
       if (matchingItem) {
         const pricingModel = matchingItem.itemPricing?.pricingModel || 'flat';
-        const rate = matchingItem.itemPricing?.rate || matchingItem.itemPricing?.hubPrice || 0;
+        // HubPackageInventoryItem stores rate in itemPricing.hubPrice
+        const rate = matchingItem.itemPricing?.hubPrice || 0;
         
         // Calculate based on pricing model
         let itemEarnings = 0;
@@ -849,9 +868,10 @@ export class EarningsService {
           default:
             // For flat rate, count verified proofs or use percentage complete
             const proofCount = verifiedProofs.filter(p => p.itemPath === entry.itemPath).length;
-            const plannedOccurrences = matchingItem.frequency?.totalOccurrences || 1;
+            // HubPackageInventoryItem uses 'quantity' for planned occurrences
+            const plannedOccurrences = matchingItem.quantity || 1;
             const completionPercent = Math.min(1, proofCount / plannedOccurrences);
-            itemEarnings = completionPercent * (matchingItem.itemPricing?.totalCost || rate);
+            itemEarnings = completionPercent * (matchingItem.itemPricing?.totalCost || matchingItem.campaignCost || rate);
             break;
         }
         
@@ -873,9 +893,10 @@ export class EarningsService {
         );
         
         if (itemProofs.length > 0) {
-          const plannedOccurrences = item.frequency?.totalOccurrences || 1;
+          // HubPackageInventoryItem uses 'quantity' for planned occurrences
+          const plannedOccurrences = item.quantity || 1;
           const completionPercent = Math.min(1, itemProofs.length / plannedOccurrences);
-          const itemEarnings = completionPercent * (item.itemPricing?.totalCost || 0);
+          const itemEarnings = completionPercent * (item.itemPricing?.totalCost || item.campaignCost || 0);
           
           actualByChannel[channel] = (actualByChannel[channel] || 0) + itemEarnings;
           actualTotal += itemEarnings;
@@ -904,7 +925,7 @@ export class EarningsService {
     return {
       orderId: orderId.toString(),
       campaignId: order.campaignId,
-      campaignName: campaign?.name || campaign?.basicInfo?.campaignName || 'Unknown Campaign',
+      campaignName: campaign?.basicInfo?.name || 'Unknown Campaign',
       publicationId: order.publicationId,
       publicationName: order.publicationName || 'Unknown Publication',
       hubId: order.hubId || campaign?.hubId || '',

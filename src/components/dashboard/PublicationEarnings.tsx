@@ -356,7 +356,7 @@ export function PublicationEarnings({ publicationId }: PublicationEarningsProps)
               </TableHeader>
               <TableBody>
                 {earnings.map((record) => (
-                  <TableRow key={record._id} className="cursor-pointer hover:bg-muted/50">
+                  <TableRow key={record.orderId || record._id} className="cursor-pointer hover:bg-muted/50">
                     <TableCell>
                       <div>
                         <div className="font-medium">{record.campaignName || 'Unnamed Campaign'}</div>
@@ -397,7 +397,7 @@ export function PublicationEarnings({ publicationId }: PublicationEarningsProps)
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => navigate(`/dashboard?tab=order-detail&orderId=${record.orderId}`)}
+                        onClick={() => navigate(`/dashboard?tab=order-detail&campaignId=${record.campaignId}&publicationId=${record.publicationId}`)}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>

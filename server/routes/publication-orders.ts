@@ -422,6 +422,231 @@ router.get('/with-recent-messages', async (req: any, res: Response) => {
 });
 
 /**
+ * GET /api/publication-orders/delivery-summary
+ * Get aggregated delivery progress across all active orders for a publication
+ * NOTE: This must be defined BEFORE parameterized routes like /:campaignId/:publicationId
+ */
+router.get('/delivery-summary', async (req: any, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { publicationId } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Get user's assigned publications
+    let publicationIds: string[] = [];
+    
+    if (publicationId) {
+      publicationIds = [publicationId as string];
+    } else {
+      publicationIds = await permissionsService.getUserPublications(userId);
+    }
+    
+    if (publicationIds.length === 0) {
+      return res.json({
+        overallDeliveryPercent: 0,
+        totalExpectedReports: 0,
+        totalReportsSubmitted: 0,
+        totalOrders: 0,
+        activeOrders: 0,
+        byChannel: {},
+        totals: {
+          reports: 0,
+          impressions: 0,
+          clicks: 0,
+          insertions: 0,
+          circulation: 0,
+          spotsAired: 0,
+          downloads: 0,
+          proofs: 0
+        },
+        statusBreakdown: {
+          on_track: 0,
+          ahead: 0,
+          behind: 0,
+          at_risk: 0
+        }
+      });
+    }
+
+    const { getDatabase } = await import('../../src/integrations/mongodb/client');
+    const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+    const db = getDatabase();
+    const ordersCollection = db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS);
+    const perfCollection = db.collection(COLLECTIONS.PERFORMANCE_ENTRIES);
+    const proofsCollection = db.collection(COLLECTIONS.PROOF_OF_PERFORMANCE);
+
+    // Get all active orders (confirmed, in_production) for the publication
+    const activeStatuses = ['confirmed', 'in_production'];
+    const orders = await ordersCollection.find({
+      publicationId: { $in: publicationIds.map(id => parseInt(id)) },
+      status: { $in: activeStatuses }
+    }).toArray();
+
+    if (orders.length === 0) {
+      return res.json({
+        overallDeliveryPercent: 0,
+        totalExpectedReports: 0,
+        totalReportsSubmitted: 0,
+        totalOrders: 0,
+        activeOrders: 0,
+        byChannel: {},
+        totals: {
+          reports: 0,
+          impressions: 0,
+          clicks: 0,
+          insertions: 0,
+          circulation: 0,
+          spotsAired: 0,
+          downloads: 0,
+          proofs: 0
+        },
+        statusBreakdown: {
+          on_track: 0,
+          ahead: 0,
+          behind: 0,
+          at_risk: 0
+        }
+      });
+    }
+
+    // Aggregate data from all orders' deliverySummary
+    let totalExpectedReports = 0;
+    let totalReportsSubmitted = 0;
+    const byChannel: Record<string, { 
+      goal: number; 
+      delivered: number; 
+      deliveryPercent: number;
+      goalType: string;
+      volumeLabel: string;
+    }> = {};
+    
+    const statusBreakdown = {
+      on_track: 0,
+      ahead: 0,
+      behind: 0,
+      at_risk: 0
+    };
+
+    orders.forEach(order => {
+      const summary = order.deliverySummary;
+      if (summary) {
+        totalExpectedReports += summary.totalExpectedReports || 0;
+        totalReportsSubmitted += summary.totalReportsSubmitted || 0;
+        
+        // Aggregate by channel
+        if (summary.byChannel) {
+          Object.entries(summary.byChannel).forEach(([channel, data]: [string, any]) => {
+            if (!byChannel[channel]) {
+              byChannel[channel] = {
+                goal: 0,
+                delivered: 0,
+                deliveryPercent: 0,
+                goalType: data.goalType || 'frequency',
+                volumeLabel: data.volumeLabel || 'Delivered'
+              };
+            }
+            byChannel[channel].goal += data.goal || 0;
+            byChannel[channel].delivered += data.delivered || 0;
+          });
+        }
+        
+        // Track status breakdown
+        const percent = summary.deliveryPercent || 0;
+        if (percent >= 110) statusBreakdown.ahead++;
+        else if (percent >= 90) statusBreakdown.on_track++;
+        else if (percent >= 70) statusBreakdown.behind++;
+        else statusBreakdown.at_risk++;
+      } else {
+        // Order without deliverySummary counts as at_risk
+        statusBreakdown.at_risk++;
+      }
+    });
+
+    // Calculate per-channel delivery percentages
+    Object.keys(byChannel).forEach(channel => {
+      const ch = byChannel[channel];
+      ch.deliveryPercent = ch.goal > 0 ? Math.round((ch.delivered / ch.goal) * 100) : 0;
+    });
+
+    // Calculate overall delivery percentage (average of channel percentages)
+    const channelPercents = Object.values(byChannel).map(ch => ch.deliveryPercent);
+    const overallDeliveryPercent = channelPercents.length > 0
+      ? Math.round(channelPercents.reduce((sum, p) => sum + p, 0) / channelPercents.length)
+      : 0;
+
+    // Get aggregated performance metrics
+    const orderIds = orders.map(o => o._id?.toString()).filter(Boolean);
+    
+    const perfAggregation = await perfCollection.aggregate([
+      { 
+        $match: { 
+          orderId: { $in: orderIds },
+          deletedAt: { $exists: false }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalEntries: { $sum: 1 },
+          totalImpressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } },
+          totalClicks: { $sum: { $ifNull: ['$metrics.clicks', 0] } },
+          totalInsertions: { $sum: { $ifNull: ['$metrics.insertions', 0] } },
+          totalCirculation: { $sum: { $ifNull: ['$metrics.circulation', 0] } },
+          totalSpotsAired: { $sum: { $ifNull: ['$metrics.spotsAired', 0] } },
+          totalDownloads: { $sum: { $ifNull: ['$metrics.downloads', 0] } }
+        }
+      }
+    ]).toArray();
+
+    const perfTotals = perfAggregation[0] || {
+      totalEntries: 0,
+      totalImpressions: 0,
+      totalClicks: 0,
+      totalInsertions: 0,
+      totalCirculation: 0,
+      totalSpotsAired: 0,
+      totalDownloads: 0
+    };
+
+    // Count proofs
+    const proofsCount = await proofsCollection.countDocuments({
+      orderId: { $in: orderIds }
+    });
+
+    // Get total order count (all statuses)
+    const totalOrders = await ordersCollection.countDocuments({
+      publicationId: { $in: publicationIds.map(id => parseInt(id)) }
+    });
+
+    res.json({
+      overallDeliveryPercent,
+      totalExpectedReports,
+      totalReportsSubmitted,
+      totalOrders,
+      activeOrders: orders.length,
+      byChannel,
+      totals: {
+        reports: perfTotals.totalEntries,
+        impressions: perfTotals.totalImpressions,
+        clicks: perfTotals.totalClicks,
+        insertions: perfTotals.totalInsertions,
+        circulation: perfTotals.totalCirculation,
+        spotsAired: perfTotals.totalSpotsAired,
+        downloads: perfTotals.totalDownloads,
+        proofs: proofsCount
+      },
+      statusBreakdown
+    });
+  } catch (error) {
+    console.error('Error fetching delivery summary:', error);
+    res.status(500).json({ error: 'Failed to fetch delivery summary' });
+  }
+});
+
+/**
  * GET /api/publication-orders/:campaignId/:publicationId
  * Get a specific insertion order
  */
@@ -1604,229 +1829,6 @@ router.post('/:campaignId/:publicationId/proof', async (req: any, res: Response)
   } catch (error) {
     console.error('Error uploading proof:', error);
     res.status(500).json({ error: 'Failed to upload proof' });
-  }
-});
-
-/**
- * GET /api/publication-orders/delivery-summary
- * Get aggregated delivery progress across all active orders for a publication
- */
-router.get('/delivery-summary', async (req: any, res: Response) => {
-  try {
-    const userId = req.user?.id;
-    const { publicationId } = req.query;
-
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Get user's assigned publications
-    let publicationIds: string[] = [];
-    
-    if (publicationId) {
-      publicationIds = [publicationId as string];
-    } else {
-      publicationIds = await permissionsService.getUserPublications(userId);
-    }
-    
-    if (publicationIds.length === 0) {
-      return res.json({
-        overallDeliveryPercent: 0,
-        totalExpectedReports: 0,
-        totalReportsSubmitted: 0,
-        totalOrders: 0,
-        activeOrders: 0,
-        byChannel: {},
-        totals: {
-          reports: 0,
-          impressions: 0,
-          clicks: 0,
-          insertions: 0,
-          circulation: 0,
-          spotsAired: 0,
-          downloads: 0,
-          proofs: 0
-        },
-        statusBreakdown: {
-          on_track: 0,
-          ahead: 0,
-          behind: 0,
-          at_risk: 0
-        }
-      });
-    }
-
-    const { getDatabase, COLLECTIONS } = await import('../../src/integrations/mongodb/client');
-    const db = getDatabase();
-    const ordersCollection = db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS);
-    const perfCollection = db.collection(COLLECTIONS.PERFORMANCE_ENTRIES);
-    const proofsCollection = db.collection(COLLECTIONS.PROOF_OF_PERFORMANCE);
-
-    // Get all active orders (confirmed, in_production) for the publication
-    const activeStatuses = ['confirmed', 'in_production'];
-    const orders = await ordersCollection.find({
-      publicationId: { $in: publicationIds.map(id => parseInt(id)) },
-      status: { $in: activeStatuses }
-    }).toArray();
-
-    if (orders.length === 0) {
-      return res.json({
-        overallDeliveryPercent: 0,
-        totalExpectedReports: 0,
-        totalReportsSubmitted: 0,
-        totalOrders: 0,
-        activeOrders: 0,
-        byChannel: {},
-        totals: {
-          reports: 0,
-          impressions: 0,
-          clicks: 0,
-          insertions: 0,
-          circulation: 0,
-          spotsAired: 0,
-          downloads: 0,
-          proofs: 0
-        },
-        statusBreakdown: {
-          on_track: 0,
-          ahead: 0,
-          behind: 0,
-          at_risk: 0
-        }
-      });
-    }
-
-    // Aggregate data from all orders' deliverySummary
-    let totalExpectedReports = 0;
-    let totalReportsSubmitted = 0;
-    const byChannel: Record<string, { 
-      goal: number; 
-      delivered: number; 
-      deliveryPercent: number;
-      goalType: string;
-      volumeLabel: string;
-    }> = {};
-    
-    const statusBreakdown = {
-      on_track: 0,
-      ahead: 0,
-      behind: 0,
-      at_risk: 0
-    };
-
-    orders.forEach(order => {
-      const summary = order.deliverySummary;
-      if (summary) {
-        totalExpectedReports += summary.totalExpectedReports || 0;
-        totalReportsSubmitted += summary.totalReportsSubmitted || 0;
-        
-        // Aggregate by channel
-        if (summary.byChannel) {
-          Object.entries(summary.byChannel).forEach(([channel, data]: [string, any]) => {
-            if (!byChannel[channel]) {
-              byChannel[channel] = {
-                goal: 0,
-                delivered: 0,
-                deliveryPercent: 0,
-                goalType: data.goalType || 'frequency',
-                volumeLabel: data.volumeLabel || 'Delivered'
-              };
-            }
-            byChannel[channel].goal += data.goal || 0;
-            byChannel[channel].delivered += data.delivered || 0;
-          });
-        }
-        
-        // Track status breakdown
-        const percent = summary.deliveryPercent || 0;
-        if (percent >= 110) statusBreakdown.ahead++;
-        else if (percent >= 90) statusBreakdown.on_track++;
-        else if (percent >= 70) statusBreakdown.behind++;
-        else statusBreakdown.at_risk++;
-      } else {
-        // Order without deliverySummary counts as at_risk
-        statusBreakdown.at_risk++;
-      }
-    });
-
-    // Calculate per-channel delivery percentages
-    Object.keys(byChannel).forEach(channel => {
-      const ch = byChannel[channel];
-      ch.deliveryPercent = ch.goal > 0 ? Math.round((ch.delivered / ch.goal) * 100) : 0;
-    });
-
-    // Calculate overall delivery percentage (average of channel percentages)
-    const channelPercents = Object.values(byChannel).map(ch => ch.deliveryPercent);
-    const overallDeliveryPercent = channelPercents.length > 0
-      ? Math.round(channelPercents.reduce((sum, p) => sum + p, 0) / channelPercents.length)
-      : 0;
-
-    // Get aggregated performance metrics
-    const orderIds = orders.map(o => o._id?.toString()).filter(Boolean);
-    
-    const perfAggregation = await perfCollection.aggregate([
-      { 
-        $match: { 
-          orderId: { $in: orderIds },
-          deletedAt: { $exists: false }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalEntries: { $sum: 1 },
-          totalImpressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } },
-          totalClicks: { $sum: { $ifNull: ['$metrics.clicks', 0] } },
-          totalInsertions: { $sum: { $ifNull: ['$metrics.insertions', 0] } },
-          totalCirculation: { $sum: { $ifNull: ['$metrics.circulation', 0] } },
-          totalSpotsAired: { $sum: { $ifNull: ['$metrics.spotsAired', 0] } },
-          totalDownloads: { $sum: { $ifNull: ['$metrics.downloads', 0] } }
-        }
-      }
-    ]).toArray();
-
-    const perfTotals = perfAggregation[0] || {
-      totalEntries: 0,
-      totalImpressions: 0,
-      totalClicks: 0,
-      totalInsertions: 0,
-      totalCirculation: 0,
-      totalSpotsAired: 0,
-      totalDownloads: 0
-    };
-
-    // Count proofs
-    const proofsCount = await proofsCollection.countDocuments({
-      orderId: { $in: orderIds }
-    });
-
-    // Get total order count (all statuses)
-    const totalOrders = await ordersCollection.countDocuments({
-      publicationId: { $in: publicationIds.map(id => parseInt(id)) }
-    });
-
-    res.json({
-      overallDeliveryPercent,
-      totalExpectedReports,
-      totalReportsSubmitted,
-      totalOrders,
-      activeOrders: orders.length,
-      byChannel,
-      totals: {
-        reports: perfTotals.totalEntries,
-        impressions: perfTotals.totalImpressions,
-        clicks: perfTotals.totalClicks,
-        insertions: perfTotals.totalInsertions,
-        circulation: perfTotals.totalCirculation,
-        spotsAired: perfTotals.totalSpotsAired,
-        downloads: perfTotals.totalDownloads,
-        proofs: proofsCount
-      },
-      statusBreakdown
-    });
-  } catch (error) {
-    console.error('Error fetching delivery summary:', error);
-    res.status(500).json({ error: 'Failed to fetch delivery summary' });
   }
 });
 
