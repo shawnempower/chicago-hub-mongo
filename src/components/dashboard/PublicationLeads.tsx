@@ -150,7 +150,8 @@ export const PublicationLeads = ({ publicationId }: PublicationLeadsProps) => {
     }
   };
 
-  const getHubName = (hubId: string): string => {
+  const getHubName = (hubId?: string): string => {
+    if (!hubId) return 'No Hub';
     // Map hub IDs to display names
     const hubNames: Record<string, string> = {
       'chicago-hub': 'Chicago Hub',

@@ -584,9 +584,6 @@ export function DashboardOverview() {
         </Card>
       </div>
 
-      {/* Delivery Progress - Aggregated across all active orders */}
-      <PublicationDeliveryProgress publicationId={selectedPublication.publicationId} />
-
       {/* Action Center - What do you need to do? */}
       <Card>
         <CardHeader>
@@ -599,6 +596,9 @@ export function DashboardOverview() {
           <PublicationActionCenter limit={5} compact />
         </CardContent>
       </Card>
+
+      {/* Delivery Progress - Aggregated across all active orders */}
+      <PublicationDeliveryProgress publicationId={selectedPublication.publicationId} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
