@@ -264,6 +264,95 @@ function getNestedValue(obj: any, path: string): any {
   return path.split('.').reduce((current, key) => current?.[key], obj);
 }
 
+/**
+ * Remove hubPricing from all advertising opportunities in a publication.
+ * Hub pricing should be set up by hub admins after import, not imported from JSON.
+ * This prevents orphaned hub pricing entries when hub IDs don't match.
+ */
+function stripHubPricing(publication: any): void {
+  const dc = publication.distributionChannels;
+  if (!dc) return;
+
+  // Website
+  if (dc.website?.advertisingOpportunities) {
+    for (const ad of dc.website.advertisingOpportunities) {
+      delete ad.hubPricing;
+    }
+  }
+
+  // Newsletters
+  if (dc.newsletters) {
+    for (const nl of dc.newsletters) {
+      for (const ad of nl.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+    }
+  }
+
+  // Print
+  if (Array.isArray(dc.print)) {
+    for (const print of dc.print) {
+      for (const ad of print.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+    }
+  } else if (dc.print?.advertisingOpportunities) {
+    for (const ad of dc.print.advertisingOpportunities) {
+      delete ad.hubPricing;
+    }
+  }
+
+  // Social Media
+  if (dc.socialMedia) {
+    for (const social of dc.socialMedia) {
+      for (const ad of social.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+    }
+  }
+
+  // Events
+  if (dc.events) {
+    for (const event of dc.events) {
+      for (const opp of event.advertisingOpportunities || event.sponsorshipOpportunities || []) {
+        delete opp.hubPricing;
+      }
+    }
+  }
+
+  // Podcasts
+  if (dc.podcasts) {
+    for (const podcast of dc.podcasts) {
+      for (const ad of podcast.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+    }
+  }
+
+  // Radio Stations
+  if (dc.radioStations) {
+    for (const radio of dc.radioStations) {
+      for (const ad of radio.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+      for (const show of radio.shows || []) {
+        for (const ad of show.advertisingOpportunities || []) {
+          delete ad.hubPricing;
+        }
+      }
+    }
+  }
+
+  // Streaming Video
+  if (dc.streamingVideo) {
+    for (const stream of dc.streamingVideo) {
+      for (const ad of stream.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+    }
+  }
+}
+
 function displayPreview(results: ImportResult[]) {
   console.log('\n📋 Import Preview:');
   console.log('==================');
@@ -410,11 +499,13 @@ async function importPublications(args: string[] = []) {
     const publications = Array.isArray(data) ? data : [data];
     console.log(`📊 Found ${publications.length} publication(s) to import`);
 
-    // Validate publications
+    // Validate publications and strip hubPricing
     for (const pub of publications) {
       if (!pub.publicationId || !pub.basicInfo?.publicationName) {
         throw new Error(`Invalid publication data: missing publicationId or publicationName`);
       }
+      // Strip hubPricing - it should be set up by hub admins after import
+      stripHubPricing(pub);
     }
 
     // Analyze what changes will be made

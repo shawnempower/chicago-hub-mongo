@@ -438,6 +438,8 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
           const pricingTiers = normalizePricingToArray(hubPrice.pricing);
           const isExpanded = expandedHubIndexes.has(hubIndex);
           const columnCount = conditionalFields && conditionalFields.length > 0 ? 5 : 4;
+          // Check if this hub pricing references a hub that no longer exists
+          const isOrphanedHub = hubPrice.hubId && !hubs.find(h => h.hubId === hubPrice.hubId);
           
           return (
             <div key={hubIndex} className="border rounded-lg overflow-hidden bg-white shadow-sm">
@@ -447,27 +449,42 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                   <tr style={{ backgroundColor: '#FAFAFA' }} className="border-b">
                     <td colSpan={columnCount} className="px-4 py-1">
                       <div className="flex items-center justify-between">
-                        <Select
-                          value={hubPrice.hubId}
-                          onValueChange={(value) => updateHubSelection(hubIndex, value)}
-                        >
-                          <SelectTrigger className="w-64 border-0 bg-transparent shadow-none hover:bg-gray-100 data-[state=open]:border data-[state=open]:bg-background data-[state=open]:shadow-sm">
-                            <SelectValue className="flex-1" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {hubsLoading ? (
-                              <SelectItem value="loading" disabled>Loading hubs...</SelectItem>
-                            ) : hubs.length === 0 ? (
-                              <SelectItem value="none" disabled>No hubs available</SelectItem>
-                            ) : (
-                              hubs.map((hub) => (
-                                <SelectItem key={hub.hubId} value={hub.hubId}>
-                                  {hub.basicInfo.name} {hub.status !== 'active' && `(${hub.status})`}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={hubPrice.hubId || ''}
+                            onValueChange={(value) => updateHubSelection(hubIndex, value)}
+                          >
+                            <SelectTrigger className={`w-64 border-0 bg-transparent shadow-none hover:bg-gray-100 data-[state=open]:border data-[state=open]:bg-background data-[state=open]:shadow-sm ${isOrphanedHub ? 'text-amber-600' : ''}`}>
+                              <SelectValue placeholder={hubPrice.hubName || 'Select a hub...'} className="flex-1" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {hubsLoading ? (
+                                <SelectItem value="loading" disabled>Loading hubs...</SelectItem>
+                              ) : hubs.length === 0 ? (
+                                <SelectItem value="none" disabled>No hubs available</SelectItem>
+                              ) : (
+                                <>
+                                  {/* Show orphaned hub option if it exists but isn't in the list */}
+                                  {isOrphanedHub && (
+                                    <SelectItem value={hubPrice.hubId} disabled className="text-amber-600">
+                                      {hubPrice.hubName || hubPrice.hubId} (not found)
+                                    </SelectItem>
+                                  )}
+                                  {hubs.map((hub) => (
+                                    <SelectItem key={hub.hubId} value={hub.hubId}>
+                                      {hub.basicInfo.name} {hub.status !== 'active' && `(${hub.status})`}
+                                    </SelectItem>
+                                  ))}
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {isOrphanedHub && (
+                            <span className="text-xs text-amber-600" title="This hub no longer exists. Please select a different hub or delete this pricing.">
+                              ⚠️
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <Button
                             type="button"

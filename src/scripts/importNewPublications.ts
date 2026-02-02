@@ -24,6 +24,95 @@ const publicationFiles = [
   'wvon_profile.json'
 ];
 
+/**
+ * Remove hubPricing from all advertising opportunities in a publication.
+ * Hub pricing should be set up by hub admins after import, not imported from JSON.
+ * This prevents orphaned hub pricing entries when hub IDs don't match.
+ */
+function stripHubPricing(publication: any): void {
+  const dc = publication.distributionChannels;
+  if (!dc) return;
+
+  // Website
+  if (dc.website?.advertisingOpportunities) {
+    for (const ad of dc.website.advertisingOpportunities) {
+      delete ad.hubPricing;
+    }
+  }
+
+  // Newsletters
+  if (dc.newsletters) {
+    for (const nl of dc.newsletters) {
+      for (const ad of nl.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+    }
+  }
+
+  // Print
+  if (Array.isArray(dc.print)) {
+    for (const print of dc.print) {
+      for (const ad of print.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+    }
+  } else if (dc.print?.advertisingOpportunities) {
+    for (const ad of dc.print.advertisingOpportunities) {
+      delete ad.hubPricing;
+    }
+  }
+
+  // Social Media
+  if (dc.socialMedia) {
+    for (const social of dc.socialMedia) {
+      for (const ad of social.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+    }
+  }
+
+  // Events
+  if (dc.events) {
+    for (const event of dc.events) {
+      for (const opp of event.advertisingOpportunities || event.sponsorshipOpportunities || []) {
+        delete opp.hubPricing;
+      }
+    }
+  }
+
+  // Podcasts
+  if (dc.podcasts) {
+    for (const podcast of dc.podcasts) {
+      for (const ad of podcast.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+    }
+  }
+
+  // Radio Stations
+  if (dc.radioStations) {
+    for (const radio of dc.radioStations) {
+      for (const ad of radio.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+      for (const show of radio.shows || []) {
+        for (const ad of show.advertisingOpportunities || []) {
+          delete ad.hubPricing;
+        }
+      }
+    }
+  }
+
+  // Streaming Video
+  if (dc.streamingVideo) {
+    for (const stream of dc.streamingVideo) {
+      for (const ad of stream.advertisingOpportunities || []) {
+        delete ad.hubPricing;
+      }
+    }
+  }
+}
+
 async function importNewPublications() {
   try {
     console.log('🚀 Starting import of new publication files...');
@@ -57,6 +146,10 @@ async function importNewPublications() {
         // Read and parse the JSON file
         const fileContent = fs.readFileSync(filePath, 'utf-8');
         const publicationData = JSON.parse(fileContent);
+        
+        // Strip hubPricing from all distribution channels - hub pricing should be set up
+        // by hub admins after import, not imported from JSON
+        stripHubPricing(publicationData);
         
         // Check if publication already exists
         const existing = await publicationsService.getByPublicationId(publicationData.publicationId);
