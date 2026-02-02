@@ -738,7 +738,190 @@ export class EarningsService {
   // ==================== Query Methods ====================
 
   /**
-   * Get earnings for a publication
+   * Calculate earnings for a single order on-the-fly
+   * This doesn't require a pre-created earnings record
+   */
+  async calculateOrderEarnings(orderId: string): Promise<{
+    orderId: string;
+    campaignId: string;
+    campaignName: string;
+    publicationId: number;
+    publicationName: string;
+    hubId: string;
+    estimated: { total: number; byChannel: Record<string, number> };
+    actual: { total: number; byChannel: Record<string, number> };
+    variance: { amount: number; percentage: number };
+    paymentStatus: 'pending' | 'partially_paid' | 'paid';
+    amountPaid: number;
+    amountOwed: number;
+    finalized: boolean;
+    createdAt: Date;
+    campaignEndDate?: Date;
+  } | null> {
+    // Get the order
+    const order = await this.ordersCollection.findOne({
+      $or: [
+        { _id: new ObjectId(orderId) },
+        { _id: orderId }
+      ]
+    });
+    
+    if (!order) return null;
+    
+    // Only include confirmed orders
+    if (order.status !== 'confirmed' && order.status !== 'completed') {
+      return null;
+    }
+    
+    // Get campaign info
+    const campaign = await this.campaignsCollection.findOne({
+      $or: [
+        { _id: new ObjectId(order.campaignId) },
+        { _id: order.campaignId },
+        { campaignId: order.campaignId }
+      ]
+    });
+    
+    // Get existing earnings record for payment info (if exists)
+    const existingEarnings = await this.earningsCollection.findOne({ orderId: orderId.toString() });
+    
+    // Get performance entries for this order
+    const performanceEntries = await this.performanceEntriesCollection
+      .find({ orderId: orderId.toString() })
+      .toArray();
+    
+    // Get verified proofs for this order
+    const verifiedProofs = await this.proofsCollection
+      .find({ orderId: orderId.toString(), status: 'verified' })
+      .toArray();
+    
+    // Calculate estimated earnings from order items
+    const estimatedByChannel: Record<string, number> = {};
+    let estimatedTotal = 0;
+    
+    const items = order.items || order.inventory || [];
+    for (const item of items) {
+      const channel = item.channel || 'other';
+      const itemCost = item.itemPricing?.totalCost || item.itemPricing?.hubPrice || 0;
+      estimatedByChannel[channel] = (estimatedByChannel[channel] || 0) + itemCost;
+      estimatedTotal += itemCost;
+    }
+    
+    // Calculate actual earnings from performance entries
+    const actualByChannel: Record<string, number> = {};
+    let actualTotal = 0;
+    
+    for (const entry of performanceEntries) {
+      const channel = entry.channel || 'other';
+      // Find the matching item to get pricing info
+      const matchingItem = items.find((i: any) => 
+        i.itemPath === entry.itemPath || 
+        i.sourcePath === entry.itemPath ||
+        i.channel === channel
+      );
+      
+      if (matchingItem) {
+        const pricingModel = matchingItem.itemPricing?.pricingModel || 'flat';
+        const rate = matchingItem.itemPricing?.rate || matchingItem.itemPricing?.hubPrice || 0;
+        
+        // Calculate based on pricing model
+        let itemEarnings = 0;
+        const impressions = entry.metrics?.impressions || 0;
+        const clicks = entry.metrics?.clicks || 0;
+        const occurrences = entry.occurrenceCount || 1;
+        
+        switch (pricingModel) {
+          case 'cpm':
+            itemEarnings = (impressions / 1000) * rate;
+            break;
+          case 'cpc':
+            itemEarnings = clicks * rate;
+            break;
+          case 'per_send':
+          case 'per_spot':
+          case 'per_post':
+          case 'per_ad':
+          case 'per_episode':
+            itemEarnings = occurrences * rate;
+            break;
+          case 'flat':
+          case 'monthly':
+          default:
+            // For flat rate, count verified proofs or use percentage complete
+            const proofCount = verifiedProofs.filter(p => p.itemPath === entry.itemPath).length;
+            const plannedOccurrences = matchingItem.frequency?.totalOccurrences || 1;
+            const completionPercent = Math.min(1, proofCount / plannedOccurrences);
+            itemEarnings = completionPercent * (matchingItem.itemPricing?.totalCost || rate);
+            break;
+        }
+        
+        actualByChannel[channel] = (actualByChannel[channel] || 0) + itemEarnings;
+        actualTotal += itemEarnings;
+      }
+    }
+    
+    // For flat-rate items without performance entries, calculate from proofs
+    for (const item of items) {
+      const channel = item.channel || 'other';
+      const hasPerformanceEntry = performanceEntries.some((e: any) => 
+        e.itemPath === item.itemPath || e.itemPath === item.sourcePath
+      );
+      
+      if (!hasPerformanceEntry) {
+        const itemProofs = verifiedProofs.filter(p => 
+          p.itemPath === item.itemPath || p.itemPath === item.sourcePath
+        );
+        
+        if (itemProofs.length > 0) {
+          const plannedOccurrences = item.frequency?.totalOccurrences || 1;
+          const completionPercent = Math.min(1, itemProofs.length / plannedOccurrences);
+          const itemEarnings = completionPercent * (item.itemPricing?.totalCost || 0);
+          
+          actualByChannel[channel] = (actualByChannel[channel] || 0) + itemEarnings;
+          actualTotal += itemEarnings;
+        }
+      }
+    }
+    
+    // Calculate variance
+    const varianceAmount = actualTotal - estimatedTotal;
+    const variancePercent = estimatedTotal > 0 ? (varianceAmount / estimatedTotal) * 100 : 0;
+    
+    // Use payment info from existing record, or defaults
+    const amountPaid = existingEarnings?.amountPaid || 0;
+    const amountOwed = Math.max(0, actualTotal - amountPaid);
+    let paymentStatus: 'pending' | 'partially_paid' | 'paid' = 'pending';
+    if (amountPaid >= actualTotal && actualTotal > 0) {
+      paymentStatus = 'paid';
+    } else if (amountPaid > 0) {
+      paymentStatus = 'partially_paid';
+    }
+    
+    // Check if campaign has ended (finalized)
+    const campaignEndDate = campaign?.timeline?.endDate ? new Date(campaign.timeline.endDate) : undefined;
+    const finalized = campaignEndDate ? campaignEndDate < new Date() : false;
+    
+    return {
+      orderId: orderId.toString(),
+      campaignId: order.campaignId,
+      campaignName: campaign?.name || campaign?.basicInfo?.campaignName || 'Unknown Campaign',
+      publicationId: order.publicationId,
+      publicationName: order.publicationName || 'Unknown Publication',
+      hubId: order.hubId || campaign?.hubId || '',
+      estimated: { total: estimatedTotal, byChannel: estimatedByChannel },
+      actual: { total: actualTotal, byChannel: actualByChannel },
+      variance: { amount: varianceAmount, percentage: variancePercent },
+      paymentStatus,
+      amountPaid,
+      amountOwed,
+      finalized,
+      createdAt: order.createdAt || new Date(),
+      campaignEndDate,
+    };
+  }
+
+  /**
+   * Get earnings for a publication (calculates on-the-fly)
    */
   async getPublicationEarnings(
     publicationId: number,
@@ -748,26 +931,44 @@ export class EarningsService {
       limit?: number;
       skip?: number;
     }
-  ): Promise<PublicationEarnings[]> {
-    const query: any = { publicationId };
+  ): Promise<any[]> {
+    // Get all confirmed orders for this publication
+    const orders = await this.ordersCollection
+      .find({ 
+        publicationId,
+        status: { $in: ['confirmed', 'completed'] }
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+    
+    // Calculate earnings for each order
+    const earningsPromises = orders.map(async (order) => {
+      const orderId = order._id?.toString();
+      if (!orderId) return null;
+      return this.calculateOrderEarnings(orderId);
+    });
+    
+    const allEarnings = (await Promise.all(earningsPromises)).filter(e => e !== null);
+    
+    // Apply filters
+    let filteredEarnings = allEarnings;
     
     if (options?.paymentStatus) {
-      query.paymentStatus = options.paymentStatus;
+      filteredEarnings = filteredEarnings.filter(e => e!.paymentStatus === options.paymentStatus);
     }
     if (options?.finalized !== undefined) {
-      query.finalized = options.finalized;
+      filteredEarnings = filteredEarnings.filter(e => e!.finalized === options.finalized);
     }
-
-    return this.earningsCollection
-      .find(query)
-      .sort({ createdAt: -1 })
-      .skip(options?.skip || 0)
-      .limit(options?.limit || 100)
-      .toArray();
+    
+    // Apply pagination
+    const skip = options?.skip || 0;
+    const limit = options?.limit || 100;
+    
+    return filteredEarnings.slice(skip, skip + limit);
   }
 
   /**
-   * Get earnings summary for a publication
+   * Get earnings summary for a publication (calculates on-the-fly)
    */
   async getPublicationEarningsSummary(publicationId: number): Promise<{
     totalEarned: number;
@@ -776,9 +977,8 @@ export class EarningsService {
     campaignCount: number;
     byPaymentStatus: Record<string, number>;
   }> {
-    const allEarnings = await this.earningsCollection
-      .find({ publicationId })
-      .toArray();
+    // Get all earnings on-the-fly
+    const allEarnings = await this.getPublicationEarnings(publicationId, { limit: 1000 });
 
     const summary = {
       totalEarned: 0,
@@ -793,7 +993,8 @@ export class EarningsService {
     };
 
     for (const earnings of allEarnings) {
-      summary.totalEarned += earnings.actual.total || earnings.estimated.total;
+      // Use actual if available, otherwise estimated
+      summary.totalEarned += earnings.actual.total > 0 ? earnings.actual.total : earnings.estimated.total;
       summary.totalPaid += earnings.amountPaid;
       summary.totalPending += earnings.amountOwed;
       summary.byPaymentStatus[earnings.paymentStatus] = 

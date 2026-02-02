@@ -57,22 +57,20 @@ router.get('/publication/:publicationId/summary', async (req: any, res: Response
 
 /**
  * GET /api/earnings/order/:orderId
- * Get earnings for a specific order
+ * Get earnings for a specific order (calculated on-the-fly)
  */
 router.get('/order/:orderId', async (req: any, res: Response) => {
   try {
     const { orderId } = req.params;
     
-    const db = getDatabase();
-    const collection = db.collection(COLLECTIONS.PUBLICATION_EARNINGS);
-    
-    const earnings = await collection.findOne({ orderId });
+    // Calculate earnings on-the-fly
+    const earnings = await earningsService.calculateOrderEarnings(orderId);
     
     if (!earnings) {
-      return res.status(404).json({ error: 'Earnings record not found' });
+      return res.status(404).json({ error: 'Order not found or not confirmed' });
     }
     
-    res.json(earnings);
+    res.json({ earnings });
   } catch (error) {
     console.error('Error fetching order earnings:', error);
     res.status(500).json({ error: 'Failed to fetch order earnings' });
