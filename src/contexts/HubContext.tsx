@@ -23,21 +23,26 @@ interface HubContextType {
 const HubContext = createContext<HubContextType | undefined>(undefined);
 
 export const HubProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { hubs: allHubs, loading, error, refetch } = useHubs({ status: 'active' });
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  // Only fetch hubs when user is logged in (prevents API errors on auth page)
+  const { hubs: allHubs, loading, error, refetch } = useHubs(
+    { status: 'active' }, 
+    { enabled: !authLoading && !!user }
+  );
   const [selectedHubId, setSelectedHubId] = useState<string | null>(null);
   const [selectedHub, setSelectedHub] = useState<Hub | null>(null);
 
   // Log hub context state for debugging
   useEffect(() => {
     console.log('🎯 HubContext State:', {
+      authLoading,
       loading,
       error,
       hubsCount: allHubs.length,
       selectedHubId,
       hasUser: !!user
     });
-  }, [loading, error, allHubs.length, selectedHubId, user]);
+  }, [authLoading, loading, error, allHubs.length, selectedHubId, user]);
 
   // Create a stable reference for user hub permissions to detect changes
   const userHubPermissionsKey = useMemo(() => {

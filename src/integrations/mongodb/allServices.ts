@@ -1225,6 +1225,54 @@ export class PublicationsService {
     }
   }
 
+  /**
+   * Get publications with advanced options (projection, pagination, custom query)
+   * Used by the optimized API endpoint for better performance
+   */
+  async getAllWithOptions(options: {
+    query?: any;
+    projection?: any;
+    limit?: number | null;
+    sort?: any;
+  }): Promise<Publication[]> {
+    try {
+      const { query = {}, projection, limit, sort = { 'basicInfo.publicationName': 1 } } = options;
+
+      // Ensure database connection is ready
+      const db = getDatabase();
+      await db.admin().ping().catch(() => {
+        throw new Error('Database connection not ready');
+      });
+
+      let cursor = this.collection.find(query);
+      
+      // Apply projection if specified
+      if (projection) {
+        cursor = cursor.project(projection);
+      }
+      
+      // Apply sorting
+      cursor = cursor.sort(sort);
+      
+      // Apply limit if specified
+      if (limit && limit > 0) {
+        cursor = cursor.limit(limit);
+      }
+
+      return await cursor.toArray();
+    } catch (error) {
+      console.error('Error fetching publications with options:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+      }
+      throw error;
+    }
+  }
+
   async getById(id: string): Promise<Publication | null> {
     try {
       const query: any = { $or: [] };

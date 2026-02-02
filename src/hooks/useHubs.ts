@@ -10,14 +10,27 @@ import { Hub } from '@/integrations/mongodb/hubSchema';
 
 /**
  * Hook to fetch all hubs
+ * @param filters - Optional filters for hub query
+ * @param options - Optional settings (enabled: whether to fetch)
  */
-export const useHubs = (filters?: HubFilters) => {
+export const useHubs = (filters?: HubFilters, options?: { enabled?: boolean }) => {
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  
+  // Default to enabled if not specified
+  const enabled = options?.enabled !== false;
 
   useEffect(() => {
+    // Skip fetching if not enabled (e.g., user not logged in)
+    if (!enabled) {
+      setHubs([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     let retryTimeout: NodeJS.Timeout;
     
     const fetchHubs = async () => {
@@ -54,7 +67,7 @@ export const useHubs = (filters?: HubFilters) => {
         clearTimeout(retryTimeout);
       }
     };
-  }, [filters?.status, filters?.includeInactive, retryCount]);
+  }, [filters?.status, filters?.includeInactive, retryCount, enabled]);
 
   const refetch = async () => {
     try {

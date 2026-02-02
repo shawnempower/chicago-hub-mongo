@@ -15,12 +15,58 @@ const getAuthHeaders = (): HeadersInit => {
   };
 };
 
-// Get all publications with optional filtering
+// Type for minimal publication data (for dropdowns)
+export interface PublicationMinimal {
+  _id?: string;
+  publicationId: number;
+  hubIds?: string[];
+  basicInfo: {
+    publicationName: string;
+  };
+}
+
+// Type for list view publication data
+export interface PublicationListItem {
+  _id?: string;
+  publicationId: number;
+  hubIds?: string[];
+  basicInfo: {
+    publicationName: string;
+    websiteUrl?: string;
+    publicationType?: string;
+    contentType?: string;
+    geographicCoverage?: string;
+    primaryServiceArea?: string;
+  };
+  contactInfo?: {
+    primaryContact?: any;
+  };
+  metadata?: {
+    verificationStatus?: string;
+    lastUpdated?: string;
+  };
+}
+
+// Paginated response type
+export interface PaginatedPublicationsResponse<T> {
+  data: T[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: string | null;
+    count: number;
+  };
+}
+
+// Field level options for getPublications
+export type PublicationFieldLevel = 'minimal' | 'list' | 'full';
+
+// Get all publications with optional filtering and field projection
 export const getPublications = async (filters?: {
   geographicCoverage?: string;
   publicationType?: string;
   contentType?: string;
   verificationStatus?: string;
+  fields?: PublicationFieldLevel;
 }): Promise<PublicationFrontend[]> => {
   try {
     const params = new URLSearchParams();
@@ -28,6 +74,7 @@ export const getPublications = async (filters?: {
     if (filters?.publicationType) params.append('publicationType', filters.publicationType);
     if (filters?.contentType) params.append('contentType', filters.contentType);
     if (filters?.verificationStatus) params.append('verificationStatus', filters.verificationStatus);
+    if (filters?.fields) params.append('fields', filters.fields);
 
     const url = `${API_BASE_URL}/publications${params.toString() ? '?' + params.toString() : ''}`;
     
@@ -86,6 +133,124 @@ export const getPublications = async (filters?: {
       throw error;
     }
     throw new Error('Failed to fetch publications');
+  }
+};
+
+// Get minimal publication data for dropdowns (much smaller payload)
+export const getPublicationsMinimal = async (): Promise<PublicationMinimal[]> => {
+  try {
+    const url = `${API_BASE_URL}/publications?fields=minimal`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for minimal data
+    
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: getAuthHeaders()
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch publications: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format: expected array');
+      }
+
+      return data;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error) {
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timed out. Please try again.');
+        }
+        throw fetchError;
+      }
+      throw new Error('Network error while fetching publications');
+    }
+  } catch (error) {
+    console.error('Error fetching minimal publications:', error);
+    throw error;
+  }
+};
+
+// Get paginated publications list (for admin views)
+export const getPublicationsPaginated = async (options?: {
+  limit?: number;
+  cursor?: string;
+  fields?: PublicationFieldLevel;
+  filters?: {
+    geographicCoverage?: string;
+    publicationType?: string;
+    contentType?: string;
+    verificationStatus?: string;
+  };
+}): Promise<PaginatedPublicationsResponse<PublicationListItem>> => {
+  try {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.cursor) params.append('cursor', options.cursor);
+    if (options?.fields) params.append('fields', options.fields);
+    if (options?.filters?.geographicCoverage) params.append('geographicCoverage', options.filters.geographicCoverage);
+    if (options?.filters?.publicationType) params.append('publicationType', options.filters.publicationType);
+    if (options?.filters?.contentType) params.append('contentType', options.filters.contentType);
+    if (options?.filters?.verificationStatus) params.append('verificationStatus', options.filters.verificationStatus);
+
+    const url = `${API_BASE_URL}/publications${params.toString() ? '?' + params.toString() : ''}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: getAuthHeaders()
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch publications: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // If response has pagination structure, return as-is
+      if (data.pagination && data.data) {
+        return data;
+      }
+      
+      // If response is an array (non-paginated fallback), wrap it
+      if (Array.isArray(data)) {
+        return {
+          data,
+          pagination: {
+            hasMore: false,
+            nextCursor: null,
+            count: data.length
+          }
+        };
+      }
+
+      throw new Error('Invalid response format');
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error) {
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timed out. Please try again.');
+        }
+        throw fetchError;
+      }
+      throw new Error('Network error while fetching publications');
+    }
+  } catch (error) {
+    console.error('Error fetching paginated publications:', error);
+    throw error;
   }
 };
 

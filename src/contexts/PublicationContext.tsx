@@ -1,15 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { PublicationFrontend } from '@/types/publication';
-import { getPublications } from '@/api/publications';
+import { getPublications, getPublicationsMinimal, getPublicationById, PublicationMinimal } from '@/api/publications';
 import { useAuth } from './CustomAuthContext';
 
 interface PublicationContextType {
   selectedPublication: PublicationFrontend | null;
-  setSelectedPublication: (publication: PublicationFrontend | null) => void;
-  availablePublications: PublicationFrontend[];
+  setSelectedPublication: (publication: PublicationFrontend | PublicationMinimal | null) => void;
+  availablePublications: PublicationMinimal[];
   loading: boolean;
   error: string | null;
   refreshPublication: () => Promise<void>;
+  // New: expose method to get full publication data when needed
+  getFullPublication: (id: string) => Promise<PublicationFrontend | null>;
 }
 
 const PublicationContext = createContext<PublicationContextType | undefined>(undefined);
@@ -28,13 +30,16 @@ interface PublicationProviderProps {
 
 export const PublicationProvider: React.FC<PublicationProviderProps> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
-  const [selectedPublication, setSelectedPublication] = useState<PublicationFrontend | null>(null);
-  const [allPublications, setAllPublications] = useState<PublicationFrontend[]>([]);
+  const [selectedPublication, setSelectedPublicationState] = useState<PublicationFrontend | null>(null);
+  // Store minimal publication data for dropdown (much smaller payload)
+  const [allPublications, setAllPublications] = useState<PublicationMinimal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Filter publications based on user permissions
+  // Note: Permission filtering is now done server-side, but we keep client-side as backup
   const availablePublications = useMemo(() => {
+    // Server already filters by permissions, but keep client-side filter as backup
     // Admins see all publications
     if (user?.isAdmin || user?.role === 'admin') {
       return allPublications;
@@ -81,13 +86,18 @@ export const PublicationProvider: React.FC<PublicationProviderProps> = ({ childr
     return `${pubIds}|${hubIds}`;
   }, [user?.permissions?.assignedPublicationIds, user?.permissions?.assignedHubIds]);
 
-  // Wait for auth to be ready before loading publications
+  // Wait for auth to be ready AND user to be logged in before loading publications
   // Also reload when user permissions change (e.g., after accepting an invite)
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && user) {
       loadPublications();
+    } else if (!authLoading && !user) {
+      // User not logged in - clear publications and stop loading
+      setAllPublications([]);
+      setSelectedPublicationState(null);
+      setLoading(false);
     }
-  }, [authLoading, userPermissionsKey]);
+  }, [authLoading, user, userPermissionsKey]);
 
   // Ensure selected publication is in the available list after filtering
   useEffect(() => {
@@ -118,23 +128,45 @@ export const PublicationProvider: React.FC<PublicationProviderProps> = ({ childr
     }
   }, [availablePublications, loading]);
 
+  // Fetch full publication data by ID
+  const getFullPublication = useCallback(async (id: string): Promise<PublicationFrontend | null> => {
+    try {
+      return await getPublicationById(id);
+    } catch (err) {
+      console.error('Error fetching full publication:', err);
+      return null;
+    }
+  }, []);
+
   const loadPublications = async () => {
     try {
       setLoading(true);
       setError(null);
-      const publications = await getPublications();
+      
+      // Use minimal fields for much smaller payload (~15KB vs ~525KB)
+      const publications = await getPublicationsMinimal();
       setAllPublications(publications);
       
       // Initial selection will be handled by the useEffect above after filtering
       if (publications.length > 0 && !selectedPublication) {
         // Check for previously selected publication in localStorage
         const savedPublicationId = localStorage.getItem('selectedPublicationId');
-        const savedPublication = savedPublicationId 
+        const savedMinimalPub = savedPublicationId 
           ? publications.find(p => p._id === savedPublicationId || p.publicationId.toString() === savedPublicationId)
           : null;
         
-        // Set temporarily - will be validated by the useEffect after filtering
-        setSelectedPublication(savedPublication || publications[0]);
+        const minimalPubToSelect = savedMinimalPub || publications[0];
+        
+        // Fetch full details for the selected publication
+        if (minimalPubToSelect) {
+          const fullPub = await getPublicationById(
+            minimalPubToSelect._id || minimalPubToSelect.publicationId.toString()
+          );
+          if (fullPub) {
+            setSelectedPublicationState(fullPub);
+            localStorage.setItem('selectedPublicationId', fullPub._id || fullPub.publicationId.toString());
+          }
+        }
       }
     } catch (err) {
       console.error('Error loading publications:', err);
@@ -146,13 +178,40 @@ export const PublicationProvider: React.FC<PublicationProviderProps> = ({ childr
     }
   };
 
-  const handleSetSelectedPublication = (publication: PublicationFrontend | null) => {
-    setSelectedPublication(publication);
-    // Save selection to localStorage
-    if (publication) {
-      localStorage.setItem('selectedPublicationId', publication._id || publication.publicationId.toString());
-    } else {
+  const handleSetSelectedPublication = async (publication: PublicationFrontend | PublicationMinimal | null) => {
+    if (!publication) {
+      setSelectedPublicationState(null);
       localStorage.removeItem('selectedPublicationId');
+      return;
+    }
+
+    // Save selection to localStorage
+    localStorage.setItem('selectedPublicationId', publication._id || publication.publicationId.toString());
+
+    // Check if we already have full data (has distributionChannels or other full fields)
+    const hasFullData = 'distributionChannels' in publication || 'audienceDemographics' in publication;
+    
+    if (hasFullData) {
+      // Already have full publication data
+      setSelectedPublicationState(publication as PublicationFrontend);
+    } else {
+      // Minimal data - need to fetch full details
+      try {
+        const fullPub = await getPublicationById(
+          publication._id || publication.publicationId.toString()
+        );
+        if (fullPub) {
+          setSelectedPublicationState(fullPub);
+        } else {
+          // Fallback: try to use what we have
+          console.warn('Could not fetch full publication data, using minimal');
+          setSelectedPublicationState(publication as PublicationFrontend);
+        }
+      } catch (err) {
+        console.error('Error fetching full publication on select:', err);
+        // Fallback: use what we have
+        setSelectedPublicationState(publication as PublicationFrontend);
+      }
     }
   };
 
@@ -160,17 +219,18 @@ export const PublicationProvider: React.FC<PublicationProviderProps> = ({ childr
     if (!selectedPublication) return;
     
     try {
-      const publications = await getPublications();
-      const refreshedPub = publications.find(
-        p => p._id === selectedPublication._id || 
-             p.publicationId === selectedPublication.publicationId
+      // Refresh the full selected publication
+      const refreshedPub = await getPublicationById(
+        selectedPublication._id || selectedPublication.publicationId.toString()
       );
       
       if (refreshedPub) {
-        setSelectedPublication(refreshedPub);
-        // Also update in allPublications
-        setAllPublications(publications);
+        setSelectedPublicationState(refreshedPub);
       }
+      
+      // Also refresh the minimal publications list
+      const minimalPubs = await getPublicationsMinimal();
+      setAllPublications(minimalPubs);
     } catch (err) {
       console.error('Error refreshing publication:', err);
     }
@@ -185,6 +245,7 @@ export const PublicationProvider: React.FC<PublicationProviderProps> = ({ childr
         loading,
         error,
         refreshPublication,
+        getFullPublication,
       }}
     >
       {children}

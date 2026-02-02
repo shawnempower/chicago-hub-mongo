@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { usePublication } from '@/contexts/PublicationContext';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Archive,
@@ -27,8 +28,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown } from 'lucide-react';
 import { LeadNotesTimeline } from './LeadNotesTimeline';
-import type { PublicationFrontend as Publication } from '@/types/publication';
-import { getPublications } from '@/api/publications';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 
 interface LeadDetailProps {
@@ -38,12 +37,13 @@ interface LeadDetailProps {
 
 export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
   const [lead, setLead] = useState<Lead | null>(null);
-  const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentNote, setCurrentNote] = useState('');
   const [timelineRefreshKey, setTimelineRefreshKey] = useState(0);
   const [showConversationModal, setShowConversationModal] = useState(false);
   const { toast } = useToast();
+  // Use publications from context instead of fetching separately (eliminates redundant API call)
+  const { availablePublications: publications } = usePublication();
 
   const statusOptions = [
     { value: 'new', label: 'New' },
@@ -56,7 +56,7 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
 
   useEffect(() => {
     fetchLead();
-    fetchPublications();
+    // No need to fetch publications - they come from context
   }, [leadId]);
 
   const fetchLead = async () => {
@@ -73,15 +73,6 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchPublications = async () => {
-    try {
-      const data = await getPublications();
-      setPublications(data);
-    } catch (error) {
-      console.error('Error fetching publications:', error);
     }
   };
 

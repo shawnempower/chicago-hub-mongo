@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useHubContext } from '@/contexts/HubContext';
+import { usePublication } from '@/contexts/PublicationContext';
 import { formatDistanceToNow } from 'date-fns';
 import {
   ArrowDown,
@@ -29,8 +30,6 @@ import {
   Activity,
 } from 'lucide-react';
 import { API_BASE_URL } from '@/config/api';
-import { getPublications } from '@/api/publications';
-import type { PublicationFrontend as Publication } from '@/types/publication';
 import { LeadDetail } from './LeadDetail';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
@@ -40,7 +39,6 @@ type SortKey = 'businessName' | 'contactName' | 'budgetRange' | 'status' | 'crea
 export const LeadManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,6 +57,8 @@ export const LeadManagement = () => {
   const [showActivityLog, setShowActivityLog] = useState(false);
   const { toast } = useToast();
   const { selectedHubId } = useHubContext();
+  // Use publications from context instead of fetching separately (eliminates redundant API call)
+  const { availablePublications: publications } = usePublication();
 
   const statusOptions = [
     { value: 'new', label: 'New' },
@@ -117,17 +117,14 @@ export const LeadManagement = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [leadsResponse, pubsResponse] = await Promise.all([
-        leadsApi.getAll(filters),
-        getPublications(),
-      ]);
+      // Only fetch leads - publications come from context (no redundant API call)
+      const leadsResponse = await leadsApi.getAll(filters);
       setLeads(leadsResponse.leads);
-      setPublications(pubsResponse);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch leads or publications',
+        description: 'Failed to fetch leads',
         variant: 'destructive',
       });
     } finally {

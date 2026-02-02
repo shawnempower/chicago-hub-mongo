@@ -5,8 +5,34 @@ import { authenticateToken, requirePublicationAccess } from '../middleware/authe
 import { permissionsService } from '../../src/integrations/mongodb/permissionsService';
 import { s3Service } from '../s3Service';
 import multer from 'multer';
+import { ObjectId } from 'mongodb';
 
 const router = Router();
+
+// Field projections for different use cases
+const MINIMAL_PROJECTION = {
+  _id: 1,
+  publicationId: 1,
+  hubIds: 1,
+  'basicInfo.publicationName': 1
+};
+
+const LIST_PROJECTION = {
+  _id: 1,
+  publicationId: 1,
+  hubIds: 1,
+  'basicInfo.publicationName': 1,
+  'basicInfo.websiteUrl': 1,
+  'basicInfo.publicationType': 1,
+  'basicInfo.contentType': 1,
+  'basicInfo.geographicCoverage': 1,
+  'basicInfo.primaryServiceArea': 1,
+  'contactInfo.primaryContact': 1,
+  'metadata.verificationStatus': 1,
+  'metadata.lastUpdated': 1
+};
+
+// Full projection returns all fields (no projection applied)
 
 // Configure multer for file uploads
 const upload = multer({
@@ -24,15 +50,19 @@ const upload = multer({
  */
 
 // Get all publications with optional filters (requires authentication, filtered by permissions)
+// Supports field projection via ?fields=minimal|list|full (default: list for non-admins, full for admins)
+// Supports pagination via ?limit=50&cursor=<lastId>
 router.get('/', authenticateToken, async (req: any, res) => {
   try {
-    const { geographicCoverage, publicationType, contentType, verificationStatus } = req.query;
-    
-    const filters: any = {};
-    if (geographicCoverage) filters.geographicCoverage = geographicCoverage as string;
-    if (publicationType) filters.publicationType = publicationType as string;
-    if (contentType) filters.contentType = contentType as string;
-    if (verificationStatus) filters.verificationStatus = verificationStatus as string;
+    const { 
+      geographicCoverage, 
+      publicationType, 
+      contentType, 
+      verificationStatus,
+      fields,
+      limit: limitParam,
+      cursor
+    } = req.query;
 
     // Check if service is initialized
     if (!publicationsService) {
@@ -40,53 +70,120 @@ router.get('/', authenticateToken, async (req: any, res) => {
       return res.status(500).json({ error: 'Publications service not initialized' });
     }
 
-    // Fetch all publications (will filter by permissions below)
-    const allPublications = await publicationsService.getAll(filters);
-    
-    // Filter by user permissions
+    // Build base query filters
+    const query: any = {};
+    if (geographicCoverage) query['basicInfo.geographicCoverage'] = geographicCoverage as string;
+    if (publicationType) query['basicInfo.publicationType'] = publicationType as string;
+    if (contentType) query['basicInfo.contentType'] = contentType as string;
+    if (verificationStatus) query['metadata.verificationStatus'] = verificationStatus as string;
+
+    // Check user permissions
     const isAdmin = req.user.isAdmin === true || req.user.role === 'admin';
     
-    if (isAdmin) {
-      // Admins see all publications
-      return res.json(allPublications);
-    }
+    // Get user's assigned publications and hubs for permission filtering
+    let actualAssignedHubIds: string[] = [];
+    let actualAssignedPublicationIds: string[] = [];
     
-    // Non-admin users: filter by their assigned publications and hubs
-    const assignedHubIds = req.user.permissions?.assignedHubIds || [];
-    const assignedPublicationIds = req.user.permissions?.assignedPublicationIds || [];
-    
-    // If user has no permissions, check the database directly
-    let actualAssignedHubIds = assignedHubIds;
-    let actualAssignedPublicationIds = assignedPublicationIds;
-    
-    if (assignedHubIds.length === 0 && assignedPublicationIds.length === 0) {
-      // Fetch from database (in case JWT is outdated)
-      const userPermissions = await permissionsService.getPermissions(req.user.id);
-      if (userPermissions) {
-        actualAssignedHubIds = userPermissions.hubAccess?.map(h => h.hubId) || [];
-        actualAssignedPublicationIds = await permissionsService.getUserPublications(req.user.id);
-      }
-    }
-    
-    // Filter publications
-    const filteredPublications = allPublications.filter((pub: any) => {
-      // Check direct publication assignment
-      if (actualAssignedPublicationIds.includes(pub.publicationId?.toString()) || 
-          actualAssignedPublicationIds.includes(pub._id?.toString())) {
-        return true;
-      }
+    if (!isAdmin) {
+      const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+      const assignedPublicationIds = req.user.permissions?.assignedPublicationIds || [];
       
-      // Check hub-level access
-      if (pub.hubIds && Array.isArray(pub.hubIds)) {
-        if (pub.hubIds.some((hubId: string) => actualAssignedHubIds.includes(hubId))) {
-          return true;
+      actualAssignedHubIds = assignedHubIds;
+      actualAssignedPublicationIds = assignedPublicationIds;
+      
+      // If user has no permissions in JWT, check the database directly
+      if (assignedHubIds.length === 0 && assignedPublicationIds.length === 0) {
+        const userPermissions = await permissionsService.getPermissions(req.user.id);
+        if (userPermissions) {
+          actualAssignedHubIds = userPermissions.hubAccess?.map(h => h.hubId) || [];
+          actualAssignedPublicationIds = await permissionsService.getUserPublications(req.user.id);
         }
       }
       
-      return false;
-    });
+      // Add permission filter to database query (only if user has permissions)
+      if (actualAssignedHubIds.length > 0 || actualAssignedPublicationIds.length > 0) {
+        const permissionConditions: any[] = [];
+        
+        // Match by publicationId (as string or number)
+        if (actualAssignedPublicationIds.length > 0) {
+          const pubIdNumbers = actualAssignedPublicationIds
+            .map(id => parseInt(id))
+            .filter(id => !isNaN(id));
+          
+          if (pubIdNumbers.length > 0) {
+            permissionConditions.push({ publicationId: { $in: pubIdNumbers } });
+          }
+          
+          // Also check _id field
+          const validObjectIds = actualAssignedPublicationIds
+            .filter(id => ObjectId.isValid(id))
+            .map(id => new ObjectId(id));
+          
+          if (validObjectIds.length > 0) {
+            permissionConditions.push({ _id: { $in: validObjectIds } });
+          }
+        }
+        
+        // Match by hubIds
+        if (actualAssignedHubIds.length > 0) {
+          permissionConditions.push({ hubIds: { $in: actualAssignedHubIds } });
+        }
+        
+        if (permissionConditions.length > 0) {
+          query.$or = permissionConditions;
+        }
+      }
+    }
+
+    // Determine field projection based on 'fields' parameter
+    // Default: 'list' for better performance, unless explicitly requesting 'full'
+    let projection: any = null;
+    const fieldsParam = (fields as string)?.toLowerCase();
     
-    res.json(filteredPublications);
+    if (fieldsParam === 'minimal') {
+      projection = MINIMAL_PROJECTION;
+    } else if (fieldsParam === 'list') {
+      projection = LIST_PROJECTION;
+    } else if (fieldsParam === 'full') {
+      projection = null; // No projection - return all fields
+    } else {
+      // Default behavior: full for backward compatibility
+      projection = null;
+    }
+
+    // Parse pagination parameters
+    const limit = limitParam ? Math.min(Math.max(parseInt(limitParam as string) || 100, 1), 500) : null;
+    
+    // Add cursor to query if provided (for pagination)
+    if (cursor && ObjectId.isValid(cursor as string)) {
+      query._id = { ...query._id, $gt: new ObjectId(cursor as string) };
+    }
+
+    // Fetch publications with projection and optional pagination
+    const publications = await publicationsService.getAllWithOptions({
+      query,
+      projection,
+      limit: limit ? limit + 1 : null, // Fetch one extra to check if more exist
+      sort: { 'basicInfo.publicationName': 1 }
+    });
+
+    // Handle pagination response
+    if (limit) {
+      const hasMore = publications.length > limit;
+      const data = hasMore ? publications.slice(0, limit) : publications;
+      
+      return res.json({
+        data,
+        pagination: {
+          hasMore,
+          nextCursor: hasMore && data.length > 0 ? data[data.length - 1]._id?.toString() : null,
+          count: data.length
+        }
+      });
+    }
+
+    // Non-paginated response (backward compatible)
+    res.json(publications);
   } catch (error) {
     console.error('Error fetching publications:', error);
     if (error instanceof Error) {

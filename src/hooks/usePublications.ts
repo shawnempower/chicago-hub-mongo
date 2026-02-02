@@ -264,7 +264,9 @@ export const usePublicationsFull = (filters?: UsePublicationsFilters) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getPublications(filters);
+      // Use 'list' fields to reduce payload size while still providing needed data
+      // for components like HubPublicationsManager that need geographicCoverage, etc.
+      const data = await getPublications({ ...filters, fields: 'list' });
       setPublications(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch publications');
