@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
+import { API_BASE_URL } from '@/config/api';
 
 interface HubPayoutsViewProps {
   hubId: string;
@@ -144,10 +145,10 @@ export function HubPayoutsView({ hubId }: HubPayoutsViewProps) {
       };
 
       const [earningsRes, billingRes, summaryRes, billingSummaryRes] = await Promise.all([
-        fetch(`/api/earnings/hub/${hubId}`, { headers }),
-        fetch(`/api/hub-billing/${hubId}`, { headers }),
-        fetch(`/api/earnings/hub/${hubId}/summary`, { headers }),
-        fetch(`/api/hub-billing/${hubId}/summary`, { headers }),
+        fetch(`${API_BASE_URL}/earnings/hub/${hubId}`, { headers }),
+        fetch(`${API_BASE_URL}/hub-billing/${hubId}`, { headers }),
+        fetch(`${API_BASE_URL}/earnings/hub/${hubId}/summary`, { headers }),
+        fetch(`${API_BASE_URL}/hub-billing/${hubId}/summary`, { headers }),
       ]);
 
       if (!earningsRes.ok || !billingRes.ok) {

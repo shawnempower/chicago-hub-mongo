@@ -38,6 +38,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { API_BASE_URL } from '@/config/api';
 
 interface PublicationEarningsProps {
   publicationId: number;
@@ -104,8 +105,8 @@ export function PublicationEarnings({ publicationId }: PublicationEarningsProps)
       }
       
       const [earningsRes, summaryRes] = await Promise.all([
-        fetch(`/api/earnings/publication/${publicationId}?${params}`, { headers }),
-        fetch(`/api/earnings/publication/${publicationId}/summary`, { headers }),
+        fetch(`${API_BASE_URL}/earnings/publication/${publicationId}?${params}`, { headers }),
+        fetch(`${API_BASE_URL}/earnings/publication/${publicationId}/summary`, { headers }),
       ]);
 
       if (!earningsRes.ok || !summaryRes.ok) {

@@ -37,6 +37,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { API_BASE_URL } from '@/config/api';
 
 interface HubBillingSummary {
   hubId: string;
@@ -95,8 +96,8 @@ export function PlatformBillingDashboard() {
       }
 
       const [summaryRes, billingRes] = await Promise.all([
-        fetch('/api/hub-billing/platform/summary', { headers }),
-        fetch(`/api/hub-billing/platform/all?${params}`, { headers }),
+        fetch(`${API_BASE_URL}/hub-billing/platform/summary`, { headers }),
+        fetch(`${API_BASE_URL}/hub-billing/platform/all?${params}`, { headers }),
       ]);
 
       if (!summaryRes.ok || !billingRes.ok) {
