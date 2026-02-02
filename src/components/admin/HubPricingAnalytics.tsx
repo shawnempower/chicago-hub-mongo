@@ -176,6 +176,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
           const hubPricing = findHubPricing(ad);
           if (hubPricing?.pricing) {
             const pricing = Array.isArray(hubPricing.pricing) ? hubPricing.pricing[0] : hubPricing.pricing;
+            if (!pricing) return; // Skip if pricing is null/undefined
             const rawPricingModel = pricing.pricingModel || 'flat';
             // Normalize unknown/null/empty to flat
             const pricingModel = rawPricingModel === 'unknown' || !rawPricingModel ? 'flat' : rawPricingModel;
@@ -230,6 +231,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
             const hubPricing = findHubPricing(ad);
             if (hubPricing?.pricing) {
               const pricing = Array.isArray(hubPricing.pricing) ? hubPricing.pricing[0] : hubPricing.pricing;
+              if (!pricing) return; // Skip if pricing is null/undefined
               const rawPricingModel = pricing.pricingModel || 'per_send';
               const pricingModel = rawPricingModel === 'unknown' || !rawPricingModel ? 'per_send' : rawPricingModel;
               
@@ -279,6 +281,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
             const hubPricing = findHubPricing(ad);
             if (hubPricing?.pricing) {
               const pricing = Array.isArray(hubPricing.pricing) ? hubPricing.pricing[0] : hubPricing.pricing;
+              if (!pricing) return; // Skip if pricing is null/undefined
               const rawPricingModel = pricing.pricingModel || 'per_ad';
               const pricingModel = rawPricingModel === 'unknown' || !rawPricingModel ? 'per_ad' : rawPricingModel;
               const price = pricing.flatRate || pricing.rate || 0;
@@ -309,6 +312,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
             const hubPricing = findHubPricing(ad);
             if (hubPricing?.pricing) {
               const pricing = Array.isArray(hubPricing.pricing) ? hubPricing.pricing[0] : hubPricing.pricing;
+              if (!pricing) return; // Skip if pricing is null/undefined
               const rawPricingModel = pricing.pricingModel || 'per_episode';
               const pricingModel = rawPricingModel === 'unknown' || !rawPricingModel ? 'per_episode' : rawPricingModel;
               const price = pricing.perEpisode || pricing.perSpot || pricing.flatRate || 0;
@@ -339,6 +343,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
             const hubPricing = findHubPricing(ad);
             if (hubPricing?.pricing) {
               const pricing = Array.isArray(hubPricing.pricing) ? hubPricing.pricing[0] : hubPricing.pricing;
+              if (!pricing) return; // Skip if pricing is null/undefined
               const rawPricingModel = pricing.pricingModel || 'per_spot';
               const pricingModel = rawPricingModel === 'unknown' || !rawPricingModel ? 'per_spot' : rawPricingModel;
               const price = pricing.perSpot || pricing.flatRate || 0;

@@ -90,7 +90,8 @@ function analyzeInventoryItem(
   if (Array.isArray(item.pricing) && item.pricing.length > 0) {
     const firstTier = item.pricing[0];
     // Check if pricing is nested (tier.pricing.flatRate) or flat (tier.flatRate)
-    defaultPricing = firstTier.pricing || firstTier;
+    // Handle case where firstTier could be null
+    defaultPricing = firstTier ? (firstTier.pricing || firstTier) : null;
   } else {
     defaultPricing = item.pricing;
   }

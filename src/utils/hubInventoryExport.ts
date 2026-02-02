@@ -489,6 +489,7 @@ export function exportHubInventoryToCSV(
           
           // Handle both single pricing object and array of pricing tiers
           const pricing = Array.isArray(opp.pricing) ? opp.pricing[0] : opp.pricing;
+          if (!pricing && !hubPricing?.pricing) return; // Skip if no pricing available
           
           // Calculate reach and revenue
           const reach = calculateMonthlyReach('events', {

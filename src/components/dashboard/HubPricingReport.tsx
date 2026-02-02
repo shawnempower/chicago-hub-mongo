@@ -86,9 +86,12 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
         // Hub pricing - calculate for each hub
         ad.hubPricing?.forEach((hub: any) => {
           // Handle both single pricing object and array of pricing tiers
+          // Skip if hub.pricing is null/undefined
+          if (!hub.pricing) return;
           const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
           pricingArray.forEach((pricingTier: any) => {
+            if (!pricingTier) return; // Skip null pricing tiers
             const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
             const hubRevenue = calculateRevenue(hubAd, 'month');
             
@@ -140,9 +143,11 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
         ad.hubPricing?.forEach((hub: any) => {
           // Handle both single pricing object and array of pricing tiers
+          if (!hub.pricing) return;
           const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
           pricingArray.forEach((pricingTier: any) => {
+            if (!pricingTier) return; // Skip null pricing tiers
             const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
             const hubRevenue = calculateRevenue(hubAd, 'month', newsletter.frequency);
             
@@ -215,9 +220,11 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
           ad.hubPricing?.forEach((hub: any) => {
             // Handle both single pricing object and array of pricing tiers
+            if (!hub.pricing) return;
             const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
             
             pricingArray.forEach((pricingTier: any) => {
+              if (!pricingTier) return; // Skip null pricing tiers
               // Hub pricing may also have frequency inside pricing object
               const hubFrequency = pricingTier?.frequency;
               const hubLabel = hubFrequency 
@@ -275,9 +282,11 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
         ad.hubPricing?.forEach((hub: any) => {
           // Handle both single pricing object and array of pricing tiers
+          if (!hub.pricing) return;
           const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
           pricingArray.forEach((pricingTier: any) => {
+            if (!pricingTier) return; // Skip null pricing tiers
             const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
             const hubRevenue = calculateRevenue(hubAd, 'month');
             
@@ -327,9 +336,11 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
         ad.hubPricing?.forEach((hub: any) => {
           // Handle both single pricing object and array of pricing tiers
+          if (!hub.pricing) return;
           const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
           pricingArray.forEach((pricingTier: any) => {
+            if (!pricingTier) return; // Skip null pricing tiers
             const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
             const hubRevenue = calculateRevenue(hubAd, 'month', event.frequency);
             
@@ -379,9 +390,11 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
         ad.hubPricing?.forEach((hub: any) => {
           // Handle both single pricing object and array of pricing tiers
+          if (!hub.pricing) return;
           const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
           pricingArray.forEach((pricingTier: any) => {
+            if (!pricingTier) return; // Skip null pricing tiers
             const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
             const hubRevenue = calculateRevenue(hubAd, 'month', podcast.frequency);
             
@@ -435,9 +448,11 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
             ad.hubPricing?.forEach((hub: any) => {
               // Handle both single pricing object and array of pricing tiers
+              if (!hub.pricing) return;
               const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
               
               pricingArray.forEach((pricingTier: any) => {
+                if (!pricingTier) return; // Skip null pricing tiers
                 const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
                 const hubRevenue = calculateRevenue(hubAd, 'month', show.frequency);
                 
@@ -483,9 +498,11 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
           ad.hubPricing?.forEach((hub: any) => {
             // Handle both single pricing object and array of pricing tiers
+            if (!hub.pricing) return;
             const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
             
             pricingArray.forEach((pricingTier: any) => {
+              if (!pricingTier) return; // Skip null pricing tiers
               const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
               const hubRevenue = calculateRevenue(hubAd, 'month');
               
@@ -536,9 +553,11 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
         ad.hubPricing?.forEach((hub: any) => {
           // Handle both single pricing object and array of pricing tiers
+          if (!hub.pricing) return;
           const pricingArray = Array.isArray(hub.pricing) ? hub.pricing : [hub.pricing];
           
           pricingArray.forEach((pricingTier: any) => {
+            if (!pricingTier) return; // Skip null pricing tiers
             const hubAd = { ...ad, pricing: pricingTier, hubPricing: null };
             const hubRevenue = calculateRevenue(hubAd, 'month', streaming.frequency);
             
