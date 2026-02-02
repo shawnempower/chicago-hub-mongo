@@ -309,7 +309,8 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
             </thead>
             <tbody className="bg-white">
               {defaultPricingArray.map((defaultPrice, defaultIndex) => {
-                const currentModel = defaultPrice.pricing.pricingModel as string || pricingModels?.[0]?.value;
+                if (!defaultPrice.pricing) return null; // Skip if pricing is null
+                const currentModel = defaultPrice.pricing?.pricingModel as string || pricingModels?.[0]?.value;
                 const shouldShowConditional = conditionalFields?.some(f => f.showWhen.includes(currentModel));
                 const total = calculateTotal(defaultPrice.pricing);
 
@@ -337,7 +338,7 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                     <td className="px-4 py-2">
                       {pricingModels && (
                         <Select
-                          value={defaultPrice.pricing.pricingModel as string || pricingModels[0]?.value}
+                          value={defaultPrice.pricing?.pricingModel as string || pricingModels[0]?.value}
                           onValueChange={(value) =>
                             updateDefaultPricing(defaultIndex, {
                               ...defaultPrice.pricing,
@@ -517,6 +518,7 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                 <tbody className="bg-white">
                   {pricingTiers.map((tier, tierIndex) => {
                     if (!isExpanded) return null;
+                    if (!tier) return null; // Skip if tier is null
                     
                     const currentModel = tier.pricingModel as string || pricingModels?.[0]?.value;
                     const shouldShowConditional = conditionalFields?.some(f => f.showWhen.includes(currentModel));
