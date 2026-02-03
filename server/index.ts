@@ -106,7 +106,11 @@ function estimateMonthlyRevenueNew(ad: any, channelFrequency?: string): number {
 }
 
 // Middleware
-app.use(helmet());
+// Configure Helmet to not interfere with CORS
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "unsafe-none" },
+}));
 
 // CORS configuration - use array of allowed origins
 const allowedOrigins = [
@@ -131,25 +135,9 @@ const uniqueOrigins = [...new Set(allowedOrigins)];
 console.log('🔐 CORS allowed origins:', uniqueOrigins);
 console.log('🔐 FRONTEND_URL env:', process.env.FRONTEND_URL || 'NOT SET');
 
+// Use simple array-based origin - most reliable for CORS
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (same-origin, Postman, server-to-server, etc.)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Check if origin is in allowed list - return the actual origin string
-    if (uniqueOrigins.includes(origin)) {
-      return callback(null, origin);
-    }
-    
-    // Log unexpected origins but ALLOW them to prevent silent failures
-    console.warn(`⚠️ CORS: Unexpected origin "${origin}" - allowing for debugging`);
-    console.warn(`   Expected origins: ${uniqueOrigins.join(', ')}`);
-    
-    // Return the origin to allow it (for debugging - remove in strict production)
-    return callback(null, origin);
-  },
+  origin: uniqueOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
