@@ -138,22 +138,16 @@ export class PermissionsService {
       }
       
       // Check if user has hub access and publication belongs to that hub
-      // This handles cases where junction table wasn't synced or publication was added later
-      if (permissions?.hubAccess && publication.hubIds) {
+      // Hub users get access to all publications within their assigned hubs
+      if (permissions?.hubAccess && permissions.hubAccess.length > 0 && publication.hubIds) {
         const userHubIds = permissions.hubAccess.map(h => h.hubId);
         const publicationHubIds = Array.isArray(publication.hubIds) ? publication.hubIds : [publication.hubIds];
         
         const hasHubAccess = userHubIds.some(hubId => publicationHubIds.includes(hubId));
         if (hasHubAccess) {
-          logger.info(`User ${userId} has hub-based access to publication ${publication.publicationId}`);
+          logger.debug(`User ${userId} has hub-based access to publication ${publication.publicationId}`);
           return true;
         }
-      }
-      
-      // Also check legacy permissions for backward compatibility
-      if (permissions?.individualPublicationIds?.includes(String(publication.publicationId))) {
-        logger.info(`User ${userId} has legacy publication access to ${publication.publicationId}`);
-        return true;
       }
       
       logger.debug(`User ${userId} denied access to publication ${publicationId} - no access record found`);
@@ -269,50 +263,12 @@ export class PermissionsService {
         );
       }
       
-      // If full access, grant access to all publications in the hub
-      if (accessLevel === 'full') {
-        await this.syncHubPublicationsAccess(userId, hubId, assignedBy);
-      }
+      // Hub users get publication access dynamically via hub membership
+      // No need to sync individual publication records
       
       logger.info(`Successfully assigned user ${userId} to hub ${hubId}`);
     } catch (error) {
       logger.error('Error assigning user to hub:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Sync publication access for a hub (grant access to all publications in the hub)
-   */
-  private async syncHubPublicationsAccess(userId: string, hubId: string, grantedBy: string): Promise<void> {
-    try {
-      // Get all publications in the hub
-      const publicationsCollection = getDatabase().collection(COLLECTIONS.PUBLICATIONS);
-      const publications = await publicationsCollection.find({ hubIds: hubId }).toArray();
-      
-      // Grant access to each publication
-      const accessRecords: UserPublicationAccess[] = publications.map(pub => ({
-        userId,
-        publicationId: String(pub.publicationId),
-        grantedVia: 'hub',
-        grantedViaId: hubId,
-        grantedAt: new Date(),
-        grantedBy
-      }));
-      
-      if (accessRecords.length > 0) {
-        // Remove existing hub-based access for this user/hub combo
-        await this.accessJunctionCollection.deleteMany({
-          userId,
-          grantedVia: 'hub',
-          grantedViaId: hubId
-        });
-        
-        // Insert new access records
-        await this.accessJunctionCollection.insertMany(accessRecords);
-      }
-    } catch (error) {
-      logger.error('Error syncing hub publications access:', error);
       throw error;
     }
   }
