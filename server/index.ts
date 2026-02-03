@@ -116,9 +116,12 @@ const allowedOrigins = [
   'http://localhost:8083',
   'http://localhost:5173',
   process.env.FRONTEND_URL,
-  // Also allow variations of the production URL
+  // Production and staging custom domains
   'https://admin.localmedia.store',
   'https://staging-admin.localmedia.store',
+  // Amplify app URLs (raw URLs before custom domain redirect)
+  'https://main.d3wvz0v8d4a1r.amplifyapp.com',
+  'https://staging.d3wvz0v8d4a1r.amplifyapp.com',
 ].filter(Boolean) as string[];
 
 // Remove duplicates
