@@ -5,7 +5,7 @@
  * Provides hub selection state and filtering capabilities
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useRef } from 'react';
 import { Hub } from '@/integrations/mongodb/hubSchema';
 import { useHubs } from '@/hooks/useHubs';
 import { useAuth } from './CustomAuthContext';
@@ -50,11 +50,19 @@ export const HubProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return user.permissions.assignedHubIds.sort().join(',');
   }, [user?.permissions?.assignedHubIds]);
 
+  // Track previous permissions key to detect actual changes (not initial mount)
+  const prevPermissionsKeyRef = useRef<string | null>(null);
+
   // Refetch hubs when user permissions change (e.g., after accepting an invite)
+  // Only refetch if permissions actually changed (not on initial mount)
   useEffect(() => {
     if (userHubPermissionsKey && refetch) {
-      console.log('🔄 HubContext: User hub permissions changed, refetching hubs');
-      refetch();
+      // Only refetch if this is a change from previous value, not initial mount
+      if (prevPermissionsKeyRef.current !== null && prevPermissionsKeyRef.current !== userHubPermissionsKey) {
+        console.log('🔄 HubContext: User hub permissions changed, refetching hubs');
+        refetch();
+      }
+      prevPermissionsKeyRef.current = userHubPermissionsKey;
     }
   }, [userHubPermissionsKey, refetch]);
 

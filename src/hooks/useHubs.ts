@@ -4,7 +4,7 @@
  * React hooks for fetching and managing hubs
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { hubsApi, HubFilters, HubStats } from '@/api/hubs';
 import { Hub } from '@/integrations/mongodb/hubSchema';
 
@@ -69,7 +69,7 @@ export const useHubs = (filters?: HubFilters, options?: { enabled?: boolean }) =
     };
   }, [filters?.status, filters?.includeInactive, retryCount, enabled]);
 
-  const refetch = async () => {
+  const refetch = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -85,7 +85,7 @@ export const useHubs = (filters?: HubFilters, options?: { enabled?: boolean }) =
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters?.status, filters?.includeInactive]);
 
   return { hubs, loading, error, refetch };
 };

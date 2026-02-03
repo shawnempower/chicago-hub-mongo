@@ -60,19 +60,22 @@ router.get('/me', async (req: any, res: Response) => {
 /**
  * GET /api/activities/publication/:id
  * Get activities for a specific publication
- * Requires: User must have access to the publication
+ * Requires: User must have access to the publication (via direct access or hub membership)
  */
 router.get('/publication/:id', async (req: any, res: Response) => {
   try {
     const publicationId = req.params.id;
     const userId = req.user.id;
     
-    // Check if user has access to this publication
-    const userPublications = await permissionsService.getUserPublications(userId);
+    // Check if user is admin first
     const isAdmin = isUserAdmin(req.user);
     
-    if (!isAdmin && !userPublications.includes(publicationId)) {
-      return res.status(403).json({ error: 'Access denied to this publication' });
+    // Use canAccessPublication which checks both direct access AND hub-based access
+    if (!isAdmin) {
+      const hasAccess = await permissionsService.canAccessPublication(userId, publicationId);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied to this publication' });
+      }
     }
     
     // Parse query parameters

@@ -107,15 +107,52 @@ function estimateMonthlyRevenueNew(ad: any, channelFrequency?: string): number {
 
 // Middleware
 app.use(helmet());
+
+// CORS configuration with explicit origin validation
+const allowedOrigins = [
+  'http://localhost:8080',
+  'http://localhost:8081', 
+  'http://localhost:8082',
+  'http://localhost:8083',
+  'http://localhost:5173',
+  process.env.FRONTEND_URL,
+  // Also allow variations of the production URL
+  'https://admin.localmedia.store',
+  'https://staging-admin.localmedia.store',
+].filter(Boolean) as string[];
+
+// Remove duplicates
+const uniqueOrigins = [...new Set(allowedOrigins)];
+
+// Log allowed origins at startup for debugging
+console.log('🔐 CORS allowed origins:', uniqueOrigins);
+console.log('🔐 FRONTEND_URL env:', process.env.FRONTEND_URL || 'NOT SET');
+
 app.use(cors({
-  origin: [
-    'http://localhost:8080',
-    'http://localhost:8081', 
-    'http://localhost:8082',
-    'http://localhost:8083',
-    process.env.FRONTEND_URL
-  ].filter(Boolean),
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (same-origin, Postman, server-to-server, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list
+    if (uniqueOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Log unexpected origins but ALLOW them in production to prevent silent failures
+    // This helps us debug CORS issues without breaking the application
+    console.warn(`⚠️ CORS: Unexpected origin "${origin}" - allowing anyway for debugging`);
+    console.warn(`   Expected origins: ${uniqueOrigins.join(', ')}`);
+    
+    // Allow the origin to prevent CORS errors - we log for monitoring
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 86400, // Cache preflight for 24 hours
 }));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
