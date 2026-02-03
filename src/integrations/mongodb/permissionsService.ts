@@ -133,7 +133,31 @@ export class PermissionsService {
         publicationId: String(publication.publicationId)
       });
       
-      return access !== null;
+      if (access) {
+        return true;
+      }
+      
+      // Check if user has hub access and publication belongs to that hub
+      // This handles cases where junction table wasn't synced or publication was added later
+      if (permissions?.hubAccess && publication.hubIds) {
+        const userHubIds = permissions.hubAccess.map(h => h.hubId);
+        const publicationHubIds = Array.isArray(publication.hubIds) ? publication.hubIds : [publication.hubIds];
+        
+        const hasHubAccess = userHubIds.some(hubId => publicationHubIds.includes(hubId));
+        if (hasHubAccess) {
+          logger.info(`User ${userId} has hub-based access to publication ${publication.publicationId}`);
+          return true;
+        }
+      }
+      
+      // Also check legacy permissions for backward compatibility
+      if (permissions?.individualPublicationIds?.includes(String(publication.publicationId))) {
+        logger.info(`User ${userId} has legacy publication access to ${publication.publicationId}`);
+        return true;
+      }
+      
+      logger.debug(`User ${userId} denied access to publication ${publicationId} - no access record found`);
+      return false;
     } catch (error) {
       logger.error('Error checking publication access:', error);
       return false;
