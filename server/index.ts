@@ -108,7 +108,7 @@ function estimateMonthlyRevenueNew(ad: any, channelFrequency?: string): number {
 // Middleware
 app.use(helmet());
 
-// CORS configuration with explicit origin validation
+// CORS configuration - use array of allowed origins
 const allowedOrigins = [
   'http://localhost:8080',
   'http://localhost:8081', 
@@ -138,18 +138,17 @@ app.use(cors({
       return callback(null, true);
     }
     
-    // Check if origin is in allowed list
+    // Check if origin is in allowed list - return the actual origin string
     if (uniqueOrigins.includes(origin)) {
-      return callback(null, true);
+      return callback(null, origin);
     }
     
-    // Log unexpected origins but ALLOW them in production to prevent silent failures
-    // This helps us debug CORS issues without breaking the application
-    console.warn(`⚠️ CORS: Unexpected origin "${origin}" - allowing anyway for debugging`);
+    // Log unexpected origins but ALLOW them to prevent silent failures
+    console.warn(`⚠️ CORS: Unexpected origin "${origin}" - allowing for debugging`);
     console.warn(`   Expected origins: ${uniqueOrigins.join(', ')}`);
     
-    // Allow the origin to prevent CORS errors - we log for monitoring
-    return callback(null, true);
+    // Return the origin to allow it (for debugging - remove in strict production)
+    return callback(null, origin);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
