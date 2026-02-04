@@ -2634,7 +2634,7 @@ export const DashboardInventoryManager = () => {
     <div className="space-y-6">
       {/* Header with Manage Channels Button */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Inventory</h2>
+        <h2 className="text-xl font-bold font-sans">Inventory</h2>
         <div className="flex items-center gap-2">
           <SectionActivityMenu onActivityLogClick={() => setShowActivityLog(true)} />
           <Dialog>
@@ -2677,7 +2677,7 @@ export const DashboardInventoryManager = () => {
                     const Icon = config.icon;
 
                     return (
-                      <div key={key} className="flex items-center justify-between px-3 py-2 border rounded-md bg-gray-50">
+                      <div key={key} className="flex items-center justify-between px-3 py-2 border rounded-md bg-muted/50">
                         <div className="flex items-center gap-2">
                           <Icon className="w-3.5 h-3.5 text-muted-foreground" />
                           <span className="text-sm font-medium">{config.label}</span>
@@ -2822,7 +2822,7 @@ export const DashboardInventoryManager = () => {
               </Button>
             </div>
             {/* Website URL and CMS */}
-            <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+            <div className="mt-3 p-3 bg-muted/50 rounded-md border">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Website URL</span>
@@ -2878,7 +2878,7 @@ export const DashboardInventoryManager = () => {
               
               {/* Loading state */}
               {analyticsLoading && (
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="p-4 bg-muted/50 rounded-lg border border-border">
                   <div className="flex items-center justify-center py-4">
                     <Loader2 className="w-5 h-5 animate-spin text-slate-600" />
                     <span className="ml-2 text-sm text-slate-600">Loading analytics...</span>
@@ -3185,7 +3185,7 @@ export const DashboardInventoryManager = () => {
                       </div>
                     </div>
                     {/* Specifications Container */}
-                    <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                    <div className="mt-3 p-3 bg-muted/50 rounded-md border">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground">Downloads</span>
@@ -3209,7 +3209,7 @@ export const DashboardInventoryManager = () => {
                     {/* Advertising Opportunities */}
                     <div className="-mx-4 -mb-4 mt-4">
                       <div className="border-t border-gray-200"></div>
-                      <div className="p-4 bg-gray-50">
+                      <div className="p-4 bg-muted/50">
                         <div className="flex items-center justify-between mb-3">
                           <h5 className="font-sans font-semibold text-sm">Advertising Opportunities</h5>
                           <Button 
@@ -3419,7 +3419,7 @@ export const DashboardInventoryManager = () => {
                       </div>
                     </div>
                     {/* Specifications Container */}
-                    <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                    <div className="mt-3 p-3 bg-muted/50 rounded-md border">
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground">Format</span>
@@ -3447,7 +3447,7 @@ export const DashboardInventoryManager = () => {
                                     {/* Radio Shows */}
                     <div className="-mx-4 -mb-4 mt-4">
                       <div className="border-t border-gray-200"></div>
-                      <div className="p-4 bg-gray-50">
+                      <div className="p-4 bg-muted/50">
                         <div className="flex items-center justify-between mb-3">
                           <h5 className="font-sans font-semibold text-sm">Radio Shows</h5>
                           <Button 
@@ -3757,7 +3757,7 @@ export const DashboardInventoryManager = () => {
                       </div>
                     </div>
                     {/* Specifications Container */}
-                    <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                    <div className="mt-3 p-3 bg-muted/50 rounded-md border">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground">Subscribers</span>
@@ -3791,7 +3791,7 @@ export const DashboardInventoryManager = () => {
                     {/* Advertising Opportunities */}
                     <div className="-mx-4 -mb-4 mt-4">
                       <div className="border-t border-gray-200"></div>
-                      <div className="p-4 bg-gray-50">
+                      <div className="p-4 bg-muted/50">
                         <div className="flex items-center justify-between mb-3">
                           <h5 className="font-sans font-semibold text-sm">Advertising Opportunities</h5>
                           <Button 
@@ -4054,7 +4054,7 @@ export const DashboardInventoryManager = () => {
                         </div>
                       </div>
                       {/* Specifications Container */}
-                      <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                      <div className="mt-3 p-3 bg-muted/50 rounded-md border">
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                           <div>
                             <span className="text-muted-foreground">Circulation</span>
@@ -4074,7 +4074,7 @@ export const DashboardInventoryManager = () => {
                       {/* Advertising Opportunities */}
                       <div className="-mx-4 -mb-4 mt-4">
                         <div className="border-t border-gray-200"></div>
-                        <div className="p-4 bg-gray-50">
+                        <div className="p-4 bg-muted/50">
                           <div className="flex items-center justify-between mb-3">
                             <h5 className="font-sans font-semibold text-sm">Advertising Opportunities</h5>
                             <Button 
@@ -4316,7 +4316,7 @@ export const DashboardInventoryManager = () => {
                   {/* Sponsorship Opportunities */}
                   <div className="-mx-6 -mb-6 mt-4">
                     <div className="border-t border-gray-200"></div>
-                    <div className="p-6 bg-gray-50 space-y-3">
+                    <div className="p-6 bg-muted/50 space-y-3">
                       <div className="flex items-center justify-between">
                         <h5 className="text-sm font-semibold">Sponsorship Levels</h5>
                       <Button
@@ -4542,7 +4542,7 @@ export const DashboardInventoryManager = () => {
                   </div>
                 </div>
                 {/* Specifications Container */}
-                <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                <div className="mt-3 p-3 bg-muted/50 rounded-md border">
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Subject</span>
@@ -4570,7 +4570,7 @@ export const DashboardInventoryManager = () => {
                 {/* Advertising Opportunities */}
                 <div className="-mx-4 -mb-4 mt-4">
                   <div className="border-t border-gray-200"></div>
-                  <div className="p-4 bg-gray-50">
+                  <div className="p-4 bg-muted/50">
                     <h5 className="font-sans font-semibold text-sm mb-3">Advertising Opportunities</h5>
                     {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -4805,7 +4805,7 @@ export const DashboardInventoryManager = () => {
                   </div>
                 </div>
                 {/* Specifications Container */}
-                <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                <div className="mt-3 p-3 bg-muted/50 rounded-md border">
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Followers</span>
@@ -4824,7 +4824,7 @@ export const DashboardInventoryManager = () => {
 
                 {/* Specifications */}
                 {profile.specifications && (
-                  <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                  <div className="mt-3 p-3 bg-muted/50 rounded-md">
                     <div className="flex items-start gap-2">
                       <span className="text-sm font-medium text-muted-foreground min-w-fit">Specifications:</span>
                       <span className="text-sm">{profile.specifications}</span>
@@ -4835,7 +4835,7 @@ export const DashboardInventoryManager = () => {
                 {/* Advertising Opportunities */}
                 <div className="-mx-4 -mb-4 mt-4">
                   <div className="border-t border-gray-200"></div>
-                  <div className="p-4 bg-gray-50">
+                  <div className="p-4 bg-muted/50">
                     <div className="flex items-center justify-between mb-3">
                       <h5 className="font-sans font-semibold text-sm">Advertising Opportunities</h5>
                       <Button 
@@ -5031,7 +5031,7 @@ export const DashboardInventoryManager = () => {
                       )}
                     </div>
                     {/* Specifications Container */}
-                    <div className="mt-3 p-3 bg-gray-50 rounded-md border">
+                    <div className="mt-3 p-3 bg-muted/50 rounded-md border">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         {station.channel && (
                           <div>
@@ -5079,7 +5079,7 @@ export const DashboardInventoryManager = () => {
 
                 <div className="-mx-4 -mb-4 mt-4">
                   <div className="border-t border-gray-200"></div>
-                  <div className="p-4 bg-gray-50">
+                  <div className="p-4 bg-muted/50">
                     <div className="flex items-center justify-between mb-3">
                       <span className="font-sans text-sm font-semibold">Ad Products</span>
                       <Button 
@@ -5246,7 +5246,7 @@ export const DashboardInventoryManager = () => {
       {/* Edit Dialog */}
       <Dialog open={editingItem !== null} onOpenChange={(open) => !open && closeEditDialog()}>
         <DialogContent className="w-[900px] max-w-[calc(100vw-2rem)] max-h-[90vh] flex flex-col overflow-x-hidden p-0">
-          <DialogHeader className="flex-shrink-0 px-6 pt-4 pb-3 border-b bg-gray-50">
+          <DialogHeader className="flex-shrink-0 px-6 pt-4 pb-3 border-b bg-muted/50">
             <DialogTitle className="text-base font-sans">
               {editingType === 'radio-show' ? 'Edit Radio Show' :
                `Edit ${editingType === 'website' ? 'Website' : 
@@ -5470,7 +5470,7 @@ export const DashboardInventoryManager = () => {
                           id="dimensions"
                           value={editingItem.format?.dimensions || ''}
                           disabled
-                          className="bg-gray-50 text-gray-600"
+                          className="bg-muted/50 text-muted-foreground"
                         />
                         <p className="text-xs text-muted-foreground">
                           Auto-populated from selected Ad Format
@@ -7301,7 +7301,7 @@ export const DashboardInventoryManager = () => {
           )}
           
           {editingItem && editingType !== 'radio-show' && (
-            <div className="flex justify-end space-x-2 px-6 py-4 border-t flex-shrink-0 bg-gray-50">
+            <div className="flex justify-end space-x-2 px-6 py-4 border-t flex-shrink-0 bg-muted/50">
               <Button variant="outline" onClick={closeEditDialog}>
                 Cancel
               </Button>

@@ -54,12 +54,12 @@ export default {
         },
         // Brand colors for direct access
         brand: {
-          navy: "hsl(var(--brand-navy))",
-          orange: "hsl(var(--brand-orange))",
-          green: "hsl(var(--brand-green))",
+          teal: "hsl(var(--brand-teal))",
+          amber: "hsl(var(--brand-amber))",
           cream: "hsl(var(--brand-cream))",
-          "light-gray": "hsl(var(--brand-light-gray))",
-          "medium-gray": "hsl(var(--brand-medium-gray))",
+          charcoal: "hsl(var(--brand-charcoal))",
+          muted: "hsl(var(--brand-muted))",
+          border: "hsl(var(--brand-border))",
         },
       },
       fontFamily: {

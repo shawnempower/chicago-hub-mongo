@@ -110,7 +110,7 @@ export const ChannelMetricCard: React.FC<ChannelMetricCardProps> = ({ channel })
   const borderColor = borderColorMap[channel.color] || 'border-gray-500';
   
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+    <div className="bg-muted/50 border border-border rounded-lg p-4">
       <div className="flex items-center gap-2 mb-4">
         <div className={`${channel.bgColor} p-2 rounded-lg`}>
           <Icon className="w-4 h-4 text-white" />

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,35 +8,35 @@
 
 @layer base {
   :root {
-    /* Core Brand Colors */
-    --brand-navy: 210 20% 18%;
-    --brand-orange: 24 86% 52%;
-    --brand-green: 145 63% 42%;
-    --brand-cream: 42 30% 95%;
-    --brand-light-gray: 0 0% 98%;
-    --brand-medium-gray: 215 16% 47%;
+    /* Core Brand Colors (Deep Teal + Warm Amber) */
+    --brand-teal: 175 64% 26%;
+    --brand-amber: 32 65% 53%;
+    --brand-cream: 40 33% 99%;
+    --brand-charcoal: 0 0% 16%;
+    --brand-muted: 0 0% 45%;
+    --brand-border: 40 20% 90%;
 
     /* Chicago Media Hub Color System */
-    --background: 42 30% 95%;
-    --foreground: 210 20% 18%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 16%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 20% 18%;
+    --card-foreground: 0 0% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 20% 18%;
+    --popover-foreground: 0 0% 16%;
 
-    --primary: 210 20% 18%;
+    --primary: 175 64% 26%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 98%;
-    --secondary-foreground: 210 20% 18%;
+    --secondary: 40 20% 96%;
+    --secondary-foreground: 0 0% 16%;
 
-    --muted: 0 0% 98%;
-    --muted-foreground: 215 16% 47%;
-    --placeholder: 215 16% 70%;
+    --muted: 40 20% 96%;
+    --muted-foreground: 0 0% 45%;
+    --placeholder: 0 0% 55%;
 
-    --accent: 24 86% 52%;
+    --accent: 32 65% 53%;
     --accent-foreground: 0 0% 100%;
 
     --success: 145 63% 42%;
@@ -45,14 +45,14 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 20% 90%;
-    --input: 215 20% 90%;
-    --ring: 24 86% 52%;
+    --border: 40 20% 90%;
+    --input: 40 20% 90%;
+    --ring: 175 64% 26%;
 
-    --radius: 12px;
+    --radius: 0.5rem;
 
     /* Typography Scale */
-    --font-serif: 'Playfair Display', Georgia, serif;
+    --font-serif: 'Hedvig Letters Serif', Georgia, serif;
     --font-sans: 'Inter', system-ui, sans-serif;
 
     /* Shadows */
@@ -63,6 +63,21 @@
     /* Animation */
     --transition-smooth: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-quick: all 200ms ease-out;
+  }
+
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 40 33% 95%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --border: 0 0% 20%;
+    --card: 0 0% 12%;
+    --card-foreground: 40 33% 95%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 40 33% 95%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 40 33% 95%;
+    --input: 0 0% 20%;
   }
 }
 

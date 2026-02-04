@@ -837,7 +837,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
 
   if (quality.totalItems === 0) {
     return (
-      <Card>
+      <Card className="bg-muted/50">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Info className="h-5 w-5" />
@@ -856,7 +856,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
   }
 
   return (
-    <Card>
+    <Card className="bg-muted/50">
       <CardHeader>
         <CardTitle className="font-sans text-base flex items-center justify-between">
           <span>Inventory Quality Score</span>
@@ -879,7 +879,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Score Display */}
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
           <div>
             <div className={`text-2xl font-bold ${getScoreColor(quality.score)}`}>
               {quality.score}%
@@ -924,7 +924,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
                 {quality.issues.slice(0, 3).map((issue, idx) => (
                   <div 
                     key={idx}
-                    className="flex items-start gap-2 text-sm p-2 rounded bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="flex items-start gap-2 text-sm p-2 rounded bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
                     onClick={() => setIsExpanded(true)}
                   >
                     {issue.severity === 'critical' && (
@@ -959,7 +959,7 @@ export const PublicationDataQuality: React.FC<Props> = ({
 
             {/* Expanded View - Detailed List */}
             {isExpanded && (
-              <div className="space-y-3 max-h-96 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+              <div className="space-y-3 max-h-96 overflow-y-auto border rounded-lg p-3 bg-muted/50">
                 {quality.issues.map((issue, idx) => (
                   <div 
                     key={idx}

@@ -715,7 +715,7 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
   };
 
   return (
-    <Card className="border-2">
+    <Card className="border-2 bg-muted/50">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold">Inventory Quality Score</CardTitle>
@@ -797,7 +797,7 @@ export const HubDataQuality: React.FC<HubDataQualityProps> = ({ publications, hu
 
                   {/* Expanded Items List */}
                   {expandedIssue === issue.type && (
-                    <div className="ml-6 p-3 bg-gray-50 rounded-md border max-h-60 overflow-y-auto">
+                    <div className="ml-6 p-3 bg-muted/50 rounded-md border max-h-60 overflow-y-auto">
                       <div className="text-xs font-medium text-gray-700 mb-2">
                         Affected Items:
                       </div>

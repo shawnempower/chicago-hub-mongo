@@ -257,7 +257,7 @@ export function LineItemsDetail({ publications, originalPublications, onUpdate }
     };
 
     return (
-      <div key={`${pub.publicationId}-${itemIndex}`} className={`border rounded-lg p-4 space-y-3 ${isExcluded ? 'bg-gray-50 opacity-80' : 'bg-[#eaeaea]'}`}>
+      <div key={`${pub.publicationId}-${itemIndex}`} className={`border rounded-lg p-4 space-y-3 ${isExcluded ? 'bg-muted/50 opacity-80' : 'bg-[#eaeaea]'}`}>
         {/* Item Header */}
         <div className="flex items-start justify-between">
           <div className="flex-1">

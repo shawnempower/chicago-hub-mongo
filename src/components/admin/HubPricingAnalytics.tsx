@@ -541,7 +541,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
 
       {/* Pricing Health Score Card */}
       {pricingHealth && (
-        <Card className="border-gray-200 bg-white">
+        <Card className="border-border bg-muted/50">
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -587,7 +587,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-5 gap-3">
-              <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <div className="bg-muted/50 rounded-lg p-3 border border-border">
                 <div className="flex items-start gap-2 text-left mb-2">
                   <Star className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                   <div>
@@ -599,7 +599,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                   <div className="text-xs text-muted-foreground font-sans">To use in packages</div>
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <div className="bg-muted/50 rounded-lg p-3 border border-border">
                 <div className="flex items-start gap-2 text-left mb-2">
                   <ThumbsUp className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
                   <div>
@@ -611,7 +611,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                   <div className="text-xs text-muted-foreground font-sans">Ready to sell</div>
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <div className="bg-muted/50 rounded-lg p-3 border border-border">
                 <div className="flex items-start gap-2 text-left mb-2">
                   <Info className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <div>
@@ -623,7 +623,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                   <div className="text-xs text-muted-foreground font-sans">Could improve</div>
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <div className="bg-muted/50 rounded-lg p-3 border border-border">
                 <div className="flex items-start gap-2 text-left mb-2">
                   <AlertTriangle className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />
                   <div>
@@ -635,7 +635,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                   <div className="text-xs text-muted-foreground font-sans">Needs review</div>
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <div className="bg-muted/50 rounded-lg p-3 border border-border">
                 <div className="flex items-start gap-2 text-left mb-2">
                   <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
@@ -654,7 +654,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
               <Button
                 onClick={() => setShowPricingModal(true)}
                 variant="outline"
-                className="bg-white border-gray-300 hover:bg-gray-50 text-gray-700"
+                className="bg-background border-border hover:bg-muted/50 text-foreground"
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Dive Deeper
@@ -673,10 +673,9 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
               <button 
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   pricingFilter === 'all' 
-                    ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                    : 'border border-transparent'
+                    ? 'bg-primary/10 text-primary border border-primary' 
+                    : 'border border-transparent bg-muted text-muted-foreground'
                 }`}
-                style={pricingFilter !== 'all' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
                 onClick={() => setPricingFilter('all')}
               >
                 All
@@ -684,10 +683,9 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
               <button 
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
                   pricingFilter === 'way-too-high' 
-                    ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                    : 'border border-transparent'
+                    ? 'bg-primary/10 text-primary border border-primary' 
+                    : 'border border-transparent bg-muted text-muted-foreground'
                 }`}
-                style={pricingFilter !== 'way-too-high' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
                 onClick={() => setPricingFilter('way-too-high')}
               >
                 <AlertCircle className="h-4 w-4 text-red-600" />
@@ -696,10 +694,9 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
               <button 
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
                   pricingFilter === 'too-high' 
-                    ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                    : 'border border-transparent'
+                    ? 'bg-primary/10 text-primary border border-primary' 
+                    : 'border border-transparent bg-muted text-muted-foreground'
                 }`}
-                style={pricingFilter !== 'too-high' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
                 onClick={() => setPricingFilter('too-high')}
               >
                 <AlertTriangle className="h-4 w-4 text-orange-600" />
@@ -708,10 +705,9 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
               <button 
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
                   pricingFilter === 'fair' 
-                    ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                    : 'border border-transparent'
+                    ? 'bg-primary/10 text-primary border border-primary' 
+                    : 'border border-transparent bg-muted text-muted-foreground'
                 }`}
-                style={pricingFilter !== 'fair' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
                 onClick={() => setPricingFilter('fair')}
               >
                 <Info className="h-4 w-4 text-yellow-600" />
@@ -761,16 +757,16 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                 {filteredItems.map((item, idx) => {
                   const suggested = getSuggestedPrice(item.channel, item.pricingModel, item.audience);
                   const textColor = item.assessment.status === 'critical' ? 'text-red-700' :
-                                   item.assessment.status === 'review' ? 'text-orange-700' :
+                                   item.assessment.status === 'review' ? 'text-amber-700' :
                                    'text-yellow-700';
                   const strongTextColor = item.assessment.status === 'critical' ? 'text-red-600' :
-                                         item.assessment.status === 'review' ? 'text-orange-600' :
+                                         item.assessment.status === 'review' ? 'text-amber-600' :
                                          'text-yellow-700';
                   const badgeBg = item.assessment.status === 'critical' ? 'bg-red-100 border-red-300' :
-                                 item.assessment.status === 'review' ? 'bg-orange-100 border-orange-300' :
+                                 item.assessment.status === 'review' ? 'bg-amber-100 border-amber-300' :
                                  'bg-yellow-100 border-yellow-300';
                   const badgeText = item.assessment.status === 'critical' ? 'text-red-700' :
-                                   item.assessment.status === 'review' ? 'text-orange-700' :
+                                   item.assessment.status === 'review' ? 'text-amber-700' :
                                    'text-yellow-700';
                   const IconComponent = item.assessment.status === 'critical' ? AlertCircle :
                                        item.assessment.status === 'review' ? AlertTriangle :
@@ -780,7 +776,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                                      'Fair';
 
                   return (
-                    <Card key={idx} className="bg-white border-gray-200">
+                    <Card key={idx} className="bg-muted/50 border-border">
                       <CardContent className="pt-6">
                         {/* Header Row */}
                         <div className="flex items-center justify-between mb-4">
@@ -801,7 +797,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                         {/* 2-Column Layout */}
                         <div className="grid grid-cols-2 gap-4">
                           {/* Column 1: Currently Charging (Containerized) */}
-                          <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                          <div className="bg-muted/50 border border-border rounded-md p-3">
                             <div className="text-xs text-gray-600 mb-2 font-medium">Currently Charging</div>
                             <div className="text-sm space-y-1">
                               <div className="text-gray-700">
@@ -815,7 +811,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
                           
                           {/* Column 2: Suggested (Containerized) */}
                           {suggested && (
-                            <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                            <div className="bg-muted/50 border border-border rounded-md p-3">
                               <div className="text-xs text-gray-600 mb-2 font-medium">
                                 {item.assessment.status === 'fair' ? 'Optimal' : 'Suggested'}
                               </div>
@@ -1181,7 +1177,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
 
                     {/* Legend - Accordion */}
                     <Accordion type="single" collapsible className="w-full">
-                      <AccordionItem value="pricing-explanation" className="border rounded-lg bg-white">
+                      <AccordionItem value="pricing-explanation" className="border rounded-lg bg-muted/50">
                         <AccordionTrigger className="px-4 hover:no-underline">
                           <span className="font-semibold text-sm text-gray-900 font-sans">
                             Understanding Normalized Pricing ({getNormalizedUnitLabel(activeChannel)})
@@ -1246,7 +1242,7 @@ export const HubPricingAnalytics: React.FC<HubPricingAnalyticsProps> = ({
       {showScrollTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-24 z-50 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-3 shadow-lg transition-all duration-300 hover:scale-110"
+          className="fixed bottom-6 right-24 z-50 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-3 shadow-lg transition-all duration-300 hover:scale-110"
           aria-label="Scroll to top"
         >
           <ArrowUp className="h-6 w-6" />

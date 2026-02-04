@@ -29,8 +29,8 @@ const TabsTrigger = React.forwardRef<
     className={cn(
       "inline-flex items-center justify-center whitespace-nowrap px-4 py-3 text-sm font-medium transition-all",
       "border-r border-t border-b border-border first:border-l first:rounded-tl-lg last:rounded-tr-lg",
-      "bg-[#F2F0EA] text-muted-foreground",
-      "data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:border-b-white data-[state=active]:relative data-[state=active]:z-10",
+      "bg-muted/50 text-muted-foreground",
+      "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:border-b-background data-[state=active]:relative data-[state=active]:z-10",
       "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       "disabled:pointer-events-none disabled:opacity-50",
       className,
@@ -47,7 +47,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "bg-white border border-t-0 border-border rounded-b-lg p-6",
+      "bg-background border border-t-0 border-border rounded-b-lg p-6",
       "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       className,
     )}

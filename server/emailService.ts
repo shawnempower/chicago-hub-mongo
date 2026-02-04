@@ -289,7 +289,7 @@ export class EmailService {
                 <tr>
                   <td style="background-color: ${backgroundColor}; padding: 40px 30px; text-align: center;">
                     ${headerIcon ? `<div style="font-size: 48px; margin-bottom: 16px;">${headerIcon}</div>` : ''}
-                    <h1 style="margin: 0; color: ${textColor}; font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 400; line-height: 1.2;">${title}</h1>
+                    <h1 style="margin: 0; color: ${textColor}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 22px; font-weight: 400; line-height: 1.2;">${title}</h1>
                   </td>
                 </tr>
                 
@@ -385,7 +385,7 @@ export class EmailService {
       : null;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.firstName || 'there'}!
       </h2>
       
@@ -450,7 +450,7 @@ export class EmailService {
     const resetLink = `${this.getBaseUrl()}/reset-password?token=${data.resetToken}`;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.firstName || 'there'}!
       </h2>
       
@@ -511,7 +511,7 @@ export class EmailService {
     const verificationLink = `${this.getBaseUrl()}/verify-email?token=${data.verificationToken}`;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.firstName || 'there'}!
       </h2>
       
@@ -585,7 +585,7 @@ export class EmailService {
     `;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.recipientName || 'there'}!
       </h2>
       
@@ -670,7 +670,7 @@ export class EmailService {
     `;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.recipientName || 'there'}!
       </h2>
       
@@ -734,7 +734,7 @@ export class EmailService {
     `;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.recipientName || 'there'}!
       </h2>
       
@@ -802,7 +802,7 @@ export class EmailService {
     `;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.recipientName || 'there'}!
       </h2>
       
@@ -871,7 +871,7 @@ export class EmailService {
     `;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.orange}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.orange}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         New Lead Submission
       </h2>
       
@@ -943,7 +943,7 @@ export class EmailService {
     `;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.recipientName || 'there'}!
       </h2>
       
@@ -1023,7 +1023,7 @@ export class EmailService {
     `;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.recipientName || 'there'}!
       </h2>
       
@@ -1114,7 +1114,7 @@ export class EmailService {
     `;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.recipientName || 'there'}!
       </h2>
       
@@ -1179,7 +1179,7 @@ export class EmailService {
     `;
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.recipientName || 'there'}!
       </h2>
       
@@ -1260,7 +1260,7 @@ export class EmailService {
     ` : '';
 
     const content = `
-      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 600;">
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
         Hi ${data.recipientName || 'there'}!
       </h2>
       

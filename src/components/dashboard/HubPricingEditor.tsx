@@ -289,7 +289,7 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
         <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
           <table className="w-full">
             <thead>
-              <tr style={{ backgroundColor: '#FAFAFA' }}>
+              <tr className="bg-muted">
                 <th className="text-left px-4 py-2 text-[12px] font-normal text-gray-700">
                   Standard Pricing Tiers
                 </th>
@@ -447,7 +447,7 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
               <table className="w-full">
                 <thead>
                   {/* Top Header with Hub Selector and Controls */}
-                  <tr style={{ backgroundColor: '#FAFAFA' }} className="border-b">
+                  <tr className="bg-muted border-b">
                     <td colSpan={columnCount} className="px-4 py-1">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -505,7 +505,7 @@ export const HubPricingEditor: React.FC<HubPricingEditorProps> = ({
                     </td>
                   </tr>
                   {/* Hidden header row to match column structure with standard pricing */}
-                  <tr style={{ backgroundColor: '#FAFAFA' }} className="h-0 invisible">
+                  <tr className="bg-muted h-0 invisible">
                     <th className="text-left px-4 py-0 text-[12px] font-normal text-gray-700"></th>
                     <th className="text-left px-4 py-0 text-[12px] font-normal text-gray-700"></th>
                     {conditionalFields && conditionalFields.length > 0 && (

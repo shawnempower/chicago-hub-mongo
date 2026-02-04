@@ -620,7 +620,7 @@ function StatusBadge({ status }: { status: 'uploaded' | 'pending' | 'missing' })
     missing: { 
       icon: AlertCircle, 
       label: 'Missing', 
-      className: 'bg-orange-50 text-orange-700 border-orange-200' 
+      className: 'bg-amber-50 text-amber-700 border-amber-200' 
     }
   };
 
@@ -2315,10 +2315,9 @@ export function CreativeAssetsManager({
             <button 
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeChannel === 'all' 
-                  ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                  : 'border border-transparent'
+                  ? 'bg-primary/10 text-primary border border-primary' 
+                  : 'border border-transparent bg-muted text-muted-foreground'
               }`}
-              style={activeChannel !== 'all' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
               onClick={() => setActiveChannel('all')}
             >
               All ({metrics.uploaded}/{metrics.totalRequired})
@@ -2334,10 +2333,9 @@ export function CreativeAssetsManager({
                 key={channel}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   activeChannel === channel 
-                    ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                    : 'border border-transparent'
+                    ? 'bg-primary/10 text-primary border border-primary' 
+                    : 'border border-transparent bg-muted text-muted-foreground'
                 }`}
-                style={activeChannel !== channel ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
                 onClick={() => setActiveChannel(channel)}
               >
                 {config?.label || channel} ({channelMet?.uploaded || 0}/{channelMet?.total || 0})
@@ -2979,7 +2977,7 @@ export function CreativeAssetsManager({
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger>
-                                      <Badge variant="outline" className="h-5 px-1.5 bg-gray-50 text-gray-600 border-gray-300">
+                                      <Badge variant="outline" className="h-5 px-1.5 bg-muted/50 text-muted-foreground border-border">
                                         <GitBranch className="h-3 w-3" />
                                       </Badge>
                                     </TooltipTrigger>
@@ -3064,7 +3062,7 @@ export function CreativeAssetsManager({
 
                         {/* Expanded Content Row */}
                         {isExpanded && (
-                          <TableRow className="bg-gray-50 hover:bg-gray-50">
+                          <TableRow className="bg-muted/50 hover:bg-muted/50">
                             <TableCell colSpan={activeChannel === 'all' ? 5 : 4} className="p-0">
                               <div className="px-6 py-4 space-y-4">
                                 {/* Two Column Layout: File Details | Placements */}

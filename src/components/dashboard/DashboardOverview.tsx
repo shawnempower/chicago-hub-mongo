@@ -486,7 +486,7 @@ export function DashboardOverview() {
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Revenue Potential */}
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
@@ -504,7 +504,7 @@ export function DashboardOverview() {
         </Card>
 
         {/* Total Reach */}
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Users className="h-4 w-4" />
@@ -522,7 +522,7 @@ export function DashboardOverview() {
         </Card>
 
         {/* Hub Pricing */}
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -562,7 +562,7 @@ export function DashboardOverview() {
 
         {/* Inventory Quality */}
         <Card 
-          className="cursor-pointer hover:shadow-md transition-shadow"
+          className="bg-muted/50 cursor-pointer hover:shadow-md transition-shadow"
           onClick={scrollToInventoryQuality}
         >
           <CardHeader className="pb-2">
@@ -585,7 +585,7 @@ export function DashboardOverview() {
       </div>
 
       {/* Action Center - What do you need to do? */}
-      <Card>
+      <Card className="bg-muted/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-sans text-base">
             <Calendar className="h-5 w-5" />
@@ -602,7 +602,7 @@ export function DashboardOverview() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-sans text-base">
               <Package className="h-5 w-5" />
@@ -628,7 +628,7 @@ export function DashboardOverview() {
         </Card>
 
         {/* Recent Activity */}
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-sans text-base">
               <MessageCircle className="h-5 w-5" />
@@ -686,7 +686,7 @@ export function DashboardOverview() {
       </div>
 
       {/* Knowledge Base - Full Width */}
-      <Card>
+      <Card className="bg-muted/50">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>

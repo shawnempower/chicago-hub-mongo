@@ -32,7 +32,7 @@ export function PlacementStatusBadge({ status, className = '' }: PlacementStatus
       );
     case 'delivered':
       return (
-        <Badge className={`bg-purple-50 text-purple-700 border border-purple-200 pointer-events-none ${className}`}>
+        <Badge className={`bg-green-50 text-green-700 border border-green-200 pointer-events-none ${className}`}>
           <CheckCircle2 className="h-3 w-3 mr-1" /> Delivered
         </Badge>
       );

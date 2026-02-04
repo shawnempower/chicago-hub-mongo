@@ -10,7 +10,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Mail, Info } from 'lucide-react';
 import { authAPI } from '@/api/auth';
-import empowerLogo from '@/assets/empower-logo.png';
 import sideloginImage from '@/assets/sidelogin.png';
 
 export default function Auth() {
@@ -96,7 +95,7 @@ export default function Auth() {
           {/* Logo */}
           <div>
             <img 
-              src={empowerLogo} 
+              src="/favicon.png" 
               alt="Chicago Media Hub" 
               className="h-8 w-auto"
             />
@@ -149,7 +148,7 @@ export default function Auth() {
             <button
               type="button"
               onClick={() => setShowForgotPassword(true)}
-              className="text-sm text-orange-500 hover:text-orange-600 font-semibold hover:underline"
+              className="text-sm text-primary hover:text-primary/90 font-semibold hover:underline"
             >
               Forgot password?
             </button>

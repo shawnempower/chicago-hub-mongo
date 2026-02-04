@@ -151,7 +151,7 @@ export const LeadConversationModal = ({ lead, isOpen, onClose }: LeadConversatio
         </div>
 
         <Tabs defaultValue="chat" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 rounded-none border-b bg-slate-50">
+          <TabsList className="grid w-full grid-cols-2 rounded-none border-b bg-muted/50">
             <TabsTrigger value="chat" className="data-[state=active]:bg-white rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600">
               <MessageSquare className="h-4 w-4 mr-2" />
               Chat Replay

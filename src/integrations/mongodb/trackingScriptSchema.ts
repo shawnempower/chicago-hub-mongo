@@ -11,6 +11,7 @@
  */
 
 import { ObjectId } from 'mongodb';
+import { DEFAULT_BRAND_HEX } from '@/constants/brand';
 
 // Digital channels that support pixel tracking
 export type TrackingChannel = 'website' | 'newsletter_image' | 'newsletter_text' | 'streaming';
@@ -306,7 +307,7 @@ export function generateNewsletterTextTag(
         </tr>` : ''}
         <tr>
           <td>
-            <a href="${urls.clickTracker}" target="_blank" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#0066cc;text-decoration:none;">${ctaText} &rarr;</a>
+            <a href="${urls.clickTracker}" target="_blank" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:${DEFAULT_BRAND_HEX};text-decoration:none;">${ctaText} &rarr;</a>
           </td>
         </tr>
       </table>

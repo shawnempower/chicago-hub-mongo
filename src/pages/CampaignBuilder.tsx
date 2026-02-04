@@ -639,7 +639,7 @@ export default function CampaignBuilder() {
               position: fixed; 
               top: 10px; 
               right: 10px; 
-              background: #2563eb; 
+              background: hsl(var(--primary)); 
               color: white; 
               padding: 10px 20px; 
               border-radius: 6px; 
@@ -648,7 +648,7 @@ export default function CampaignBuilder() {
               z-index: 1000;
               box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             }
-            .print-actions:hover { background: #1d4ed8; }
+            .print-actions:hover { background: hsl(var(--primary)); filter: brightness(0.9); }
           </style>
         </head>
         <body>
@@ -733,8 +733,8 @@ export default function CampaignBuilder() {
                         className={cn(
                           "w-full flex flex-col items-center gap-1 px-2 py-3 rounded-md transition-colors",
                           item.isActive
-                            ? "bg-[#EDEAE1] font-bold"
-                            : "hover:bg-[#E2E0D8] font-bold"
+                            ? "bg-muted/50 font-bold border-l-2 border-l-primary"
+                            : "hover:bg-muted/50 font-bold"
                         )}
                       >
                         <Icon className="h-5 w-5" />

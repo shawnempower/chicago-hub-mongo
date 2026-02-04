@@ -323,7 +323,7 @@ export function CampaignAnalysisStep({
                           if (duration) details += ` • ${duration}`;
                           
                           return (
-                            <div key={itemIdx} className="flex justify-between items-start text-sm bg-gray-50 p-2 rounded">
+                            <div key={itemIdx} className="flex justify-between items-start text-sm bg-muted/50 p-2 rounded">
                               <div className="flex-1">
                                 <p className="font-medium">{item.itemName || 'Unnamed Item'}</p>
                                 <p className="text-xs text-muted-foreground">{details}</p>

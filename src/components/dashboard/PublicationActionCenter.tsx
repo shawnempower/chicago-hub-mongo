@@ -575,7 +575,7 @@ export function PublicationActionCenter({
         badge: 'bg-green-100 text-green-700 border-0',
       };
       default: return {
-        bg: 'bg-gray-50 border-gray-200',
+        bg: 'bg-muted/50 border-border',
         icon: 'text-gray-600',
         badge: 'bg-gray-100 text-gray-700 border-0',
       };

@@ -265,7 +265,7 @@ export function LineItemsTable({
       <table className="w-full">
         <thead>
           {/* Top Header with Title and Controls */}
-          <tr style={{ backgroundColor: '#FAFAFA' }} className="border-b">
+          <tr className="bg-muted border-b">
             <td colSpan={6} className="px-4 py-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -312,7 +312,7 @@ export function LineItemsTable({
             return (
               <tr 
                 key={item.itemPath || itemIndex} 
-                className={`border-t hover:bg-gray-50 ${isExcluded ? 'opacity-80' : 'bg-[#eaeaea]'}`}
+                className={`border-t hover:bg-muted/50 ${isExcluded ? 'opacity-80' : 'bg-muted'}`}
               >
                 {/* Item Name & Non-Pricing Specs */}
                 <td className="px-4 py-3">

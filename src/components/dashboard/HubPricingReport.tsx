@@ -767,7 +767,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
+      <Card className="mb-6 bg-muted/50">
         <CardHeader>
           <CardTitle className="text-lg font-sans">Filters</CardTitle>
         </CardHeader>
@@ -807,7 +807,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Total Inventory</CardTitle>
           </CardHeader>
@@ -820,7 +820,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Standard Revenue</CardTitle>
           </CardHeader>
@@ -833,7 +833,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Hub Revenue</CardTitle>
           </CardHeader>
@@ -846,7 +846,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground font-sans">Avg Discount</CardTitle>
           </CardHeader>
@@ -864,7 +864,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
       </div>
 
       {/* Inventory Table */}
-      <Card>
+      <Card className="bg-muted/50">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -904,7 +904,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
                     {/* Channel Header */}
                     <button
                       onClick={() => toggleChannel(channel)}
-                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      className="w-full flex items-center justify-between p-4 bg-muted/50 hover:bg-muted/80 transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         {isExpanded ? (
@@ -930,7 +930,7 @@ export const HubPricingReport: React.FC<{ onBack: () => void }> = ({ onBack }) =
                         {items.map((item, index) => {
                 const Icon = item.channelIcon;
                 return (
-                  <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div key={index} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <Icon className="h-5 w-5 text-blue-600" />

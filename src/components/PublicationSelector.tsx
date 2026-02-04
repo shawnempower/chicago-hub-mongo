@@ -6,6 +6,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from '@/components/ui/badge';
 import { Building2, Check, ChevronsUpDown } from 'lucide-react';
 import { getPublicationBrandColor, prefetchBrandColors } from '@/config/publicationBrandColors';
+import { DEFAULT_BRAND_HEX } from '@/constants/brand';
 import { cn } from '@/lib/utils';
 
 // Color system for tags with light backgrounds and darker text
@@ -15,7 +16,7 @@ const getTagColors = (value: string): { bg: string; text: string } => {
     'daily': { bg: 'bg-blue-50', text: 'text-blue-700' },
     'weekly': { bg: 'bg-purple-50', text: 'text-purple-700' },
     'monthly': { bg: 'bg-pink-50', text: 'text-pink-700' },
-    'other': { bg: 'bg-gray-50', text: 'text-gray-700' },
+    'other': { bg: 'bg-muted/50', text: 'text-muted-foreground' },
     
     // Geographic coverage
     'local': { bg: 'bg-green-50', text: 'text-green-700' },
@@ -24,7 +25,7 @@ const getTagColors = (value: string): { bg: string; text: string } => {
     'international': { bg: 'bg-indigo-50', text: 'text-indigo-700' },
   };
   
-  return colorMap[value?.toLowerCase()] || { bg: 'bg-gray-50', text: 'text-gray-700' };
+  return colorMap[value?.toLowerCase()] || { bg: 'bg-muted/50', text: 'text-muted-foreground' };
 };
 
 // Capitalize first letter of each word
@@ -103,14 +104,14 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
   if (compact) {
     // Compact version for navbar
     return (
-      <div className="flex items-center rounded-lg overflow-hidden h-10" style={{ border: '1px solid #D4D1C7' }}>
+      <div className="flex items-center rounded-lg overflow-hidden h-10 border border-border">
         {/* Label Section */}
-        <div className="px-3 h-full flex items-center whitespace-nowrap font-medium" style={{ backgroundColor: '#EDEAE1', color: '#6C685D', fontSize: '14px' }}>
+        <div className="px-3 h-full flex items-center whitespace-nowrap font-medium bg-muted text-muted-foreground text-sm">
           Active Publication
         </div>
         
         {/* Divider */}
-        <div className="w-px h-full" style={{ backgroundColor: '#D4D1C7' }} />
+        <div className="w-px h-full bg-border" />
         
         {/* Dropdown Section */}
         <Popover open={open} onOpenChange={(isOpen) => {
@@ -122,7 +123,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
               variant="ghost"
               role="combobox"
               aria-expanded={open}
-              className="w-auto min-w-[160px] h-full bg-white border-0 rounded-none shadow-none focus:ring-0 hover:bg-gray-50 justify-between text-[14px]"
+              className="w-auto min-w-[160px] h-full bg-background border-0 rounded-none shadow-none focus:ring-0 hover:bg-muted justify-between text-sm"
             >
               <div className="flex items-center gap-1.5">
                 <div 
@@ -130,7 +131,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                   style={{ 
                     backgroundColor: selectedPublication ? 
                       getPublicationBrandColor(selectedPublication.publicationId) : 
-                      '#0066cc' 
+                      DEFAULT_BRAND_HEX 
                   }}
                 >
                   {selectedPublication?.basicInfo.publicationName?.charAt(0) || '?'}
@@ -154,7 +155,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                     const isSelected = selectedPublication?.publicationId === publication.publicationId;
                     const avatarColor = isSelected 
                       ? getPublicationBrandColor(publication.publicationId)
-                      : '#0066cc';
+                      : DEFAULT_BRAND_HEX;
                     
                     return (
                       <CommandItem
@@ -212,7 +213,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                 style={{ 
                   backgroundColor: selectedPublication ? 
                     getPublicationBrandColor(selectedPublication.publicationId) : 
-                    '#0066cc' 
+                    DEFAULT_BRAND_HEX 
                 }}
               >
                 {selectedPublication?.basicInfo.publicationName?.charAt(0) || '?'}
@@ -236,7 +237,7 @@ export const PublicationSelector: React.FC<PublicationSelectorProps> = ({ compac
                   const isSelected = selectedPublication?.publicationId === publication.publicationId;
                   const avatarColor = isSelected 
                     ? getPublicationBrandColor(publication.publicationId)
-                    : '#0066cc';
+                    : DEFAULT_BRAND_HEX;
                   
                   return (
                     <CommandItem

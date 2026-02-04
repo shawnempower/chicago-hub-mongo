@@ -152,7 +152,7 @@ export function PublicationDeliveryProgress({
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-muted/50">
         <CardContent className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </CardContent>
@@ -175,7 +175,7 @@ export function PublicationDeliveryProgress({
   const hasPodcast = summary.totals.downloads > 0;
 
   return (
-    <Card>
+    <Card className="bg-muted/50">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>

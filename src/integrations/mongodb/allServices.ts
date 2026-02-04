@@ -1,6 +1,7 @@
 import { getDatabase } from './client';
 import { ObjectId, Filter, UpdateFilter } from 'mongodb';
 import { syncAllPerformanceMetrics } from '@/utils/performanceMetricsSync';
+import { DEFAULT_BRAND_HEX } from '@/constants/brand';
 import {
   AdPackage,
   AdvertisingInventory,
@@ -1698,7 +1699,7 @@ export class PublicationsService {
       category: publication.basicInfo.contentType || 'mixed',
       categoryTag: publication.basicInfo.contentType?.toLowerCase().replace(/\s+/g, '-') || 'mixed',
       logo: publication.basicInfo.publicationName.substring(0, 3).toUpperCase(),
-      logoColor: '#1E40AF',
+      logoColor: DEFAULT_BRAND_HEX,
       brief: `${publication.basicInfo.geographicCoverage || 'Local'} ${publication.basicInfo.contentType || 'publication'}`,
       reach: publication.audienceDemographics?.totalAudience?.toString() || 'Unknown',
       audience: publication.audienceDemographics?.targetMarkets?.join(', ') || 'General audience',

@@ -100,7 +100,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
                 ) : (
                   <button 
                     onClick={() => onNavigateToStep?.(1)}
-                    className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
+                    className="text-primary hover:text-primary/90 font-medium text-left font-sans flex items-center gap-1"
                   >
                     Add campaign name
                     <Pencil className="h-3 w-3" />
@@ -114,7 +114,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
                 ) : (
                   <button 
                     onClick={() => onNavigateToStep?.(1)}
-                    className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
+                    className="text-primary hover:text-primary/90 font-medium text-left font-sans flex items-center gap-1"
                   >
                     Add advertiser
                     <Pencil className="h-3 w-3" />
@@ -128,7 +128,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
                 ) : (
                   <button 
                     onClick={() => onNavigateToStep?.(2)}
-                    className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
+                    className="text-primary hover:text-primary/90 font-medium text-left font-sans flex items-center gap-1"
                   >
                     Add primary goal
                     <Pencil className="h-3 w-3" />
@@ -144,7 +144,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
                 ) : (
                   <button 
                     onClick={() => onNavigateToStep?.(3)}
-                    className="text-orange-600 hover:text-orange-700 font-medium text-left font-sans flex items-center gap-1"
+                    className="text-primary hover:text-primary/90 font-medium text-left font-sans flex items-center gap-1"
                   >
                     Add timeline
                     <Pencil className="h-3 w-3" />
@@ -244,19 +244,19 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
               <div className="pt-4 border-t">
                 <h4 className="font-semibold mb-3">Investment & Performance</h4>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <div className="bg-muted/50 rounded-lg p-3 text-center">
                     <p className="text-xl font-bold text-green-600">
                       ${result.pricing.finalPrice.toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">Total Investment</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <div className="bg-muted/50 rounded-lg p-3 text-center">
                     <p className="text-xl font-bold text-blue-600">
                       {result.estimatedPerformance.reach.min.toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">Est. Reach</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <div className="bg-muted/50 rounded-lg p-3 text-center">
                     <p className="text-xl font-bold text-purple-600">
                       {result.selectedInventory.totalInventoryItems}
                     </p>
@@ -339,7 +339,7 @@ export function CampaignReviewStep({ formData, result, campaignId, selectedPacka
       </Card>
 
       {/* Additional Info */}
-      <div className="bg-gray-50 border rounded-lg p-4 text-sm text-muted-foreground">
+      <div className="bg-muted/50 border rounded-lg p-4 text-sm text-muted-foreground">
         <p>
           <strong>Note:</strong> You can edit campaign details anytime before the contract is signed. 
           All selected inventory is subject to availability at time of final booking.

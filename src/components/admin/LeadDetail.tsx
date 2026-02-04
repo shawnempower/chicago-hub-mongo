@@ -90,7 +90,7 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
       closed_won: { background: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
       closed_lost: { background: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
     };
-    return styles[status] ?? { background: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
+    return styles[status] ?? { background: 'bg-muted/50', text: 'text-muted-foreground', border: 'border-border' };
   };
 
   const getStatusLabel = (status: string): string => {
@@ -287,7 +287,7 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
                   ? 'bg-purple-50 text-purple-700 border-purple-200' 
                   : lead.leadSource === 'storefront_form'
                   ? 'bg-blue-50 text-blue-700 border-blue-200'
-                  : 'bg-slate-50 text-slate-700 border-slate-200'
+                  : 'bg-muted/50 text-muted-foreground border-border'
               }
             >
               {lead.leadSource === 'ai_chat' ? '🤖 AI Chat' : 
@@ -369,7 +369,7 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
             </div>
 
             <div className="grid gap-4 grid-rows-[auto_auto]">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="rounded-lg border border-border bg-muted/50 p-6 shadow-sm">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-600">
                     <User className="h-5 w-5" />
@@ -415,7 +415,7 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
 
           {/* Message / Conversation Summary */}
           {lead.message && (
-            <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+            <div className="mt-6 rounded-lg border border-border bg-muted/50 p-4 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
                 {lead.leadSource === 'ai_chat' ? 'Conversation Summary' : 'Message'}
               </p>
@@ -501,7 +501,7 @@ export const LeadDetail = ({ leadId, onBack }: LeadDetailProps) => {
 
           {/* Sticky Note Composer - Full Width */}
           <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-6">
-            <div className="relative rounded-lg border border-slate-300 bg-slate-50 p-4" style={{ minHeight: '120px' }}>
+            <div className="relative rounded-lg border border-border bg-muted/50 p-4" style={{ minHeight: '120px' }}>
               <Textarea
                 value={currentNote}
                 disabled={Boolean(lead.archivedAt)}

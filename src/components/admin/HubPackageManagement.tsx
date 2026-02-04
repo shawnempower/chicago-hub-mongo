@@ -892,9 +892,9 @@ export const HubPackageManagement = () => {
       case 'draft':
         return { label: 'Draft', icon: FileCheck, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-300' };
       case 'archived':
-        return { label: 'Archived', icon: Archive, color: 'text-gray-500', bgColor: 'bg-gray-50', borderColor: 'border-gray-300' };
+        return { label: 'Archived', icon: Archive, color: 'text-gray-500', bgColor: 'bg-muted/50', borderColor: 'border-border' };
       default:
-        return { label: 'No Status', icon: FileCheck, color: 'text-gray-400', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' };
+        return { label: 'No Status', icon: FileCheck, color: 'text-gray-400', bgColor: 'bg-muted/50', borderColor: 'border-border' };
     }
   };
 
@@ -1291,10 +1291,9 @@ export const HubPackageManagement = () => {
           <button 
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               filterStatus === 'all' 
-                ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                : 'border border-transparent'
+                ? 'bg-primary/10 text-primary border border-primary' 
+                : 'border border-transparent bg-muted text-muted-foreground'
             }`}
-            style={filterStatus !== 'all' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
             onClick={() => setFilterStatus('all')}
           >
             All
@@ -1302,10 +1301,9 @@ export const HubPackageManagement = () => {
           <button 
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               filterStatus === 'active' 
-                ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                : 'border border-transparent'
+                ? 'bg-primary/10 text-primary border border-primary' 
+                : 'border border-transparent bg-muted text-muted-foreground'
             }`}
-            style={filterStatus !== 'active' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
             onClick={() => setFilterStatus('active')}
           >
             Active
@@ -1313,10 +1311,9 @@ export const HubPackageManagement = () => {
           <button 
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               filterStatus === 'draft' 
-                ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                : 'border border-transparent'
+                ? 'bg-primary/10 text-primary border border-primary' 
+                : 'border border-transparent bg-muted text-muted-foreground'
             }`}
-            style={filterStatus !== 'draft' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
             onClick={() => setFilterStatus('draft')}
           >
             Drafts
@@ -1324,10 +1321,9 @@ export const HubPackageManagement = () => {
           <button 
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               filterStatus === 'archived' 
-                ? 'bg-orange-50 text-orange-600 border border-orange-600' 
-                : 'border border-transparent'
+                ? 'bg-primary/10 text-primary border border-primary' 
+                : 'border border-transparent bg-muted text-muted-foreground'
             }`}
-            style={filterStatus !== 'archived' ? { backgroundColor: '#EDEAE1', color: '#6C685D' } : {}}
             onClick={() => setFilterStatus('archived')}
           >
             Archived
@@ -1543,7 +1539,7 @@ export const HubPackageManagement = () => {
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
                                 onClick={() => handleApprovalStatusChange(pkg, 'archived')}
-                                className={pkg.metadata?.approvalStatus === 'archived' ? 'bg-gray-50' : ''}
+                                className={pkg.metadata?.approvalStatus === 'archived' ? 'bg-muted/50' : ''}
                               >
                                 <Archive className="h-4 w-4 mr-2 text-gray-500" />
                                 Archived

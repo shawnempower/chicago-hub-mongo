@@ -322,7 +322,7 @@ export function CampaignCreativeAssetsStepGrouped({
               </CardHeader>
               <CardContent className="space-y-3">
                 {/* Requirements */}
-                <div className="p-3 bg-gray-50 rounded-lg space-y-2">
+                <div className="p-3 bg-muted/50 rounded-lg space-y-2">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Info className="h-3 w-3" />
                     <span className="font-medium">Specifications</span>
@@ -372,7 +372,7 @@ export function CampaignCreativeAssetsStepGrouped({
                     />
                     <label
                       htmlFor={`file-${specGroup.specGroupId}`}
-                      className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary hover:bg-gray-50 transition-colors"
+                      className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors"
                     >
                       <Upload className="h-8 w-8 text-gray-400 mb-2" />
                       <span className="text-sm font-medium text-gray-700">

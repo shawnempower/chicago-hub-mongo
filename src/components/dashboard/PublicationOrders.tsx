@@ -217,7 +217,7 @@ export function PublicationOrders() {
   const hasActiveFilters = statusFilter.length > 0;
   const visibleCount = filteredOrders.length;
   const filterTriggerClass =
-    'justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200 h-9 flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium';
+    'justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-background hover:bg-muted hover:text-foreground shadow-sm transition-all duration-200 h-9 flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium';
 
   if (loading) {
     return (
@@ -236,31 +236,31 @@ export function PublicationOrders() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="shadow-none">
+        <Card className="shadow-none bg-muted/50">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{statusCounts.all}</div>
             <p className="text-xs text-muted-foreground">Total Orders</p>
           </CardContent>
         </Card>
-        <Card className="shadow-none">
+        <Card className="shadow-none bg-muted/50">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-blue-600">{statusCounts.sent}</div>
             <p className="text-xs text-muted-foreground">Pending Review</p>
           </CardContent>
         </Card>
-        <Card className="shadow-none">
+        <Card className="shadow-none bg-muted/50">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">{statusCounts.confirmed}</div>
             <p className="text-xs text-muted-foreground">Confirmed</p>
           </CardContent>
         </Card>
-        <Card className="shadow-none">
+        <Card className="shadow-none bg-muted/50">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-purple-600">{statusCounts.in_production}</div>
             <p className="text-xs text-muted-foreground">In Production</p>
           </CardContent>
         </Card>
-        <Card className="shadow-none">
+        <Card className="shadow-none bg-muted/50">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-emerald-600">{statusCounts.delivered}</div>
             <p className="text-xs text-muted-foreground">Delivered</p>

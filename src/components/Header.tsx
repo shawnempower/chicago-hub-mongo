@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/CustomAuthContext";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { User, ChevronDown, Globe, BookOpen } from "lucide-react";
-import empowerLogo from "@/assets/empower-logo.png";
 import { PublicationSelector } from "@/components/PublicationSelector";
 import { HubSelector } from "@/components/HubSelector";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -34,12 +33,12 @@ export function Header({ showDashboardNav = false }: HeaderProps) {
   const hasHubAccess = isAdmin || (user?.permissions?.assignedHubIds && user.permissions.assignedHubIds.length > 0);
   
   return (
-    <header className="sticky top-0 z-40 backdrop-blur-[20px] border-b border-border" style={{ backgroundColor: 'hsl(42 30% 95% / 0.3)' }}>
+    <header className="sticky top-0 z-40 backdrop-blur-[20px] border-b border-border bg-background/80">
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-8">
           <Link to="/dashboard" className="hover:opacity-80 transition-opacity">
             <img 
-              src={empowerLogo} 
+              src="/favicon.png" 
               alt="Chicago Media Hub" 
               className="h-8 w-auto"
             />
@@ -50,41 +49,28 @@ export function Header({ showDashboardNav = false }: HeaderProps) {
             <div className="hidden md:flex items-center gap-3">
               {/* Toggle between Hubs and Publications */}
               {hasHubAccess && (
-                <div 
-                  className="flex items-center h-10 rounded-lg p-0.5 border"
-                  style={{ backgroundColor: '#EDEAE1', borderColor: '#D4D1C7' }}
-                >
+                <div className="flex items-center h-10 rounded-lg p-0.5 border border-border bg-muted">
                   <button
                     onClick={() => {
                       console.log('🔘 Hubs toggle clicked, navigating to /hubcentral');
                       navigate('/hubcentral');
                     }}
-                    className={`flex items-center gap-1.5 px-3 h-9 rounded-md font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 h-9 rounded-md font-medium transition-all text-sm ${
                       isHubScopedPage 
-                        ? 'bg-white border shadow-sm' 
-                        : 'hover:bg-white/30'
+                        ? 'bg-background border border-border shadow-sm text-foreground' 
+                        : 'hover:bg-background/30 text-muted-foreground'
                     }`}
-                    style={{ 
-                      fontSize: '14px',
-                      color: isHubScopedPage ? '#1a1a1a' : '#6C685D',
-                      borderColor: isHubScopedPage ? '#D4D1C7' : 'transparent'
-                    }}
                   >
                     <Globe className="h-4 w-4" />
                     Hubs
                   </button>
                   <button
                     onClick={() => navigate('/dashboard')}
-                    className={`flex items-center gap-1.5 px-3 h-9 rounded-md font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 h-9 rounded-md font-medium transition-all text-sm ${
                       !isHubScopedPage 
-                        ? 'bg-white border shadow-sm' 
-                        : 'hover:bg-white/30'
+                        ? 'bg-background border border-border shadow-sm text-foreground' 
+                        : 'hover:bg-background/30 text-muted-foreground'
                     }`}
-                    style={{ 
-                      fontSize: '14px',
-                      color: !isHubScopedPage ? '#1a1a1a' : '#6C685D',
-                      borderColor: !isHubScopedPage ? '#D4D1C7' : 'transparent'
-                    }}
                   >
                     <BookOpen className="h-4 w-4" />
                     Publications

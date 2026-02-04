@@ -240,7 +240,7 @@ export function PublicationEarnings({ publicationId }: PublicationEarningsProps)
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
@@ -255,7 +255,7 @@ export function PublicationEarnings({ publicationId }: PublicationEarningsProps)
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -267,7 +267,7 @@ export function PublicationEarnings({ publicationId }: PublicationEarningsProps)
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Clock className="h-4 w-4 text-amber-600" />
@@ -279,7 +279,7 @@ export function PublicationEarnings({ publicationId }: PublicationEarningsProps)
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-muted/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               By Status

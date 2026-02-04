@@ -220,7 +220,7 @@ export const LeadNotesTimeline = ({
         <h3 className="text-sm font-semibold">Activity Timeline</h3>
         
         {notes.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-muted-foreground">
+          <div className="rounded-lg border border-dashed border-border bg-muted/50 p-6 text-center text-sm text-muted-foreground">
             No notes yet. Add the first note above.
           </div>
         ) : (

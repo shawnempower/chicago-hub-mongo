@@ -205,8 +205,8 @@ export default function CampaignList() {
                         className={cn(
                           "w-full flex flex-col items-center gap-1 px-2 py-3 rounded-md transition-colors",
                           item.isActive
-                            ? "bg-[#EDEAE1] font-bold"
-                            : "hover:bg-[#E2E0D8] font-bold"
+                            ? "bg-muted/50 font-bold border-l-2 border-l-primary"
+                            : "hover:bg-muted/50 font-bold"
                         )}
                       >
                         <Icon className="h-5 w-5" />
@@ -284,7 +284,7 @@ export default function CampaignList() {
                       placeholder="Search campaigns..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 h-9 border-input bg-white hover:bg-[#F9F8F3] shadow-sm transition-all duration-200"
+                      className="pl-10 h-9 border-input bg-background hover:bg-muted shadow-sm transition-all duration-200"
                     />
                   </div>
 
@@ -292,7 +292,7 @@ export default function CampaignList() {
                   <div className="flex items-center gap-2">
                   {/* Status Filter Dropdown */}
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-9 w-[180px] border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200">
+                    <SelectTrigger className="h-9 w-[180px] border-input bg-background hover:bg-muted hover:text-foreground shadow-sm transition-all duration-200">
                       <SelectValue placeholder="All Statuses" />
                     </SelectTrigger>
                     <SelectContent>

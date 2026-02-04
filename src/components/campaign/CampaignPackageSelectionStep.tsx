@@ -251,10 +251,10 @@ export function CampaignPackageSelectionStep({
               key={packageId}
               className={`p-5 rounded-lg border cursor-pointer transition-all ${
                 isSelected
-                  ? 'border-gray-300 bg-gray-50'
+                  ? 'border-border bg-muted/50'
                   : isWithinBudget
                   ? 'border-blue-300 bg-blue-50/30 hover:border-gray-400'
-                  : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50/50'
+                  : 'border-gray-200 hover:border-gray-400 hover:bg-muted/50'
               }`}
               onClick={() => handlePackageSelect(pkg)}
             >

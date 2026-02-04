@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { useHubs } from '@/hooks/useHubs';
 import { Hub } from '@/integrations/mongodb/hubSchema';
+import { DEFAULT_BRAND_HEX } from '@/constants/brand';
 import { hubsApi } from '@/api/hubs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -192,7 +193,7 @@ export const HubManagement: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold"
-                          style={{ backgroundColor: hub.branding?.primaryColor || '#0066cc' }}
+                          style={{ backgroundColor: hub.branding?.primaryColor || DEFAULT_BRAND_HEX }}
                         >
                           {hub.basicInfo.name.charAt(0).toUpperCase()}
                         </div>

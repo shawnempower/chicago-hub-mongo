@@ -150,7 +150,7 @@ export function AdFormatSelector({ value, onChange, className = '', allowMultipl
                 <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => setShowCustomWarning(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     Cancel
                   </button>
@@ -247,7 +247,7 @@ export function AdFormatSelector({ value, onChange, className = '', allowMultipl
             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
               {DIMENSION_OPTIONS.map((group) => (
                 <div key={group.label}>
-                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 sticky top-0">
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-muted/50 sticky top-0">
                     {group.label}
                   </div>
                   {group.options.map((option) => (

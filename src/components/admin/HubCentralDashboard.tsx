@@ -17,6 +17,7 @@ import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useHubContext } from '@/contexts/HubContext';
 import { useHubPublications } from '@/hooks/useHubs';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
+import { DEFAULT_BRAND_HEX } from '@/constants/brand';
 import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle, Download, Megaphone, CheckCircle2, MessageSquare } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { exportHubInventoryToCSV } from '@/utils/hubInventoryExport';
@@ -136,7 +137,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
           <div 
             className="rounded-xl p-6 border shadow-sm"
             style={{
-              backgroundColor: `${selectedHub?.branding?.primaryColor || '#0066cc'}1A`, // Hub color at 10% opacity
+              backgroundColor: `${selectedHub?.branding?.primaryColor || DEFAULT_BRAND_HEX}1A`, // Hub color at 10% opacity
             }}
           >
             <div className="flex items-center justify-between">
@@ -193,7 +194,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
           )}
           
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+            <Card className="bg-muted/50">
               <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-sm font-medium">New Leads</CardTitle>
@@ -208,7 +209,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-muted/50">
               <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-sm font-medium">Publications</CardTitle>
@@ -223,7 +224,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-muted/50">
               <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
                 <Bot className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-sm font-medium">Conversations</CardTitle>
@@ -239,7 +240,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </CardContent>
             </Card>
             <Card 
-              className={`cursor-pointer hover:shadow-md transition-shadow ${
+              className={`bg-muted/50 cursor-pointer hover:shadow-md transition-shadow ${
                 (stats?.unreadMessages ?? 0) > 0 ? 'border-blue-300 bg-blue-50/30' : ''
               }`}
               onClick={() => onTabChange('orders')}
@@ -267,7 +268,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </CardContent>
             </Card>
             <Card 
-              className="cursor-pointer hover:shadow-md transition-shadow"
+              className="bg-muted/50 cursor-pointer hover:shadow-md transition-shadow"
               onClick={scrollToInventoryQuality}
             >
               <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
@@ -296,7 +297,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
           {/* Marketplace Insights Section */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Inventory Breakdown */}
-            <Card>
+            <Card className="bg-muted/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-sans text-base">
                   <Target className="h-5 w-5" />
@@ -326,7 +327,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                   const chartData = allChannels.filter(item => item.value > 0);
                   const total = allChannels.reduce((sum, item) => sum + item.value, 0);
 
-                  // Map Tailwind colors to hex values
+                  // Map Tailwind colors to hex values (channel differentiation); fallback = brand primary
                   const colorMap: Record<string, string> = {
                     'blue-500': '#3b82f6',
                     'green-500': '#22c55e',
@@ -337,6 +338,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                     'red-500': '#ef4444',
                     'indigo-500': '#6366f1',
                   };
+                  const chartFallbackHex = DEFAULT_BRAND_HEX;
 
                   // Custom tooltip component
                   const CustomTooltip = ({ active, payload }: any) => {
@@ -373,7 +375,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                               strokeWidth={3}
                             >
                               {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={colorMap[entry.color] || '#666'} />
+                                <Cell key={`cell-${index}`} fill={colorMap[entry.color] || chartFallbackHex} />
                               ))}
                             </Pie>
                             <RechartsTooltip 
@@ -415,7 +417,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
             </Card>
 
             {/* Audience Metrics */}
-            <Card>
+            <Card className="bg-muted/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-sans text-base">
                   <Eye className="h-5 w-5" />
@@ -424,7 +426,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="text-left p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="text-left p-3 border border-border rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <CHANNEL_COLORS.website.icon className={`h-5 w-5 ${CHANNEL_COLORS.website.iconColor}`} />
                       <span className="text-xs text-muted-foreground">Website</span>
@@ -434,7 +436,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                         (stats?.audienceMetrics?.totalWebsiteVisitors ?? 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-left p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="text-left p-3 border border-border rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <CHANNEL_COLORS.newsletter.icon className={`h-5 w-5 ${CHANNEL_COLORS.newsletter.iconColor}`} />
                       <span className="text-xs text-muted-foreground">Newsletter</span>
@@ -444,7 +446,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                         (stats?.audienceMetrics?.totalNewsletterSubscribers ?? 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-left p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="text-left p-3 border border-border rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <CHANNEL_COLORS.print.icon className={`h-5 w-5 ${CHANNEL_COLORS.print.iconColor}`} />
                       <span className="text-xs text-muted-foreground">Print</span>
@@ -454,7 +456,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                         (stats?.audienceMetrics?.totalPrintCirculation ?? 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-left p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="text-left p-3 border border-border rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <CHANNEL_COLORS.socialMedia.icon className={`h-5 w-5 ${CHANNEL_COLORS.socialMedia.iconColor}`} />
                       <span className="text-xs text-muted-foreground">Social Media</span>
@@ -464,7 +466,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                         (stats?.audienceMetrics?.totalSocialFollowers ?? 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-left p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="text-left p-3 border border-border rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <CHANNEL_COLORS.podcasts.icon className={`h-5 w-5 ${CHANNEL_COLORS.podcasts.iconColor}`} />
                       <span className="text-xs text-muted-foreground">Podcasts</span>
@@ -474,7 +476,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                         (stats?.audienceMetrics?.totalPodcastListeners ?? 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-left p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="text-left p-3 border border-border rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <CHANNEL_COLORS.streamingVideo.icon className={`h-5 w-5 ${CHANNEL_COLORS.streamingVideo.iconColor}`} />
                       <span className="text-xs text-muted-foreground">Streaming</span>
@@ -484,7 +486,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                         (stats?.audienceMetrics?.totalStreamingSubscribers ?? 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-left p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="text-left p-3 border border-border rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <CHANNEL_COLORS.radioStations.icon className={`h-5 w-5 ${CHANNEL_COLORS.radioStations.iconColor}`} />
                       <span className="text-xs text-muted-foreground">Radio</span>
@@ -499,7 +501,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
             </Card>
 
             {/* Pricing Insights */}
-            <Card>
+            <Card className="bg-muted/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 font-sans text-base">
@@ -602,7 +604,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
             </Card>
 
             {/* Hub Pricing */}
-            <Card>
+            <Card className="bg-muted/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 font-sans text-base">
@@ -737,7 +739,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
           {/* Quick Actions & Recent Activity */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Quick Actions */}
-            <Card>
+            <Card className="bg-muted/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-sans text-base">
                   <Package className="h-5 w-5" />
@@ -773,7 +775,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
 
           {/* Geographic & Content Distribution */}
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
+            <Card className="bg-muted/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-sans text-base">
                   <MapPin className="h-5 w-5" />
@@ -782,25 +784,25 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
                     <span className="text-xs font-medium">Local</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.local ?? 0)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
                     <span className="text-xs font-medium">Regional</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.regional ?? 0)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
                     <span className="text-xs font-medium">State</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.state ?? 0)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
                     <span className="text-xs font-medium">National</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.national ?? 0)}
@@ -810,7 +812,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-muted/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-sans text-base">
                   <BookOpen className="h-5 w-5" />
@@ -819,25 +821,25 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
                     <span className="text-xs font-medium">News</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.news ?? 0)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
                     <span className="text-xs font-medium">Business</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.business ?? 0)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
                     <span className="text-xs font-medium">Lifestyle</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.lifestyle ?? 0)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
                     <span className="text-xs font-medium">Mixed</span>
                     <span className="font-semibold text-sm">
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.mixed ?? 0)}
@@ -895,7 +897,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
     if (activeTab === 'campaigns') {
       return (
         <div className="space-y-6">
-          <Card>
+          <Card className="bg-muted/50">
             <CardHeader>
               <CardTitle className="font-sans">Campaign Builder</CardTitle>
               <CardDescription>
@@ -955,7 +957,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
 
               <div className="border-t pt-4 mt-4">
                 <h4 className="font-semibold mb-2 font-sans">Example Use Case:</h4>
-                <div className="bg-gray-50 rounded-lg p-4 text-sm">
+                <div className="bg-muted/50 rounded-lg p-4 text-sm">
                   <p className="font-medium mb-2">Summer Brand Awareness Campaign</p>
                   <ul className="space-y-1 text-muted-foreground">
                     <li>• Budget: $50,000/month for 6 months</li>

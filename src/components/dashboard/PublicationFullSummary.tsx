@@ -333,9 +333,9 @@ export const PublicationFullSummary: React.FC<PublicationFullSummaryProps> = ({ 
                       <p className="text-xs text-gray-600 mt-1">If 100% sold</p>
                     </div>
                     
-                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-orange-600">
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-primary">
                       <p className="text-xs font-medium text-gray-500 uppercase">Packages</p>
-                      <p className="text-3xl font-bold text-orange-600 print:text-2xl">{packageCount}</p>
+                      <p className="text-3xl font-bold text-primary print:text-2xl">{packageCount}</p>
                       <p className="text-xs text-gray-600 mt-1">Cross-Channel Bundles</p>
                     </div>
                   </div>

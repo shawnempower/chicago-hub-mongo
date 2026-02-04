@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { updatePublication } from '@/api/publications';
 import { getPublicationBrandColor, prefetchBrandColors } from '@/config/publicationBrandColors';
+import { DEFAULT_BRAND_HEX } from '@/constants/brand';
 import { 
   Edit3,
   Save,
@@ -323,8 +324,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* ESSENTIAL INFORMATION */}
         <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EEECE5' }}>
-            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Essential Information</h2>
+          <div className="py-3 px-6 border-b mb-6 bg-muted">
+            <h2 className="text-sm font-semibold font-sans text-muted-foreground">Essential Information</h2>
           </div>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -411,7 +412,7 @@ export const PublicationProfile: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 
                 {/* Primary Contact Card */}
-                <div className="bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition-shadow">
+                <div className="bg-muted/50 border border-border rounded-md p-3 shadow-sm hover:shadow transition-shadow">
                   <div className="space-y-2">
                     <SchemaField mappingStatus="full" schemaPath="contactInfo.primaryContact.name" showSchemaPath={showSchemaDebug}>
                       <div className="flex items-center gap-1.5">
@@ -482,7 +483,7 @@ export const PublicationProfile: React.FC = () => {
                   const salesContact = formData.contactInfo?.salesContact;
                   return salesContact !== undefined && salesContact !== null;
                 })() && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
+                  <div className="bg-muted/50 border border-border rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
                     <Button
                       type="button"
                       variant="ghost"
@@ -581,7 +582,7 @@ export const PublicationProfile: React.FC = () => {
                   const editorialContact = formData.contactInfo?.editorialContact;
                   return editorialContact !== undefined && editorialContact !== null;
                 })() && (
-                <div className="bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
+                <div className="bg-muted/50 border border-border rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
                   <Button
                     type="button"
                     variant="ghost"
@@ -680,7 +681,7 @@ export const PublicationProfile: React.FC = () => {
                   const generalManager = formData.contactInfo?.generalManager;
                   return generalManager !== undefined && generalManager !== null;
                 })() && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
+                  <div className="bg-muted/50 border border-border rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
                     <Button
                       type="button"
                       variant="ghost"
@@ -778,7 +779,7 @@ export const PublicationProfile: React.FC = () => {
                   const advertisingDirector = formData.contactInfo?.advertisingDirector;
                   return advertisingDirector !== undefined && advertisingDirector !== null;
                 })() && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
+                  <div className="bg-muted/50 border border-border rounded-md p-3 shadow-sm hover:shadow transition-shadow relative">
                     <Button
                       type="button"
                       variant="ghost"
@@ -878,8 +879,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* BUSINESS INFORMATION */}
         <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EEECE5' }}>
-            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Business Information</h2>
+          <div className="py-3 px-6 border-b mb-6 bg-muted">
+            <h2 className="text-sm font-semibold font-sans text-muted-foreground">Business Information</h2>
           </div>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -925,8 +926,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* AUDIENCE DEMOGRAPHICS */}
         <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EEECE5' }}>
-            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Audience Demographics</h2>
+          <div className="py-3 px-6 border-b mb-6 bg-muted">
+            <h2 className="text-sm font-semibold font-sans text-muted-foreground">Audience Demographics</h2>
           </div>
           <CardContent className="space-y-6">
             
@@ -1040,8 +1041,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* POSITIONING & UNIQUE VALUE */}
         <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EEECE5' }}>
-            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Positioning & Unique Value</h2>
+          <div className="py-3 px-6 border-b mb-6 bg-muted">
+            <h2 className="text-sm font-semibold font-sans text-muted-foreground">Positioning & Unique Value</h2>
           </div>
           <CardContent className="space-y-4">
             <SchemaField mappingStatus="full" schemaPath="competitiveInfo.uniqueValueProposition" showSchemaPath={showSchemaDebug}>
@@ -1078,8 +1079,8 @@ export const PublicationProfile: React.FC = () => {
 
         {/* NOTES */}
         <Card className="border rounded-lg">
-          <div className="py-3 px-6 border-b mb-6" style={{ backgroundColor: '#EEECE5' }}>
-            <h2 className="text-sm font-semibold font-sans" style={{ color: '#787367' }}>Notes</h2>
+          <div className="py-3 px-6 border-b mb-6 bg-muted">
+            <h2 className="text-sm font-semibold font-sans text-muted-foreground">Notes</h2>
           </div>
           <CardContent>
             <SchemaField mappingStatus="full" schemaPath="internalNotes.operationalNotes" showSchemaPath={showSchemaDebug}>
@@ -1106,7 +1107,7 @@ export const PublicationProfile: React.FC = () => {
   // Get primary brand color
   const primaryColor = selectedPublication 
     ? getPublicationBrandColor(selectedPublication.publicationId)
-    : '#0066cc';
+    : DEFAULT_BRAND_HEX;
 
   // ============ VIEW MODE ============
   return (
@@ -1151,8 +1152,8 @@ export const PublicationProfile: React.FC = () => {
       </div>
 
       {/* ESSENTIAL INFORMATION */}
-      <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
-        <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Essential Information</h2>
+      <Card className="rounded-xl bg-muted">
+        <h2 className="text-sm font-semibold font-sans py-3 px-6 text-muted-foreground">Essential Information</h2>
         <div className="bg-white rounded-xl p-6 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
@@ -1210,7 +1211,7 @@ export const PublicationProfile: React.FC = () => {
                 <h4 className="font-medium mb-3 text-sm">Contacts</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {hasPrimaryData && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                    <div className="bg-muted/50 border border-border rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
                       <div className="space-y-1.5">
                         {primaryContact.name && (
                           <div className="flex items-center gap-1.5">
@@ -1244,7 +1245,7 @@ export const PublicationProfile: React.FC = () => {
                     </div>
                   )}
                   {hasSalesData && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                    <div className="bg-muted/50 border border-border rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
                       <div className="space-y-1.5">
                         {salesContact.name && (
                           <div className="flex items-center gap-1.5">
@@ -1278,7 +1279,7 @@ export const PublicationProfile: React.FC = () => {
                     </div>
                   )}
                   {hasEditorialData && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                    <div className="bg-muted/50 border border-border rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
                       <div className="space-y-1.5">
                         {editorialContact.name && (
                           <div className="flex items-center gap-1.5">
@@ -1312,7 +1313,7 @@ export const PublicationProfile: React.FC = () => {
                     </div>
                   )}
                   {hasGeneralManagerData && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                    <div className="bg-muted/50 border border-border rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
                       <div className="space-y-1.5">
                         {generalManager.name && (
                           <div className="flex items-center gap-1.5">
@@ -1346,7 +1347,7 @@ export const PublicationProfile: React.FC = () => {
                     </div>
                   )}
                   {hasAdvertisingDirectorData && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                    <div className="bg-muted/50 border border-border rounded-lg p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
                       <div className="space-y-1.5">
                         {advertisingDirector.name && (
                           <div className="flex items-center gap-1.5">
@@ -1399,8 +1400,8 @@ export const PublicationProfile: React.FC = () => {
         if (!hasBusinessData) return null;
         
         return (
-          <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
-            <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Business Information</h2>
+          <Card className="rounded-xl bg-muted">
+            <h2 className="text-sm font-semibold font-sans py-3 px-6 text-muted-foreground">Business Information</h2>
             <div className="bg-white rounded-xl p-6 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {businessInfo.legalEntity && (
@@ -1434,8 +1435,8 @@ export const PublicationProfile: React.FC = () => {
       })()}
 
       {/* KEY METRICS - Dynamic based on active channels with inventory */}
-      <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
-        <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Key Metrics</h2>
+      <Card className="rounded-xl bg-muted">
+        <h2 className="text-sm font-semibold font-sans py-3 px-6 text-muted-foreground">Key Metrics</h2>
         <div className="bg-white rounded-xl p-6 space-y-4">
           {(() => {
             const activeChannels = getActiveChannelMetrics(selectedPublication);
@@ -1474,8 +1475,8 @@ export const PublicationProfile: React.FC = () => {
         if (!hasDemographicData) return null;
         
         return (
-          <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
-            <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Audience Demographics</h2>
+          <Card className="rounded-xl bg-muted">
+            <h2 className="text-sm font-semibold font-sans py-3 px-6 text-muted-foreground">Audience Demographics</h2>
             <div className="bg-white rounded-xl p-6 space-y-6">
               {/* Age Groups & Household Income - Side by Side on Desktop */}
               {(hasAgeData || hasIncomeData) && (
@@ -1547,8 +1548,8 @@ export const PublicationProfile: React.FC = () => {
       })()}
 
       {/* POSITIONING & UNIQUE VALUE */}
-      <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
-        <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Positioning & Unique Value</h2>
+      <Card className="rounded-xl bg-muted">
+        <h2 className="text-sm font-semibold font-sans py-3 px-6 text-muted-foreground">Positioning & Unique Value</h2>
         <div className="bg-white rounded-xl p-6 space-y-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Market Position</p>
@@ -1570,8 +1571,8 @@ export const PublicationProfile: React.FC = () => {
       </Card>
 
       {/* CHANNELS OFFERED */}
-      <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
-        <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Channels Offered</h2>
+      <Card className="rounded-xl bg-muted">
+        <h2 className="text-sm font-semibold font-sans py-3 px-6 text-muted-foreground">Channels Offered</h2>
         <div className="bg-white rounded-xl p-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {[
@@ -1599,8 +1600,8 @@ export const PublicationProfile: React.FC = () => {
           </Card>
 
       {/* NOTES */}
-      <Card className="rounded-xl" style={{ backgroundColor: '#EEECE5' }}>
-        <h2 className="text-sm font-semibold font-sans py-3 px-6" style={{ color: '#787367' }}>Notes</h2>
+      <Card className="rounded-xl bg-muted">
+        <h2 className="text-sm font-semibold font-sans py-3 px-6 text-muted-foreground">Notes</h2>
         <div className="bg-white rounded-xl p-6">
           <p className="whitespace-pre-wrap">{get('internalNotes.operationalNotes') || 'No notes available'}</p>
         </div>

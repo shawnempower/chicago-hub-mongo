@@ -251,7 +251,7 @@ export function CampaignCreativeAssetsStep({
         </CardHeader>
         <CardContent className="space-y-3">
           {/* Requirements */}
-          <div className="p-3 bg-gray-50 rounded-lg space-y-2">
+          <div className="p-3 bg-muted/50 rounded-lg space-y-2">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Info className="h-3 w-3" />
               <span className="font-medium">Requirements</span>
@@ -301,7 +301,7 @@ export function CampaignCreativeAssetsStep({
               />
               <label
                 htmlFor={`file-${requirement.placementId}`}
-                className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary hover:bg-gray-50 transition-colors"
+                className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors"
               >
                 <Upload className="h-8 w-8 text-gray-400 mb-2" />
                 <span className="text-sm font-medium text-gray-700">
@@ -334,7 +334,7 @@ export function CampaignCreativeAssetsStep({
               )}
               
               {/* File Info */}
-              <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-start justify-between p-3 bg-muted/50 rounded-lg">
                 <div className="flex items-start gap-2 flex-1 min-w-0">
                   {asset.file.type.startsWith('image/') ? (
                     <ImageIcon className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />

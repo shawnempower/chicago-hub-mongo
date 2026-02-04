@@ -417,7 +417,7 @@ export function HubOrdersManagement() {
   const hasActiveFilters = issueFilter.length > 0 || selectedCampaign !== 'all';
   const visibleCount = filteredOrders.length;
   const filterTriggerClass =
-    'justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200 h-9 flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium';
+    'justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-input bg-background hover:bg-muted hover:text-foreground shadow-sm transition-all duration-200 h-9 flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium';
 
   if (loading) {
     return (
@@ -443,43 +443,43 @@ export function HubOrdersManagement() {
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          <Card className="shadow-none border-l-4 border-l-slate-500">
+          <Card className="bg-muted/50 shadow-none border-l-4 border-l-slate-500">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{stats.total}</div>
               <p className="text-xs text-muted-foreground">Total Orders</p>
             </CardContent>
           </Card>
-          <Card className="shadow-none border-l-4 border-l-blue-500">
+          <Card className="bg-muted/50 shadow-none border-l-4 border-l-blue-500">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{stats.totalPlacements}</div>
               <p className="text-xs text-muted-foreground">Total Placements</p>
             </CardContent>
           </Card>
-          <Card className="shadow-none border-l-4 border-l-green-500">
+          <Card className="bg-muted/50 shadow-none border-l-4 border-l-green-500">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-green-600">{stats.placementStats.accepted}</div>
               <p className="text-xs text-muted-foreground">Accepted</p>
             </CardContent>
           </Card>
-          <Card className="shadow-none border-l-4 border-l-purple-500">
+          <Card className="bg-muted/50 shadow-none border-l-4 border-l-purple-500">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-purple-600">{stats.placementStats.in_production}</div>
               <p className="text-xs text-muted-foreground">In Production</p>
             </CardContent>
           </Card>
-          <Card className="shadow-none border-l-4 border-l-emerald-500">
+          <Card className="bg-muted/50 shadow-none border-l-4 border-l-emerald-500">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-emerald-600">{stats.placementStats.delivered}</div>
               <p className="text-xs text-muted-foreground">Delivered</p>
             </CardContent>
           </Card>
-          <Card className="shadow-none border-l-4 border-l-amber-500">
+          <Card className="bg-muted/50 shadow-none border-l-4 border-l-amber-500">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-amber-600">{stats.placementStats.pending}</div>
               <p className="text-xs text-muted-foreground">Pending</p>
             </CardContent>
           </Card>
-          <Card className="shadow-none border-l-4 border-l-red-500">
+          <Card className="bg-muted/50 shadow-none border-l-4 border-l-red-500">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-red-600">{stats.placementStats.rejected}</div>
               <p className="text-xs text-muted-foreground">Rejected</p>
@@ -487,7 +487,7 @@ export function HubOrdersManagement() {
           </Card>
           {stats.ordersWithUnreadMessages > 0 && (
             <Card 
-              className="shadow-none border-l-4 border-l-blue-500 cursor-pointer hover:bg-blue-50/50 transition-colors"
+              className="bg-muted/50 shadow-none border-l-4 border-l-blue-500 cursor-pointer hover:bg-blue-50/50 transition-colors"
               onClick={() => {
                 setIssueFilter(['unread_messages']);
               }}
@@ -677,7 +677,7 @@ export function HubOrdersManagement() {
                   return (
                     <TableRow
                       key={`${order.campaignId}-${order.publicationId}`}
-                      className={`cursor-pointer hover:bg-gray-50 transition-colors ${
+                      className={`cursor-pointer hover:bg-muted/50 transition-colors ${
                         order.hasUnreadMessages ? 'bg-blue-50/40 hover:bg-blue-50/60' : ''
                       }`}
                       onClick={() => navigate(`/hubcentral?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`)}

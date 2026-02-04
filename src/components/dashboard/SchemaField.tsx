@@ -161,7 +161,7 @@ export const SchemaSection: React.FC<SchemaSectionProps> = ({
  */
 export const SchemaFieldLegend: React.FC = () => {
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+    <div className="bg-muted/50 border border-border rounded-lg p-4">
       <h4 className="font-semibold text-sm mb-3">Field Mapping Legend</h4>
       <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2">

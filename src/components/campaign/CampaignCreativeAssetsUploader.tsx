@@ -1429,7 +1429,7 @@ export function CampaignCreativeAssetsUploader({
                           ? 'border-green-500 bg-green-50'
                           : isPending
                           ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 bg-gray-50'
+                          : 'border-border bg-muted/50'
                       }`}
                     >
                       <div className="flex items-start gap-3">

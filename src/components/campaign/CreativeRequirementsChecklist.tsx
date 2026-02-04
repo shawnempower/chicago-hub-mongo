@@ -213,7 +213,7 @@ export function CreativeRequirementsChecklist({
 
             <div className="space-y-3">
               {items.map((req, idx) => (
-                <div key={idx} className="flex gap-3 p-3 bg-gray-50 rounded-lg border">
+                <div key={idx} className="flex gap-3 p-3 bg-muted/50 rounded-lg border">
                   <div className="flex-shrink-0 mt-0.5">
                     {req.status === 'approved' ? (
                       <CheckCircle2 className="h-5 w-5 text-green-600" />

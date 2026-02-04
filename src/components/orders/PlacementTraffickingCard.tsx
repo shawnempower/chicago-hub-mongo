@@ -83,7 +83,7 @@ export function PlacementTraffickingCard({
 
       {/* Actions */}
       {showActions && isPending && (
-        <div className="px-4 py-3 bg-gray-50 border-t flex justify-end gap-2">
+        <div className="px-4 py-3 bg-muted/50 border-t flex justify-end gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -186,7 +186,7 @@ function WebsiteContent({
           </p>
           <div className="space-y-2">
             {placement.availableSizes.map((size, idx) => (
-              <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+              <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded border">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{size.dimensions}</Badge>
                 </div>
@@ -263,7 +263,7 @@ function NewsletterContent({
         <div className="mt-4">
           <Accordion type="single" collapsible>
             {placement.scripts.map((script, idx) => (
-              <AccordionItem key={idx} value={`script-${idx}`} className="border rounded bg-gray-50">
+              <AccordionItem key={idx} value={`script-${idx}`} className="border rounded bg-muted/50">
                 <div className="flex items-center">
                   <AccordionTrigger className="flex-1 px-3 py-2 hover:no-underline">
                     <div className="flex items-center gap-2 text-left">
@@ -549,7 +549,7 @@ function StreamingContent({
       {placement.scripts && placement.scripts.length > 0 && (
         <div className="mt-4 space-y-2">
           {placement.scripts.map((script, idx) => (
-            <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+            <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded border">
               <span className="text-sm">{script.creative.name}</span>
               <Button
                 size="sm"
@@ -600,7 +600,7 @@ function EventsContent({ placement }: { placement: EventsTraffickingInfo }) {
           <p className="text-sm font-medium text-gray-700 mb-2">DELIVERABLES:</p>
           <div className="space-y-2">
             {placement.deliverables.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+              <div key={idx} className="flex items-center gap-2 p-2 bg-muted/50 rounded">
                 <input
                   type="checkbox"
                   checked={item.completed || false}

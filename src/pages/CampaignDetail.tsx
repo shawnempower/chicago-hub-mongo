@@ -374,7 +374,7 @@ export default function CampaignDetail() {
               position: fixed; 
               top: 10px; 
               right: 10px; 
-              background: #2563eb; 
+              background: hsl(var(--primary)); 
               color: white; 
               padding: 10px 20px; 
               border-radius: 6px; 
@@ -383,7 +383,7 @@ export default function CampaignDetail() {
               z-index: 1000;
               box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             }
-            .print-actions:hover { background: #1d4ed8; }
+            .print-actions:hover { background: hsl(var(--primary)); filter: brightness(0.9); }
           </style>
         </head>
         <body>
@@ -493,8 +493,8 @@ export default function CampaignDetail() {
                         className={cn(
                           "w-full flex flex-col items-center gap-1 px-2 py-3 rounded-md transition-colors",
                           item.isActive
-                            ? "bg-[#EDEAE1] font-bold"
-                            : "hover:bg-[#E2E0D8] font-bold"
+                            ? "bg-muted/50 font-bold border-l-2 border-l-primary"
+                            : "hover:bg-muted/50 font-bold"
                         )}
                       >
                         <Icon className="h-5 w-5" />
@@ -898,7 +898,6 @@ export default function CampaignDetail() {
                           onClick={handleGeneratePublicationOrders} 
                           disabled={generatingOrders}
                           variant="default"
-                          className="bg-amber-600 hover:bg-amber-700"
                         >
                           {generatingOrders ? (
                             <>
@@ -984,7 +983,7 @@ export default function CampaignDetail() {
                                   size="sm"
                                   className={hasLivePlacements 
                                     ? "border-gray-300 text-gray-400 cursor-not-allowed" 
-                                    : "border-amber-600 text-amber-700 hover:bg-amber-100"
+                                    : "border-primary text-primary hover:bg-primary/10"
                                   }
                                 >
                                   {generatingOrders ? (
@@ -1089,7 +1088,7 @@ export default function CampaignDetail() {
                                 <Table>
                                   <TableHeader>
                                     {/* Publication Header Row */}
-                                    <TableRow className="border-b bg-gray-50/50 hover:bg-gray-50/50">
+                                    <TableRow className="border-b bg-muted/50 hover:bg-muted/50">
                                       <TableHead colSpan={4} className="py-4">
                                         <div className="flex items-center gap-3">
                                           <div className="flex items-baseline gap-2">
@@ -1189,7 +1188,7 @@ export default function CampaignDetail() {
                                           <TableRow 
                                             key={idx} 
                                             className={cn(
-                                              "hover:bg-gray-50 transition-colors",
+                                              "hover:bg-muted/50 transition-colors",
                                               placementStatus === 'delivered' && "bg-purple-50/50",
                                               placementStatus === 'in_production' && "bg-blue-50/50",
                                               placementStatus === 'accepted' && "bg-green-50/50",
@@ -1301,7 +1300,7 @@ export default function CampaignDetail() {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleRegenerateOrders}
-                className="bg-amber-600 hover:bg-amber-700"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 {generatingOrders ? (
                   <>

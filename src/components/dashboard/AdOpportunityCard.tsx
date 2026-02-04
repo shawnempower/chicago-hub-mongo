@@ -48,7 +48,7 @@ export const AdOpportunityCard: React.FC<AdOpportunityCardProps> = ({
       </div>
 
       {/* Specifications Container */}
-      <div className="p-3 bg-gray-50 rounded-md border">
+      <div className="p-3 bg-muted/50 rounded-md border">
         <div className="grid grid-cols-2 gap-x-6 gap-y-3">
           {/* Left Column */}
           <div className="space-y-3">

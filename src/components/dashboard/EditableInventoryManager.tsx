@@ -1778,7 +1778,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <Input
                             value={ad.format?.dimensions || ''}
                             disabled
-                            className="bg-gray-50 text-gray-600"
+                            className="bg-muted/50 text-muted-foreground"
                             placeholder='Auto-populated from Ad Format'
                           />
                         </div>

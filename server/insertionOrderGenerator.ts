@@ -154,11 +154,11 @@ class InsertionOrderGenerator {
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #2a2a2a;
             max-width: 900px;
             margin: 40px auto;
             padding: 20px;
-            background: #f5f5f5;
+            background: #fdfcfa;
         }
         .container {
             background: white;
@@ -166,17 +166,17 @@ class InsertionOrderGenerator {
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .header {
-            border-bottom: 3px solid #2563eb;
+            border-bottom: 3px solid #1a6b6b;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
         .header h1 {
-            color: #1e40af;
+            color: #1a6b6b;
             margin: 0 0 10px 0;
             font-size: 28px;
         }
         .header .campaign-id {
-            color: #64748b;
+            color: #737373;
             font-size: 14px;
             font-weight: 600;
         }
@@ -184,14 +184,14 @@ class InsertionOrderGenerator {
             margin-bottom: 30px;
         }
         .section h2 {
-            color: #1e40af;
+            color: #1a6b6b;
             font-size: 20px;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 2px solid #e7e5e4;
             padding-bottom: 8px;
             margin-bottom: 15px;
         }
         .section h3 {
-            color: #475569;
+            color: #57534e;
             font-size: 16px;
             margin-top: 20px;
             margin-bottom: 10px;
@@ -204,27 +204,27 @@ class InsertionOrderGenerator {
         }
         .info-item {
             padding: 12px;
-            background: #f8fafc;
-            border-left: 3px solid #2563eb;
+            background: #fafaf9;
+            border-left: 3px solid #1a6b6b;
         }
         .info-label {
             font-weight: 600;
-            color: #475569;
+            color: #57534e;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .info-value {
-            color: #1e293b;
+            color: #2a2a2a;
             font-size: 14px;
             margin-top: 4px;
         }
         .publication-card {
-            border: 1px solid #e2e8f0;
+            border: 1px solid #e7e5e4;
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 20px;
-            background: #f9fafb;
+            background: #fafaf9;
         }
         .publication-header {
             display: flex;

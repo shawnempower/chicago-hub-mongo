@@ -370,7 +370,7 @@ export const PublicationInventory: React.FC = () => {
                   {publication.distributionChannels.website.advertisingOpportunities && publication.distributionChannels.website.advertisingOpportunities.length > 0 ? (
                     <div className="space-y-2">
                       {publication.distributionChannels.website.advertisingOpportunities.map((ad, adIndex) => (
-                        <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                        <div key={adIndex} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
                           <div className="flex-1">
                             <span className="font-medium">{ad.name}</span>
                             <span className="text-muted-foreground ml-2">
@@ -448,7 +448,7 @@ export const PublicationInventory: React.FC = () => {
                     {newsletter.advertisingOpportunities && newsletter.advertisingOpportunities.length > 0 ? (
                       <div className="space-y-2">
                         {newsletter.advertisingOpportunities.map((ad, adIndex) => (
-                          <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                          <div key={adIndex} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
                             <div className="flex-1">
                               <span className="font-medium">{ad.name}</span>
                               <span className="text-muted-foreground ml-2">
@@ -531,7 +531,7 @@ export const PublicationInventory: React.FC = () => {
                     {printPub.advertisingOpportunities && printPub.advertisingOpportunities.length > 0 ? (
                       <div className="space-y-2">
                         {printPub.advertisingOpportunities.map((ad, adIndex) => (
-                          <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                          <div key={adIndex} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
                             <div className="flex-1">
                               <span className="font-medium">{ad.name}</span>
                               <span className="text-muted-foreground ml-2">
@@ -610,7 +610,7 @@ export const PublicationInventory: React.FC = () => {
                     {social.advertisingOpportunities && social.advertisingOpportunities.length > 0 ? (
                       <div className="space-y-2">
                         {social.advertisingOpportunities.map((ad, adIndex) => (
-                          <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                          <div key={adIndex} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
                             <div className="flex-1">
                               <span className="font-medium">{ad.name}</span>
                               <span className="text-muted-foreground ml-2">
@@ -689,7 +689,7 @@ export const PublicationInventory: React.FC = () => {
                     {event.advertisingOpportunities && event.advertisingOpportunities.length > 0 ? (
                       <div className="space-y-2">
                         {event.advertisingOpportunities.map((ad, adIndex) => (
-                          <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                          <div key={adIndex} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
                             <div className="flex-1">
                               <span className="font-medium">{ad.name}</span>
                               <span className="text-muted-foreground ml-2">
@@ -768,7 +768,7 @@ export const PublicationInventory: React.FC = () => {
                     {podcast.advertisingOpportunities && podcast.advertisingOpportunities.length > 0 ? (
                       <div className="space-y-2">
                         {podcast.advertisingOpportunities.map((ad, adIndex) => (
-                          <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                          <div key={adIndex} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
                             <div className="flex-1">
                               <span className="font-medium">{ad.name}</span>
                               <span className="text-muted-foreground ml-2">
@@ -847,7 +847,7 @@ export const PublicationInventory: React.FC = () => {
                     {radio.advertisingOpportunities && radio.advertisingOpportunities.length > 0 ? (
                       <div className="space-y-2">
                         {radio.advertisingOpportunities.map((ad, adIndex) => (
-                          <div key={adIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                          <div key={adIndex} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
                             <div className="flex-1">
                               <span className="font-medium">{ad.name}</span>
                               <span className="text-muted-foreground ml-2">
@@ -944,7 +944,7 @@ export const PublicationInventory: React.FC = () => {
                     {streaming.advertisingOpportunities && streaming.advertisingOpportunities.length > 0 ? (
                       <div className="space-y-2">
                         {streaming.advertisingOpportunities.map((ad, adIndex) => (
-                          <div key={adIndex} className="p-2 bg-gray-50 rounded text-xs space-y-1">
+                          <div key={adIndex} className="p-2 bg-muted/50 rounded text-xs space-y-1">
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <span className="font-medium">{ad.name}</span>

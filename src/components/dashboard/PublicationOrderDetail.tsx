@@ -551,7 +551,7 @@ export function PublicationOrderDetail() {
     } else {
       instructionsHtml = `<div class="instructions">
     <strong>Instructions:</strong>
-    <p style="color:#b45309;margin-bottom:8px;">⚠️ No ad server or ESP configured in your publication profile. Set these in Settings for pre-formatted tags.</p>
+    <p style="color:#d4903a;margin-bottom:8px;">⚠️ No ad server or ESP configured in your publication profile. Set these in Settings for pre-formatted tags.</p>
     <ul>
       <li>For <strong>Google Ad Manager (GAM)</strong>: Replace CACHE_BUSTER with %%CACHEBUSTER%%</li>
       <li>For <strong>Broadstreet</strong>: Replace CACHE_BUSTER with [timestamp]</li>
@@ -567,16 +567,16 @@ export function PublicationOrderDetail() {
   <title>Creative Assets - ${campaignName} - ${pubName}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
-    h1 { color: #1e40af; }
-    h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-top: 32px; }
-    h3 { color: #6b7280; margin-top: 16px; }
-    .meta { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
-    .placement-block { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0; }
-    .asset-block { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; margin: 8px 0; }
+    h1 { color: #1a6b6b; }
+    h2 { color: #2a2a2a; border-bottom: 2px solid #e7e5e4; padding-bottom: 8px; margin-top: 32px; }
+    h3 { color: #737373; margin-top: 16px; }
+    .meta { color: #737373; font-size: 14px; margin-bottom: 24px; }
+    .placement-block { background: #fafaf9; border: 1px solid #e7e5e4; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .asset-block { background: #ffffff; border: 1px solid #e7e5e4; border-radius: 6px; padding: 12px; margin: 8px 0; }
     .asset-name { font-weight: 600; margin-bottom: 4px; font-size: 14px; }
-    .asset-size { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
-    pre { background: #1f2937; color: #f3f4f6; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
-    .instructions { background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 16px; margin: 24px 0; }
+    .asset-size { font-size: 12px; color: #737373; margin-bottom: 8px; }
+    pre { background: #2a2a2a; color: #fdfcfa; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+    .instructions { background: #fef3c7; border: 1px solid #d4903a; border-radius: 8px; padding: 16px; margin: 24px 0; }
     .trafficking-info { background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 13px; line-height: 1.6; }
   </style>
 </head>
@@ -1690,7 +1690,7 @@ export function PublicationOrderDetail() {
               radio: { border: 'border-l-orange-500', bg: 'bg-orange-50/30', iconBg: 'bg-orange-100', iconColor: 'text-orange-600', badge: 'bg-orange-100 text-orange-700' },
               podcast: { border: 'border-l-pink-500', bg: 'bg-pink-50/30', iconBg: 'bg-pink-100', iconColor: 'text-pink-600', badge: 'bg-pink-100 text-pink-700' },
               streaming: { border: 'border-l-cyan-500', bg: 'bg-cyan-50/30', iconBg: 'bg-cyan-100', iconColor: 'text-cyan-600', badge: 'bg-cyan-100 text-cyan-700' },
-              other: { border: 'border-l-gray-400', bg: 'bg-gray-50/30', iconBg: 'bg-gray-100', iconColor: 'text-gray-600', badge: 'bg-gray-100 text-gray-700' },
+              other: { border: 'border-l-border', bg: 'bg-muted/30', iconBg: 'bg-muted', iconColor: 'text-muted-foreground', badge: 'bg-muted text-muted-foreground' },
             };
 
             return sortedChannels.map(channel => {
@@ -1743,7 +1743,7 @@ export function PublicationOrderDetail() {
                     </div>
                     
                     {/* Implementation Instructions */}
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg border text-sm">
+                    <div className="mt-3 p-3 bg-muted/50 rounded-lg border text-sm">
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -1809,7 +1809,7 @@ export function PublicationOrderDetail() {
                           {/* Header Row - Trigger + Actions */}
                           <div className="flex items-center">
                             {/* Collapsed Header - shows key info at a glance */}
-                            <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline hover:bg-gray-50/50 [&[data-state=open]>svg]:rotate-90">
+                            <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline hover:bg-muted/50 [&[data-state=open]>svg]:rotate-90">
                               <div className="flex items-center justify-between w-full pr-2">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
@@ -1875,7 +1875,7 @@ export function PublicationOrderDetail() {
                           
                           {/* Delivery Expectations - Always Visible */}
                           {deliveryExpectations.length > 0 && (
-                            <div className="px-4 py-2 border-t bg-slate-50/80">
+                            <div className="px-4 py-2 border-t bg-muted/50">
                               <div className="flex flex-wrap items-center gap-4 text-xs">
                                 {deliveryExpectations.map((exp, i) => (
                                   <div 
@@ -1920,7 +1920,7 @@ export function PublicationOrderDetail() {
                                       <AccordionItem 
                                         key={script._id?.toString()} 
                                         value={script._id?.toString() || ''} 
-                                        className="border rounded bg-gray-50"
+                                        className="border rounded bg-muted/50"
                                       >
                                         <div className="flex items-center">
                                           <AccordionTrigger className="flex-1 px-3 py-2 hover:no-underline">
@@ -2188,7 +2188,7 @@ export function PublicationOrderDetail() {
 
                             {/* Digital: No scripts yet - show awaiting message regardless of status */}
                             {isDigital && scripts.length === 0 && (
-                              <div className="text-center py-3 text-muted-foreground text-sm bg-gray-50 rounded">
+                              <div className="text-center py-3 text-muted-foreground text-sm bg-muted/50 rounded">
                                 <Code className="h-5 w-5 mx-auto mb-1 opacity-50" />
                                 Scripts will appear when assets are uploaded
                               </div>
@@ -2210,7 +2210,7 @@ export function PublicationOrderDetail() {
 
                             {/* Non-Digital: No assets yet - show awaiting message */}
                             {!isDigital && placementAssets.length === 0 && (
-                              <div className="text-center py-3 text-muted-foreground text-sm bg-gray-50 rounded">
+                              <div className="text-center py-3 text-muted-foreground text-sm bg-muted/50 rounded">
                                 <Clock className="h-5 w-5 mx-auto mb-1 opacity-50" />
                                 Awaiting creative assets from hub
                               </div>
@@ -2467,7 +2467,7 @@ export function PublicationOrderDetail() {
           {testingScript && (
             <div className="space-y-4">
               {/* Script Info */}
-              <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-sm font-medium">{testingScript.creative.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {testingScript.creative.width}x{testingScript.creative.height} • {testingScript.channel}

@@ -1,4 +1,5 @@
 import { getStorefrontConfiguration } from '@/api/storefront';
+import { DEFAULT_BRAND_HEX } from '@/constants/brand';
 
 // In-memory cache for brand colors
 const colorCache = new Map<string, string>();
@@ -12,14 +13,14 @@ const fetchingPromises = new Map<string, Promise<string>>();
  * NOTE: This function is synchronous and only returns cached colors.
  * To fetch colors, use prefetchBrandColors() explicitly.
  * @param publicationId - The publication ID (can be string or number)
- * @returns The brand color hex code (defaults to #0066cc if not cached)
+ * @returns The brand color hex code (defaults to design system primary if not cached)
  */
 export const getPublicationBrandColor = (publicationId: string | number): string => {
   const pubIdString = String(publicationId);
   
   // Return cached color if available, otherwise return default
   // This no longer automatically triggers fetching to avoid premature API calls
-  return colorCache.get(pubIdString) || '#0066cc';
+  return colorCache.get(pubIdString) || DEFAULT_BRAND_HEX;
 };
 
 /**
@@ -29,7 +30,7 @@ async function fetchBrandColor(publicationId: string): Promise<string> {
   try {
     const config = await getStorefrontConfiguration(publicationId);
     
-    let color = '#0066cc'; // default
+    let color = DEFAULT_BRAND_HEX;
     
     if (config?.theme?.colors?.gradStart) {
       color = config.theme.colors.gradStart;
@@ -42,8 +43,8 @@ async function fetchBrandColor(publicationId: string): Promise<string> {
   } catch (error) {
     console.error(`Error fetching brand color for publication ${publicationId}:`, error);
     // Cache the default color to avoid repeated failed requests
-    colorCache.set(publicationId, '#0066cc');
-    return '#0066cc';
+    colorCache.set(publicationId, DEFAULT_BRAND_HEX);
+    return DEFAULT_BRAND_HEX;
   }
 }
 

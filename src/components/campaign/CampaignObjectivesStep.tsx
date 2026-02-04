@@ -109,7 +109,7 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
                 ? (formData.inventorySelectionMethod || 'package') === 'ai'
                   ? 'border-purple-500 bg-purple-50 cursor-pointer'
                   : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'
-                : 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                : 'border-border bg-muted/50 opacity-60 cursor-not-allowed'
             }`}
             onClick={() => {
               if (AI_SELECTION_ENABLED) {
@@ -260,7 +260,7 @@ export function CampaignObjectivesStep({ formData, updateFormData }: CampaignObj
           </div>
           
           {loadingAlgorithms ? (
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground">Loading algorithms...</p>
             </div>
           ) : (

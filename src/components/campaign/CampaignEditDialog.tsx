@@ -433,7 +433,7 @@ export function CampaignEditDialog({ campaign, isOpen, onClose, onSaved }: Campa
                 </p>
                 
                 {pendingDateChange && (
-                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Current:</span>
                       <span className="font-medium">{format(pendingDateChange.oldValue, 'PPP')}</span>

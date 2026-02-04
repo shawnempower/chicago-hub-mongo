@@ -458,7 +458,7 @@ export function HubOrderDetail() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Order Summary */}
-          <Card>
+          <Card className="bg-muted/50">
             <CardHeader>
               <CardTitle className="text-lg font-sans flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
@@ -516,7 +516,7 @@ export function HubOrderDetail() {
           </Card>
 
           {/* Placement Status */}
-          <Card>
+          <Card className="bg-muted/50">
             <CardHeader>
               <CardTitle className="text-lg font-sans flex items-center gap-2">
                 <Package className="h-5 w-5" />
@@ -549,7 +549,7 @@ export function HubOrderDetail() {
 
               {/* Asset Status */}
               {order.assetStatus && (
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <div className="mt-4 p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Creative Assets</span>
                     <Badge variant={order.assetStatus.allAssetsReady ? 'default' : 'secondary'}>

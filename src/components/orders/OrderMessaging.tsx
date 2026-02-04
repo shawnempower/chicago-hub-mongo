@@ -182,8 +182,8 @@ export function OrderMessaging({
 
         {/* Message thread */}
         {messages.length > 0 && (
-          <div className="space-y-3 max-h-96 overflow-y-auto border rounded-lg p-3 bg-gray-50/50">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide sticky top-0 bg-gray-50/90 py-1">
+          <div className="space-y-3 max-h-96 overflow-y-auto border rounded-lg p-3 bg-muted/50">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide sticky top-0 bg-muted/80 py-1">
               Conversation ({messages.length} message{messages.length !== 1 ? 's' : ''})
             </div>
             {messages.map((message) => {
@@ -250,7 +250,7 @@ export function OrderMessaging({
 
         {/* Empty state */}
         {messages.length === 0 && !publicationNotes && !hubNotes && (
-          <div className="text-center py-8 text-gray-500 border rounded-lg bg-gray-50/50">
+          <div className="text-center py-8 text-gray-500 border rounded-lg bg-muted/50">
             <Send className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No messages yet</p>
             {!readOnly && onSendMessage && (

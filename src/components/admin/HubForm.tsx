@@ -21,6 +21,7 @@ import { Hub, HubInsert, HubUpdate, HubAdvertisingTerms, AdvertiserAgreementTerm
 import { hubsApi } from '@/api/hubs';
 import { toast } from 'sonner';
 import { Loader2, FileText, Handshake, Building2, Palette, MapPin, DollarSign } from 'lucide-react';
+import { DEFAULT_BRAND_HEX, DEFAULT_SECONDARY_HEX } from '@/constants/brand';
 
 interface HubFormProps {
   hub?: Hub | null;
@@ -36,7 +37,7 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
     tagline: '',
     description: '',
     status: 'active' as 'active' | 'inactive' | 'pending' | 'archived',
-    primaryColor: '#0066cc',
+    primaryColor: DEFAULT_BRAND_HEX,
     secondaryColor: '',
     region: '',
     primaryCity: '',
@@ -79,7 +80,7 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
         tagline: hub.basicInfo.tagline || '',
         description: hub.basicInfo.description || '',
         status: hub.status,
-        primaryColor: hub.branding?.primaryColor || '#0066cc',
+        primaryColor: hub.branding?.primaryColor || DEFAULT_BRAND_HEX,
         secondaryColor: hub.branding?.secondaryColor || '',
         region: hub.geography?.region || '',
         primaryCity: hub.geography?.primaryCity || '',
@@ -399,7 +400,7 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
                 <Input
                   value={formData.primaryColor}
                   onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                  placeholder="#0066cc"
+                  placeholder={DEFAULT_BRAND_HEX}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -413,14 +414,14 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
                 <Input
                   id="secondaryColor"
                   type="color"
-                  value={formData.secondaryColor || '#666666'}
+                  value={formData.secondaryColor || DEFAULT_SECONDARY_HEX}
                   onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
                   className="w-20 h-10"
                 />
                 <Input
                   value={formData.secondaryColor}
                   onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
-                  placeholder="#666666"
+                  placeholder={DEFAULT_SECONDARY_HEX}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -438,7 +439,7 @@ export const HubForm: React.FC<HubFormProps> = ({ hub, onSuccess, onCancel }) =>
               />
               <div 
                 className="w-16 h-16 rounded-lg shadow-sm border" 
-                style={{ backgroundColor: formData.secondaryColor || '#666666' }}
+                style={{ backgroundColor: formData.secondaryColor || DEFAULT_SECONDARY_HEX }}
               />
               <div className="text-sm text-muted-foreground">
                 These colors will be used throughout the hub interface

@@ -436,7 +436,7 @@ export const RadioShowEditor = forwardRef<{ openShowDialog: (show: RadioShow) =>
                       </div>
 
                       {editingShow.advertisingOpportunities.length === 0 ? (
-                        <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg">
+                        <div className="text-center py-6 text-gray-500 bg-muted/50 rounded-lg">
                           <p className="text-sm">No ads yet. Click "Add Ad" to create one.</p>
                         </div>
                       ) : (

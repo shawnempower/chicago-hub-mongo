@@ -18,21 +18,21 @@ export const Breadcrumb = ({
       {/* Root Breadcrumb - Clickable with hover state */}
       <button
         onClick={onBackClick}
-        className="flex items-center gap-3 rounded-md px-2 py-1.5 -ml-2 transition-colors hover:bg-[#EDEAE1]"
+        className="flex items-center gap-3 rounded-md px-2 py-1.5 -ml-2 transition-colors hover:bg-muted"
       >
-        {/* Icon Container with Light Orange Background */}
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-50">
-          <RootIcon className="w-4 h-4 text-orange-600" strokeWidth={2} />
+        {/* Icon Container - Brand primary */}
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+          <RootIcon className="w-4 h-4 text-primary" strokeWidth={2} />
         </div>
         {/* Root Label */}
-        <span className="font-medium text-gray-700">{rootLabel}</span>
+        <span className="font-medium text-foreground">{rootLabel}</span>
       </button>
 
       {/* Chevron Separator */}
       <ChevronRight className="w-4 h-4 text-gray-400" strokeWidth={1.5} />
 
       {/* Current Page Breadcrumb - Non-clickable, no icon */}
-      <span className="font-medium text-gray-900">{currentLabel}</span>
+      <span className="font-medium text-foreground">{currentLabel}</span>
     </div>
   );
 };

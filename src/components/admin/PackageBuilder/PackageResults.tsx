@@ -200,7 +200,7 @@ export function PackageResults({
       case 'draft':
         return { label: 'Draft', icon: FileCheck, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' };
       case 'archived':
-        return { label: 'Archived', icon: Archive, color: 'text-gray-500', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' };
+        return { label: 'Archived', icon: Archive, color: 'text-gray-500', bgColor: 'bg-muted/50', borderColor: 'border-border' };
       default:
         return { label: 'Draft', icon: FileCheck, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' };
     }

@@ -116,8 +116,8 @@ export default function Dashboard() {
                         className={cn(
                           "w-full flex flex-col items-center gap-1 px-2 py-3 rounded-md transition-colors",
                           isActive
-                            ? "bg-[#EDEAE1] font-bold"
-                            : "hover:bg-[#E2E0D8] font-bold"
+                            ? "bg-muted/50 font-bold border-l-2 border-l-primary"
+                            : "hover:bg-muted/50 font-bold"
                         )}
                       >
                         <Icon className="h-5 w-5" />

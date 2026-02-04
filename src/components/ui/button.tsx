@@ -11,9 +11,9 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all duration-200",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all duration-200",
-        outline: "border border-input bg-white hover:bg-[#F9F8F3] hover:text-foreground shadow-sm transition-all duration-200",
+        outline: "border border-input bg-background hover:bg-muted hover:text-foreground shadow-sm transition-all duration-200",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm transition-all duration-200",
-        ghost: "hover:bg-[#F9F8F3] hover:text-foreground transition-all duration-200",
+        ghost: "hover:bg-muted hover:text-foreground transition-all duration-200",
         link: "text-primary underline-offset-4 hover:underline transition-all duration-200",
         // Custom variants for Chicago Media Hub
         hero: "bg-accent text-accent-foreground hover:bg-accent/90 hover:scale-105 font-semibold text-base shadow-lg transition-all duration-300",

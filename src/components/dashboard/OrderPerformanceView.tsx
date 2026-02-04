@@ -284,7 +284,7 @@ export function OrderPerformanceView({
               {hasOfflinePlacements && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                    <Button size="sm" variant="default">
                       <Zap className="w-4 h-4 mr-2" />
                       Report Results
                       <ChevronDown className="w-3 h-3 ml-1" />
