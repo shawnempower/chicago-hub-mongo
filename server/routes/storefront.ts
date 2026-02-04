@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
-import { storefrontConfigurationsService, userProfilesService } from '../../src/integrations/mongodb/allServices';
-import { authenticateToken } from '../middleware/authenticate';
+import { storefrontConfigurationsService } from '../../src/integrations/mongodb/allServices';
+import { authenticateToken, requirePublicationAccess, requireAdmin } from '../middleware/authenticate';
 import { StorefrontImageService } from '../storefrontImageService';
 import { subdomainService } from '../subdomainService';
 import multer from 'multer';
@@ -77,14 +77,8 @@ router.get('/:publicationId', async (req, res) => {
 });
 
 // Get all storefront configurations with optional filtering (admin only)
-router.get('/', authenticateToken, async (req: any, res: Response) => {
+router.get('/', authenticateToken, requireAdmin, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const { status, draft } = req.query;
     const filters: any = {};
     if (status) filters.status = status;
@@ -99,14 +93,8 @@ router.get('/', authenticateToken, async (req: any, res: Response) => {
 });
 
 // Create a new storefront configuration (admin only)
-router.post('/', authenticateToken, async (req: any, res: Response) => {
+router.post('/', authenticateToken, requireAdmin, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const config = await storefrontConfigurationsService.create(req.body, req.user.id);
     res.status(201).json(config);
   } catch (error) {
@@ -115,15 +103,9 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// Update storefront configuration (admin only)
-router.put('/:publicationId', authenticateToken, async (req: any, res: Response) => {
+// Update storefront configuration (hub users and publication users can update their assigned publications)
+router.put('/:publicationId', authenticateToken, requirePublicationAccess(), async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const { publicationId } = req.params;
     const { isDraft } = req.query;
     const updates = req.body;
@@ -140,15 +122,9 @@ router.put('/:publicationId', authenticateToken, async (req: any, res: Response)
   }
 });
 
-// Delete storefront configuration (admin only)
-router.delete('/:publicationId', authenticateToken, async (req: any, res: Response) => {
+// Delete storefront configuration (admin only - destructive operation)
+router.delete('/:publicationId', authenticateToken, requireAdmin, async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const { publicationId } = req.params;
     await storefrontConfigurationsService.delete(publicationId);
     res.json({ success: true });
@@ -158,15 +134,9 @@ router.delete('/:publicationId', authenticateToken, async (req: any, res: Respon
   }
 });
 
-// Publish draft storefront configuration
-router.post('/:publicationId/publish', authenticateToken, async (req: any, res: Response) => {
+// Publish draft storefront configuration (hub users and publication users can publish their assigned publications)
+router.post('/:publicationId/publish', authenticateToken, requirePublicationAccess(), async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const { publicationId } = req.params;
     console.log(`📤 Publishing storefront for publication: ${publicationId}`);
     
@@ -234,15 +204,9 @@ router.post('/:publicationId/publish', authenticateToken, async (req: any, res: 
   }
 });
 
-// Setup subdomain for storefront (Route53 + CloudFront)
-router.post('/:publicationId/setup-subdomain', authenticateToken, async (req: any, res: Response) => {
+// Setup subdomain for storefront (Route53 + CloudFront) - hub users and publication users can setup subdomains for their publications
+router.post('/:publicationId/setup-subdomain', authenticateToken, requirePublicationAccess(), async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const { publicationId } = req.params;
     const { isDraft } = req.query;
     
@@ -323,15 +287,9 @@ router.post('/:publicationId/setup-subdomain', authenticateToken, async (req: an
   }
 });
 
-// Upload hero image
-router.post('/:publicationId/hero-image', authenticateToken, upload.single('image'), async (req: any, res: Response) => {
+// Upload hero image (hub users and publication users can upload for their assigned publications)
+router.post('/:publicationId/hero-image', authenticateToken, requirePublicationAccess(), upload.single('image'), async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
     }
@@ -380,15 +338,9 @@ router.post('/:publicationId/hero-image', authenticateToken, upload.single('imag
   }
 });
 
-// Delete hero image
-router.delete('/:publicationId/hero-image', authenticateToken, async (req: any, res: Response) => {
+// Delete hero image (hub users and publication users can delete for their assigned publications)
+router.delete('/:publicationId/hero-image', authenticateToken, requirePublicationAccess(), async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const { publicationId } = req.params;
     
     // Get current configuration to retrieve S3 key
@@ -423,15 +375,9 @@ router.delete('/:publicationId/hero-image', authenticateToken, async (req: any, 
   }
 });
 
-// Upload storefront image (logo, hero, channel, about, ogImage, favicon, metaLogo)
-router.post('/:publicationId/images', authenticateToken, upload.single('image'), async (req: any, res: Response) => {
+// Upload storefront image (logo, hero, channel, about, ogImage, favicon, metaLogo) - hub users and publication users can upload for their assigned publications
+router.post('/:publicationId/images', authenticateToken, requirePublicationAccess(), upload.single('image'), async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
     }
@@ -487,15 +433,9 @@ router.post('/:publicationId/images', authenticateToken, upload.single('image'),
   }
 });
 
-// Replace storefront image
-router.put('/:publicationId/images', authenticateToken, upload.single('image'), async (req: any, res: Response) => {
+// Replace storefront image (hub users and publication users can replace for their assigned publications)
+router.put('/:publicationId/images', authenticateToken, requirePublicationAccess(), upload.single('image'), async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
     }
@@ -546,15 +486,9 @@ router.put('/:publicationId/images', authenticateToken, upload.single('image'), 
   }
 });
 
-// Remove storefront image
-router.delete('/:publicationId/images', authenticateToken, async (req: any, res: Response) => {
+// Remove storefront image (hub users and publication users can remove for their assigned publications)
+router.delete('/:publicationId/images', authenticateToken, requirePublicationAccess(), async (req: any, res: Response) => {
   try {
-    // Check if user is admin
-    const profile = await userProfilesService.getByUserId(req.user.id);
-    if (!profile?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
     const { publicationId } = req.params;
     const { imageType, channelId } = req.query;
     
