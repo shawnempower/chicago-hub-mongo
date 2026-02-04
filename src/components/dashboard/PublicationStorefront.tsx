@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePublication } from '@/contexts/PublicationContext';
+import { useAuth } from '@/contexts/CustomAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -61,7 +62,11 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 
 export const PublicationStorefront: React.FC = () => {
   const { selectedPublication } = usePublication();
+  const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Check if user is admin
+  const isAdmin = user?.isAdmin === true || user?.role === 'admin';
   const [storefrontConfig, setStorefrontConfig] = useState<StorefrontConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -809,7 +814,7 @@ export const PublicationStorefront: React.FC = () => {
               </Button>
             </>
           )}
-          {!storefrontConfig && (
+          {!storefrontConfig && isAdmin && (
             <Button onClick={handleImportStorefront} disabled={saving || !importJson.trim()}>
               <Upload className="w-4 h-4 mr-2" />
               {saving ? 'Importing...' : 'Import Configuration'}
@@ -2124,7 +2129,21 @@ export const PublicationStorefront: React.FC = () => {
             />
           </TabsContent>
         </Tabs>
+      ) : !isAdmin ? (
+        /* Non-admin users see "Coming Soon" when no storefront config exists */
+        <Card className="border-dashed border-2 border-muted-foreground/25">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="rounded-full bg-primary/10 p-4 mb-4">
+              <Store className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Coming Soon!</h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              Your storefront is being configured. Please contact your administrator for more information.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
+        /* Admin users see the import UI when no storefront config exists */
         <Card className="border-dashed border-2 border-muted-foreground/25">
           <CardContent className="py-8">
             <div className="flex flex-col items-center justify-center text-center mb-8">
