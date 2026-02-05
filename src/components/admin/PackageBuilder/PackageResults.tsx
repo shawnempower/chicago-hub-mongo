@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { HubPackagePublication } from '@/integrations/mongodb/hubPackageSchema';
+import { Checkbox } from '@/components/ui/checkbox';
 import { BuilderResult } from '@/services/packageBuilderService';
 import { LineItemsTable } from './LineItemsTable';
 import { calculateItemCost, calculatePublicationTotal } from '@/utils/inventoryPricing';
@@ -59,7 +60,7 @@ interface PackageResultsProps {
   onSave: (packageName: string, approvalStatus: ApprovalStatus) => Promise<void>;
   onExportCSV: () => void;
   onUpdatePublications: (publications: HubPackagePublication[]) => void;
-  onRefresh?: () => Promise<void>;
+  onRefresh?: (options?: { includeNewPublications?: boolean }) => Promise<void>;
   onFindNewPublications?: (currentPublicationIds: (string | number)[]) => Promise<{ publications: HubPackagePublication[]; count: number; message: string; debug?: { totalInHub: number; alreadyInPackage: number; newBeforeGeoFilter?: number; geographyFilter?: string[] } }>;
   onDelete?: () => Promise<void>;
   loading?: boolean;
@@ -107,6 +108,7 @@ export function PackageResults({
   const [tempPackageName, setTempPackageName] = useState(initialPackageName);
   const [showRefreshDialog, setShowRefreshDialog] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [includeNewPubs, setIncludeNewPubs] = useState(true); // Default to including new publications
   const [showNewPubsDialog, setShowNewPubsDialog] = useState(false);
   const [findingNewPubs, setFindingNewPubs] = useState(false);
   const [newPublications, setNewPublications] = useState<HubPackagePublication[]>([]);
@@ -236,10 +238,12 @@ export function PackageResults({
     
     setRefreshing(true);
     try {
-      await onRefresh();
+      await onRefresh({ includeNewPublications: includeNewPubs });
       toast({
         title: 'Package Refreshed',
-        description: 'Publication inventory and pricing have been updated with the latest data.',
+        description: includeNewPubs 
+          ? 'Publication inventory, pricing, and new publications have been updated.'
+          : 'Publication inventory and pricing have been updated with the latest data.',
       });
     } catch (error) {
       console.error('Error refreshing package:', error);
@@ -1169,6 +1173,24 @@ export function PackageResults({
                   <li>New inventory items added</li>
                   <li>Current availability data</li>
                 </ul>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded p-3 mt-3">
+                <div className="flex items-start space-x-3">
+                  <Checkbox 
+                    id="includeNewPubs" 
+                    checked={includeNewPubs}
+                    onCheckedChange={(checked) => setIncludeNewPubs(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <label htmlFor="includeNewPubs" className="font-semibold text-purple-800 cursor-pointer">
+                      Include new publications from hub
+                    </label>
+                    <p className="text-purple-700 text-sm mt-1">
+                      Add any new publications that have been added to this hub since the package was created.
+                    </p>
+                  </div>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

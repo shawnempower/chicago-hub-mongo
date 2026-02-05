@@ -1058,8 +1058,9 @@ export const HubPackageManagement = () => {
         }}
         onSave={handleSave}
         onExportCSV={handleExportCSV}
-        onRefresh={async () => {
+        onRefresh={async (options) => {
           // Smart refresh: preserve customizations, update data, and auto-save
+          // Optionally include new publications from hub
           setLoading(true);
           try {
             // Use current package publications if editing, otherwise use builder result
@@ -1071,7 +1072,8 @@ export const HubPackageManagement = () => {
               body: JSON.stringify({
                 hubId: selectedHubId,
                 currentPublications: publicationsToRefresh,
-                filters: builderFilters
+                filters: builderFilters,
+                includeNewPublications: options?.includeNewPublications ?? false
               })
             });
 
@@ -1083,11 +1085,16 @@ export const HubPackageManagement = () => {
             const result: BuilderResult = await response.json();
             setBuilderResult(result);
             
+            // Get count of new publications added (if any)
+            const newPubsAdded = (result.summary as any)?.newPublicationsAdded || 0;
+            const newPubsMessage = newPubsAdded > 0 ? ` Added ${newPubsAdded} new publication(s).` : '';
+            
             // Auto-save the refreshed package if editing
             console.log('🔄 Auto-save check:', { 
               hasEditingPackage: !!editingPackage, 
               hasId: !!editingPackage?._id,
-              id: editingPackage?._id 
+              id: editingPackage?._id,
+              newPubsAdded
             });
             if (editingPackage && editingPackage._id) {
               const updateData = {
@@ -1126,12 +1133,12 @@ export const HubPackageManagement = () => {
 
               toast({
                 title: 'Success!',
-                description: 'Package refreshed and saved successfully'
+                description: `Package refreshed and saved successfully.${newPubsMessage}`
               });
             } else {
               toast({
                 title: 'Success!',
-                description: 'Package refreshed (remember to save when ready)'
+                description: `Package refreshed (remember to save when ready).${newPubsMessage}`
               });
             }
           } catch (error) {

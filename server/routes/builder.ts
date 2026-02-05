@@ -1136,7 +1136,8 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
     const { 
       hubId, 
       currentPublications, // Current package state with exclusions/frequencies
-      filters // Original builder filters (channels, geography, etc.)
+      filters, // Original builder filters (channels, geography, etc.)
+      includeNewPublications // Optional: also fetch and add new publications from hub
     } = req.body;
 
     if (!hubId || !currentPublications || !filters) {
@@ -1159,14 +1160,26 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
     
     // Get the publication IDs from current package
     const publicationIds = currentPublications.map((p: any) => p.publicationId);
+    // Create a Set for quick lookups (handle both string and number types)
+    const existingPubIds = new Set(publicationIds.map((id: any) => String(id)));
     
-    // Fetch fresh publication data
-    const freshPublications = await publicationsCollection
-      .find({ 
-        publicationId: { $in: publicationIds },
-        'hubIds': hubId 
-      })
-      .toArray();
+    // Fetch fresh publication data - either just existing or all hub publications
+    let freshPublications: any[];
+    if (includeNewPublications) {
+      // Fetch ALL publications in the hub
+      freshPublications = await publicationsCollection
+        .find({ 'hubIds': hubId })
+        .toArray();
+      console.log(`[Refresh] Including new publications. Total in hub: ${freshPublications.length}, Already in package: ${existingPubIds.size}`);
+    } else {
+      // Fetch only existing publications
+      freshPublications = await publicationsCollection
+        .find({ 
+          publicationId: { $in: publicationIds },
+          'hubIds': hubId 
+        })
+        .toArray();
+    }
 
     // Helper to detect publication frequency type
     const detectFrequencyType = (printFrequency?: string): string => {
@@ -1605,28 +1618,274 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
       };
     });
 
+    // If includeNewPublications is true, process and add new publications
+    let allPublications = [...mergedPublications];
+    
+    if (includeNewPublications) {
+      // Find publications in hub that aren't in the current package
+      const newPubsFromHub = freshPublications.filter((pub: any) => 
+        !existingPubIds.has(String(pub.publicationId))
+      );
+      
+      console.log(`[Refresh] Found ${newPubsFromHub.length} new publications to add`);
+      
+      // Process new publications (similar to new-publications endpoint)
+      for (const pub of newPubsFromHub) {
+        const pubType = detectFrequencyType(pub.printFrequency);
+        const inventoryItems: any[] = [];
+        
+        // Helper to extract inventory from a channel for new publications
+        const extractNewPubChannel = (channelName: string, channelData: any, path: string, itemFrequencyString?: string, sourceInfo?: any) => {
+          const channelMetrics = {
+            ...sourceInfo?.websiteMetrics,
+            ...sourceInfo?.newsletterMetrics,
+            ...sourceInfo?.printMetrics,
+            ...sourceInfo?.socialMetrics,
+            ...sourceInfo?.radioMetrics,
+            ...sourceInfo?.podcastMetrics
+          };
+          
+          const opportunities = Array.isArray(channelData) 
+            ? channelData.flatMap((item: any) => item.advertisingOpportunities || [])
+            : channelData?.advertisingOpportunities || [];
+
+          opportunities.forEach((opp: any, idx: number) => {
+            const hubPricing = opp.hubPricing?.find((hp: any) => hp.hubId === hubId && hp.available);
+            if (!hubPricing?.pricing) return;
+
+            const rawPricingTiers = Array.isArray(hubPricing.pricing) 
+              ? hubPricing.pricing 
+              : [hubPricing.pricing];
+            
+            const seenModels = new Set<string>();
+            const pricingTiers = rawPricingTiers.filter((tier: any) => {
+              const model = tier.pricingModel || 'flat';
+              if (seenModels.has(model)) return false;
+              seenModels.add(model);
+              return true;
+            });
+            
+            pricingTiers.forEach((pricing: any, tierIndex: number) => {
+              const pricingModel = pricing.pricingModel || 'flat';
+              
+              let hubPrice = 0;
+              switch (pricingModel) {
+                case 'monthly': hubPrice = pricing.monthly || pricing.flatRate || pricing.rate || 0; break;
+                case 'per_week': hubPrice = pricing.perWeek || pricing.flatRate || pricing.rate || 0; break;
+                case 'per_day': hubPrice = pricing.perDay || pricing.flatRate || pricing.rate || 0; break;
+                case 'per_send': hubPrice = pricing.perSend || pricing.rate || pricing.flatRate || 0; break;
+                case 'per_spot': hubPrice = pricing.perSpot || pricing.rate || pricing.flatRate || 0; break;
+                case 'per_post': hubPrice = pricing.perPost || pricing.rate || pricing.flatRate || 0; break;
+                case 'per_episode': hubPrice = pricing.perEpisode || pricing.rate || pricing.flatRate || 0; break;
+                case 'per_ad':
+                case 'per_insertion': hubPrice = pricing.rate || pricing.flatRate || 0; break;
+                case 'cpm': hubPrice = pricing.cpm || pricing.flatRate || pricing.rate || 0; break;
+                case 'cpv': hubPrice = pricing.cpv || pricing.flatRate || pricing.rate || 0; break;
+                case 'cpc': hubPrice = pricing.cpc || pricing.flatRate || pricing.rate || 0; break;
+                case 'flat':
+                default: hubPrice = pricing.flatRate || pricing.rate || pricing.monthly || 0; break;
+              }
+              
+              if (hubPrice === 0) return;
+
+              const tierSuffix = pricingTiers.length > 1 ? `-tier${tierIndex}` : '';
+              const baseItemName = opp.title || opp.name || `${channelName} Ad`;
+              const getPricingModelLabel = (model: string) => {
+                const labels: Record<string, string> = {
+                  'flat': 'Monthly', 'monthly': 'Monthly', 'per_week': 'Weekly',
+                  'per_day': 'Daily', 'per_send': 'Per Send', 'per_spot': 'Per Spot', 'per_ad': 'Per Ad'
+                };
+                return labels[model] || model;
+              };
+              const itemName = pricingTiers.length > 1
+                ? `${baseItemName} (${getPricingModelLabel(pricingModel)})`
+                : baseItemName;
+
+              const format = opp.format ? { ...opp.format } : {};
+              const itemPubType = itemFrequencyString 
+                ? detectFrequencyType(itemFrequencyString)
+                : pubType;
+              
+              // Determine frequency based on pricing model
+              let frequency = 1;
+              if (itemFrequencyString) {
+                frequency = Math.round(inferOccurrencesFromFrequency(itemFrequencyString));
+              } else {
+                switch (pricingModel) {
+                  case 'per_week': frequency = 4; break;
+                  case 'per_day': frequency = 30; break;
+                  case 'per_spot': frequency = 22; break;
+                  case 'per_post': frequency = 4; break;
+                  case 'cpm':
+                  case 'cpv':
+                  case 'cpc': frequency = 100; break;
+                  default: frequency = 1;
+                }
+              }
+
+              const item: any = {
+                channel: channelName,
+                itemPath: `${path}[${idx}]${tierSuffix}`,
+                itemName: itemName,
+                quantity: frequency,
+                currentFrequency: frequency,
+                maxFrequency: itemPubType === 'daily' ? 30 : itemPubType === 'weekly' ? 4 : itemPubType === 'bi-weekly' ? 2 : 1,
+                publicationFrequencyType: itemPubType,
+                frequency: itemFrequencyString || pub.printFrequency,
+                itemPricing: {
+                  standardPrice: hubPrice,
+                  hubPrice,
+                  pricingModel: pricingModel
+                },
+                format,
+                audienceMetrics: Object.keys(channelMetrics).length > 0 ? channelMetrics : undefined,
+                performanceMetrics: opp.performanceMetrics || undefined,
+                isExcluded: false
+              };
+
+              if (sourceInfo?.sourceName) {
+                item.sourceName = sourceInfo.sourceName;
+              }
+
+              inventoryItems.push(item);
+            });
+          });
+        };
+
+        // Extract from all channels for new publication
+        if (pub.distributionChannels) {
+          const dc = pub.distributionChannels;
+          
+          if (dc.website) {
+            extractNewPubChannel('website', dc.website, 'distributionChannels.website.advertisingOpportunities', undefined, {
+              websiteMetrics: { monthlyVisitors: dc.website.metrics?.monthlyVisitors, monthlyPageViews: dc.website.metrics?.monthlyPageViews }
+            });
+          }
+          
+          if (dc.newsletters && Array.isArray(dc.newsletters)) {
+            dc.newsletters.forEach((newsletter: any, nlIdx: number) => {
+              if (newsletter.advertisingOpportunities) {
+                extractNewPubChannel('newsletter', [newsletter], `distributionChannels.newsletters[${nlIdx}].advertisingOpportunities`, newsletter.frequency, {
+                  sourceName: newsletter.name || 'Newsletter',
+                  newsletterMetrics: { subscribers: newsletter.subscribers, openRate: newsletter.openRate }
+                });
+              }
+            });
+          }
+          
+          if (dc.print) {
+            const printPubs = Array.isArray(dc.print) ? dc.print : [dc.print];
+            printPubs.forEach((printPub: any, printIdx: number) => {
+              if (printPub.advertisingOpportunities) {
+                extractNewPubChannel('print', [printPub], `distributionChannels.print[${printIdx}].advertisingOpportunities`, printPub.frequency || pub.printFrequency, {
+                  sourceName: printPub.section || pub.basicInfo?.publicationName || 'Print',
+                  printMetrics: { circulation: printPub.circulation }
+                });
+              }
+            });
+          }
+          
+          if (dc.socialMedia && Array.isArray(dc.socialMedia)) {
+            dc.socialMedia.forEach((social: any, socialIdx: number) => {
+              if (social.advertisingOpportunities) {
+                extractNewPubChannel('social', [social], `distributionChannels.socialMedia[${socialIdx}].advertisingOpportunities`, undefined, {
+                  sourceName: social.platform || 'Social Media'
+                });
+              }
+            });
+          }
+          
+          if (dc.radio && Array.isArray(dc.radio)) {
+            dc.radio.forEach((radioStation: any, radioIdx: number) => {
+              if (radioStation.advertisingOpportunities) {
+                extractNewPubChannel('radio', [radioStation], `distributionChannels.radio[${radioIdx}].advertisingOpportunities`, undefined, {
+                  sourceName: radioStation.stationName || radioStation.name || 'Radio'
+                });
+              }
+            });
+          }
+          
+          if (dc.podcasts && Array.isArray(dc.podcasts)) {
+            dc.podcasts.forEach((podcast: any, podIdx: number) => {
+              if (podcast.advertisingOpportunities) {
+                extractNewPubChannel('podcast', [podcast], `distributionChannels.podcasts[${podIdx}].advertisingOpportunities`, undefined, {
+                  sourceName: podcast.podcastName || podcast.name || 'Podcast'
+                });
+              }
+            });
+          }
+          
+          if (dc.streaming && Array.isArray(dc.streaming)) {
+            dc.streaming.forEach((stream: any, streamIdx: number) => {
+              if (stream.advertisingOpportunities) {
+                extractNewPubChannel('streaming', [stream], `distributionChannels.streaming[${streamIdx}].advertisingOpportunities`, undefined, {
+                  sourceName: stream.name || 'Streaming'
+                });
+              }
+            });
+          }
+          
+          if (dc.events && Array.isArray(dc.events)) {
+            dc.events.forEach((event: any, eventIdx: number) => {
+              if (event.advertisingOpportunities) {
+                extractNewPubChannel('events', [event], `distributionChannels.events[${eventIdx}].advertisingOpportunities`, undefined, {
+                  sourceName: event.name || 'Event'
+                });
+              }
+            });
+          }
+        }
+
+        // Only add if publication has matching inventory
+        if (inventoryItems.length > 0) {
+          const pubTotal = inventoryItems
+            .filter((item: any) => !item.isExcluded)
+            .reduce((sum: number, item: any) => {
+              const cost = calculateItemCost(item, item.currentFrequency || item.quantity || 1);
+              return sum + cost;
+            }, 0);
+
+          // Ensure publicationId is a number (schema expects number)
+          const pubIdRaw = pub.publicationId;
+          const publicationId = typeof pubIdRaw === 'number' ? pubIdRaw : parseInt(pubIdRaw, 10);
+
+          allPublications.push({
+            publicationId: isNaN(publicationId) ? pubIdRaw : publicationId,
+            publicationName: pub.basicInfo?.publicationName || pub.publicationName || 'Unknown Publication',
+            inventoryItems,
+            publicationTotal: pubTotal,
+            publicationFrequencyType: pubType,
+            isNew: true // Mark as new for UI highlighting
+          });
+        }
+      }
+      
+      console.log(`[Refresh] Total publications after adding new: ${allPublications.length}`);
+    }
+
     // Calculate total cost
-    const totalCost = mergedPublications.reduce((sum: number, pub: any) => 
+    const totalCost = allPublications.reduce((sum: number, pub: any) => 
       sum + (pub.publicationTotal || 0), 0
     );
 
     // Calculate reach
-    const reachSummary = calculatePackageReach(mergedPublications);
+    const reachSummary = calculatePackageReach(allPublications);
 
     // Return refreshed package data
     res.json({
-      publications: mergedPublications,
+      publications: allPublications,
       summary: {
-        totalOutlets: mergedPublications.length,
+        totalOutlets: allPublications.length,
         monthlyCost: totalCost,
         totalCost: totalCost * (filters.duration || 1),
         duration: filters.duration || 1,
         totalChannels: reachSummary.channelsCount,
-        totalUnits: mergedPublications.reduce((sum: number, pub: any) => 
+        totalUnits: allPublications.reduce((sum: number, pub: any) => 
           sum + (pub.inventoryItems || []).reduce((pSum: number, item: any) => 
             pSum + (item.isExcluded ? 0 : (item.currentFrequency || item.quantity || 1)), 0
           ), 0
-        )
+        ),
+        newPublicationsAdded: includeNewPublications ? allPublications.filter((p: any) => p.isNew).length : 0
       },
       reach: reachSummary
     });
