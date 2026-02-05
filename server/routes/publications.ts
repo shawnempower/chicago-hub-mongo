@@ -3,7 +3,6 @@ import { publicationsService, userProfilesService, publicationFilesService } fro
 import { HubsService } from '../../src/integrations/mongodb/hubService';
 import { authenticateToken, requirePublicationAccess } from '../middleware/authenticate';
 import { permissionsService } from '../../src/integrations/mongodb/permissionsService';
-import { getActiveStorefrontConfigurationsCount } from '../../src/integrations/mongodb/storefrontService';
 import { s3Service } from '../s3Service';
 import multer from 'multer';
 import { ObjectId } from 'mongodb';
@@ -307,22 +306,13 @@ router.delete('/:id', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// Import publications from JSON/CSV
-// If no storefront configuration exists, only Admin users can import
-// Once storefronts are configured, authenticated users can import
+// Import publications from JSON/CSV (admin only)
 router.post('/import', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if any storefront configurations exist
-    const storefrontCount = await getActiveStorefrontConfigurationsCount();
-    
-    // If no storefront configuration exists, only allow Admin users
-    if (storefrontCount === 0) {
-      const profile = await userProfilesService.getByUserId(req.user.id);
-      if (!profile?.isAdmin) {
-        return res.status(403).json({ 
-          error: 'This feature is coming soon! Publication import will be available once your storefront has been configured.' 
-        });
-      }
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
     }
 
     const { publications, overwrite = false } = req.body;
@@ -340,21 +330,13 @@ router.post('/import', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// Preview import without saving
-// If no storefront configuration exists, only Admin users can preview
+// Preview import without saving (admin only)
 router.post('/import-preview', authenticateToken, async (req: any, res: Response) => {
   try {
-    // Check if any storefront configurations exist
-    const storefrontCount = await getActiveStorefrontConfigurationsCount();
-    
-    // If no storefront configuration exists, only allow Admin users
-    if (storefrontCount === 0) {
-      const profile = await userProfilesService.getByUserId(req.user.id);
-      if (!profile?.isAdmin) {
-        return res.status(403).json({ 
-          error: 'This feature is coming soon! Publication import will be available once your storefront has been configured.' 
-        });
-      }
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
     }
 
     const { publications } = req.body;
