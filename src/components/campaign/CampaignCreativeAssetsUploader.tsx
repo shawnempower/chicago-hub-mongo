@@ -6,7 +6,7 @@
  * - Right: Upload area where files are assigned to specs
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,9 @@ import {
   File,
   Plus,
   Trash2,
-  Download
+  Download,
+  Search,
+  Filter
 } from 'lucide-react';
 import {
   Select,
@@ -44,6 +46,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { CreativeRequirement } from '@/utils/creativeSpecsExtractor';
 import {
   groupRequirementsBySpec,
@@ -122,6 +129,11 @@ export function CampaignCreativeAssetsUploader({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<{ assetId: string; specGroupId: string; fileName: string } | null>(null);
 
+  // Publication filter state for ZIP upload targeting
+  const [publicationFilterMode, setPublicationFilterMode] = useState<'all' | 'selected'>('all');
+  const [selectedPublicationIds, setSelectedPublicationIds] = useState<Set<number>>(new Set());
+  const [publicationSearch, setPublicationSearch] = useState('');
+
   // Load existing assets from campaign on mount
   useEffect(() => {
     async function loadExistingAssets() {
@@ -141,9 +153,12 @@ export function CampaignCreativeAssetsUploader({
           
           const newAssetsMap = new Map<string, UploadedAssetWithSpecs>();
           data.assets.forEach((asset: any) => {
+            // specGroupId can be in associations (schema) or metadata (legacy) - check both
+            const assetSpecGroupId = asset.associations?.specGroupId || asset.metadata?.specGroupId;
+            
             // Reconstruct the asset object to match UploadedAssetWithSpecs
             const reconstructedAsset: UploadedAssetWithSpecs = {
-              specGroupId: asset.metadata.specGroupId || `library_${asset._id}`, // Use specGroupId if assigned, else a library ID
+              specGroupId: assetSpecGroupId || `library_${asset._id}`, // Use specGroupId if assigned, else a library ID
               fileName: asset.metadata.fileName, // Store file name instead of File object
               previewUrl: asset.metadata.fileUrl,
               uploadStatus: 'uploaded', // Already uploaded
@@ -181,6 +196,50 @@ export function CampaignCreativeAssetsUploader({
 
   // Group requirements by specifications
   const groupedSpecs = groupRequirementsBySpec(requirements);
+
+  // Extract unique publications from requirements for the filter UI
+  const availablePublications = useMemo(() => {
+    const pubMap = new Map<number, string>();
+    requirements.forEach(req => {
+      if (!pubMap.has(req.publicationId)) {
+        pubMap.set(req.publicationId, req.publicationName);
+      }
+    });
+    return Array.from(pubMap.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [requirements]);
+
+  // Filter publications by search term
+  const filteredPublications = useMemo(() => {
+    if (!publicationSearch.trim()) return availablePublications;
+    const search = publicationSearch.toLowerCase();
+    return availablePublications.filter(p => 
+      p.name.toLowerCase().includes(search)
+    );
+  }, [availablePublications, publicationSearch]);
+
+  // Filter spec groups AND their placements based on publication selection
+  const filteredGroupedSpecs = useMemo(() => {
+    if (publicationFilterMode === 'all' || selectedPublicationIds.size === 0) {
+      return groupedSpecs;
+    }
+    // Filter spec groups and also filter the placements within each group
+    return groupedSpecs
+      .map(group => {
+        const filteredPlacements = group.placements.filter(p => 
+          selectedPublicationIds.has(p.publicationId)
+        );
+        if (filteredPlacements.length === 0) return null;
+        return {
+          ...group,
+          placements: filteredPlacements,
+          placementCount: filteredPlacements.length,
+          publicationCount: new Set(filteredPlacements.map(p => p.publicationId)).size
+        };
+      })
+      .filter((group): group is GroupedCreativeRequirement => group !== null);
+  }, [groupedSpecs, publicationFilterMode, selectedPublicationIds]);
 
   // Setup dropzone (must be called before any early returns)
   const { getRootProps, getInputProps } = useDropzone({
@@ -231,15 +290,37 @@ export function CampaignCreativeAssetsUploader({
   // Show coverage report if files are uploaded OR pending assignment
   const hasAnyFiles = pendingFiles.size > 0 || assignedCount > 0;
 
+  // Publication filter handlers
+  const handleSelectAllPublications = useCallback(() => {
+    setSelectedPublicationIds(new Set(availablePublications.map(p => p.id)));
+  }, [availablePublications]);
+
+  const handleClearAllPublications = useCallback(() => {
+    setSelectedPublicationIds(new Set());
+  }, []);
+
+  const togglePublicationSelection = useCallback((pubId: number) => {
+    setSelectedPublicationIds(prev => {
+      const next = new Set(prev);
+      if (next.has(pubId)) {
+        next.delete(pubId);
+      } else {
+        next.add(pubId);
+      }
+      return next;
+    });
+  }, []);
+
   // Define handleAssignToSpec first since other handlers depend on it
+  // Uses filteredGroupedSpecs to respect publication selection
   const handleAssignToSpec = useCallback((fileId: string, standardId: string) => {
     const pending = pendingFiles.get(fileId);
     if (!pending) return;
 
-    // Find which spec groups match this standard
+    // Find which spec groups match this standard (filtered by publication selection)
     const standard = getWebsiteStandards().find(s => s.id === standardId);
     
-    const matchingGroups = groupedSpecs.filter(group => {
+    const matchingGroups = filteredGroupedSpecs.filter(group => {
       if (!standard) return false;
       
       const standardDims = typeof standard.defaultSpecs.dimensions === 'string'
@@ -256,7 +337,7 @@ export function CampaignCreativeAssetsUploader({
     if (matchingGroups.length === 0) {
       toast({
         title: 'No Matching Requirements',
-        description: `This ${standard?.name || 'standard'} does not match any campaign requirements`,
+        description: `This ${standard?.name || 'standard'} does not match any campaign requirements${publicationFilterMode === 'selected' ? ' for selected publications' : ''}`,
         variant: 'destructive'
       });
       return;
@@ -292,7 +373,7 @@ export function CampaignCreativeAssetsUploader({
       title: 'Asset Assigned',
       description: `${pending.file.name} assigned to ${totalPlacements} placement(s) across ${matchingGroups.length} specification group(s)`,
     });
-  }, [pendingFiles, groupedSpecs, uploadedAssets, onAssetsChange, toast]);
+  }, [pendingFiles, filteredGroupedSpecs, publicationFilterMode, uploadedAssets, onAssetsChange, toast]);
 
   const handleFilesSelected = useCallback(async (files: FileList | null) => {
     if (!files) return;
@@ -377,7 +458,8 @@ export function CampaignCreativeAssetsUploader({
           if (isPrint) {
             // For print files, match directly against spec groups with print dimensions
             // Print standards don't have specific dimensions, they're publication-specific
-            matchedSpecGroups = groupedSpecs.filter(group => {
+            // Uses filteredGroupedSpecs to respect publication selection
+            matchedSpecGroups = filteredGroupedSpecs.filter(group => {
               if (group.channel?.toLowerCase() !== 'print') return false;
               if (!group.dimensions) return false;
               
@@ -465,7 +547,7 @@ export function CampaignCreativeAssetsUploader({
           newPending.delete(fileId);
           
         } else if (suggestedStandard && matchConfidence >= 50) {
-          // Web/digital file - use standard-based matching
+          // Web/digital file - use standard-based matching (filtered by publication selection)
           console.log(`✅ Auto-assigning ${fileData.file.name} → ${suggestedStandard.name} (${matchConfidence}%)`);
           
           // Find matching spec groups
@@ -473,7 +555,7 @@ export function CampaignCreativeAssetsUploader({
             ? suggestedStandard.defaultSpecs.dimensions
             : suggestedStandard.defaultSpecs.dimensions?.[0];
           
-          const matchingGroups = groupedSpecs.filter(group => {
+          const matchingGroups = filteredGroupedSpecs.filter(group => {
             const groupDims = typeof group.dimensions === 'string'
               ? group.dimensions
               : group.dimensions?.[0];
@@ -522,7 +604,7 @@ export function CampaignCreativeAssetsUploader({
       title: 'Files Added',
       description: `${files.length} file(s) being analyzed...`,
     });
-  }, [pendingFiles, uploadedAssets, groupedSpecs, onAssetsChange, toast]);
+  }, [pendingFiles, uploadedAssets, filteredGroupedSpecs, onAssetsChange, toast]);
 
   const handleZipFile = useCallback(async (zipFile: File) => {
     setProcessingZip(true);
@@ -571,8 +653,8 @@ export function CampaignCreativeAssetsUploader({
         const isPrint = detectedDims && isPrintDimensions(detectedDims);
         
         if (isPrint && detectedDims) {
-          // Print file - match directly against spec groups
-          const matchingPrintGroups = groupedSpecs.filter(group => {
+          // Print file - match directly against spec groups (filtered by publication selection)
+          const matchingPrintGroups = filteredGroupedSpecs.filter(group => {
             if (group.channel?.toLowerCase() !== 'print') return false;
             if (!group.dimensions) return false;
             
@@ -605,13 +687,13 @@ export function CampaignCreativeAssetsUploader({
             newPending.delete(fileId);
           }
         } else if (processedFile.suggestedStandard && processedFile.matchConfidence >= 50) {
-          // Web/digital file - use standard-based matching
+          // Web/digital file - use standard-based matching (filtered by publication selection)
           // Find matching spec groups
           const standardDims = typeof processedFile.suggestedStandard.defaultSpecs.dimensions === 'string'
             ? processedFile.suggestedStandard.defaultSpecs.dimensions
             : processedFile.suggestedStandard.defaultSpecs.dimensions?.[0];
           
-          const matchingGroups = groupedSpecs.filter(group => {
+          const matchingGroups = filteredGroupedSpecs.filter(group => {
             const groupDims = typeof group.dimensions === 'string'
               ? group.dimensions
               : group.dimensions?.[0];
@@ -659,7 +741,7 @@ export function CampaignCreativeAssetsUploader({
       setProcessingZip(false);
       setZipProgress(null);
     }
-  }, [pendingFiles, uploadedAssets, groupedSpecs, onAssetsChange, toast]);
+  }, [pendingFiles, uploadedAssets, filteredGroupedSpecs, onAssetsChange, toast]);
 
   const uploadFileForPreview = useCallback(async (file: File, fileId: string, pendingMap: Map<string, any>) => {
     try {
@@ -1524,7 +1606,138 @@ export function CampaignCreativeAssetsUploader({
         </div>
 
         {/* RIGHT COLUMN (2/5 width) - Upload Zone (Sticky) */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-4">
+          {/* Publication Filter - Only show when 2+ publications */}
+          {availablePublications.length >= 2 && (
+            <Card className="border-2 border-amber-200 bg-amber-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-sans flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Publication Targeting
+                </CardTitle>
+                <CardDescription>
+                  Choose which publications to match assets against
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <RadioGroup 
+                  value={publicationFilterMode} 
+                  onValueChange={(value: 'all' | 'selected') => setPublicationFilterMode(value)}
+                  className="space-y-3"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="all" id="pub-all" />
+                    <Label htmlFor="pub-all" className="font-normal cursor-pointer">
+                      Match All Publications ({availablePublications.length} pubs)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="selected" id="pub-selected" />
+                    <Label htmlFor="pub-selected" className="font-normal cursor-pointer">
+                      Select Specific Publications
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {/* Publication selection UI - only visible when "selected" mode is active */}
+                {publicationFilterMode === 'selected' && (
+                  <div className="mt-4 space-y-3">
+                    {/* Search input */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search publications..."
+                        value={publicationSearch}
+                        onChange={(e) => setPublicationSearch(e.target.value)}
+                        className="pl-9 bg-white"
+                      />
+                      {publicationSearch && (
+                        <button
+                          onClick={() => setPublicationSearch('')}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          <CloseIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Select All / Clear All buttons and count */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleSelectAllPublications}
+                          className="text-xs h-7"
+                        >
+                          Select All
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleClearAllPublications}
+                          disabled={selectedPublicationIds.size === 0}
+                          className="text-xs h-7"
+                        >
+                          Clear All
+                        </Button>
+                      </div>
+                      <Badge variant={selectedPublicationIds.size > 0 ? "default" : "secondary"}>
+                        {selectedPublicationIds.size} of {availablePublications.length} selected
+                      </Badge>
+                    </div>
+
+                    {/* Scrollable publication list */}
+                    <ScrollArea className="h-48 border rounded-md bg-white p-2">
+                      <div className="space-y-2">
+                        {filteredPublications.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-4">
+                            No publications match your search
+                          </p>
+                        ) : (
+                          filteredPublications.map(pub => (
+                            <div 
+                              key={pub.id} 
+                              className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50"
+                            >
+                              <Checkbox
+                                id={`pub-${pub.id}`}
+                                checked={selectedPublicationIds.has(pub.id)}
+                                onCheckedChange={() => togglePublicationSelection(pub.id)}
+                              />
+                              <Label 
+                                htmlFor={`pub-${pub.id}`} 
+                                className="font-normal cursor-pointer flex-1 text-sm"
+                              >
+                                {pub.name}
+                              </Label>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+
+                    {/* Warning if no publications selected */}
+                    {selectedPublicationIds.size === 0 && (
+                      <div className="flex items-center gap-2 text-amber-700 text-xs bg-amber-100 p-2 rounded">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        <span>Select at least one publication, or switch to "Match All"</span>
+                      </div>
+                    )}
+
+                    {/* Info about filtered placements */}
+                    {selectedPublicationIds.size > 0 && (
+                      <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
+                        <Info className="h-3 w-3 inline mr-1" />
+                        Assets will only match to {filteredGroupedSpecs.length} spec group(s) from selected publications
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="border-2 border-blue-300 bg-blue-50 lg:sticky lg:top-20">
         <CardHeader>
           <CardTitle className="text-lg font-sans flex items-center gap-2">
@@ -1677,8 +1890,8 @@ export function CampaignCreativeAssetsUploader({
                                 isPrintDimensions(detectedSpecs.dimensions.formatted);
                               const matchedPrintGroups = (pendingFiles.get(fileId) as any)?.matchedSpecGroups || [];
                               
-                              // Get available print spec groups from campaign requirements
-                              const availablePrintGroups = groupedSpecs.filter(g => 
+                              // Get available print spec groups from campaign requirements (filtered by publication selection)
+                              const availablePrintGroups = filteredGroupedSpecs.filter(g => 
                                 g.channel?.toLowerCase() === 'print' && g.dimensions
                               );
                               
@@ -1707,8 +1920,8 @@ export function CampaignCreativeAssetsUploader({
                                     // Print file - show spec groups (campaign placements)
                                     <Select 
                                       onValueChange={(value) => {
-                                        // For print, assign directly to spec group
-                                        const specGroup = groupedSpecs.find(g => g.specGroupId === value);
+                                        // For print, assign directly to spec group (use filtered specs)
+                                        const specGroup = filteredGroupedSpecs.find(g => g.specGroupId === value);
                                         if (specGroup) {
                                           const pending = pendingFiles.get(fileId);
                                           if (!pending) return;

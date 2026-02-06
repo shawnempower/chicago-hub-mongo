@@ -137,20 +137,9 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
       .update(file.buffer)
       .digest('hex');
 
-    // Check for existing asset with same content in this campaign
-    if (campaignId) {
-      const existingAsset = await creativesService.findByHash(campaignId, contentHash);
-      if (existingAsset) {
-        console.log(`⚡ Duplicate detected: "${file.originalname}" matches existing asset ${existingAsset._id}`);
-        return res.json({
-          assetId: existingAsset._id?.toString() || existingAsset.assetId,
-          fileUrl: existingAsset.metadata.fileUrl,
-          fileName: existingAsset.metadata.fileName,
-          isDuplicate: true,
-          message: 'Asset already exists - same file was previously uploaded'
-        });
-      }
-    }
+    // Note: We don't block duplicate uploads - users may want to re-upload the same file
+    // to update it or assign it to different spec groups. The contentHash is still stored
+    // for informational purposes and potential future cleanup.
 
     // Determine category and path for S3 storage
     const category = campaignId ? 'creative-assets/campaigns' : packageId ? 'creative-assets/packages' : 'creative-assets/insertion-orders';

@@ -75,7 +75,11 @@ import {
   RefreshCw,
   Download,
   Eye,
+  Search,
+  Filter,
 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -688,6 +692,11 @@ export function CreativeAssetsManager({
     clickUrl: string;
   } | null>(null);
 
+  // Publication filter state for ZIP upload targeting
+  const [publicationFilterMode, setPublicationFilterMode] = useState<'all' | 'selected'>('all');
+  const [selectedPublicationIds, setSelectedPublicationIds] = useState<Set<number>>(new Set());
+  const [publicationSearch, setPublicationSearch] = useState('');
+
   // Channel configuration with icons and accepted file types
   const channelConfig: Record<string, { 
     label: string; 
@@ -792,6 +801,50 @@ export function CreativeAssetsManager({
     return allGroups.filter(g => g.placementCount > 0);
   }, [requirements, customSpecGroups]);
 
+  // Extract unique publications from requirements for the filter UI
+  const availablePublications = useMemo(() => {
+    const pubMap = new Map<number, string>();
+    requirements.forEach(req => {
+      if (!pubMap.has(req.publicationId)) {
+        pubMap.set(req.publicationId, req.publicationName);
+      }
+    });
+    return Array.from(pubMap.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [requirements]);
+
+  // Filter publications by search term
+  const filteredPublications = useMemo(() => {
+    if (!publicationSearch.trim()) return availablePublications;
+    const search = publicationSearch.toLowerCase();
+    return availablePublications.filter(p => 
+      p.name.toLowerCase().includes(search)
+    );
+  }, [availablePublications, publicationSearch]);
+
+  // Filter spec groups AND their placements based on publication selection (for ZIP auto-matching)
+  const filteredGroupedSpecs = useMemo(() => {
+    if (publicationFilterMode === 'all' || selectedPublicationIds.size === 0) {
+      return groupedSpecs;
+    }
+    // Filter spec groups and also filter the placements within each group
+    return groupedSpecs
+      .map(group => {
+        const filteredPlacements = group.placements.filter(p => 
+          selectedPublicationIds.has(p.publicationId)
+        );
+        if (filteredPlacements.length === 0) return null;
+        return {
+          ...group,
+          placements: filteredPlacements,
+          placementCount: filteredPlacements.length,
+          publicationCount: new Set(filteredPlacements.map(p => p.publicationId)).size
+        };
+      })
+      .filter((group): group is GroupedCreativeRequirement => group !== null);
+  }, [groupedSpecs, publicationFilterMode, selectedPublicationIds]);
+
   // Group specs by channel
   const specsByChannel = useMemo(() => {
     const byChannel = new Map<string, GroupedCreativeRequirement[]>();
@@ -846,13 +899,13 @@ export function CreativeAssetsManager({
     return metrics;
   }, [specsByChannel, uploadedAssets]);
 
-  // Get specs for current channel (or all)
+  // Get specs for current channel (or all) - respects publication filter
   const currentChannelSpecs = useMemo(() => {
     if (activeChannel === 'all') {
-      return groupedSpecs;
+      return filteredGroupedSpecs;
     }
-    return specsByChannel.get(activeChannel) || [];
-  }, [activeChannel, groupedSpecs, specsByChannel]);
+    return filteredGroupedSpecs.filter(spec => spec.channel === activeChannel);
+  }, [activeChannel, filteredGroupedSpecs]);
 
   // Load existing assets from campaign on mount
   useEffect(() => {
@@ -877,8 +930,11 @@ export function CreativeAssetsManager({
             // Note: digitalAdProperties is stored at root level, not in metadata
             const digitalAdProps = asset.digitalAdProperties || {};
             
+            // specGroupId can be in associations (schema) or metadata (legacy) - check both
+            const assetSpecGroupId = asset.associations?.specGroupId || asset.metadata?.specGroupId;
+            
             const reconstructedAsset: UploadedAssetWithSpecs = {
-              specGroupId: asset.metadata.specGroupId || `library_${asset._id}`,
+              specGroupId: assetSpecGroupId || `library_${asset._id}`,
               fileName: asset.metadata.fileName,
               previewUrl: asset.metadata.fileUrl,
               uploadStatus: 'uploaded',
@@ -1075,6 +1131,27 @@ export function CreativeAssetsManager({
       : <ArrowDown className="h-4 w-4 ml-1" />;
   };
 
+  // Publication filter handlers
+  const handleSelectAllPublications = useCallback(() => {
+    setSelectedPublicationIds(new Set(availablePublications.map(p => p.id)));
+  }, [availablePublications]);
+
+  const handleClearAllPublications = useCallback(() => {
+    setSelectedPublicationIds(new Set());
+  }, []);
+
+  const togglePublicationSelection = useCallback((pubId: number) => {
+    setSelectedPublicationIds(prev => {
+      const next = new Set(prev);
+      if (next.has(pubId)) {
+        next.delete(pubId);
+      } else {
+        next.add(pubId);
+      }
+      return next;
+    });
+  }, []);
+
   // Handle ZIP file processing
   const handleZipFile = useCallback(async (zipFile: File) => {
     setProcessingZip(true);
@@ -1095,7 +1172,8 @@ export function CreativeAssetsManager({
       const newPendingFiles = new Map<string, PendingFile>();
       
       console.log(`[ZIP] Processing ${result.processedFiles.length} files from ZIP`);
-      console.log(`[ZIP] Available spec groups:`, groupedSpecs.map(g => ({
+      console.log(`[ZIP] Publication filter: ${publicationFilterMode}, selected: ${selectedPublicationIds.size}`);
+      console.log(`[ZIP] Available spec groups (filtered):`, filteredGroupedSpecs.map(g => ({
         id: g.specGroupId,
         channel: g.channel,
         dimensions: g.dimensions
@@ -1164,13 +1242,16 @@ export function CreativeAssetsManager({
           previewUrl = URL.createObjectURL(processedFile.file);
         }
 
-        // Auto-match to spec groups (channel-aware when a specific channel is selected)
-        const specsToMatch = activeChannel === 'all' ? groupedSpecs : currentChannelSpecs;
-        const matches = autoMatchFileToSpecs(processedFile.detectedSpecs, specsToMatch);
+        // Auto-match to spec groups (filtered by publication selection, and channel-aware)
+        // Use filteredGroupedSpecs to respect publication filter
+        const channelFilteredSpecs = activeChannel === 'all' 
+          ? filteredGroupedSpecs 
+          : filteredGroupedSpecs.filter(g => g.channel === activeChannel);
+        const matches = autoMatchFileToSpecs(processedFile.detectedSpecs, channelFilteredSpecs);
         const bestMatch = matches.length > 0 ? matches[0] : null;
         const matchConfidence = bestMatch ? bestMatch.matchScore : 0;
 
-        console.log(`[ZIP] Found ${matches.length} matches for ${processedFile.fileName} in ${activeChannel === 'all' ? 'all channels' : activeChannel}`);
+        console.log(`[ZIP] Found ${matches.length} matches for ${processedFile.fileName} in ${activeChannel === 'all' ? 'all channels' : activeChannel} (pub filter: ${publicationFilterMode})`);
         if (bestMatch) {
           console.log(`[ZIP] Best match: ${bestMatch.specGroupId} with ${matchConfidence}% confidence`);
           console.log(`[ZIP] Match reasons:`, bestMatch.matchReasons);
@@ -1183,7 +1264,7 @@ export function CreativeAssetsManager({
         if (bestMatch && matchConfidence >= 50) {
           console.log(`✅ [ZIP] Auto-assigning ${processedFile.fileName} → ${bestMatch.specGroupId} (${matchConfidence}%)`);
           
-          const matchingGroup = groupedSpecs.find(g => g.specGroupId === bestMatch.specGroupId);
+          const matchingGroup = filteredGroupedSpecs.find(g => g.specGroupId === bestMatch.specGroupId);
           if (matchingGroup) {
             updatedAssets.set(matchingGroup.specGroupId, {
               specGroupId: matchingGroup.specGroupId,
@@ -1250,7 +1331,7 @@ export function CreativeAssetsManager({
       setProcessingZip(false);
       setZipProgress(null);
     }
-  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, toast, pendingFiles]);
+  }, [filteredGroupedSpecs, activeChannel, uploadedAssets, onAssetsChange, toast, pendingFiles, publicationFilterMode, selectedPublicationIds]);
 
   // Handle file selection
   const handleFilesSelected = useCallback(async (files: FileList | File[]) => {
@@ -1263,7 +1344,6 @@ export function CreativeAssetsManager({
       const file = fileArray[0]; // Only use first file for replacement
       const existingAsset = uploadedAssets.get(replacingSpecGroupId);
       
-      console.log(`[Replace] Replacing asset for spec group: ${replacingSpecGroupId}`);
       
       // First, delete the old asset if it exists on the server
       if (existingAsset?.assetId) {
@@ -1327,9 +1407,12 @@ export function CreativeAssetsManager({
       // Clear replacement mode
       setReplacingSpecGroupId(null);
       
+      // Update parent state
+      onAssetsChange(newAssetsMap);
+      
       toast({
         title: 'File Attached',
-        description: `"${file.name}" is ready to upload. Click "Save All to Server" to save.`
+        description: `"${file.name}" is ready to upload. Click "Save" to save.`
       });
       
       // Update the assets via callback
@@ -1444,10 +1527,12 @@ export function CreativeAssetsManager({
         const detectedSpecs = await detectFileSpecs(file);
         console.log(`[File Detection] Detected specs for ${file.name}:`, detectedSpecs);
         
-        // Match against channel-specific requirements when a channel is selected
-        const specsToMatch = activeChannel === 'all' ? groupedSpecs : currentChannelSpecs;
-        const matches = autoMatchFileToSpecs(detectedSpecs, specsToMatch);
-        console.log(`[File Matching] Found ${matches.length} potential matches for ${file.name} in ${activeChannel === 'all' ? 'all channels' : activeChannel}`);
+        // Match against channel-specific requirements (filtered by publication selection)
+        const channelFilteredSpecs = activeChannel === 'all' 
+          ? filteredGroupedSpecs 
+          : filteredGroupedSpecs.filter(g => g.channel === activeChannel);
+        const matches = autoMatchFileToSpecs(detectedSpecs, channelFilteredSpecs);
+        console.log(`[File Matching] Found ${matches.length} potential matches for ${file.name} in ${activeChannel === 'all' ? 'all channels' : activeChannel} (pub filter: ${publicationFilterMode})`);
         
         if (matches.length > 0) {
           console.log(`[File Matching] Top 3 matches:`, matches.slice(0, 3).map(m => ({
@@ -1497,8 +1582,8 @@ export function CreativeAssetsManager({
           console.log(`✅ Auto-assigning ${file.name} → ${bestMatch.specGroupId} (${matchConfidence}%)`);
           console.log(`   Matched requirements:`, bestMatch.matchReasons);
           
-          // Auto-assign to the best matching spec group
-          const matchingGroup = groupedSpecs.find(g => g.specGroupId === bestMatch.specGroupId);
+          // Auto-assign to the best matching spec group (from filtered specs)
+          const matchingGroup = filteredGroupedSpecs.find(g => g.specGroupId === bestMatch.specGroupId);
           if (matchingGroup) {
             console.log(`   Found matching group:`, matchingGroup.channel, matchingGroup.dimensions);
             
@@ -1577,7 +1662,7 @@ export function CreativeAssetsManager({
         variant: 'default',
       });
     }
-  }, [groupedSpecs, currentChannelSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile, recentlySplitSpecId, customSpecGroups, pendingFiles, toast, replacingSpecGroupId]);
+  }, [groupedSpecs, filteredGroupedSpecs, activeChannel, uploadedAssets, onAssetsChange, handleZipFile, recentlySplitSpecId, customSpecGroups, pendingFiles, toast, replacingSpecGroupId, publicationFilterMode]);
 
   // Dropzone
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
@@ -1750,13 +1835,28 @@ export function CreativeAssetsManager({
 
         const result = await response.json();
 
+        // Handle duplicate detection - server found same file content already uploaded
+        let assetId: string;
+        let fileUrl: string;
+        
+        if (result.isDuplicate) {
+          // Use existing file URL but keep our specGroupId
+          assetId = result.assetId;
+          fileUrl = result.fileUrl;
+        } else {
+          // API returns { success, asset } - extract asset data
+          const uploadedAssetData = result.asset;
+          assetId = uploadedAssetData?._id || uploadedAssetData?.assetId || result.assetId;
+          fileUrl = uploadedAssetData?.metadata?.fileUrl || result.fileUrl;
+        }
+
         // Update asset status in working map
         const updatedAsset: UploadedAssetWithSpecs = {
           ...asset,
           uploadStatus: 'uploaded',
-          assetId: result.assetId,
-          uploadedUrl: result.fileUrl,
-          previewUrl: result.fileUrl,
+          assetId: assetId,
+          uploadedUrl: fileUrl,
+          previewUrl: fileUrl,
         };
 
         workingAssetsMap.set(specGroupId, updatedAsset);
@@ -1870,14 +1970,39 @@ export function CreativeAssetsManager({
 
       const result = await response.json();
 
+      // Handle duplicate detection - server found same file content already uploaded
+      if (result.isDuplicate) {
+        // Use the existing file URL but keep our specGroupId
+        const finalMap = new Map(uploadedAssets);
+        finalMap.set(specGroupId, {
+          ...asset,
+          uploadStatus: 'uploaded',
+          assetId: result.assetId,
+          uploadedUrl: result.fileUrl,
+          previewUrl: result.fileUrl,
+        });
+        onAssetsChange(finalMap);
+        
+        toast({
+          title: 'Asset Assigned',
+          description: `"${asset.file.name}" was already uploaded - assigned to this requirement.`,
+        });
+        return;
+      }
+
+      // API returns { success, asset } - extract asset data
+      const uploadedAssetData = result.asset;
+      const assetId = uploadedAssetData?._id || uploadedAssetData?.assetId || result.assetId;
+      const fileUrl = uploadedAssetData?.metadata?.fileUrl || result.fileUrl;
+
       // Update asset status
       const finalMap = new Map(uploadedAssets);
       finalMap.set(specGroupId, {
         ...asset,
         uploadStatus: 'uploaded',
-        assetId: result.assetId,
-        uploadedUrl: result.fileUrl,
-        previewUrl: result.fileUrl,
+        assetId: assetId,
+        uploadedUrl: fileUrl,
+        previewUrl: fileUrl,
       });
       onAssetsChange(finalMap);
       
@@ -2131,15 +2256,20 @@ export function CreativeAssetsManager({
       
       const result = await response.json();
       
+      // API returns { success, asset } - extract asset data
+      const uploadedAssetData = result.asset;
+      const assetId = uploadedAssetData?._id || uploadedAssetData?.assetId || result.assetId;
+      const fileUrl = uploadedAssetData?.metadata?.fileUrl || result.fileUrl;
+      
       // Update uploadedAssets with the uploaded asset
       const updatedAssets = new Map(uploadedAssets);
       updatedAssets.set(specGroupId, {
         specGroupId,
         file,
-        previewUrl: result.fileUrl || previewUrl,
+        previewUrl: fileUrl || previewUrl,
         uploadStatus: 'uploaded',
-        assetId: result.assetId,
-        uploadedUrl: result.fileUrl,
+        assetId: assetId,
+        uploadedUrl: fileUrl,
         clickUrl: clickUrl || undefined,
         appliesTo: specGroup.placements.map(p => ({
           placementId: p.placementId,
@@ -2458,6 +2588,136 @@ export function CreativeAssetsManager({
             </CardContent>
           </Card>
 
+          {/* Publication Filter - Only show when 2+ publications */}
+          {availablePublications.length >= 2 && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-medium font-sans flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Publication Targeting
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Choose which publications to match assets against
+                </p>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <RadioGroup 
+                  value={publicationFilterMode} 
+                  onValueChange={(value: 'all' | 'selected') => setPublicationFilterMode(value)}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="all" id="pub-all" />
+                    <Label htmlFor="pub-all" className="font-normal cursor-pointer text-sm">
+                      Match All Publications ({availablePublications.length} pubs)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="selected" id="pub-selected" />
+                    <Label htmlFor="pub-selected" className="font-normal cursor-pointer text-sm">
+                      Select Specific Publications
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {/* Publication selection UI - only visible when "selected" mode is active */}
+                {publicationFilterMode === 'selected' && (
+                  <div className="mt-3 space-y-2">
+                    {/* Search input */}
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                      <Input
+                        placeholder="Search publications..."
+                        value={publicationSearch}
+                        onChange={(e) => setPublicationSearch(e.target.value)}
+                        className="pl-8 h-8 text-sm bg-white"
+                      />
+                      {publicationSearch && (
+                        <button
+                          onClick={() => setPublicationSearch('')}
+                          className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Select All / Clear All buttons and count */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-1.5">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleSelectAllPublications}
+                          className="text-xs h-6 px-2"
+                        >
+                          Select All
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleClearAllPublications}
+                          disabled={selectedPublicationIds.size === 0}
+                          className="text-xs h-6 px-2"
+                        >
+                          Clear All
+                        </Button>
+                      </div>
+                      <Badge variant={selectedPublicationIds.size > 0 ? "default" : "secondary"} className="text-xs">
+                        {selectedPublicationIds.size} of {availablePublications.length}
+                      </Badge>
+                    </div>
+
+                    {/* Scrollable publication list */}
+                    <ScrollArea className="h-36 border rounded-md bg-white">
+                      <div className="p-2 space-y-1">
+                        {filteredPublications.length === 0 ? (
+                          <p className="text-xs text-gray-500 text-center py-3">
+                            No publications match your search
+                          </p>
+                        ) : (
+                          filteredPublications.map(pub => (
+                            <div 
+                              key={pub.id} 
+                              className="flex items-center space-x-2 p-1.5 rounded hover:bg-gray-50"
+                            >
+                              <Checkbox
+                                id={`pub-${pub.id}`}
+                                checked={selectedPublicationIds.has(pub.id)}
+                                onCheckedChange={() => togglePublicationSelection(pub.id)}
+                              />
+                              <Label 
+                                htmlFor={`pub-${pub.id}`} 
+                                className="font-normal cursor-pointer flex-1 text-xs"
+                              >
+                                {pub.name}
+                              </Label>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+
+                    {/* Warning if no publications selected */}
+                    {selectedPublicationIds.size === 0 && (
+                      <div className="flex items-center gap-1.5 text-amber-700 text-xs bg-amber-100 p-1.5 rounded">
+                        <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>Select at least one publication, or switch to "Match All"</span>
+                      </div>
+                    )}
+
+                    {/* Info about filtered placements */}
+                    {selectedPublicationIds.size > 0 && (
+                      <div className="text-xs text-gray-600 bg-gray-100 p-1.5 rounded">
+                        Assets will match to {filteredGroupedSpecs.length} spec group(s) from selected publications
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* RIGHT: Upload Zone - Channel-aware */}
           <Card>
             <CardHeader className="pb-3">
@@ -2594,7 +2854,7 @@ export function CreativeAssetsManager({
                         </div>
                       )}
                       
-                      {/* Assignment dropdown - filtered by active channel tab */}
+                      {/* Assignment dropdown - filtered by active channel tab AND publication selection */}
                       {!fileData.isAnalyzing && (
                         <div className="pl-6 space-y-2">
                           <Select onValueChange={(value) => handleAssignToSpec(id, value)}>
@@ -2603,8 +2863,10 @@ export function CreativeAssetsManager({
                             </SelectTrigger>
                             <SelectContent className="max-h-[300px]">
                               {(() => {
-                                // Use channel-filtered specs when a specific channel is selected
-                                const specsToShow = activeChannel === 'all' ? groupedSpecs : currentChannelSpecs;
+                                // Use filtered specs (respects publication selection) and channel filter
+                                const specsToShow = activeChannel === 'all' 
+                                  ? filteredGroupedSpecs 
+                                  : filteredGroupedSpecs.filter(g => g.channel === activeChannel);
                                 
                                 // Group specs by channel
                                 const byChannel = specsToShow.reduce((acc, spec) => {

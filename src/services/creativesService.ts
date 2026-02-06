@@ -419,6 +419,25 @@ export class CreativesService {
   }
 
   /**
+   * Find asset by content hash AND specGroupId (for deduplication)
+   * Only returns duplicate if same file was uploaded to the SAME spec group
+   * (allows same file to be assigned to multiple different spec groups)
+   */
+  async findByHashAndSpecGroup(campaignId: string, contentHash: string, specGroupId: string): Promise<CreativeAsset | null> {
+    try {
+      return await this.collection.findOne({
+        'associations.campaignId': campaignId,
+        'associations.specGroupId': specGroupId,
+        'metadata.contentHash': contentHash,
+        deletedAt: { $exists: false }
+      });
+    } catch (error) {
+      console.error('Error finding asset by hash and spec group:', error);
+      return null;
+    }
+  }
+
+  /**
    * Count assets matching filters
    */
   async count(filters: CreativeAssetListFilters): Promise<number> {
