@@ -422,7 +422,8 @@ router.delete('/:campaignId/:publicationId/placement/:placementId', async (req: 
 
 /**
  * DELETE /api/admin/orders/:campaignId/:publicationId
- * Delete/rescind a single publication order
+ * Delete/rescind a single publication order by rescinding all its placements
+ * Returns partial success if some placements could be removed but others couldn't
  */
 router.delete('/:campaignId/:publicationId', async (req: any, res: Response) => {
   try {
@@ -434,12 +435,31 @@ router.delete('/:campaignId/:publicationId', async (req: any, res: Response) => 
     );
 
     if (!result.success) {
-      return res.status(400).json({ error: result.error });
+      return res.status(400).json({ 
+        error: result.error,
+        failedPlacements: result.failedPlacements
+      });
+    }
+
+    // Build response message based on result
+    let message: string;
+    if (result.partialSuccess) {
+      const rescindedCount = result.rescindedPlacements?.length || 0;
+      const failedCount = result.failedPlacements?.length || 0;
+      message = `Partially rescinded: ${rescindedCount} placement(s) removed, ${failedCount} could not be removed`;
+    } else {
+      const rescindedCount = result.rescindedPlacements?.length || 0;
+      message = rescindedCount > 0 
+        ? `Publication order rescinded successfully (${rescindedCount} placement(s) removed)`
+        : `Publication order rescinded successfully`;
     }
 
     res.json({ 
       success: true,
-      message: `Publication order rescinded successfully`
+      partialSuccess: result.partialSuccess,
+      message,
+      rescindedPlacements: result.rescindedPlacements,
+      failedPlacements: result.failedPlacements
     });
   } catch (error) {
     console.error('Error deleting publication order:', error);
@@ -516,6 +536,163 @@ router.post('/send-reminders', async (req: any, res: Response) => {
   } catch (error) {
     console.error('Error sending reminders:', error);
     res.status(500).json({ error: 'Failed to send reminders' });
+  }
+});
+
+/**
+ * POST /api/admin/orders/:campaignId/:publicationId/placement
+ * Add a placement to an existing publication order
+ */
+router.post('/:campaignId/:publicationId/placement', async (req: any, res: Response) => {
+  try {
+    const { campaignId, publicationId } = req.params;
+    const { placement } = req.body;
+
+    if (!placement) {
+      return res.status(400).json({ error: 'Placement data is required' });
+    }
+
+    if (!placement.itemPath || !placement.itemName || !placement.channel) {
+      return res.status(400).json({ error: 'Placement must have itemPath, itemName, and channel' });
+    }
+
+    const result = await insertionOrderService.addPlacementToOrder(
+      campaignId,
+      parseInt(publicationId),
+      placement
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    // Send notification to publication users about the new placement
+    try {
+      const { notificationService } = await import('../../../src/services/notificationService');
+      
+      const order = result.updatedOrder;
+      
+      if (order) {
+        // Find publication users to notify
+        const db = getDatabase();
+        const pubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
+          'publications.publicationId': parseInt(publicationId)
+        }).toArray();
+        
+        for (const perm of pubPermissions) {
+          await notificationService.create({
+            userId: perm.userId,
+            publicationId: parseInt(publicationId),
+            type: 'new_order', // Reuse existing type
+            title: 'Placement Added',
+            message: `A new placement "${placement.itemName}" has been added to your order for "${order.campaignName}"`,
+            campaignId,
+            orderId: order._id?.toString() || '',
+            link: `/dashboard?tab=order-detail&campaignId=${campaignId}&publicationId=${publicationId}`
+          });
+        }
+        
+        console.log(`📧 Sent placement added notifications to publication users`);
+      }
+    } catch (notifyError) {
+      console.error('Error sending placement added notifications:', notifyError);
+      // Don't fail the request if notification fails
+    }
+
+    res.json({
+      success: true,
+      message: `Placement "${placement.itemName}" added successfully`,
+      updatedOrder: result.updatedOrder
+    });
+  } catch (error) {
+    console.error('Error adding placement:', error);
+    res.status(500).json({ error: 'Failed to add placement' });
+  }
+});
+
+/**
+ * POST /api/admin/orders/:campaignId/publication
+ * Add a new publication with placements to a campaign
+ */
+router.post('/:campaignId/publication', async (req: any, res: Response) => {
+  try {
+    const userId = req.user?.id || 'hub_admin';
+    const { campaignId } = req.params;
+    const { publicationId, publicationName, placements } = req.body;
+
+    if (!publicationId || !publicationName) {
+      return res.status(400).json({ error: 'publicationId and publicationName are required' });
+    }
+
+    if (!placements || !Array.isArray(placements) || placements.length === 0) {
+      return res.status(400).json({ error: 'At least one placement is required' });
+    }
+
+    // Validate each placement has required fields
+    for (const placement of placements) {
+      if (!placement.itemPath || !placement.itemName || !placement.channel) {
+        return res.status(400).json({ 
+          error: 'Each placement must have itemPath, itemName, and channel' 
+        });
+      }
+    }
+
+    const result = await insertionOrderService.addPublicationToOrder(
+      campaignId,
+      parseInt(publicationId),
+      publicationName,
+      placements,
+      userId
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    // Send notification to publication users about the new order
+    // Only send notifications for sent orders, not drafts
+    try {
+      const order = result.newOrder;
+      
+      if (order && order.status !== 'draft') {
+        const { notificationService } = await import('../../../src/services/notificationService');
+        
+        // Find publication users to notify
+        const db = getDatabase();
+        const pubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
+          'publications.publicationId': parseInt(publicationId)
+        }).toArray();
+        
+        for (const perm of pubPermissions) {
+          await notificationService.create({
+            userId: perm.userId,
+            publicationId: parseInt(publicationId),
+            type: 'new_order',
+            title: 'New Order',
+            message: `You have a new order for "${order.campaignName}" with ${placements.length} placement(s)`,
+            campaignId,
+            orderId: order._id?.toString() || '',
+            link: `/dashboard?tab=order-detail&campaignId=${campaignId}&publicationId=${publicationId}`
+          });
+        }
+        
+        console.log(`📧 Sent new order notifications to publication users`);
+      } else if (order?.status === 'draft') {
+        console.log(`📋 New draft order created for publication - no notification sent until orders are sent`);
+      }
+    } catch (notifyError) {
+      console.error('Error sending new order notifications:', notifyError);
+      // Don't fail the request if notification fails
+    }
+
+    res.json({
+      success: true,
+      message: `Publication "${publicationName}" added with ${placements.length} placement(s)`,
+      newOrder: result.newOrder
+    });
+  } catch (error) {
+    console.error('Error adding publication:', error);
+    res.status(500).json({ error: 'Failed to add publication' });
   }
 });
 

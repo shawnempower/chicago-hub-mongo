@@ -96,10 +96,13 @@ router.get('/', async (req: any, res: Response) => {
     const { insertionOrderService } = await import('../../src/services/insertionOrderService');
     const allOrders = [];
     
+    // Publication users should not see draft orders - only sent and beyond
+    const isAdmin = profile?.isAdmin === true;
+    
     for (const pubId of publicationsToQuery) {
       const orders = await insertionOrderService.getOrdersForPublication(
         parseInt(pubId),
-        filters
+        { ...filters, excludeDrafts: !isAdmin } // Admins see drafts, publications don't
       );
       allOrders.push(...orders);
     }
@@ -689,6 +692,11 @@ router.get('/:campaignId/:publicationId', async (req: any, res: Response) => {
     );
 
     if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Publication users cannot view draft orders
+    if (order.status === 'draft' && !profile?.isAdmin) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
@@ -1344,6 +1352,14 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    // Check if order is in draft status - messages not allowed on drafts
+    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+    const orderForCheck = await insertionOrderService.getOrderByCampaignAndPublication(campaignId, parseInt(publicationId));
+    
+    if (orderForCheck?.status === 'draft') {
+      return res.status(400).json({ error: 'Messages cannot be sent on draft orders. Please send the order to the publication first.' });
+    }
+
     // Build sender name - try multiple sources
     let senderName = 'Unknown User';
     if (profile?.firstName && profile?.lastName) {
@@ -1361,8 +1377,7 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
     
     const senderType: 'hub' | 'publication' = isHubUser ? 'hub' : 'publication';
 
-    // Add message
-    const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+    // Add message (insertionOrderService already imported above for draft check)
     const result = await insertionOrderService.addMessage(
       campaignId,
       parseInt(publicationId),

@@ -6,9 +6,10 @@
  */
 
 import { getDatabase } from '../integrations/mongodb/client';
-import { COLLECTIONS } from '../integrations/mongodb/schemas';
+import { COLLECTIONS, Publication } from '../integrations/mongodb/schemas';
 import { Campaign } from '../integrations/mongodb/campaignSchema';
 import { HubPackage } from '../integrations/mongodb/hubPackageSchema';
+import { Hub } from '../integrations/mongodb/hubSchema';
 import {
   PublicationInsertionOrderDocument,
   PublicationInsertionOrderInsert,
@@ -36,6 +37,14 @@ export class InsertionOrderService {
 
   private get packagesCollection() {
     return getDatabase().collection<HubPackage>(COLLECTIONS.HUB_PACKAGES);
+  }
+
+  private get hubsCollection() {
+    return getDatabase().collection<Hub>(COLLECTIONS.HUBS);
+  }
+
+  private get publicationsCollection() {
+    return getDatabase().collection<Publication>(COLLECTIONS.PUBLICATIONS);
   }
 
   /**
@@ -176,6 +185,7 @@ export class InsertionOrderService {
       status?: InsertionOrderStatus;
       dateFrom?: Date;
       dateTo?: Date;
+      excludeDrafts?: boolean; // If true, exclude draft orders (for publication users)
     }
   ): Promise<PublicationInsertionOrderWithCampaign[]> {
     try {
@@ -184,6 +194,11 @@ export class InsertionOrderService {
         deletedAt: { $exists: false }
       };
 
+      // Publications should not see draft orders - they only see sent and beyond
+      if (filters?.excludeDrafts) {
+        query.status = { $ne: 'draft' };
+      }
+      
       if (filters?.status) {
         query.status = filters.status;
       }
@@ -338,7 +353,11 @@ export class InsertionOrderService {
         query.publicationId = filters.publicationId;
       }
       if (filters?.campaignId) {
-        query.campaignId = filters.campaignId;
+        // Search by both campaignId string and campaignObjectId since orders may use either
+        query.$or = [
+          { campaignId: filters.campaignId },
+          { campaignObjectId: filters.campaignId }
+        ];
       }
       if (filters?.hubId) {
         query.hubId = filters.hubId;
@@ -740,16 +759,51 @@ export class InsertionOrderService {
       }
 
       // Check if orders already exist for this campaign
-      const existingOrders = await this.ordersCollection.countDocuments({
-        campaignId: campaign.campaignId,
+      const existingOrders = await this.ordersCollection.find({
+        $or: [
+          { campaignId: campaign.campaignId },
+          { campaignObjectId: campaignObjectId }
+        ],
         deletedAt: { $exists: false }
-      });
+      }).toArray();
 
-      if (existingOrders > 0) {
-        return { success: false, ordersGenerated: 0, error: 'Orders already generated for this campaign' };
+      // If draft orders exist, send them (change status from draft to sent)
+      if (existingOrders.length > 0) {
+        const draftOrders = existingOrders.filter(o => o.status === 'draft');
+        
+        if (draftOrders.length > 0) {
+          // Send all draft orders
+          const now = new Date();
+          await this.ordersCollection.updateMany(
+            {
+              _id: { $in: draftOrders.map(o => o._id) }
+            },
+            {
+              $set: {
+                status: 'sent',
+                sentAt: now,
+                updatedAt: now
+              },
+              $push: {
+                statusHistory: {
+                  status: 'sent',
+                  timestamp: now,
+                  changedBy: userId,
+                  notes: 'Order sent to publication'
+                }
+              }
+            }
+          );
+          
+          console.log(`[GenerateOrders] Sent ${draftOrders.length} draft orders for campaign ${campaign.campaignId}`);
+          return { success: true, ordersGenerated: draftOrders.length };
+        }
+        
+        // If orders exist but none are drafts (all already sent), return error
+        return { success: false, ordersGenerated: 0, error: 'Orders already sent for this campaign' };
       }
 
-      // Generate orders for each publication
+      // No orders exist - create and send them (backwards compatibility for old campaigns)
       const publications = campaign.selectedInventory?.publications || [];
       const ordersToInsert: PublicationInsertionOrderInsert[] = [];
 
@@ -845,6 +899,18 @@ export class InsertionOrderService {
           }
         });
 
+        // Copy the publication's inventory data to the order
+        // This is the source of truth for what placements belong to this order
+        const orderSelectedInventory = {
+          publications: [{
+            publicationId: pub.publicationId,
+            publicationName: pub.publicationName,
+            inventoryItems: pub.inventoryItems || [],
+            publicationTotal: pub.publicationTotal || 0
+          }],
+          total: pub.publicationTotal || 0
+        };
+
         const order: PublicationInsertionOrderInsert = {
           campaignId: campaign.campaignId,
           campaignObjectId,
@@ -856,6 +922,9 @@ export class InsertionOrderService {
           // Always send immediately - publications see "Assets Pending" status if not ready
           status: 'sent',
           sentAt: new Date(),
+          // Store the inventory data on the order (source of truth)
+          selectedInventory: orderSelectedInventory,
+          orderTotal: pub.publicationTotal || 0,
           // Asset references for dynamic loading (assets loaded via /fresh-assets endpoint)
           assetReferences,
           assetStatus: {
@@ -932,67 +1001,25 @@ export class InsertionOrderService {
   }
 
   /**
-   * Delete/rescind a single publication order
-   * Cannot rescind if any placements are in_production or delivered
+   * Delete/rescind a single publication order by rescinding all its placements
+   * Uses rescindPlacement for each placement to ensure all business rules are applied:
+   * - Cancellation deadline checks for accepted placements
+   * - Campaign selectedInventory sync
+   * - Status history recording
+   * - Proper notifications
+   * 
+   * Returns partial success if some placements can be removed but others cannot.
    */
   async deleteOrderForPublication(
     campaignId: string,
     publicationId: number
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      // First, check if any placements are live (in_production or delivered)
-      const order = await this.ordersCollection.findOne({
-        campaignId,
-        publicationId,
-        deletedAt: { $exists: false }
-      });
-
-      if (!order) {
-        return { success: false, error: 'Order not found' };
-      }
-
-      // Check for live placements
-      const placementStatuses = order.placementStatuses || {};
-      const liveStatuses = ['in_production', 'delivered'];
-      const livePlacements = Object.entries(placementStatuses).filter(
-        ([_, status]) => liveStatuses.includes(status as string)
-      );
-
-      if (livePlacements.length > 0) {
-        return { 
-          success: false, 
-          error: `Cannot rescind order: ${livePlacements.length} placement(s) are already live (in production or delivered)` 
-        };
-      }
-
-      const result = await this.ordersCollection.updateOne(
-        { _id: order._id },
-        { $set: { deletedAt: new Date() } }
-      );
-
-      if (result.modifiedCount === 0) {
-        return { success: false, error: 'Failed to rescind order' };
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error deleting publication order:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
-
-  /**
-   * Rescind/remove a specific placement from a publication order
-   * This allows hub admins to remove individual placements without rescinding the entire order
-   */
-  async rescindPlacement(
-    campaignId: string,
-    publicationId: number,
-    placementId: string
-  ): Promise<{ success: boolean; error?: string; updatedOrder?: PublicationInsertionOrderDocument }> {
+  ): Promise<{ 
+    success: boolean; 
+    error?: string;
+    partialSuccess?: boolean;
+    rescindedPlacements?: string[];
+    failedPlacements?: Array<{ placementId: string; error: string }>;
+  }> {
     try {
       // Get the order
       const order = await this.ordersCollection.findOne({
@@ -1005,22 +1032,183 @@ export class InsertionOrderService {
         return { success: false, error: 'Order not found' };
       }
 
-      // Check if placement is live (in_production or delivered)
+      // Get all placements from the order
+      const placementStatuses = order.placementStatuses || {};
+      const placementIds = Object.keys(placementStatuses);
+
+      if (placementIds.length === 0) {
+        // No placements - just soft delete the order directly
+        await this.ordersCollection.updateOne(
+          { _id: order._id },
+          { $set: { deletedAt: new Date() } }
+        );
+        return { success: true, rescindedPlacements: [] };
+      }
+
+      // Rescind each placement using the full business logic
+      const rescindedPlacements: string[] = [];
+      const failedPlacements: Array<{ placementId: string; error: string }> = [];
+
+      for (const placementId of placementIds) {
+        const result = await this.rescindPlacement(campaignId, publicationId, placementId);
+        
+        if (result.success) {
+          rescindedPlacements.push(placementId);
+        } else {
+          failedPlacements.push({
+            placementId,
+            error: result.error || 'Unknown error'
+          });
+        }
+      }
+
+      // Determine overall result
+      const allSucceeded = failedPlacements.length === 0;
+      const someSucceeded = rescindedPlacements.length > 0;
+      const noneSucceeded = rescindedPlacements.length === 0;
+
+      if (allSucceeded) {
+        // All placements rescinded - order should already be soft-deleted by rescindPlacement
+        return { 
+          success: true, 
+          rescindedPlacements 
+        };
+      } else if (noneSucceeded) {
+        // Nothing could be rescinded
+        return { 
+          success: false, 
+          error: `Could not rescind any placements: ${failedPlacements.map(f => f.error).join('; ')}`,
+          failedPlacements
+        };
+      } else {
+        // Partial success
+        return { 
+          success: true,
+          partialSuccess: true, 
+          rescindedPlacements,
+          failedPlacements
+        };
+      }
+    } catch (error) {
+      console.error('Error deleting publication order:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Rescind/remove a specific placement from a publication order
+   * This allows hub admins to remove individual placements without rescinding the entire order
+   * 
+   * Business Rules:
+   * - pending/rejected placements: Always allowed
+   * - accepted placements: Only if within cancellation deadline (stricter of hub/publication settings)
+   * - in_production/delivered placements: Never allowed
+   */
+  async rescindPlacement(
+    campaignId: string,
+    publicationId: number,
+    placementId: string
+  ): Promise<{ success: boolean; error?: string; updatedOrder?: PublicationInsertionOrderDocument; deadlineInfo?: { canCancel: boolean; daysUntilDeadline?: number; effectiveDeadlineDays: number } }> {
+    try {
+      // Get the order
+      const order = await this.ordersCollection.findOne({
+        campaignId,
+        publicationId,
+        deletedAt: { $exists: false }
+      });
+
+      if (!order) {
+        return { success: false, error: 'Order not found' };
+      }
+
+      // Draft orders: all placements can be freely removed without restrictions
+      // since the order hasn't been sent to publications yet
+      const isDraftOrder = order.status === 'draft';
+      
+      // Check if placement is live (in_production or delivered) - unless it's a draft order
       const placementStatus = order.placementStatuses?.[placementId];
-      if (placementStatus === 'in_production' || placementStatus === 'delivered') {
+      if (!isDraftOrder && (placementStatus === 'in_production' || placementStatus === 'delivered')) {
         return {
           success: false,
           error: `Cannot rescind placement: it is already ${placementStatus === 'in_production' ? 'in production' : 'delivered'}`
         };
       }
 
-      // Find and remove the placement from selectedInventory
-      const selectedInventory = order.selectedInventory || { publications: [] };
-      let placementFound = false;
-      let placementCost = 0;
+      // For accepted placements in sent orders, check cancellation deadline
+      // Draft orders skip this check entirely
+      if (!isDraftOrder && placementStatus === 'accepted') {
+        // Get campaign to find start date
+        let campaign: Campaign | null = null;
+        try {
+          const objectId = new ObjectId(campaignId);
+          campaign = await this.campaignsCollection.findOne({ _id: objectId });
+        } catch {
+          campaign = await this.campaignsCollection.findOne({ campaignId });
+        }
 
+        if (!campaign) {
+          return { success: false, error: 'Campaign not found for deadline check' };
+        }
+
+        const campaignStartDate = campaign.timeline?.startDate;
+        if (!campaignStartDate) {
+          return { success: false, error: 'Campaign has no start date for deadline check' };
+        }
+
+        // Get hub settings
+        const hub = await this.hubsCollection.findOne({ hubId: order.hubId });
+        const hubNoticeDays = hub?.agreementTerms?.cancellationPolicy?.noticeDays ?? 0;
+
+        // Get publication settings
+        const publication = await this.publicationsCollection.findOne({ id: publicationId });
+        const pubDeadlineDays = publication?.campaignSettings?.cancellationDeadlineDays ?? 14;
+
+        // Use the stricter setting (longer notice period)
+        const effectiveDeadlineDays = Math.max(hubNoticeDays, pubDeadlineDays);
+
+        // Calculate deadline date
+        const startDate = new Date(campaignStartDate);
+        const deadline = new Date(startDate);
+        deadline.setDate(deadline.getDate() - effectiveDeadlineDays);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day
+        deadline.setHours(0, 0, 0, 0);
+
+        const canCancel = today <= deadline;
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const daysUntilDeadline = Math.ceil((deadline.getTime() - today.getTime()) / msPerDay);
+
+        if (!canCancel) {
+          return {
+            success: false,
+            error: `Cannot rescind accepted placement: cancellation deadline has passed (required ${effectiveDeadlineDays} days before campaign start, deadline was ${deadline.toLocaleDateString()})`,
+            deadlineInfo: { canCancel: false, daysUntilDeadline, effectiveDeadlineDays }
+          };
+        }
+
+        console.log(`[RescindPlacement] Accepted placement within deadline. Days until deadline: ${daysUntilDeadline}, effective deadline: ${effectiveDeadlineDays} days`);
+      }
+
+      // Check if placement exists in placementStatuses first
+      const placementStatuses = order.placementStatuses || {};
+      const placementExistsInStatuses = placementId in placementStatuses;
+      
       console.log(`[RescindPlacement] Looking for placement: ${placementId}`);
-      console.log(`[RescindPlacement] Order has placementStatuses keys:`, Object.keys(order.placementStatuses || {}));
+      console.log(`[RescindPlacement] Order has placementStatuses keys:`, Object.keys(placementStatuses));
+      console.log(`[RescindPlacement] Placement exists in statuses: ${placementExistsInStatuses}`);
+
+      if (!placementExistsInStatuses) {
+        console.log(`[RescindPlacement] Placement not found in placementStatuses`);
+        return { success: false, error: 'Placement not found in order' };
+      }
+
+      // Find and remove the placement from selectedInventory (if it exists)
+      const selectedInventory = order.selectedInventory || { publications: [] };
+      let placementCost = 0;
 
       // Find the publication in selectedInventory
       const pubIndex = selectedInventory.publications?.findIndex(
@@ -1072,6 +1260,7 @@ export class InsertionOrderService {
             const channelType = placementId.includes('.print') ? 'print' :
                                placementId.includes('.website') ? 'website' :
                                placementId.includes('.newsletter') ? 'newsletter' :
+                               placementId.includes('.podcasts') ? 'podcasts' :
                                placementId.includes('.digital') ? 'digital' : null;
             
             if (channelType) {
@@ -1095,25 +1284,42 @@ export class InsertionOrderService {
         }
 
         if (itemIndex >= 0 && pub.inventoryItems) {
-          placementFound = true;
           const item = pub.inventoryItems[itemIndex];
-          placementCost = item.cost || item.price || item.itemPricing?.hubPrice || 0;
           
-          console.log(`[RescindPlacement] Found item to remove: ${item.itemName}, cost: ${placementCost}`);
+          // Calculate total cost with frequency (same logic as addPlacementToOrder)
+          const unitPrice = item.itemPricing?.hubPrice || item.cost || item.price || 0;
+          const frequency = item.currentFrequency || item.quantity || 1;
+          const pricingModel = item.itemPricing?.pricingModel || 'flat';
+          
+          if (['cpm', 'cpv', 'cpc'].includes(pricingModel) && item.monthlyImpressions) {
+            // CPM: (impressions * frequency% / 100 / 1000) * CPM rate
+            const purchasedImpressions = Math.round((item.monthlyImpressions * frequency) / 100);
+            placementCost = Math.round((purchasedImpressions / 1000) * unitPrice);
+          } else if (['flat', 'monthly'].includes(pricingModel)) {
+            // Flat/monthly: just the unit price
+            placementCost = unitPrice;
+          } else {
+            // Frequency-based (per_week, per_day, per_send, etc.): unit price * frequency
+            placementCost = unitPrice * frequency;
+          }
+          
+          // Use stored totalCost if available
+          placementCost = item.itemPricing?.totalCost || placementCost;
+          
+          console.log(`[RescindPlacement] Found item to remove: ${item.itemName}, unitPrice: ${unitPrice}, frequency: ${frequency}, totalCost: ${placementCost}`);
           
           // Remove the placement
           pub.inventoryItems.splice(itemIndex, 1);
           
-          // Update publication total
-          if (pub.publicationTotal) {
-            pub.publicationTotal -= placementCost;
+          // Update publication total (ensure it doesn't go negative)
+          if (typeof pub.publicationTotal === 'number') {
+            pub.publicationTotal = Math.max(0, pub.publicationTotal - placementCost);
           }
+        } else {
+          console.log(`[RescindPlacement] Item not found in selectedInventory, but exists in placementStatuses - proceeding with removal`);
         }
-      }
-
-      if (!placementFound) {
-        console.log(`[RescindPlacement] Placement not found in inventory items`);
-        return { success: false, error: 'Placement not found in order' };
+      } else {
+        console.log(`[RescindPlacement] No selectedInventory data for this publication, but placement exists in statuses - proceeding with removal`);
       }
 
       // Remove placement status
@@ -1151,17 +1357,503 @@ export class InsertionOrderService {
       }
 
       // Check if all placements have been removed - if so, soft delete the order
-      const remainingPlacements = selectedInventory.publications?.[0]?.inventoryItems?.length || 0;
+      // Use placementStatuses as the source of truth, not selectedInventory
+      const remainingPlacements = Object.keys(updatedPlacementStatuses).length;
       if (remainingPlacements === 0) {
+        console.log(`[RescindPlacement] All placements removed, soft-deleting order`);
         await this.ordersCollection.updateOne(
           { _id: order._id },
           { $set: { deletedAt: new Date() } }
         );
+      } else {
+        console.log(`[RescindPlacement] ${remainingPlacements} placements remaining in order`);
       }
+
+      // NOTE: We no longer sync to campaign.selectedInventory here.
+      // The campaign GET endpoint rebuilds selectedInventory from active orders,
+      // so orders are the single source of truth for inventory data.
 
       return { success: true, updatedOrder: result };
     } catch (error) {
       console.error('Error rescinding placement:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Add a placement to an existing publication order
+   * This allows hub admins to add individual placements to orders
+   * 
+   * Business Rules:
+   * - Cannot add to an order where ALL placements are delivered (order is complete)
+   * - Cannot add duplicate placements (same itemPath)
+   * - New placements start with status 'pending'
+   * - Automatically recalculates order totals
+   */
+  async addPlacementToOrder(
+    campaignId: string,
+    publicationId: number,
+    placement: {
+      channel: string;
+      itemPath: string;
+      itemName: string;
+      quantity?: number;
+      frequency?: string;
+      duration?: string;
+      sourceName?: string;
+      currentFrequency?: number;
+      format?: {
+        dimensions?: string | string[];
+        fileFormats?: string[];
+        maxFileSize?: string;
+        colorSpace?: string;
+        resolution?: string;
+      };
+      itemPricing?: {
+        standardPrice: number;
+        hubPrice: number;
+        pricingModel: string;
+        totalCost?: number;
+      };
+      audienceMetrics?: {
+        monthlyVisitors?: number;
+        subscribers?: number;
+        circulation?: number;
+        followers?: number;
+        listeners?: number;
+        [key: string]: any;
+      };
+      performanceMetrics?: {
+        impressionsPerMonth?: number;
+        audienceSize?: number;
+        guaranteed?: boolean;
+      };
+    }
+  ): Promise<{ success: boolean; error?: string; updatedOrder?: PublicationInsertionOrderDocument }> {
+    try {
+      // Get the order - search by both campaignId and campaignObjectId since the API may pass either
+      // First try to find an active order
+      let order = await this.ordersCollection.findOne({
+        $or: [
+          { campaignId, publicationId },
+          { campaignObjectId: campaignId, publicationId }
+        ],
+        deletedAt: { $exists: false }
+      });
+
+      // If no active order found, check if there's a soft-deleted order we can restore
+      if (!order) {
+        const deletedOrder = await this.ordersCollection.findOne({
+          $or: [
+            { campaignId, publicationId },
+            { campaignObjectId: campaignId, publicationId }
+          ],
+          deletedAt: { $exists: true }
+        });
+
+        if (deletedOrder) {
+          // Restore the soft-deleted order by removing deletedAt
+          console.log(`[AddPlacement] Restoring soft-deleted order for publication ${publicationId}`);
+          await this.ordersCollection.updateOne(
+            { _id: deletedOrder._id },
+            { 
+              $unset: { deletedAt: '' },
+              $set: { 
+                placementStatuses: {},
+                selectedInventory: { publications: [] },
+                orderTotal: 0,
+                updatedAt: new Date()
+              },
+              $push: {
+                statusHistory: {
+                  status: deletedOrder.status,
+                  changedAt: new Date(),
+                  changedBy: 'hub_admin',
+                  notes: 'Order restored when adding new placement'
+                }
+              }
+            }
+          );
+          // Re-fetch the restored order
+          order = await this.ordersCollection.findOne({ _id: deletedOrder._id });
+        }
+      }
+
+      if (!order) {
+        return { success: false, error: 'Order not found. Generate orders for this campaign first.' };
+      }
+
+      // Check if order is fully delivered (all placements delivered)
+      const placementStatuses = order.placementStatuses || {};
+      const allDelivered = Object.values(placementStatuses).length > 0 &&
+        Object.values(placementStatuses).every(s => s === 'delivered');
+      
+      if (allDelivered) {
+        return {
+          success: false,
+          error: 'Cannot add placements to a fully delivered order'
+        };
+      }
+
+      // Check for duplicate placement
+      const existingPlacements = Object.keys(placementStatuses);
+      if (existingPlacements.includes(placement.itemPath)) {
+        return {
+          success: false,
+          error: 'Placement already exists in this order'
+        };
+      }
+
+      // Initialize or get selectedInventory
+      const selectedInventory = order.selectedInventory || { publications: [] };
+      
+      // Find or create the publication entry
+      let pubIndex = selectedInventory.publications?.findIndex(
+        (p: any) => String(p.publicationId) === String(publicationId)
+      ) ?? -1;
+
+      if (pubIndex < 0) {
+        // Create new publication entry
+        selectedInventory.publications = selectedInventory.publications || [];
+        selectedInventory.publications.push({
+          publicationId,
+          publicationName: order.publicationName,
+          inventoryItems: [],
+          publicationTotal: 0
+        });
+        pubIndex = selectedInventory.publications.length - 1;
+      }
+
+      const pub = selectedInventory.publications[pubIndex];
+      pub.inventoryItems = pub.inventoryItems || [];
+
+      // Add the placement
+      // Calculate total cost: unit price * frequency (for frequency-based pricing)
+      const unitPrice = placement.itemPricing?.hubPrice || 0;
+      const frequency = placement.currentFrequency || placement.quantity || 1;
+      const pricingModel = placement.itemPricing?.pricingModel || 'flat';
+      
+      // For CPM pricing, frequency is a percentage (1-100), so calculate differently
+      let placementCost = 0;
+      if (['cpm', 'cpv', 'cpc'].includes(pricingModel) && (placement as any).monthlyImpressions) {
+        // CPM: (impressions * frequency% / 100 / 1000) * CPM rate
+        const monthlyImpressions = (placement as any).monthlyImpressions;
+        const purchasedImpressions = Math.round((monthlyImpressions * frequency) / 100);
+        placementCost = Math.round((purchasedImpressions / 1000) * unitPrice);
+      } else if (['flat', 'monthly'].includes(pricingModel)) {
+        // Flat/monthly: just the unit price
+        placementCost = unitPrice;
+      } else {
+        // Frequency-based (per_week, per_day, per_send, etc.): unit price * frequency
+        placementCost = unitPrice * frequency;
+      }
+      
+      // Use provided totalCost if available (already calculated by caller)
+      placementCost = placement.itemPricing?.totalCost || placementCost;
+      
+      pub.inventoryItems.push({
+        ...placement,
+        isExcluded: false
+      });
+
+      // Update publication total
+      pub.publicationTotal = (pub.publicationTotal || 0) + placementCost;
+
+      // Add to placement statuses (new placements start as pending)
+      const updatedPlacementStatuses = {
+        ...placementStatuses,
+        [placement.itemPath]: 'pending' as const
+      };
+
+      // Update order total
+      const newTotal = (order.orderTotal || 0) + placementCost;
+
+      // Add asset reference for the new placement
+      const assetReferences = order.assetReferences || [];
+      const specGroupId = `${placement.channel}::dim:${
+        Array.isArray(placement.format?.dimensions) 
+          ? placement.format.dimensions[0] 
+          : placement.format?.dimensions || 'default'
+      }`;
+      
+      assetReferences.push({
+        specGroupId,
+        placementId: placement.itemPath,
+        placementName: placement.itemName,
+        channel: placement.channel,
+        dimensions: Array.isArray(placement.format?.dimensions) 
+          ? placement.format.dimensions[0] 
+          : placement.format?.dimensions
+      });
+
+      // Update asset status
+      const totalPlacements = Object.keys(updatedPlacementStatuses).length;
+      const currentAssetsReady = order.assetStatus?.placementsWithAssets || 0;
+      const assetStatus = {
+        ...order.assetStatus,
+        totalPlacements,
+        placementsWithAssets: currentAssetsReady,
+        allAssetsReady: currentAssetsReady >= totalPlacements,
+        pendingUpload: currentAssetsReady < totalPlacements,
+        lastAssetUpdateAt: new Date()
+      };
+
+      // Update the order
+      const result = await this.ordersCollection.findOneAndUpdate(
+        { _id: order._id },
+        {
+          $set: {
+            selectedInventory,
+            placementStatuses: updatedPlacementStatuses,
+            assetReferences,
+            assetStatus,
+            orderTotal: newTotal,
+            updatedAt: new Date()
+          },
+          $push: {
+            statusHistory: {
+              status: order.status,
+              timestamp: new Date(),
+              changedBy: 'hub_admin',
+              notes: `Placement "${placement.itemName}" (${placement.itemPath}) was added by hub admin`
+            }
+          }
+        },
+        { returnDocument: 'after' }
+      );
+
+      if (!result) {
+        return { success: false, error: 'Failed to update order' };
+      }
+
+      // NOTE: We no longer sync to campaign.selectedInventory here.
+      // The campaign GET endpoint rebuilds selectedInventory from active orders,
+      // so orders are the single source of truth for inventory data.
+
+      console.log(`[AddPlacement] Successfully added placement "${placement.itemName}" to order. New total: ${newTotal}`);
+
+      return { success: true, updatedOrder: result };
+    } catch (error) {
+      console.error('Error adding placement to order:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Add a new publication with placements to a campaign
+   * Creates a new publication insertion order document
+   * 
+   * Use this when adding a publication that doesn't currently have an order in the campaign
+   */
+  async addPublicationToOrder(
+    campaignId: string,
+    publicationId: number,
+    publicationName: string,
+    placements: Array<{
+      channel: string;
+      itemPath: string;
+      itemName: string;
+      quantity?: number;
+      frequency?: string;
+      duration?: string;
+      sourceName?: string;
+      currentFrequency?: number;
+      format?: {
+        dimensions?: string | string[];
+        fileFormats?: string[];
+        maxFileSize?: string;
+        colorSpace?: string;
+        resolution?: string;
+      };
+      itemPricing?: {
+        standardPrice: number;
+        hubPrice: number;
+        pricingModel: string;
+        totalCost?: number;
+      };
+      audienceMetrics?: {
+        monthlyVisitors?: number;
+        subscribers?: number;
+        circulation?: number;
+        followers?: number;
+        listeners?: number;
+        [key: string]: any;
+      };
+      performanceMetrics?: {
+        impressionsPerMonth?: number;
+        audienceSize?: number;
+        guaranteed?: boolean;
+      };
+    }>,
+    userId: string
+  ): Promise<{ success: boolean; error?: string; newOrder?: PublicationInsertionOrderDocument }> {
+    try {
+      // Check if order already exists for this publication in this campaign
+      // Search by both campaignId and campaignObjectId since orders may use either
+      const existingOrder = await this.ordersCollection.findOne({
+        $or: [
+          { campaignId, publicationId },
+          { campaignObjectId: campaignId, publicationId }
+        ],
+        deletedAt: { $exists: false }
+      });
+
+      if (existingOrder) {
+        return {
+          success: false,
+          error: 'An order already exists for this publication in this campaign. Use addPlacementToOrder instead.'
+        };
+      }
+
+      // Get the campaign to get hubId and other info
+      let campaign: Campaign | null = null;
+      let campaignObjectId: string | undefined;
+      
+      try {
+        const objectId = new ObjectId(campaignId);
+        campaign = await this.campaignsCollection.findOne({ _id: objectId });
+        if (campaign) {
+          campaignObjectId = objectId.toString();
+        }
+      } catch {
+        campaign = await this.campaignsCollection.findOne({ campaignId });
+        if (campaign && campaign._id) {
+          campaignObjectId = campaign._id.toString();
+        }
+      }
+
+      if (!campaign) {
+        return { success: false, error: 'Campaign not found' };
+      }
+
+      // Determine if new orders should be draft or sent based on existing orders
+      // If other orders in the campaign are drafts, new ones should also be drafts
+      const existingCampaignOrders = await this.ordersCollection.find({
+        $or: [
+          { campaignId: campaign.campaignId },
+          { campaignObjectId: campaignObjectId }
+        ],
+        deletedAt: { $exists: false }
+      }).limit(1).toArray();
+      
+      const shouldBeDraft = existingCampaignOrders.length > 0 && existingCampaignOrders[0].status === 'draft';
+
+      // Validate placements
+      if (!placements || placements.length === 0) {
+        return { success: false, error: 'At least one placement is required' };
+      }
+
+      // Build placement statuses and asset references
+      const placementStatuses: Record<string, 'pending'> = {};
+      const assetReferences: OrderAssetReference[] = [];
+      let orderTotal = 0;
+
+      const inventoryItems = placements.map(placement => {
+        // Add to placement statuses
+        placementStatuses[placement.itemPath] = 'pending';
+
+        // Calculate cost
+        const placementCost = placement.itemPricing?.hubPrice || placement.itemPricing?.totalCost || 0;
+        orderTotal += placementCost;
+
+        // Build asset reference
+        const specGroupId = `${placement.channel}::dim:${
+          Array.isArray(placement.format?.dimensions) 
+            ? placement.format.dimensions[0] 
+            : placement.format?.dimensions || 'default'
+        }`;
+        
+        assetReferences.push({
+          specGroupId,
+          placementId: placement.itemPath,
+          placementName: placement.itemName,
+          channel: placement.channel,
+          dimensions: Array.isArray(placement.format?.dimensions) 
+            ? placement.format.dimensions[0] 
+            : placement.format?.dimensions
+        });
+
+        return {
+          ...placement,
+          isExcluded: false
+        };
+      });
+
+      // Create the new order document - match status with other campaign orders
+      const orderStatus = shouldBeDraft ? 'draft' : 'sent';
+      const now = new Date();
+      
+      const newOrder: PublicationInsertionOrderInsert = {
+        campaignId: campaign.campaignId,
+        campaignObjectId,
+        campaignName: campaign.basicInfo.name,
+        hubId: campaign.hubId,
+        publicationId,
+        publicationName,
+        generatedAt: now,
+        status: orderStatus,
+        sentAt: shouldBeDraft ? undefined : now,
+        selectedInventory: {
+          publications: [{
+            publicationId,
+            publicationName,
+            inventoryItems,
+            publicationTotal: orderTotal
+          }]
+        },
+        assetReferences,
+        assetStatus: {
+          totalPlacements: placements.length,
+          placementsWithAssets: 0,
+          allAssetsReady: false,
+          pendingUpload: true,
+          lastAssetUpdateAt: now,
+          lastChecked: now
+        },
+        placementStatuses,
+        placementStatusHistory: [],
+        statusHistory: [{
+          status: orderStatus,
+          timestamp: now,
+          changedBy: userId,
+          notes: shouldBeDraft 
+            ? `New publication order created in draft status with ${placements.length} placement(s)` 
+            : `New publication order created with ${placements.length} placement(s) by hub admin`
+        }],
+        orderTotal
+      };
+
+      // Insert the new order (now was already defined above)
+      const orderWithTimestamps = {
+        ...newOrder,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      const insertResult = await this.ordersCollection.insertOne(orderWithTimestamps as any);
+
+      if (!insertResult.insertedId) {
+        return { success: false, error: 'Failed to create order' };
+      }
+
+      // Fetch the created order
+      const createdOrder = await this.ordersCollection.findOne({ _id: insertResult.insertedId });
+
+      // NOTE: We no longer sync to campaign.selectedInventory here.
+      // The campaign GET endpoint rebuilds selectedInventory from active orders,
+      // so orders are the single source of truth for inventory data.
+
+      console.log(`[AddPublication] Successfully created new order for publication "${publicationName}" with ${placements.length} placement(s). Total: ${orderTotal}`);
+
+      return { success: true, newOrder: createdOrder || undefined };
+    } catch (error) {
+      console.error('Error adding publication to order:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

@@ -801,21 +801,17 @@ export class EarningsService {
     const estimatedByChannel: Record<string, number> = {};
     let estimatedTotal = 0;
     
-    // Get items from the campaign's selectedInventory.publications for this publication
-    // Structure: campaign.selectedInventory.publications[].inventoryItems (HubPackageInventoryItem[])
-    // Also has publications[].publicationTotal for the pre-calculated total
+    // Get items from order.selectedInventory (source of truth, not campaign.selectedInventory which may be stale)
+    // Structure: order.selectedInventory.publications[0].inventoryItems (HubPackageInventoryItem[])
     let items: any[] = [];
-    let pubInventory: any = null;
     
-    if (campaign?.selectedInventory?.publications) {
-      pubInventory = campaign.selectedInventory.publications.find(
-        (p: any) => p.publicationId === order.publicationId
-      );
-      if (pubInventory) {
-        items = pubInventory.inventoryItems || [];
-        // Use the pre-calculated publicationTotal for estimated earnings
-        estimatedTotal = pubInventory.publicationTotal || 0;
-      }
+    const orderPublication = order?.selectedInventory?.publications?.[0];
+    if (orderPublication) {
+      items = orderPublication.inventoryItems || [];
+      // Calculate total in real-time from inventory items (more reliable than stored total)
+      estimatedTotal = items.reduce((sum: number, item: any) => {
+        return sum + (item.itemPricing?.totalCost || item.itemPricing?.hubPrice || 0);
+      }, 0);
     }
     
     // Calculate channel breakdown from inventory items

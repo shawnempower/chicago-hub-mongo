@@ -282,9 +282,8 @@ export function HubOrderDetail() {
   }
 
   const campaign = order.campaignData;
-  const publication = campaign?.selectedInventory?.publications?.find(
-    (p: any) => p.publicationId === order.publicationId
-  );
+  // Use order.selectedInventory as source of truth (not campaign.selectedInventory which may be stale)
+  const publication = order?.selectedInventory?.publications?.[0];
 
   // Calculate placement stats
   const placementStats = {
@@ -503,11 +502,11 @@ export function HubOrderDetail() {
                     </div>
                   </>
                 )}
-                {publication?.publicationTotal && (
+                {publication?.inventoryItems && publication.inventoryItems.length > 0 && (
                   <div>
                     <p className="text-sm text-muted-foreground">Publication Total</p>
                     <p className="font-medium text-green-600">
-                      ${publication.publicationTotal.toLocaleString()}
+                      ${publication.inventoryItems.reduce((sum: number, item: any) => sum + (item.itemPricing?.totalCost || item.itemPricing?.hubPrice || 0), 0).toLocaleString()}
                     </p>
                   </div>
                 )}

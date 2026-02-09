@@ -268,12 +268,104 @@ export class CampaignsService {
           pricing: pricingValidation.isValid ? 'PASS' : 'WARN',
           reach: reachValidation.isValid ? 'PASS' : 'WARN'
         });
+
+        // Create draft orders for each publication (orders are the source of truth)
+        // These start in 'draft' status until the user sends them to publications
+        try {
+          await this.createDraftOrders(createdCampaign, userId);
+          console.log(`[Campaign ${campaignId}] Created draft orders for ${createdCampaign.selectedInventory.publications.length} publications`);
+        } catch (orderError) {
+          console.error(`[Campaign ${campaignId}] Failed to create draft orders:`, orderError);
+          // Don't fail campaign creation if order creation fails
+        }
       }
 
       return createdCampaign;
     } catch (error) {
       console.error('Error creating campaign:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Create draft orders for each publication in a campaign
+   * Orders start in 'draft' status and are only visible to the hub admin
+   * until they are sent to publications
+   */
+  private async createDraftOrders(campaign: Campaign, userId: string): Promise<void> {
+    const publications = campaign.selectedInventory?.publications || [];
+    if (publications.length === 0) return;
+
+    const ordersCollection = getDatabase().collection('publication_insertion_orders');
+    const campaignObjectId = campaign._id?.toString() || '';
+    const now = new Date();
+
+    const ordersToInsert = publications.map((pub: any) => {
+      // Initialize placement statuses
+      const placementStatuses: Record<string, 'pending'> = {};
+      pub.inventoryItems?.forEach((item: any) => {
+        const placementId = item.itemPath || item.sourcePath;
+        if (placementId) {
+          placementStatuses[placementId] = 'pending';
+        }
+      });
+
+      // Build asset references for placements
+      const assetReferences = (pub.inventoryItems || []).map((item: any) => ({
+        specGroupId: item.specGroupId || `${item.channel || 'general'}::dim:${item.format?.dimensions || 'default'}`,
+        placementId: item.itemPath || item.sourcePath,
+        placementName: item.itemName || item.sourceName,
+        channel: item.channel || 'general',
+        dimensions: item.format?.dimensions
+      }));
+
+      // Create selectedInventory for this order (source of truth)
+      const orderSelectedInventory = {
+        publications: [{
+          publicationId: pub.publicationId,
+          publicationName: pub.publicationName,
+          inventoryItems: pub.inventoryItems || [],
+          publicationTotal: pub.publicationTotal || 0
+        }],
+        total: pub.publicationTotal || 0
+      };
+
+      return {
+        campaignId: campaign.campaignId,
+        campaignObjectId,
+        campaignName: campaign.basicInfo?.name || '',
+        hubId: campaign.hubId,
+        publicationId: pub.publicationId,
+        publicationName: pub.publicationName,
+        generatedAt: now,
+        status: 'draft', // Start as draft - not yet sent to publication
+        selectedInventory: orderSelectedInventory,
+        orderTotal: pub.publicationTotal || 0,
+        assetReferences,
+        assetStatus: {
+          totalPlacements: pub.inventoryItems?.length || 0,
+          placementsWithAssets: 0,
+          allAssetsReady: false,
+          pendingUpload: true,
+          lastChecked: now
+        },
+        adSpecifications: [],
+        adSpecificationsProvided: false,
+        placementStatuses,
+        placementStatusHistory: [],
+        statusHistory: [{
+          status: 'draft',
+          timestamp: now,
+          changedBy: userId,
+          notes: 'Order created in draft status'
+        }],
+        createdAt: now,
+        updatedAt: now
+      };
+    });
+
+    if (ordersToInsert.length > 0) {
+      await ordersCollection.insertMany(ordersToInsert);
     }
   }
 
@@ -488,10 +580,173 @@ export class CampaignsService {
         { returnDocument: 'after' }
       );
 
+      // If selectedInventory was updated, sync changes to draft orders
+      // This ensures orders stay in sync when inventory is edited through the campaign builder
+      if (updates.selectedInventory && result) {
+        try {
+          await this.syncDraftOrdersFromInventory(result, userId);
+        } catch (syncError) {
+          console.error(`[Campaign ${id}] Failed to sync draft orders:`, syncError);
+          // Don't fail the update if order sync fails
+        }
+      }
+
       return result;
     } catch (error) {
       console.error('Error updating campaign:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Sync draft orders from campaign.selectedInventory
+   * This is called when selectedInventory is updated directly (e.g., through campaign builder)
+   * Only updates draft orders - sent orders are not modified
+   */
+  private async syncDraftOrdersFromInventory(campaign: Campaign, userId: string): Promise<void> {
+    const ordersCollection = getDatabase().collection('publication_insertion_orders');
+    const publications = campaign.selectedInventory?.publications || [];
+    const campaignObjectId = campaign._id?.toString() || '';
+    const campaignIdString = campaign.campaignId || '';
+    const now = new Date();
+
+    // Get existing draft orders for this campaign
+    const existingDraftOrders = await ordersCollection.find({
+      $or: [
+        { campaignObjectId },
+        { campaignId: campaignIdString }
+      ],
+      status: 'draft',
+      deletedAt: { $exists: false }
+    }).toArray();
+
+    const existingPubIds = new Set(existingDraftOrders.map((o: any) => o.publicationId));
+    const newPubIds = new Set(publications.map((p: any) => p.publicationId));
+
+    // Create orders for new publications
+    const ordersToInsert = [];
+    for (const pub of publications) {
+      if (!existingPubIds.has(pub.publicationId)) {
+        // Initialize placement statuses
+        const placementStatuses: Record<string, 'pending'> = {};
+        pub.inventoryItems?.forEach((item: any) => {
+          const placementId = item.itemPath || item.sourcePath;
+          if (placementId) {
+            placementStatuses[placementId] = 'pending';
+          }
+        });
+
+        const assetReferences = (pub.inventoryItems || []).map((item: any) => ({
+          specGroupId: item.specGroupId || `${item.channel || 'general'}::dim:${item.format?.dimensions || 'default'}`,
+          placementId: item.itemPath || item.sourcePath,
+          placementName: item.itemName || item.sourceName,
+          channel: item.channel || 'general',
+          dimensions: item.format?.dimensions
+        }));
+
+        const orderSelectedInventory = {
+          publications: [{
+            publicationId: pub.publicationId,
+            publicationName: pub.publicationName,
+            inventoryItems: pub.inventoryItems || [],
+            publicationTotal: pub.publicationTotal || 0
+          }],
+          total: pub.publicationTotal || 0
+        };
+
+        ordersToInsert.push({
+          campaignId: campaign.campaignId,
+          campaignObjectId,
+          campaignName: campaign.basicInfo?.name || '',
+          hubId: campaign.hubId,
+          publicationId: pub.publicationId,
+          publicationName: pub.publicationName,
+          generatedAt: now,
+          status: 'draft',
+          selectedInventory: orderSelectedInventory,
+          orderTotal: pub.publicationTotal || 0,
+          assetReferences,
+          assetStatus: {
+            totalPlacements: pub.inventoryItems?.length || 0,
+            placementsWithAssets: 0,
+            allAssetsReady: false,
+            pendingUpload: true,
+            lastChecked: now
+          },
+          adSpecifications: [],
+          adSpecificationsProvided: false,
+          placementStatuses,
+          placementStatusHistory: [],
+          statusHistory: [{
+            status: 'draft',
+            timestamp: now,
+            changedBy: userId,
+            notes: 'Order created from campaign inventory update'
+          }],
+          createdAt: now,
+          updatedAt: now
+        });
+      }
+    }
+
+    if (ordersToInsert.length > 0) {
+      await ordersCollection.insertMany(ordersToInsert);
+      console.log(`[Campaign ${campaign.campaignId}] Created ${ordersToInsert.length} new draft orders`);
+    }
+
+    // Update existing draft orders with new inventory
+    for (const order of existingDraftOrders) {
+      const pub = publications.find((p: any) => p.publicationId === order.publicationId);
+      if (pub) {
+        // Update the order's selectedInventory
+        const placementStatuses: Record<string, string> = { ...order.placementStatuses };
+        pub.inventoryItems?.forEach((item: any) => {
+          const placementId = item.itemPath || item.sourcePath;
+          if (placementId && !placementStatuses[placementId]) {
+            placementStatuses[placementId] = 'pending';
+          }
+        });
+
+        await ordersCollection.updateOne(
+          { _id: order._id },
+          {
+            $set: {
+              selectedInventory: {
+                publications: [{
+                  publicationId: pub.publicationId,
+                  publicationName: pub.publicationName,
+                  inventoryItems: pub.inventoryItems || [],
+                  publicationTotal: pub.publicationTotal || 0
+                }],
+                total: pub.publicationTotal || 0
+              },
+              orderTotal: pub.publicationTotal || 0,
+              placementStatuses,
+              updatedAt: now
+            }
+          }
+        );
+      } else if (!newPubIds.has(order.publicationId)) {
+        // Publication was removed - soft delete the draft order
+        await ordersCollection.updateOne(
+          { _id: order._id },
+          {
+            $set: {
+              deletedAt: now,
+              updatedAt: now
+            },
+            $push: {
+              statusHistory: {
+                status: 'deleted',
+                timestamp: now,
+                changedBy: userId,
+                notes: 'Publication removed from campaign inventory'
+              }
+            }
+          }
+        );
+        console.log(`[Campaign ${campaign.campaignId}] Soft-deleted draft order for removed publication ${order.publicationId}`);
+      }
     }
   }
 
@@ -588,7 +843,7 @@ export class CampaignsService {
   }
 
   /**
-   * Soft delete a campaign
+   * Soft delete a campaign and its associated orders
    */
   async delete(id: string, userId: string): Promise<boolean> {
     try {
@@ -599,16 +854,55 @@ export class CampaignsService {
         return false;
       }
 
+      // Get campaign first to get campaignId
+      const campaign = await this.collection.findOne({ _id: objectId });
+      if (!campaign) {
+        return false;
+      }
+
+      const now = new Date();
+
+      // Soft delete the campaign
       const result = await this.collection.updateOne(
         { _id: objectId, deletedAt: { $exists: false } },
         {
           $set: {
-            deletedAt: new Date(),
+            deletedAt: now,
             deletedBy: userId,
-            'metadata.updatedAt': new Date()
+            'metadata.updatedAt': now
           }
         }
       );
+
+      // Also soft delete associated orders (cascade delete)
+      if (result.modifiedCount > 0) {
+        const ordersCollection = getDatabase().collection('publication_insertion_orders');
+        await ordersCollection.updateMany(
+          {
+            $or: [
+              { campaignId: campaign.campaignId },
+              { campaignObjectId: id }
+            ],
+            deletedAt: { $exists: false }
+          },
+          {
+            $set: {
+              deletedAt: now,
+              deletedBy: userId,
+              updatedAt: now
+            },
+            $push: {
+              statusHistory: {
+                status: 'deleted',
+                timestamp: now,
+                changedBy: userId,
+                notes: 'Campaign deleted'
+              }
+            }
+          }
+        );
+        console.log(`[Campaign ${campaign.campaignId}] Soft-deleted campaign and cascaded to orders`);
+      }
 
       return result.modifiedCount > 0;
     } catch (error) {

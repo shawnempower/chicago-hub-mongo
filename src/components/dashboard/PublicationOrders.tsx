@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { OrderStatusBadge, OrderStatus } from '../orders/OrderStatusBadge';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Eye, X } from 'lucide-react';
 import { usePublication } from '@/contexts/PublicationContext';
+import { useAuth } from '@/contexts/CustomAuthContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/config/api';
@@ -31,6 +32,7 @@ type SortKey = 'campaignName' | 'generatedAt' | 'status';
 
 export function PublicationOrders() {
   const { selectedPublication } = usePublication();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<InsertionOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,13 +43,22 @@ export function PublicationOrders() {
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
   const [showActivityLog, setShowActivityLog] = useState(false);
 
-  const statusOptions = [
-    { value: 'draft', label: 'Draft' },
-    { value: 'sent', label: 'Sent' },
-    { value: 'confirmed', label: 'Confirmed' },
-    { value: 'in_production', label: 'In Production' },
-    { value: 'delivered', label: 'Delivered' },
-  ] as const;
+  const isAdmin = user?.isAdmin || user?.role === 'admin';
+
+  // Status options - only admins see 'draft' since publications can't see draft orders
+  const statusOptions = useMemo(() => {
+    const options = [
+      { value: 'sent', label: 'Sent' },
+      { value: 'confirmed', label: 'Confirmed' },
+      { value: 'in_production', label: 'In Production' },
+      { value: 'delivered', label: 'Delivered' },
+    ];
+    
+    if (isAdmin) {
+      return [{ value: 'draft', label: 'Draft' }, ...options];
+    }
+    return options;
+  }, [isAdmin]);
 
   // Fetch orders when publication changes
   useEffect(() => {

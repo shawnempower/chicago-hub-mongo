@@ -89,6 +89,7 @@ export function HubOrdersManagement() {
   const [rescindTarget, setRescindTarget] = useState<{ campaignId: string; publicationId: number; publicationName: string; campaignName: string } | null>(null);
 
   const issueOptions = [
+    { value: 'draft', label: 'Draft Orders (Not Sent)' },
     { value: 'unread_messages', label: 'Unread Messages' },
     { value: 'rejected', label: 'Has Rejections' },
     { value: 'pending', label: 'Has Pending' },
@@ -211,6 +212,11 @@ export function HubOrdersManagement() {
   const getOrderIssues = (order: InsertionOrder) => {
     const issues: string[] = [];
     const statuses = Object.values(order.placementStatuses || {});
+    
+    // Check for draft orders (not sent yet)
+    if (order.status === 'draft') {
+      issues.push('draft');
+    }
     
     // Check for unread messages (messages from publications)
     if (order.hasUnreadMessages) {
@@ -674,10 +680,13 @@ export function HubOrdersManagement() {
                   const placementCounts = getPlacementStatusCounts(order);
                   const issues = getOrderIssues(order);
                   
+                  const isDraft = order.status === 'draft';
+                  
                   return (
                     <TableRow
                       key={`${order.campaignId}-${order.publicationId}`}
                       className={`cursor-pointer hover:bg-muted/50 transition-colors ${
+                        isDraft ? 'bg-gray-50/70 hover:bg-gray-100/70 opacity-75' :
                         order.hasUnreadMessages ? 'bg-blue-50/40 hover:bg-blue-50/60' : ''
                       }`}
                       onClick={() => navigate(`/hubcentral?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`)}

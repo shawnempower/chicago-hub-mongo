@@ -186,16 +186,14 @@ export class PlacementCompletionService {
         return { completed: false, reason: `Placement status is ${currentStatus}, must be accepted or in_production` };
       }
 
-      // Find the publication and placement in the campaign
-      const publication = campaign.selectedInventory?.publications?.find(
-        (p: any) => p.publicationId === order.publicationId
-      );
-      const placement = publication?.inventoryItems?.find(
+      // Find the placement from order.selectedInventory (source of truth)
+      const orderPublication = order?.selectedInventory?.publications?.[0];
+      const placement = orderPublication?.inventoryItems?.find(
         (item: any) => (item.itemPath || item.sourcePath) === placementId
       );
 
       if (!placement) {
-        return { completed: false, reason: 'Placement not found in campaign' };
+        return { completed: false, reason: 'Placement not found in order' };
       }
 
       // Determine completion based on channel type
@@ -529,22 +527,15 @@ export class PlacementCompletionService {
       }
 
       // Get campaign for placement details
-      const campaign = await this.campaignsCollection.findOne({ campaignId: order.campaignId });
-      if (!campaign) {
-        return { checked: 0, completed: 0, results: {} };
-      }
+      // Use order.selectedInventory as source of truth
+      const orderPublication = order?.selectedInventory?.publications?.[0];
 
-      // Find the publication
-      const publication = campaign.selectedInventory?.publications?.find(
-        (p: any) => p.publicationId === order.publicationId
-      );
-
-      if (!publication?.inventoryItems) {
+      if (!orderPublication?.inventoryItems) {
         return { checked: 0, completed: 0, results: {} };
       }
 
       // Check each placement
-      for (const item of publication.inventoryItems) {
+      for (const item of orderPublication.inventoryItems) {
         if (item.isExcluded) continue;
 
         const placementId = item.itemPath || item.sourcePath;
@@ -603,17 +594,15 @@ export class PlacementCompletionService {
         return { checked: 0, completed: 0 };
       }
 
-      // Find the publication
-      const publication = campaign.selectedInventory?.publications?.find(
-        (p: any) => p.publicationId === order.publicationId
-      );
+      // Use order.selectedInventory as source of truth
+      const orderPublication = order?.selectedInventory?.publications?.[0];
 
-      if (!publication?.inventoryItems) {
+      if (!orderPublication?.inventoryItems) {
         return { checked: 0, completed: 0 };
       }
 
       // Check only digital placements that are in_production
-      for (const item of publication.inventoryItems) {
+      for (const item of orderPublication.inventoryItems) {
         if (item.isExcluded) continue;
 
         const channel = (item.channel || 'other').toLowerCase();

@@ -136,6 +136,66 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       latestDate: null,
     };
     
+    // Filter selectedInventory by active orders to get accurate goals
+    // This ensures rescinded/rejected placements don't count toward delivery goals
+    try {
+      const campaignObjectId = campaign._id?.toString() || '';
+      const campaignIdString = campaign.campaignId || '';
+      
+      // Only include sent orders (not drafts) for reporting/delivery progress
+      // Draft orders haven't been sent to publications yet
+      const activeOrders = await db.collection('publication_insertion_orders').find({
+        $or: [
+          { campaignObjectId: campaignObjectId },
+          { campaignId: campaignIdString }
+        ],
+        deletedAt: { $exists: false },
+        status: { $ne: 'draft' } // Exclude draft orders from reporting
+      }).toArray();
+      
+      if (activeOrders.length > 0) {
+        const validStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
+        const filteredPublications: any[] = [];
+        
+        for (const order of activeOrders) {
+          const pubId = order.publicationId;
+          const placementStatuses = order.placementStatuses || {};
+          
+          const validPlacements = new Set<string>();
+          for (const [placementPath, status] of Object.entries(placementStatuses)) {
+            if (validStatuses.includes(status as string)) {
+              validPlacements.add(placementPath);
+            }
+          }
+          
+          if (validPlacements.size === 0) continue;
+          
+          // Use order.selectedInventory as single source of truth
+          const pubData = order.selectedInventory?.publications?.[0];
+          if (!pubData) continue;
+          
+          const filteredItems = (pubData.inventoryItems || []).filter((item: any) => {
+            return validPlacements.has(item.itemPath || '') || 
+                   validPlacements.has(item.sourcePath || '');
+          });
+          
+          if (filteredItems.length > 0) {
+            filteredPublications.push({
+              ...pubData,
+              inventoryItems: filteredItems
+            });
+          }
+        }
+        
+        campaign.selectedInventory = {
+          ...campaign.selectedInventory,
+          publications: filteredPublications
+        };
+      }
+    } catch (filterError) {
+      console.error('Error filtering selectedInventory for reporting:', filterError);
+    }
+    
     // Calculate delivery progress by channel from selectedInventory
     const digitalChannels = ['website', 'newsletter', 'streaming'];
     const deliveryProgress: Record<string, {

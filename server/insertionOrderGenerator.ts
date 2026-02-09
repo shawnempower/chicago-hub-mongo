@@ -68,9 +68,10 @@ class InsertionOrderGenerator {
       modified = true;
     }
 
-    // Ensure reach calculations exist
-    if (!campaign.estimatedPerformance?.reach && campaign.selectedInventory?.publications) {
-      console.log('Calculating missing campaign reach');
+    // Always recalculate reach from current selectedInventory
+    // This ensures accuracy when placements/publications have been added or removed
+    if (campaign.selectedInventory?.publications) {
+      console.log('Calculating campaign reach from current inventory');
       const reachSummary = calculatePackageReach(campaign.selectedInventory.publications);
       if (!campaign.estimatedPerformance) {
         campaign.estimatedPerformance = {} as any;
@@ -134,9 +135,138 @@ class InsertionOrderGenerator {
   }
 
   /**
+   * Filter campaign's selectedInventory to only include publications with active orders
+   * This ensures the agreement only shows placements that haven't been rescinded
+   */
+  private async filterByActiveOrders(campaign: Campaign): Promise<Campaign> {
+    try {
+      const { MongoClient, ObjectId } = await import('mongodb');
+      const mongoUrl = process.env.MONGODB_URI || 'mongodb+srv://shawn:ig8kVxMOy6e98YmP@cluster0.1shq5cl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+      const dbName = process.env.MONGODB_DB || 'staging-chicago-hub';
+      
+      const client = new MongoClient(mongoUrl);
+      await client.connect();
+      const db = client.db(dbName);
+      
+      // Get campaign ID (could be ObjectId or campaignId string)
+      const campaignObjectId = campaign._id?.toString() || '';
+      const campaignIdString = campaign.campaignId || '';
+      
+      // Fetch active orders for this campaign
+      const activeOrders = await db.collection('publication_insertion_orders').find({
+        $or: [
+          { campaignObjectId: campaignObjectId },
+          { campaignId: campaignIdString }
+        ],
+        deletedAt: { $exists: false }
+      }).toArray();
+      
+      await client.close();
+      
+      if (activeOrders.length === 0) {
+        console.log('[InsertionOrderGenerator] No active orders found, returning empty inventory');
+        campaign.selectedInventory = { publications: [], total: 0 };
+        return campaign;
+      }
+      
+      // Build a map of active publication IDs and their non-rejected placement paths
+      // Only include placements that are likely to be filled (pending, accepted, in_production, delivered)
+      const validStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
+      const activeOrdersMap = new Map<number, Set<string>>();
+      
+      for (const order of activeOrders) {
+        const pubId = order.publicationId;
+        const placementStatuses = order.placementStatuses || {};
+        
+        // Only include placements with valid statuses (not rejected)
+        const validPlacements = new Set<string>();
+        for (const [placementPath, status] of Object.entries(placementStatuses)) {
+          if (validStatuses.includes(status as string)) {
+            validPlacements.add(placementPath);
+          }
+        }
+        
+        // Only add publication if it has at least one valid placement
+        if (validPlacements.size > 0) {
+          activeOrdersMap.set(pubId, validPlacements);
+        }
+      }
+      
+      // Build filtered publications from active orders
+      // Use order's selectedInventory data if campaign's selectedInventory doesn't have the publication
+      const { calculateItemCost } = require('../src/utils/inventoryPricing');
+      const filteredPublications: any[] = [];
+      
+      for (const order of activeOrders) {
+        const pubId = order.publicationId;
+        const activePlacements = activeOrdersMap.get(pubId);
+        
+        // Skip if no valid placements for this publication
+        if (!activePlacements || activePlacements.size === 0) {
+          continue;
+        }
+        
+        // Use order.selectedInventory as single source of truth
+        const pubData = order.selectedInventory?.publications?.[0] || {
+          publicationId: pubId,
+          publicationName: order.publicationName,
+          inventoryItems: [],
+          publicationTotal: 0
+        };
+        
+        // Filter inventory items to only those with active/valid placements
+        const filteredItems = (pubData.inventoryItems || []).filter((item: any) => {
+          // Match by itemPath or sourcePath
+          return activePlacements.has(item.itemPath || '') || 
+                 activePlacements.has(item.sourcePath || '');
+        });
+        
+        // Skip if no matching items
+        if (filteredItems.length === 0) {
+          console.log(`[InsertionOrderGenerator] No matching items for ${order.publicationName}, active placements:`, Array.from(activePlacements));
+          continue;
+        }
+        
+        // Recalculate publication total
+        let pubTotal = 0;
+        for (const item of filteredItems) {
+          const freq = item.currentFrequency || item.quantity || 1;
+          pubTotal += calculateItemCost(item, freq, 1);
+        }
+        
+        filteredPublications.push({
+          ...pubData,
+          inventoryItems: filteredItems,
+          publicationTotal: pubTotal
+        });
+      }
+      
+      // Recalculate total
+      const newTotal = filteredPublications.reduce((sum, pub) => sum + (pub.publicationTotal || 0), 0);
+      
+      campaign.selectedInventory = {
+        ...campaign.selectedInventory,
+        publications: filteredPublications,
+        total: newTotal
+      };
+      
+      console.log(`[InsertionOrderGenerator] Filtered to ${filteredPublications.length} publications with active orders`);
+      
+      return campaign;
+    } catch (error) {
+      console.error('[InsertionOrderGenerator] Error filtering by active orders:', error);
+      // Return campaign as-is if filtering fails
+      return campaign;
+    }
+  }
+
+  /**
    * Generate HTML Insertion Order (Advertiser Agreement)
    */
   async generateHTMLInsertionOrder(campaign: Campaign, hub?: Hub | null): Promise<string> {
+    // Filter to only include publications/placements with active orders
+    campaign = await this.filterByActiveOrders(campaign);
+    
     // PHASE 5: Ensure pre-calculated values exist (calculate if missing)
     campaign = await this.ensureCampaignCalculations(campaign);
     
@@ -464,20 +594,34 @@ class InsertionOrderGenerator {
         ` : ''}
 
         <!-- Estimated Performance -->
-        ${(campaign.performance || campaign.estimatedPerformance) ? `
+        ${(campaign.performance || campaign.estimatedPerformance) ? (() => {
+            const reachMin = campaign.performance?.estimatedReach?.minReach || campaign.estimatedPerformance?.reach?.min || 0;
+            const reachMax = campaign.performance?.estimatedReach?.maxReach || campaign.estimatedPerformance?.reach?.max || 0;
+            const impressionsMin = campaign.performance?.estimatedImpressions?.minImpressions || campaign.estimatedPerformance?.impressions?.min || 0;
+            const impressionsMax = campaign.performance?.estimatedImpressions?.maxImpressions || campaign.estimatedPerformance?.impressions?.max || 0;
+            
+            // Format as range only if min !== max, otherwise show single value with "+"
+            const reachDisplay = reachMin === reachMax 
+                ? `${reachMin.toLocaleString()}+`
+                : `${reachMin.toLocaleString()} - ${reachMax.toLocaleString()}`;
+            const impressionsDisplay = impressionsMin === impressionsMax
+                ? `${Math.round(impressionsMin).toLocaleString()}+`
+                : `${Math.round(impressionsMin).toLocaleString()} - ${Math.round(impressionsMax).toLocaleString()}`;
+            
+            return `
         <div class="section">
             <h2>Estimated Performance</h2>
             <div class="performance-grid">
                 ${(campaign.performance?.estimatedReach || campaign.estimatedPerformance?.reach) ? `
                 <div class="performance-card">
                     <div class="performance-label">Estimated Reach</div>
-                    <div class="performance-value">${(campaign.performance?.estimatedReach?.minReach || campaign.estimatedPerformance?.reach?.min || 0).toLocaleString()} - ${(campaign.performance?.estimatedReach?.maxReach || campaign.estimatedPerformance?.reach?.max || 0).toLocaleString()}</div>
+                    <div class="performance-value">${reachDisplay}</div>
                 </div>
                 ` : ''}
                 ${(campaign.performance?.estimatedImpressions || campaign.estimatedPerformance?.impressions) ? `
                 <div class="performance-card">
                     <div class="performance-label">Estimated Impressions</div>
-                    <div class="performance-value">${(campaign.performance?.estimatedImpressions?.minImpressions || campaign.estimatedPerformance?.impressions?.min || 0).toLocaleString()} - ${(campaign.performance?.estimatedImpressions?.maxImpressions || campaign.estimatedPerformance?.impressions?.max || 0).toLocaleString()}</div>
+                    <div class="performance-value">${impressionsDisplay}</div>
                 </div>
                 ` : ''}
                 ${(campaign.performance?.costPerThousand || campaign.estimatedPerformance?.cpm) ? `
@@ -488,7 +632,8 @@ class InsertionOrderGenerator {
                 ` : ''}
             </div>
         </div>
-        ` : ''}
+        `;
+        })() : ''}
 
         <!-- Schedule of Advertising Placements -->
         <div class="section">
@@ -750,8 +895,26 @@ class InsertionOrderGenerator {
    * Generate Markdown Insertion Order
    */
   async generateMarkdownInsertionOrder(campaign: Campaign): Promise<string> {
+    // Filter to only include publications/placements with active orders
+    campaign = await this.filterByActiveOrders(campaign);
+    
     // PHASE 5: Ensure pre-calculated values exist (calculate if missing)
     campaign = await this.ensureCampaignCalculations(campaign);
+    
+    // Pre-calculate reach and impressions display values
+    const reachMin = campaign.performance?.estimatedReach?.minReach || campaign.estimatedPerformance?.reach?.min || 0;
+    const reachMax = campaign.performance?.estimatedReach?.maxReach || campaign.estimatedPerformance?.reach?.max || 0;
+    const impressionsMin = campaign.performance?.estimatedImpressions?.minImpressions || campaign.estimatedPerformance?.impressions?.min || 0;
+    const impressionsMax = campaign.performance?.estimatedImpressions?.maxImpressions || campaign.estimatedPerformance?.impressions?.max || 0;
+    
+    // Format as range only if min !== max, otherwise show single value with "+"
+    const reachDisplay = reachMin === reachMax 
+        ? `${reachMin.toLocaleString()}+`
+        : `${reachMin.toLocaleString()} - ${reachMax.toLocaleString()}`;
+    const impressionsDisplay = impressionsMin === impressionsMax
+        ? `${Math.round(impressionsMin).toLocaleString()}+`
+        : `${Math.round(impressionsMin).toLocaleString()} - ${Math.round(impressionsMax).toLocaleString()}`;
+    
     const markdown = `# Media Insertion Order
 
 **Campaign ID:** ${campaign.campaignId}  
@@ -782,8 +945,8 @@ ${campaign.basicInfo.description ? `\n## Campaign Description\n\n${campaign.basi
 
 | Metric | Value |
 |--------|-------|
-${(campaign.performance?.estimatedReach || campaign.estimatedPerformance?.reach) ? `| **Estimated Reach** | ${(campaign.performance?.estimatedReach?.minReach || campaign.estimatedPerformance?.reach?.min || 0).toLocaleString()} - ${(campaign.performance?.estimatedReach?.maxReach || campaign.estimatedPerformance?.reach?.max || 0).toLocaleString()} |\n` : ''}
-${(campaign.performance?.estimatedImpressions || campaign.estimatedPerformance?.impressions) ? `| **Estimated Impressions** | ${(campaign.performance?.estimatedImpressions?.minImpressions || campaign.estimatedPerformance?.impressions?.min || 0).toLocaleString()} - ${(campaign.performance?.estimatedImpressions?.maxImpressions || campaign.estimatedPerformance?.impressions?.max || 0).toLocaleString()} |\n` : ''}
+${(campaign.performance?.estimatedReach || campaign.estimatedPerformance?.reach) ? `| **Estimated Reach** | ${reachDisplay} |\n` : ''}
+${(campaign.performance?.estimatedImpressions || campaign.estimatedPerformance?.impressions) ? `| **Estimated Impressions** | ${impressionsDisplay} |\n` : ''}
 ${(campaign.performance?.costPerThousand || campaign.estimatedPerformance?.cpm) ? `| **Cost Per Thousand (CPM)** | ${this.formatCurrency(campaign.performance?.costPerThousand || campaign.estimatedPerformance?.cpm || 0)} |\n` : ''}
 
 ---

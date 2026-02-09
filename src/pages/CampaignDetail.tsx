@@ -4,7 +4,7 @@
  * Displays full campaign details with insertion order viewer
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Header } from '@/components/Header';
@@ -49,7 +49,8 @@ import {
   Pause,
   Copy,
   Check,
-  Pencil
+  Pencil,
+  Send
 } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
@@ -64,6 +65,8 @@ import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 import { CampaignPerformanceDashboard } from '@/components/admin/CampaignPerformanceDashboard';
 import { CampaignEditDialog } from '@/components/campaign/CampaignEditDialog';
+import { AddPlacementModal } from '@/components/campaign/AddPlacementModal';
+import { Plus } from 'lucide-react';
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-800 border border-gray-300 hover:bg-gray-100',
@@ -105,7 +108,7 @@ export default function CampaignDetail() {
   const [publicationOrders, setPublicationOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [showActivityLog, setShowActivityLog] = useState(false);
-  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
+  const [showAddPlacementModal, setShowAddPlacementModal] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   
@@ -136,6 +139,50 @@ export default function CampaignDetail() {
     placementId: string;
     placementName: string;
   } | null>(null);
+  
+  // Derive publications data from orders (orders are the single source of truth)
+  const publicationsFromOrders = useMemo(() => {
+    if (!publicationOrders || !Array.isArray(publicationOrders)) {
+      return [];
+    }
+    // Only use orders that are not deleted
+    return publicationOrders
+      .filter((order: any) => order && !order.deletedAt)
+      .map((order: any) => {
+        const inventoryItems = order.selectedInventory?.publications?.[0]?.inventoryItems || [];
+        
+        // Calculate total in real-time from inventory items (more reliable than stored total)
+        const calculatedTotal = inventoryItems.reduce((sum: number, item: any) => {
+          return sum + (item.itemPricing?.totalCost || item.itemPricing?.hubPrice || 0);
+        }, 0);
+        
+        return {
+          publicationId: order.publicationId,
+          publicationName: order.publicationName || 'Unknown Publication',
+          inventoryItems,
+          publicationTotal: calculatedTotal,
+          placementStatuses: order.placementStatuses || {},
+          orderStatus: order.status
+        };
+      });
+  }, [publicationOrders]);
+
+  // Compute total placements and investment from orders
+  const ordersSummary = useMemo(() => {
+    const totalPlacements = publicationsFromOrders.reduce(
+      (sum, pub) => sum + (pub.inventoryItems?.length || 0), 
+      0
+    );
+    const totalInvestment = publicationsFromOrders.reduce(
+      (sum, pub) => sum + (pub.publicationTotal || 0), 
+      0
+    );
+    return {
+      totalPlacements,
+      totalPublications: publicationsFromOrders.length,
+      totalInvestment
+    };
+  }, [publicationsFromOrders]);
   
   // Read tab from URL query params (e.g., ?tab=orders maps to insertion-order)
   const tabFromUrl = searchParams.get('tab');
@@ -202,26 +249,26 @@ export default function CampaignDetail() {
     }
   };
 
-  const handleRegenerateOrders = async () => {
-    if (!id || !campaign?.campaignId) return;
+  // Refresh publication orders (used after adding placements)
+  const refreshPublicationOrders = async () => {
+    if (!campaign?.campaignId) return;
     
     try {
       const token = localStorage.getItem('auth_token');
-      // Delete existing orders first
-      await fetch(`${API_BASE_URL}/admin/orders/${id}/publication-orders`, {
-        method: 'DELETE',
+      // Try both campaignId and _id to ensure we find all orders
+      const queryId = campaign.campaignId || campaign._id?.toString() || id;
+      
+      const response = await fetch(`${API_BASE_URL}/admin/orders?campaignId=${queryId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      // Then regenerate
-      await handleGeneratePublicationOrders();
-      setShowRegenerateDialog(false);
+      if (response.ok) {
+        const data = await response.json();
+        setPublicationOrders(data.orders || []);
+      }
+      // Also refetch campaign data
+      refetch();
     } catch (error) {
-      console.error('Error regenerating publication orders:', error);
-      toast({
-        title: 'Regeneration Failed',
-        description: 'Failed to regenerate publication orders. Please try again.',
-        variant: 'destructive',
-      });
+      console.error('Error refreshing publication orders:', error);
     }
   };
 
@@ -250,6 +297,9 @@ export default function CampaignDetail() {
         description: `Publication order for ${rescindTarget.publicationName} has been rescinded.`,
       });
       setRescindTarget(null);
+      
+      // Refetch to ensure everything is in sync
+      refetch();
     } catch (error) {
       console.error('Error rescinding order:', error);
       toast({
@@ -687,7 +737,12 @@ export default function CampaignDetail() {
                       <DollarSign className="h-4 w-4 text-gray-400" />
                       <p className="text-sm text-muted-foreground font-sans">Investment</p>
                     </div>
-                    <p className="text-lg font-bold font-sans">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</p>
+                    <p className="text-lg font-bold font-sans">${(campaign.investmentSummary?.projected || campaign.pricing?.total || campaign.pricing?.finalPrice || 0).toLocaleString()}</p>
+                    {campaign.investmentSummary && (
+                      <p className="text-xs text-green-600 font-sans">
+                        ${campaign.investmentSummary.confirmed.toLocaleString()} confirmed
+                      </p>
+                    )}
                   </div>
 
                   <div className="p-3 bg-white border border-gray-200 rounded-lg">
@@ -703,7 +758,12 @@ export default function CampaignDetail() {
                       <Package className="h-4 w-4 text-gray-400" />
                       <p className="text-sm text-muted-foreground font-sans">Placements</p>
                     </div>
-                    <p className="text-lg font-bold font-sans">{campaign.selectedInventory?.totalInventoryItems || 0}</p>
+                    <p className="text-lg font-bold font-sans">{campaign.investmentSummary?.projectedPlacements || campaign.selectedInventory?.totalInventoryItems || 0}</p>
+                    {campaign.investmentSummary && (
+                      <p className="text-xs text-green-600 font-sans">
+                        {campaign.investmentSummary.confirmedPlacements} confirmed
+                      </p>
+                    )}
                   </div>
 
                   <div className="p-3 bg-white border border-gray-200 rounded-lg">
@@ -881,137 +941,176 @@ export default function CampaignDetail() {
 
             {/* Insertion Order Tab */}
             <TabsContent value="insertion-order" className="mt-0">
-              {/* Publication Orders Alert */}
-              {publicationOrders.length === 0 ? (
-                <Card className="mb-6 border-amber-200 bg-amber-50">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <AlertTriangle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-1" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold font-sans text-amber-900 mb-2">Publication Orders Not Generated</h3>
-                        <p className="text-sm text-amber-800 mb-4">
-                          Publication insertion orders create individual order records for each publication in this campaign. 
-                          Once generated, these orders will be visible to publications in their dashboard where they can review, 
-                          confirm, and provide ad specifications.
-                        </p>
-                        <Button 
-                          onClick={handleGeneratePublicationOrders} 
-                          disabled={generatingOrders}
-                          variant="default"
-                        >
-                          {generatingOrders ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating Publication Orders...
-                            </>
-                          ) : (
-                            <>
-                              <Package className="mr-2 h-4 w-4" />
-                              Generate Publication Orders ({campaign.selectedInventory?.publications?.length || 0} publications)
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="mb-6 border-green-200 bg-green-50">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold font-sans text-green-900 mb-1">Publication Orders Generated</h3>
-                        <p className="text-sm text-green-800 mb-3">
-                          {publicationOrders.length} publication orders have been created and are visible to publications.
-                        </p>
-                        
-                        {/* Placement Status Summary */}
-                        {(() => {
-                          let totalPlacements = 0;
-                          let acceptedCount = 0;
-                          let inProductionCount = 0;
-                          let deliveredCount = 0;
-                          let rejectedCount = 0;
-                          
-                          publicationOrders.forEach((order: any) => {
-                            const statuses = order.placementStatuses || {};
-                            const pub = campaign.selectedInventory?.publications?.find((p: any) => p.publicationId === order.publicationId);
-                            const placementCount = pub?.inventoryItems?.length || 0;
-                            totalPlacements += placementCount;
-                            
-                            Object.values(statuses).forEach((status: any) => {
-                              if (status === 'accepted') acceptedCount++;
-                              if (status === 'in_production') inProductionCount++;
-                              if (status === 'delivered') deliveredCount++;
-                              if (status === 'rejected') rejectedCount++;
-                            });
-                          });
-                          
-                          const pendingCount = totalPlacements - acceptedCount - inProductionCount - deliveredCount - rejectedCount;
-                          const hasLivePlacements = inProductionCount > 0 || deliveredCount > 0;
-                          
-                          return (
-                            <>
-                              <div className="mb-3 grid grid-cols-5 gap-2 text-xs">
-                                <div className="bg-green-100 p-2 rounded border border-green-300">
-                                  <div className="font-bold text-green-900">{acceptedCount}</div>
-                                  <div className="text-green-700">Accepted</div>
-                                </div>
-                                <div className="bg-blue-100 p-2 rounded border border-blue-300">
-                                  <div className="font-bold text-blue-900">{inProductionCount}</div>
-                                  <div className="text-blue-700">In Production</div>
-                                </div>
-                                <div className="bg-purple-100 p-2 rounded border border-purple-300">
-                                  <div className="font-bold text-purple-900">{deliveredCount}</div>
-                                  <div className="text-purple-700">Delivered</div>
-                                </div>
-                                <div className="bg-yellow-100 p-2 rounded border border-yellow-300">
-                                  <div className="font-bold text-yellow-900">{pendingCount}</div>
-                                  <div className="text-yellow-700">Pending</div>
-                                </div>
-                                <div className="bg-red-100 p-2 rounded border border-red-300">
-                                  <div className="font-bold text-red-900">{rejectedCount}</div>
-                                  <div className="text-red-700">Rejected</div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <Button 
-                                  onClick={() => setShowRegenerateDialog(true)}
-                                  disabled={generatingOrders || hasLivePlacements}
-                                  variant="outline"
-                                  size="sm"
-                                  className={hasLivePlacements 
-                                    ? "border-gray-300 text-gray-400 cursor-not-allowed" 
-                                    : "border-primary text-primary hover:bg-primary/10"
-                                  }
-                                >
-                                  {generatingOrders ? (
-                                    <>
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      Regenerating...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Package className="mr-2 h-4 w-4" />
-                                      Regenerate Publication Orders
-                                    </>
-                                  )}
-                                </Button>
-                                {hasLivePlacements && (
-                                  <span className="text-xs text-muted-foreground italic">
-                                    Cannot regenerate: {inProductionCount + deliveredCount} placement(s) are live
-                                  </span>
+              {/* Publication Orders Alert - three states: no orders, draft orders, sent orders */}
+              {(() => {
+                const draftOrders = publicationOrders.filter((o: any) => o.status === 'draft');
+                const sentOrders = publicationOrders.filter((o: any) => o.status !== 'draft');
+                const allDraft = publicationOrders.length > 0 && draftOrders.length === publicationOrders.length;
+                const hasSentOrders = sentOrders.length > 0;
+                
+                // State 1: Draft orders exist - show "Send to Publications" button
+                if (allDraft) {
+                  return (
+                    <Card className="mb-6 border-blue-200 bg-blue-50">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start gap-4">
+                          <Package className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+                          <div className="flex-1">
+                            <h3 className="font-semibold font-sans text-blue-900 mb-2">Orders Ready to Send</h3>
+                            <p className="text-sm text-blue-800 mb-4">
+                              {draftOrders.length} publication orders are ready in draft status. You can add or remove 
+                              placements before sending. Once sent, publications will see these orders in their dashboard.
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <Button 
+                                onClick={() => setShowAddPlacementModal(true)}
+                                variant="outline"
+                                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add Placements
+                              </Button>
+                              <Button 
+                                onClick={handleGeneratePublicationOrders} 
+                                disabled={generatingOrders}
+                                variant="default"
+                              >
+                                {generatingOrders ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Sending to Publications...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Send to Publications ({draftOrders.length} orders)
+                                  </>
                                 )}
-                              </div>
-                            </>
-                          );
-                        })()}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+                
+                // State 2: Sent orders exist - show success message
+                if (hasSentOrders) {
+                  return (
+                    <Card className="mb-6 border-green-200 bg-green-50">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start gap-4">
+                          <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                          <div className="flex-1">
+                            <h3 className="font-semibold font-sans text-green-900 mb-1">Publication Orders Sent</h3>
+                            <p className="text-sm text-green-800 mb-3">
+                              {sentOrders.length} publication orders have been sent and are visible to publications.
+                            </p>
+                        
+                            {/* Placement Status Summary */}
+                            {(() => {
+                              let totalPlacements = 0;
+                              let acceptedCount = 0;
+                              let inProductionCount = 0;
+                              let deliveredCount = 0;
+                              let rejectedCount = 0;
+                              
+                              publicationOrders.forEach((order: any) => {
+                                const statuses = order.placementStatuses || {};
+                                const itemCount = order.selectedInventory?.publications?.[0]?.inventoryItems?.length || 0;
+                                totalPlacements += itemCount;
+                                
+                                Object.values(statuses).forEach((status: any) => {
+                                  if (status === 'accepted') acceptedCount++;
+                                  if (status === 'in_production') inProductionCount++;
+                                  if (status === 'delivered') deliveredCount++;
+                                  if (status === 'rejected') rejectedCount++;
+                                });
+                              });
+                              
+                              const pendingCount = totalPlacements - acceptedCount - inProductionCount - deliveredCount - rejectedCount;
+                              
+                              return (
+                                <>
+                                  <div className="mb-3 grid grid-cols-5 gap-2 text-xs">
+                                    <div className="bg-green-100 p-2 rounded border border-green-300">
+                                      <div className="font-bold text-green-900">{acceptedCount}</div>
+                                      <div className="text-green-700">Accepted</div>
+                                    </div>
+                                    <div className="bg-blue-100 p-2 rounded border border-blue-300">
+                                      <div className="font-bold text-blue-900">{inProductionCount}</div>
+                                      <div className="text-blue-700">In Production</div>
+                                    </div>
+                                    <div className="bg-purple-100 p-2 rounded border border-purple-300">
+                                      <div className="font-bold text-purple-900">{deliveredCount}</div>
+                                      <div className="text-purple-700">Delivered</div>
+                                    </div>
+                                    <div className="bg-yellow-100 p-2 rounded border border-yellow-300">
+                                      <div className="font-bold text-yellow-900">{pendingCount}</div>
+                                      <div className="text-yellow-700">Pending</div>
+                                    </div>
+                                    <div className="bg-red-100 p-2 rounded border border-red-300">
+                                      <div className="font-bold text-red-900">{rejectedCount}</div>
+                                      <div className="text-red-700">Rejected</div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <Button 
+                                      onClick={() => setShowAddPlacementModal(true)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-primary text-primary hover:bg-primary/10"
+                                    >
+                                      <Plus className="mr-2 h-4 w-4" />
+                                      Add Placements
+                                    </Button>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+                
+                // State 3: No orders exist - show generate button (backwards compatibility)
+                return (
+                  <Card className="mb-6 border-amber-200 bg-amber-50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <AlertTriangle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-1" />
+                        <div className="flex-1">
+                          <h3 className="font-semibold font-sans text-amber-900 mb-2">Publication Orders Not Generated</h3>
+                          <p className="text-sm text-amber-800 mb-4">
+                            Publication insertion orders create individual order records for each publication in this campaign. 
+                            Once generated, these orders will be visible to publications in their dashboard.
+                          </p>
+                          <Button 
+                            onClick={handleGeneratePublicationOrders} 
+                            disabled={generatingOrders}
+                            variant="default"
+                          >
+                            {generatingOrders ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating Orders...
+                              </>
+                            ) : (
+                              <>
+                                <Package className="mr-2 h-4 w-4" />
+                                Generate Publication Orders
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
               
               <div className="space-y-6">
                 {/* Campaign Info & Objectives */}
@@ -1041,8 +1140,12 @@ export default function CampaignDetail() {
                               <p className="font-semibold font-sans">{campaign.timeline.durationMonths} {campaign.timeline.durationMonths === 1 ? 'month' : 'months'} ({campaign.timeline.durationWeeks} weeks)</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground font-sans">Total Investment</p>
-                              <p className="font-semibold font-sans text-blue-600">${(campaign.pricing?.total || campaign.pricing?.finalPrice || campaign.pricing?.totalHubPrice || 0).toLocaleString()}</p>
+                              <p className="text-muted-foreground font-sans">Projected Investment</p>
+                              <p className="font-semibold font-sans text-blue-600">${(campaign.investmentSummary?.projected || campaign.pricing?.total || campaign.pricing?.finalPrice || 0).toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground font-sans">Confirmed Investment</p>
+                              <p className="font-semibold font-sans text-green-600">${(campaign.investmentSummary?.confirmed || 0).toLocaleString()}</p>
                             </div>
                           </div>
                         </div>
@@ -1074,15 +1177,13 @@ export default function CampaignDetail() {
                         <div className="flex items-baseline justify-between mb-4">
                           <h3 className="text-base font-semibold font-sans">Selected Publications & Inventory</h3>
                           <span className="text-sm text-muted-foreground">
-                            {campaign.selectedInventory?.totalInventoryItems || 
-                              (campaign.selectedInventory?.publications || []).reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0) ||
-                              0} placements across{' '}
-                            {campaign.selectedInventory?.totalPublications || (campaign.selectedInventory?.publications || []).length || 0} publications
+                            {ordersSummary.totalPlacements} placements across{' '}
+                            {ordersSummary.totalPublications} publications
                           </span>
                         </div>
                         
                         <div className="space-y-6">
-                          {(campaign.selectedInventory?.publications || []).map((pub) => (
+                          {publicationsFromOrders.map((pub) => (
                             <Card key={pub.publicationId} className="bg-white">
                               <CardContent className="p-0">
                                 <Table>
@@ -1098,11 +1199,8 @@ export default function CampaignDetail() {
                                             </span>
                                           </div>
                                           {(() => {
-                                            const pubOrder = publicationOrders.find((o: any) => o.publicationId === pub.publicationId);
-                                            if (!pubOrder) return null;
-                                            
                                             // Check if any placements are live
-                                            const statuses = Object.values(pubOrder.placementStatuses || {});
+                                            const statuses = Object.values(pub.placementStatuses || {});
                                             const hasLivePlacements = statuses.some(
                                               (s: any) => s === 'in_production' || s === 'delivered'
                                             );
@@ -1179,10 +1277,9 @@ export default function CampaignDetail() {
                                         // Format audience with badge using utility
                                         const audienceInfo = formatInsertionOrderAudienceWithBadge(item, performanceMetrics, channelMetrics);
                                         
-                                        // Get placement status from publication order if exists
-                                        const publicationOrder = publicationOrders.find((order: any) => order.publicationId === pub.publicationId);
+                                        // Get placement status directly from pub (derived from order)
                                         const placementId = item.itemPath || item.sourcePath || `placement-${idx}`;
-                                        const placementStatus = publicationOrder?.placementStatuses?.[placementId] || 'pending';
+                                        const placementStatus = pub.placementStatuses?.[placementId] || 'pending';
                                         
                                         return (
                                           <TableRow 
@@ -1215,7 +1312,7 @@ export default function CampaignDetail() {
                                                 {placementStatus === 'rejected' && (
                                                   <Badge className="bg-red-600 text-white text-xs">✗ Rejected</Badge>
                                                 )}
-                                                {placementStatus === 'pending' && publicationOrder && (
+                                                {placementStatus === 'pending' && (
                                                   <Badge variant="outline" className="text-xs">Pending</Badge>
                                                 )}
                                               </div>
@@ -1232,7 +1329,7 @@ export default function CampaignDetail() {
                                               ${lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </TableCell>
                                             <TableCell className="text-center">
-                                              {publicationOrder && !['in_production', 'delivered'].includes(placementStatus) && (
+                                              {!['in_production', 'delivered'].includes(placementStatus) && (
                                                 <Button
                                                   variant="ghost"
                                                   size="sm"
@@ -1280,40 +1377,23 @@ export default function CampaignDetail() {
           </div>
         </main>
 
-        {/* Regenerate Orders Confirmation Dialog */}
-        <AlertDialog open={showRegenerateDialog} onOpenChange={setShowRegenerateDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Regenerate Publication Orders?</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2">
-                <p>This will <strong>delete all existing publication orders</strong> and create new ones. This action:</p>
-                <ul className="list-disc list-inside text-sm space-y-1 mt-2">
-                  <li>Resets all placement statuses to "Pending"</li>
-                  <li>Removes any messages/conversations with publications</li>
-                  <li>Clears confirmation dates and status history</li>
-                  <li>Publications will see new orders and need to re-confirm</li>
-                </ul>
-                <p className="text-amber-600 font-medium mt-3">This cannot be undone.</p>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleRegenerateOrders}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                {generatingOrders ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Regenerating...
-                  </>
-                ) : (
-                  'Yes, Regenerate Orders'
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Add Placement Modal */}
+        {campaign && (
+          <AddPlacementModal
+            isOpen={showAddPlacementModal}
+            onClose={() => setShowAddPlacementModal(false)}
+            campaignId={campaign.campaignId || campaign._id?.toString() || id || ''}
+            hubId={campaign.hubId || ''}
+            existingPublications={
+              publicationOrders.map((order: any) => ({
+                publicationId: order.publicationId,
+                publicationName: order.publicationName,
+                inventoryItems: order.selectedInventory?.publications?.[0]?.inventoryItems || [],
+              }))
+            }
+            onPlacementsAdded={refreshPublicationOrders}
+          />
+        )}
 
         {/* Rescind Order Confirmation Dialog */}
         <AlertDialog open={!!rescindTarget} onOpenChange={(open) => !open && setRescindTarget(null)}>

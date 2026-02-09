@@ -194,6 +194,8 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { campaignsService } = await import('../../src/integrations/mongodb/campaignService');
+    const { calculatePackageReach } = await import('../../src/utils/reachCalculations');
+    const { calculateItemCost } = await import('../../src/utils/inventoryPricing');
     const { id } = req.params;
 
     // Try to find by MongoDB _id first, then by campaignId
@@ -204,6 +206,151 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    // Rebuild selectedInventory from active orders to ensure accuracy
+    // This filters out rescinded placements and rejected orders
+    // Also calculates two investment figures:
+    // - projectedInvestment: all placements likely to be filled (pending, accepted, in_production, delivered)
+    // - confirmedInvestment: only accepted/active placements (accepted, in_production, delivered)
+    let projectedInvestment = 0;
+    let confirmedInvestment = 0;
+    let projectedPlacements = 0;
+    let confirmedPlacements = 0;
+    
+    try {
+      const { getDatabase } = await import('../../src/integrations/mongodb/client');
+      const db = getDatabase();
+      const campaignObjectId = campaign._id?.toString() || '';
+      const campaignIdString = campaign.campaignId || '';
+      
+      // Fetch active orders for this campaign
+      const activeOrders = await db.collection('publication_insertion_orders').find({
+        $or: [
+          { campaignObjectId: campaignObjectId },
+          { campaignId: campaignIdString }
+        ],
+        deletedAt: { $exists: false }
+      }).toArray();
+      
+      if (activeOrders.length > 0) {
+        // Status categories
+        const projectedStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
+        const confirmedStatuses = ['accepted', 'in_production', 'delivered'];
+        const filteredPublications: any[] = [];
+        
+        for (const order of activeOrders) {
+          const pubId = order.publicationId;
+          const placementStatuses = order.placementStatuses || {};
+          
+          // Categorize placements by status
+          const projectedPaths = new Set<string>();
+          const confirmedPaths = new Set<string>();
+          
+          for (const [placementPath, status] of Object.entries(placementStatuses)) {
+            if (projectedStatuses.includes(status as string)) {
+              projectedPaths.add(placementPath);
+            }
+            if (confirmedStatuses.includes(status as string)) {
+              confirmedPaths.add(placementPath);
+            }
+          }
+          
+          // Skip if no projected placements
+          if (projectedPaths.size === 0) {
+            continue;
+          }
+          
+          // Use order.selectedInventory as single source of truth
+          const pubData = order.selectedInventory?.publications?.[0] || {
+            publicationId: pubId,
+            publicationName: order.publicationName,
+            inventoryItems: [],
+            publicationTotal: 0
+          };
+          
+          // Filter inventory items to only those with projected placements
+          const filteredItems = (pubData.inventoryItems || []).filter((item: any) => {
+            return projectedPaths.has(item.itemPath || '') || 
+                   projectedPaths.has(item.sourcePath || '');
+          });
+          
+          if (filteredItems.length === 0) {
+            continue;
+          }
+          
+          // Calculate costs per item and track by status
+          let pubProjectedTotal = 0;
+          let pubConfirmedTotal = 0;
+          
+          for (const item of filteredItems) {
+            const freq = item.currentFrequency || item.quantity || 1;
+            const itemCost = calculateItemCost(item, freq, 1);
+            const itemPath = item.itemPath || item.sourcePath || '';
+            
+            // All filtered items are projected
+            pubProjectedTotal += itemCost;
+            projectedPlacements++;
+            
+            // Check if also confirmed
+            if (confirmedPaths.has(itemPath)) {
+              pubConfirmedTotal += itemCost;
+              confirmedPlacements++;
+            }
+          }
+          
+          projectedInvestment += pubProjectedTotal;
+          confirmedInvestment += pubConfirmedTotal;
+          
+          filteredPublications.push({
+            ...pubData,
+            inventoryItems: filteredItems,
+            publicationTotal: pubProjectedTotal
+          });
+        }
+        
+        // Update selectedInventory with filtered data (uses projected/all valid placements)
+        const newTotal = filteredPublications.reduce((sum, pub) => sum + (pub.publicationTotal || 0), 0);
+        campaign.selectedInventory = {
+          ...campaign.selectedInventory,
+          publications: filteredPublications,
+          total: newTotal,
+          totalPublications: filteredPublications.length,
+          totalInventoryItems: filteredPublications.reduce((sum, pub) => sum + (pub.inventoryItems?.length || 0), 0)
+        };
+      }
+    } catch (orderError) {
+      console.error('Error filtering by active orders:', orderError);
+      // Fall back to stored values if filtering fails
+      projectedInvestment = campaign.selectedInventory?.total || 0;
+      confirmedInvestment = 0;
+    }
+    
+    // Add investment breakdown to campaign
+    (campaign as any).investmentSummary = {
+      projected: projectedInvestment,
+      confirmed: confirmedInvestment,
+      projectedPlacements,
+      confirmedPlacements,
+      pendingAmount: projectedInvestment - confirmedInvestment,
+      pendingPlacements: projectedPlacements - confirmedPlacements
+    };
+
+    // Recalculate reach/impressions from the filtered selectedInventory
+    if (campaign.selectedInventory?.publications) {
+      const reachSummary = calculatePackageReach(campaign.selectedInventory.publications);
+      if (!campaign.estimatedPerformance) {
+        campaign.estimatedPerformance = {} as any;
+      }
+      campaign.estimatedPerformance.reach = {
+        min: reachSummary.estimatedUniqueReach || 0,
+        max: reachSummary.estimatedUniqueReach || 0,
+        description: `${(reachSummary.estimatedUniqueReach || 0).toLocaleString()}+ estimated unique reach`
+      };
+      campaign.estimatedPerformance.impressions = {
+        min: reachSummary.totalMonthlyImpressions || 0,
+        max: reachSummary.totalMonthlyImpressions || 0
+      };
     }
 
     res.json({ campaign });
@@ -366,10 +513,11 @@ router.post('/:id/publication-insertion-orders', authenticateToken, async (req: 
       return res.status(400).json({ error: result.error });
     }
     
-    // Fetch the generated orders
-    const generatedOrders = await insertionOrderService.getOrdersForCampaign(campaignIdToUse);
+    // Fetch the generated orders (only sent orders, not drafts)
+    const allOrders = await insertionOrderService.getOrdersForCampaign(campaignIdToUse);
+    const generatedOrders = allOrders.filter((o: any) => o.status !== 'draft');
     
-    // Send notifications to publication users for each generated order
+    // Send notifications to publication users for each sent order
     try {
       const { notifyOrderReceived } = await import('../../src/services/notificationService');
       const { emailService } = await import('../emailService');

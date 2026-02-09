@@ -190,6 +190,21 @@ export interface PublicationInsertionOrderDocument {
   proofOfPerformanceComplete?: boolean;
   proofCount?: number;          // Number of proofs uploaded to proof_of_performance collection
   
+  // Selected inventory for this order (source of truth for placements)
+  // Contains the publication's inventory items that belong to this order
+  selectedInventory?: {
+    publications: Array<{
+      publicationId: number;
+      publicationName: string;
+      inventoryItems: any[];
+      publicationTotal: number;
+    }>;
+    total: number;
+  };
+  
+  // Order total (sum of all placement costs)
+  orderTotal?: number;
+  
   // Metadata
   createdAt?: Date;
   updatedAt?: Date;

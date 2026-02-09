@@ -390,10 +390,9 @@ export function PublicationOrderDetail() {
   const handleDownloadAllScripts = () => {
     // Get campaign and inventory data for trafficking instructions
     const campaignDataForDownload = (order as any)?.campaignData;
-    const publicationForDownload = campaignDataForDownload?.selectedInventory?.publications?.find(
-      (pub: any) => pub.publicationId === order?.publicationId
-    );
-    const inventoryItemsForDownload = publicationForDownload?.inventoryItems || [];
+    // Use order.selectedInventory as source of truth for downloads
+    const orderPublicationForDownload = order?.selectedInventory?.publications?.[0];
+    const inventoryItemsForDownload = orderPublicationForDownload?.inventoryItems || [];
     
     // Get campaign dates
     const campaignStartDate = campaignDataForDownload?.timeline?.startDate 
@@ -893,10 +892,9 @@ export function PublicationOrderDetail() {
 
   // Extract data
   const campaignData = (order as any).campaignData;
-  const publication = campaignData?.selectedInventory?.publications?.find(
-    (pub: any) => pub.publicationId === order.publicationId
-  );
-  const inventoryItems = publication?.inventoryItems || [];
+  // Use order.selectedInventory as source of truth (not campaign.selectedInventory which may be stale)
+  const orderPublication = order?.selectedInventory?.publications?.[0];
+  const inventoryItems = orderPublication?.inventoryItems || [];
   const totalPlacements = inventoryItems.length;
   const acceptedCount = Object.values(placementStatuses).filter(s => s === 'accepted').length;
   const inProductionCount = Object.values(placementStatuses).filter(s => s === 'in_production').length;
@@ -1213,7 +1211,7 @@ export function PublicationOrderDetail() {
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right text-sm">
-                <p className="font-semibold text-green-600">${(publication?.publicationTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="font-semibold text-green-600">${inventoryItems.reduce((sum: number, item: any) => sum + (item.itemPricing?.totalCost || item.itemPricing?.hubPrice || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <p className="text-xs text-muted-foreground">
                   {campaignData?.timeline?.startDate && campaignData?.timeline?.endDate 
                     ? `${new Date(campaignData.timeline.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(campaignData.timeline.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
@@ -1314,15 +1312,14 @@ export function PublicationOrderDetail() {
         {/* OVERVIEW TAB */}
         <TabsContent value="overview" className="mt-0">
           {(() => {
-            // Calculate publication revenue from inventory
-            const pubData = campaignData?.selectedInventory?.publications?.find(
-              (p: any) => p.publicationId === order.publicationId
-            );
-            const publicationTotal = pubData?.publicationTotal || 0;
+            // Calculate publication total in real-time from inventory items (more reliable)
+            const publicationTotal = inventoryItems.reduce((sum: number, item: any) => {
+              return sum + (item.itemPricing?.totalCost || item.itemPricing?.hubPrice || 0);
+            }, 0);
             
             // Calculate channel breakdown
             const channelBreakdown: Record<string, { total: number; count: number }> = {};
-            (pubData?.inventoryItems || inventoryItems).forEach((item: any) => {
+            inventoryItems.forEach((item: any) => {
               const channel = item.channel || 'other';
               if (!channelBreakdown[channel]) {
                 channelBreakdown[channel] = { total: 0, count: 0 };
