@@ -143,20 +143,35 @@ export async function getConversation(conversationId: string): Promise<Conversat
 
 /**
  * Send a message and get AI response
+ * Uses a 90-second timeout since AI responses can take 10-30+ seconds
  */
 export async function sendMessage(conversationId: string, message: string): Promise<SendMessageResponse> {
-  const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}/messages`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ message }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout for AI responses
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to send message' }));
-    throw new Error(error.error || 'Failed to send message');
+  try {
+    const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ message }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to send message' }));
+      throw new Error(error.error || 'Failed to send message');
+    }
+
+    return response.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timed out. The AI is taking longer than expected. Please try again.');
+    }
+    throw error;
   }
-
-  return response.json();
 }
 
 /**
