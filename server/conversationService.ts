@@ -1,11 +1,20 @@
 /**
  * Conversation Service
  * 
- * Manages conversation storage and retrieval for the inventory chat agent
+ * Manages conversation storage and retrieval for the Hub Sales Assistant
  */
 
 import { getDatabase } from '../src/integrations/mongodb/client';
-import { Conversation, ConversationInsert, ConversationMessage, CONVERSATION_COLLECTION } from './conversationSchema';
+import { 
+  Conversation, 
+  ConversationInsert, 
+  ConversationMessage, 
+  ConversationAttachment,
+  GeneratedFile,
+  ConversationContext,
+  CONVERSATION_COLLECTION,
+  MAX_FILES_PER_CONVERSATION,
+} from './conversationSchema';
 import { ObjectId } from 'mongodb';
 
 export class ConversationService {
@@ -201,6 +210,219 @@ export class ConversationService {
 
     // Return last N messages
     return conversation.messages.slice(-limit);
+  }
+
+  // ============================================
+  // Attachment Methods
+  // ============================================
+
+  /**
+   * Add an attachment to a conversation
+   */
+  static async addAttachment(
+    conversationId: string,
+    userId: string,
+    attachment: ConversationAttachment
+  ): Promise<boolean> {
+    const db = getDatabase();
+    
+    // Check attachment limit
+    const conversation = await this.getConversation(conversationId, userId);
+    if (!conversation) {
+      throw new Error('Conversation not found');
+    }
+    
+    const currentCount = conversation.attachments?.length || 0;
+    if (currentCount >= MAX_FILES_PER_CONVERSATION) {
+      throw new Error(`Maximum of ${MAX_FILES_PER_CONVERSATION} attachments allowed per conversation`);
+    }
+
+    const result = await db
+      .collection(CONVERSATION_COLLECTION)
+      .updateOne(
+        { conversationId, userId },
+        {
+          $push: { attachments: attachment },
+          $set: { 'metadata.updatedAt': new Date() }
+        }
+      );
+
+    return result.modifiedCount > 0;
+  }
+
+  /**
+   * Remove an attachment from a conversation
+   */
+  static async removeAttachment(
+    conversationId: string,
+    userId: string,
+    attachmentId: string
+  ): Promise<ConversationAttachment | null> {
+    const db = getDatabase();
+    
+    // Get the attachment before removing (for S3 cleanup)
+    const conversation = await this.getConversation(conversationId, userId);
+    if (!conversation) {
+      return null;
+    }
+    
+    const attachment = conversation.attachments?.find(a => a.id === attachmentId);
+    if (!attachment) {
+      return null;
+    }
+
+    const result = await db
+      .collection(CONVERSATION_COLLECTION)
+      .updateOne(
+        { conversationId, userId },
+        {
+          $pull: { attachments: { id: attachmentId } },
+          $set: { 'metadata.updatedAt': new Date() }
+        }
+      );
+
+    return result.modifiedCount > 0 ? attachment : null;
+  }
+
+  /**
+   * Get all attachments for a conversation
+   */
+  static async getAttachments(
+    conversationId: string,
+    userId: string
+  ): Promise<ConversationAttachment[]> {
+    const conversation = await this.getConversation(conversationId, userId);
+    return conversation?.attachments || [];
+  }
+
+  /**
+   * Get a specific attachment by ID
+   */
+  static async getAttachment(
+    conversationId: string,
+    userId: string,
+    attachmentId: string
+  ): Promise<ConversationAttachment | null> {
+    const attachments = await this.getAttachments(conversationId, userId);
+    return attachments.find(a => a.id === attachmentId) || null;
+  }
+
+  // ============================================
+  // Generated File Methods
+  // ============================================
+
+  /**
+   * Add a generated file to a conversation
+   */
+  static async addGeneratedFile(
+    conversationId: string,
+    userId: string,
+    file: GeneratedFile
+  ): Promise<boolean> {
+    const db = getDatabase();
+
+    const result = await db
+      .collection(CONVERSATION_COLLECTION)
+      .updateOne(
+        { conversationId, userId },
+        {
+          $push: { generatedFiles: file },
+          $set: { 'metadata.updatedAt': new Date() }
+        }
+      );
+
+    return result.modifiedCount > 0;
+  }
+
+  /**
+   * Get all generated files for a conversation
+   */
+  static async getGeneratedFiles(
+    conversationId: string,
+    userId: string
+  ): Promise<GeneratedFile[]> {
+    const conversation = await this.getConversation(conversationId, userId);
+    return conversation?.generatedFiles || [];
+  }
+
+  /**
+   * Get a specific generated file by ID
+   */
+  static async getGeneratedFile(
+    conversationId: string,
+    userId: string,
+    fileId: string
+  ): Promise<GeneratedFile | null> {
+    const files = await this.getGeneratedFiles(conversationId, userId);
+    return files.find(f => f.id === fileId) || null;
+  }
+
+  // ============================================
+  // Context Methods
+  // ============================================
+
+  /**
+   * Update the conversation context (brand/campaign info)
+   */
+  static async updateContext(
+    conversationId: string,
+    userId: string,
+    contextUpdate: Partial<ConversationContext>
+  ): Promise<boolean> {
+    const db = getDatabase();
+    
+    // Build the $set object for partial updates
+    const setFields: Record<string, any> = {
+      'metadata.updatedAt': new Date(),
+    };
+    
+    for (const [key, value] of Object.entries(contextUpdate)) {
+      if (value !== undefined) {
+        setFields[`context.${key}`] = value;
+      }
+    }
+
+    const result = await db
+      .collection(CONVERSATION_COLLECTION)
+      .updateOne(
+        { conversationId, userId },
+        { $set: setFields }
+      );
+
+    return result.modifiedCount > 0;
+  }
+
+  /**
+   * Get the conversation context
+   */
+  static async getContext(
+    conversationId: string,
+    userId: string
+  ): Promise<ConversationContext | null> {
+    const conversation = await this.getConversation(conversationId, userId);
+    return conversation?.context || null;
+  }
+
+  /**
+   * Clear the conversation context
+   */
+  static async clearContext(
+    conversationId: string,
+    userId: string
+  ): Promise<boolean> {
+    const db = getDatabase();
+
+    const result = await db
+      .collection(CONVERSATION_COLLECTION)
+      .updateOne(
+        { conversationId, userId },
+        {
+          $unset: { context: '' },
+          $set: { 'metadata.updatedAt': new Date() }
+        }
+      );
+
+    return result.modifiedCount > 0;
   }
 }
 

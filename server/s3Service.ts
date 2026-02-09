@@ -163,6 +163,33 @@ export class S3Service {
     }
   }
 
+  // Get file contents as Buffer
+  async getFileBuffer(key: string): Promise<Buffer> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      });
+
+      const response = await this.s3Client.send(command);
+      
+      if (!response.Body) {
+        throw new Error('Empty response body');
+      }
+
+      // Convert stream to buffer
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+        chunks.push(chunk);
+      }
+      
+      return Buffer.concat(chunks);
+    } catch (error) {
+      console.error('Error getting file buffer from S3:', error);
+      throw error;
+    }
+  }
+
   // Delete file from S3
   async deleteFile(key: string): Promise<{ success: boolean; error?: string }> {
     try {

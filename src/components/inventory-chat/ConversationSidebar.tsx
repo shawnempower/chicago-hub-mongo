@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MessageSquarePlus, Trash2, Loader2, MessageSquare } from 'lucide-react';
+import { MessageSquarePlus, Trash2, Loader2, MessageSquare, Sparkles } from 'lucide-react';
 import { listConversations, createConversation, deleteConversation, type Conversation } from '@/api/inventoryChat';
 import { toast } from '@/components/ui/use-toast';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -141,85 +141,77 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
 
   return (
     <>
-      <div className="flex h-full flex-col font-sans">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-border/40">
-          <h3 className="text-sm font-semibold text-foreground font-sans">Chat History</h3>
-          <Button
-            size="sm"
+      <div className="flex h-full flex-col bg-slate-50/50">
+        {/* Header - Compact */}
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 bg-white">
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">History</h3>
+          <button
             onClick={handleCreateConversation}
             disabled={isCreating}
-            className="h-8 px-3 bg-primary hover:bg-primary/90"
+            className="p-1.5 rounded-md bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-sm disabled:opacity-50"
           >
             {isCreating ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <>
-                <MessageSquarePlus className="h-3.5 w-3.5 mr-1.5" />
-                <span className="text-xs font-medium font-sans">New Chat</span>
-              </>
+              <MessageSquarePlus className="h-4 w-4" />
             )}
-          </Button>
+          </button>
         </div>
         
         {/* Content */}
-        <div className="flex-1 overflow-hidden bg-muted/30">
+        <div className="flex-1 overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
             </div>
           ) : conversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full p-6 text-center font-sans">
-              <div className="mb-4 p-3 rounded-full bg-primary/10">
-                <MessageSquare className="h-6 w-6 text-primary" />
-              </div>
-              <p className="text-sm font-medium text-foreground mb-1 font-sans">
-                No conversations yet
+            <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+              <MessageSquare className="h-8 w-8 text-slate-300 mb-2" />
+              <p className="text-xs text-slate-500 mb-3">
+                No chats yet
               </p>
-              <p className="text-xs text-muted-foreground mb-4 font-sans">
-                Start a new chat to explore your inventory
-              </p>
-              <Button 
-                size="sm" 
-                onClick={handleCreateConversation} 
+              <button
+                onClick={handleCreateConversation}
                 disabled={isCreating}
-                className="h-8 px-4"
+                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
               >
-                <MessageSquarePlus className="h-3.5 w-3.5 mr-1.5" />
-                <span className="font-sans">New Chat</span>
-              </Button>
+                + New Chat
+              </button>
             </div>
           ) : (
             <ScrollArea className="h-full">
-              <div className="p-2 space-y-0">
+              <div className="p-1.5 space-y-0.5">
                 {conversations.map((conversation) => (
                   <div
                     key={conversation.conversationId}
                     className={cn(
-                      'group relative flex items-center gap-2 p-3 cursor-pointer transition-all font-sans border-b border-border/40',
+                      'group relative flex items-center gap-2 px-2.5 py-2 cursor-pointer transition-all rounded-md',
                       selectedConversationId === conversation.conversationId
-                        ? 'bg-background/50'
-                        : 'hover:bg-background/30'
+                        ? 'bg-white shadow-sm border border-slate-200'
+                        : 'hover:bg-white/60'
                     )}
                     onClick={() => onSelectConversation(conversation.conversationId)}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-xs truncate leading-tight text-foreground font-sans">
+                      <div className={cn(
+                        "text-xs truncate leading-tight",
+                        selectedConversationId === conversation.conversationId
+                          ? "font-medium text-slate-800"
+                          : "text-slate-600"
+                      )}>
                         {conversation.title}
                       </div>
                     </div>
                     
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 flex-shrink-0 hover:bg-destructive/10"
+                    <button
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 flex-shrink-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         confirmDelete(conversation.conversationId);
                       }}
                     >
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
+                      <Trash2 className="h-3 w-3 text-red-400" />
+                    </button>
                   </div>
                 ))}
               </div>
