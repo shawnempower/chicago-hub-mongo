@@ -191,9 +191,12 @@ export function HubOrderDetail() {
         throw new Error(data.error || 'Failed to rescind order');
       }
       
+      const isDraft = order?.status === 'draft';
       toast({
-        title: 'Order Rescinded',
-        description: `Order for ${order?.publicationName} has been rescinded.`,
+        title: isDraft ? 'Order Removed' : 'Order Rescinded',
+        description: isDraft
+          ? `Draft order for ${order?.publicationName} has been removed.`
+          : `Order for ${order?.publicationName} has been rescinded.`,
       });
       
       setShowRescindDialog(false);
@@ -201,9 +204,10 @@ export function HubOrderDetail() {
       navigate('/hubcentral?tab=orders');
     } catch (error) {
       console.error('Error rescinding order:', error);
+      const isDraftError = order?.status === 'draft';
       toast({
-        title: 'Rescind Failed',
-        description: error instanceof Error ? error.message : 'Failed to rescind order. Please try again.',
+        title: isDraftError ? 'Remove Failed' : 'Rescind Failed',
+        description: error instanceof Error ? error.message : `Failed to ${isDraftError ? 'remove' : 'rescind'} order. Please try again.`,
         variant: 'destructive',
       });
     }
@@ -410,11 +414,13 @@ export function HubOrderDetail() {
             <Button 
               variant="outline" 
               size="sm" 
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+              className={order.status === 'draft'
+                ? "text-gray-600 hover:text-gray-700 hover:bg-gray-50 border-gray-200"
+                : "text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"}
               onClick={() => setShowRescindDialog(true)}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Rescind Order
+              {order.status === 'draft' ? 'Remove Order' : 'Rescind Order'}
             </Button>
           )}
           <Button 
@@ -700,28 +706,43 @@ export function HubOrderDetail() {
         </TabsContent>
       </Tabs>
 
-      {/* Rescind Order Confirmation Dialog */}
+      {/* Rescind/Remove Order Confirmation Dialog */}
       <AlertDialog open={showRescindDialog} onOpenChange={setShowRescindDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Rescind Publication Order?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {order?.status === 'draft' ? 'Remove Draft Order?' : 'Rescind Publication Order?'}
+            </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>This will remove the insertion order for <strong>{order?.publicationName}</strong> from campaign <strong>{order?.campaignName}</strong>.</p>
-              <ul className="list-disc list-inside text-sm space-y-1 mt-2">
-                <li>The publication will no longer see this order</li>
-                <li>Any confirmations or status updates will be lost</li>
-                <li>Messages with this publication will be removed</li>
-              </ul>
-              <p className="text-amber-600 font-medium mt-3">This cannot be undone.</p>
+              {order?.status === 'draft' ? (
+                <>
+                  <p>This will remove the draft order for <strong>{order?.publicationName}</strong> from campaign <strong>{order?.campaignName}</strong>.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    The publication has not seen this order yet, so no notification will be sent.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>This will remove the insertion order for <strong>{order?.publicationName}</strong> from campaign <strong>{order?.campaignName}</strong>.</p>
+                  <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                    <li>The publication will no longer see this order</li>
+                    <li>Any confirmations or status updates will be lost</li>
+                    <li>Messages with this publication will be removed</li>
+                  </ul>
+                  <p className="text-amber-600 font-medium mt-3">This cannot be undone.</p>
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRescindOrder}
-              className="bg-red-600 hover:bg-red-700"
+              className={order?.status === 'draft' 
+                ? "bg-gray-600 hover:bg-gray-700" 
+                : "bg-red-600 hover:bg-red-700"}
             >
-              Yes, Rescind Order
+              {order?.status === 'draft' ? 'Yes, Remove Order' : 'Yes, Rescind Order'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

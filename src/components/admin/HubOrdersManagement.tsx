@@ -86,7 +86,7 @@ export function HubOrdersManagement() {
   const [issuePopoverOpen, setIssuePopoverOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
   const [showActivityLog, setShowActivityLog] = useState(false);
-  const [rescindTarget, setRescindTarget] = useState<{ campaignId: string; publicationId: number; publicationName: string; campaignName: string } | null>(null);
+  const [rescindTarget, setRescindTarget] = useState<{ campaignId: string; publicationId: number; publicationName: string; campaignName: string; orderStatus: string } | null>(null);
 
   const issueOptions = [
     { value: 'draft', label: 'Draft Orders (Not Sent)' },
@@ -172,16 +172,20 @@ export function HubOrdersManagement() {
       );
       setStats(calculateStats(updatedOrders));
       
+      const isDraft = rescindTarget.orderStatus === 'draft';
       toast({
-        title: 'Order Rescinded',
-        description: `Order for ${rescindTarget.publicationName} has been rescinded.`,
+        title: isDraft ? 'Order Removed' : 'Order Rescinded',
+        description: isDraft 
+          ? `Draft order for ${rescindTarget.publicationName} has been removed.`
+          : `Order for ${rescindTarget.publicationName} has been rescinded.`,
       });
       setRescindTarget(null);
     } catch (error) {
       console.error('Error rescinding order:', error);
+      const isDraftError = rescindTarget.orderStatus === 'draft';
       toast({
-        title: 'Rescind Failed',
-        description: error instanceof Error ? error.message : 'Failed to rescind order. Please try again.',
+        title: isDraftError ? 'Remove Failed' : 'Rescind Failed',
+        description: error instanceof Error ? error.message : `Failed to ${isDraftError ? 'remove' : 'rescind'} order. Please try again.`,
         variant: 'destructive',
       });
     }
@@ -809,14 +813,17 @@ export function HubOrdersManagement() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className={order.status === 'draft' 
+                                ? "text-gray-600 hover:text-gray-700 hover:bg-gray-50" 
+                                : "text-red-600 hover:text-red-700 hover:bg-red-50"}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setRescindTarget({
                                   campaignId: order.campaignId,
                                   publicationId: order.publicationId,
                                   publicationName: order.publicationName,
-                                  campaignName: order.campaignName
+                                  campaignName: order.campaignName,
+                                  orderStatus: order.status
                                 });
                               }}
                             >
@@ -843,28 +850,43 @@ export function HubOrdersManagement() {
         hubId={selectedHubId}
       />
 
-      {/* Rescind Order Confirmation Dialog */}
+      {/* Rescind/Remove Order Confirmation Dialog */}
       <AlertDialog open={!!rescindTarget} onOpenChange={(open) => !open && setRescindTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Rescind Publication Order?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {rescindTarget?.orderStatus === 'draft' ? 'Remove Draft Order?' : 'Rescind Publication Order?'}
+            </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>This will remove the insertion order for <strong>{rescindTarget?.publicationName}</strong> from campaign <strong>{rescindTarget?.campaignName}</strong>.</p>
-              <ul className="list-disc list-inside text-sm space-y-1 mt-2">
-                <li>The publication will no longer see this order</li>
-                <li>Any confirmations or status updates will be lost</li>
-                <li>Messages with this publication will be removed</li>
-              </ul>
-              <p className="text-amber-600 font-medium mt-3">This cannot be undone.</p>
+              {rescindTarget?.orderStatus === 'draft' ? (
+                <>
+                  <p>This will remove the draft order for <strong>{rescindTarget?.publicationName}</strong> from campaign <strong>{rescindTarget?.campaignName}</strong>.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    The publication has not seen this order yet, so no notification will be sent.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>This will remove the insertion order for <strong>{rescindTarget?.publicationName}</strong> from campaign <strong>{rescindTarget?.campaignName}</strong>.</p>
+                  <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                    <li>The publication will no longer see this order</li>
+                    <li>Any confirmations or status updates will be lost</li>
+                    <li>Messages with this publication will be removed</li>
+                  </ul>
+                  <p className="text-amber-600 font-medium mt-3">This cannot be undone.</p>
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRescindOrder}
-              className="bg-red-600 hover:bg-red-700"
+              className={rescindTarget?.orderStatus === 'draft' 
+                ? "bg-gray-600 hover:bg-gray-700" 
+                : "bg-red-600 hover:bg-red-700"}
             >
-              Yes, Rescind Order
+              {rescindTarget?.orderStatus === 'draft' ? 'Yes, Remove Order' : 'Yes, Rescind Order'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
