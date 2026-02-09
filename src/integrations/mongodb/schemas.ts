@@ -379,7 +379,8 @@ export interface UserInteraction {
     | 'lead_create' | 'lead_update' | 'lead_delete'
     | 'package_create' | 'package_update' | 'package_delete' | 'package_refresh'
     | 'settings_update' | 'storefront_update'
-    | 'user_login' | 'user_logout';
+    | 'user_login' | 'user_logout'
+    | 'password_reset_request' | 'password_reset';
   
   // Context for filtering by publication or hub
   hubId?: string;
@@ -917,6 +918,12 @@ export interface Publication {
       emailIdMergeTag?: string;    // Custom merge tag for subscriber ID
       cacheBusterMergeTag?: string; // Custom merge tag for timestamp
     };
+  };
+
+  // Campaign settings - e.g. cancellation policy
+  campaignSettings?: {
+    /** Days before campaign start that cancellation is allowed (default 14 = two weeks) */
+    cancellationDeadlineDays?: number;
   };
 }
 

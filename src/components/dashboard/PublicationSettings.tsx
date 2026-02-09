@@ -16,8 +16,14 @@ import {
   UserPlus,
   X,
   Code,
-  Newspaper
+  Newspaper,
+  AlertTriangle,
+  ChevronDown,
+  Users,
+  CalendarClock
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getAdServerOptions, getESPOptions } from '@/utils/trackingTagTransforms';
 import type { PublicationAdServer, PublicationESP } from '@/integrations/mongodb/schemas';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
@@ -47,6 +53,9 @@ export const PublicationSettings: React.FC = () => {
         emailIdMergeTag: '',
         cacheBusterMergeTag: ''
       }
+    },
+    campaign: {
+      cancellationDeadlineDays: selectedPublication?.campaignSettings?.cancellationDeadlineDays ?? 14
     }
   });
 
@@ -141,6 +150,9 @@ export const PublicationSettings: React.FC = () => {
             adServer: settings.adDelivery.adServer,
             esp: settings.adDelivery.esp,
             espOther: settings.adDelivery.esp === 'other' ? settings.adDelivery.espOther : undefined
+          },
+          campaignSettings: {
+            cancellationDeadlineDays: settings.campaign.cancellationDeadlineDays
           }
         })
       });
@@ -201,7 +213,27 @@ export const PublicationSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* Team Management Section */}
+      <Tabs defaultValue="team" className="w-full">
+        <TabsList className="w-full grid grid-cols-4 lg:w-auto lg:inline-flex">
+          <TabsTrigger value="team" className="gap-2">
+            <Users className="h-4 w-4" />
+            Team
+          </TabsTrigger>
+          <TabsTrigger value="ad-delivery" className="gap-2">
+            <Code className="h-4 w-4" />
+            Ad Delivery
+          </TabsTrigger>
+          <TabsTrigger value="campaign" className="gap-2">
+            <CalendarClock className="h-4 w-4" />
+            Campaign
+          </TabsTrigger>
+          <TabsTrigger value="danger" className="gap-2 text-destructive data-[state=active]:text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            Danger Zone
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="team" className="mt-0 space-y-4">
       <Card className="bg-white">
         <CardHeader className="border-b">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -249,17 +281,17 @@ export const PublicationSettings: React.FC = () => {
           )}
         </CardContent>
       </Card>
+          <UserInviteDialog
+            open={inviteDialogOpen}
+            onOpenChange={setInviteDialogOpen}
+            resourceType="publication"
+            resourceId={selectedPublication.publicationId.toString()}
+            resourceName={selectedPublication.basicInfo?.publicationName || 'Publication'}
+            onInviteSent={() => setRefreshKey(prev => prev + 1)}
+          />
+        </TabsContent>
 
-      <UserInviteDialog
-        open={inviteDialogOpen}
-        onOpenChange={setInviteDialogOpen}
-        resourceType="publication"
-        resourceId={selectedPublication.publicationId.toString()}
-        resourceName={selectedPublication.basicInfo?.publicationName || 'Publication'}
-        onInviteSent={() => setRefreshKey(prev => prev + 1)}
-      />
-
-      {/* Ad Delivery Settings - Full width, right below Team Members */}
+        <TabsContent value="ad-delivery" className="mt-0">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-sans text-base">
@@ -380,9 +412,44 @@ export const PublicationSettings: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
+        <TabsContent value="campaign" className="mt-0">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-sans text-base">
+                <CalendarClock className="h-5 w-5" />
+                Campaign Settings
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Default policies for campaigns involving this publication
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 max-w-md">
+                <div className="space-y-2">
+                  <Label htmlFor="cancellationDeadlineDays">Cancellation deadline (days before start)</Label>
+                  <Input
+                    id="cancellationDeadlineDays"
+                    type="number"
+                    min={0}
+                    max={365}
+                    value={settings.campaign.cancellationDeadlineDays}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      if (!isNaN(v) && v >= 0) updateSetting('campaign', 'cancellationDeadlineDays', Math.min(365, v));
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    How many days before a campaign start date cancellations are allowed. Default is 14 (two weeks).
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Danger Zone - Commented out until functionality is implemented
+        <TabsContent value="danger" className="mt-0">
       <Collapsible defaultOpen={false}>
         <Card className="border-destructive/50">
           <CollapsibleTrigger className="w-full">
@@ -425,7 +492,8 @@ export const PublicationSettings: React.FC = () => {
           </CollapsibleContent>
         </Card>
       </Collapsible>
-      */}
+        </TabsContent>
+      </Tabs>
 
       {/* Activity Log Dialog */}
       <ActivityLogDialog

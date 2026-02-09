@@ -638,6 +638,21 @@ export interface PublicationFrontend {
     responseTime?: string;
     decisionMakers?: string[];
   };
+
+  adDeliverySettings?: {
+    adServer?: string;
+    esp?: string;
+    espOther?: {
+      name?: string;
+      emailIdMergeTag?: string;
+      cacheBusterMergeTag?: string;
+    };
+  };
+
+  campaignSettings?: {
+    /** Days before campaign start that cancellation is allowed (default 14 = two weeks) */
+    cancellationDeadlineDays?: number;
+  };
 }
 
 export type PublicationInsertFrontend = Omit<PublicationFrontend, '_id'>;
