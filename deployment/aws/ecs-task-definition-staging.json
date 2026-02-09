@@ -95,6 +95,10 @@
         {
           "name": "STOREFRONT_AI_CHAT_URL",
           "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub-staging/storefront-ai-chat-url"
+        },
+        {
+          "name": "PERPLEXITY_API_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-2:947442015939:parameter/chicago-hub-staging/perplexity-api-key"
         }
       ],
       "logConfiguration": {
