@@ -245,8 +245,8 @@ export function calculatePackageReach(
   }
   
   return {
-    totalMonthlyImpressions: totalImpressions > 0 ? totalImpressions : undefined,
-    totalMonthlyExposures: totalExposures > 0 ? totalExposures : undefined,
+    totalMonthlyImpressions: totalImpressions > 0 ? Math.round(totalImpressions) : undefined,
+    totalMonthlyExposures: totalExposures > 0 ? Math.round(totalExposures) : undefined,
     channelAudiences,
     estimatedTotalReach: totalAudience,
     estimatedUniqueReach,

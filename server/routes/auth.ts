@@ -4,10 +4,40 @@ import { authenticateToken } from '../middleware/authenticate';
 
 const router = Router();
 
+/** Platform hubId for auth-related activities (login, logout, password reset) */
+const PLATFORM_HUB_ID = '__platform';
+
 // Lazy load email service to avoid loading before env vars
 async function getEmailService() {
   const { emailService } = await import('../emailService');
   return emailService;
+}
+
+// Lazy load activity tracking so auth routes don't depend on full allServices at startup
+async function trackAuthActivity(data: {
+  userId: string;
+  interactionType: 'user_login' | 'user_logout' | 'password_reset_request' | 'password_reset';
+  metadata?: { userEmail?: string; userName?: string };
+  ipAddress?: string;
+  userAgent?: string;
+}) {
+  try {
+    const { userInteractionsService } = await import('../../src/integrations/mongodb/allServices');
+    if (!userInteractionsService) {
+      console.warn('Activity tracking skipped: userInteractionsService not initialized');
+      return;
+    }
+    await userInteractionsService.track({
+      userId: data.userId,
+      interactionType: data.interactionType,
+      hubId: PLATFORM_HUB_ID,
+      metadata: data.metadata,
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+    });
+  } catch (err) {
+    console.error('Activity tracking failed (auth):', err);
+  }
 }
 
 // Sign up
@@ -71,6 +101,17 @@ router.post('/signin', async (req: Request, res: Response) => {
       return res.status(401).json({ error: result.error });
     }
 
+    void trackAuthActivity({
+      userId: result.user.id,
+      interactionType: 'user_login',
+      metadata: {
+        userEmail: result.user.email,
+        userName: [result.user.firstName, result.user.lastName].filter(Boolean).join(' ') || undefined,
+      },
+      ipAddress: req.ip || (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+    });
+
     res.json({
       user: result.user,
       token: result.token
@@ -84,7 +125,15 @@ router.post('/signin', async (req: Request, res: Response) => {
 // Sign out
 router.post('/signout', authenticateToken, async (req: any, res: Response) => {
   try {
+    const user = req.user;
     await authService.signOut(req.token);
+    trackAuthActivity({
+      userId: user?.id ?? '',
+      interactionType: 'user_logout',
+      metadata: user?.email ? { userEmail: user.email, userName: [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined } : undefined,
+      ipAddress: req.ip || (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+    }).catch(() => {});
     res.json({ success: true });
   } catch (error) {
     console.error('Signout error:', error);
@@ -115,6 +164,16 @@ router.post('/request-password-reset', async (req: Request, res: Response) => {
 
     if (result.error) {
       return res.status(400).json({ error: result.error });
+    }
+
+    if (result.user && result.resetToken) {
+      trackAuthActivity({
+        userId: result.user.id,
+        interactionType: 'password_reset_request',
+        metadata: { userEmail: result.user.email, userName: [result.user.firstName, result.user.lastName].filter(Boolean).join(' ') || undefined },
+        ipAddress: req.ip || (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
+        userAgent: req.headers['user-agent'],
+      }).catch(() => {});
     }
 
     // Send password reset email if user exists and token was generated
@@ -152,6 +211,15 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 
     if (result.error) {
       return res.status(400).json({ error: result.error });
+    }
+
+    if (result.userId) {
+      trackAuthActivity({
+        userId: result.userId,
+        interactionType: 'password_reset',
+        ipAddress: req.ip || (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
+        userAgent: req.headers['user-agent'],
+      }).catch(() => {});
     }
 
     res.json({ success: true, message: 'Password has been reset successfully' });

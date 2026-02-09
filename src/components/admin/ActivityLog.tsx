@@ -65,6 +65,8 @@ const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   settings_update: 'Settings Updated',
   user_login: 'User Login',
   user_logout: 'User Logout',
+  password_reset_request: 'Password Reset Requested',
+  password_reset: 'Password Reset',
 };
 
 const ACTIVITY_TYPE_COLORS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -89,6 +91,8 @@ const ACTIVITY_TYPE_COLORS: Record<string, 'default' | 'secondary' | 'destructiv
   settings_update: 'secondary',
   user_login: 'outline',
   user_logout: 'outline',
+  password_reset_request: 'secondary',
+  password_reset: 'secondary',
 };
 
 const ACTIVITY_TYPE_ICONS: Record<string, React.ComponentType<any>> = {
@@ -113,6 +117,8 @@ const ACTIVITY_TYPE_ICONS: Record<string, React.ComponentType<any>> = {
   settings_update: Settings,
   user_login: User,
   user_logout: User,
+  password_reset_request: Settings,
+  password_reset: Settings,
 };
 
 export function ActivityLog({ hubId, publicationId, userId, showFilters = true, hideCard = false, activityTypes }: ActivityLogProps) {
@@ -254,6 +260,14 @@ export function ActivityLog({ hubId, publicationId, userId, showFilters = true, 
     }
   };
 
+  const platformOnlyTypes = ['user_login', 'user_logout', 'password_reset_request', 'password_reset'];
+
+  useEffect(() => {
+    if (hubId !== '__platform' && platformOnlyTypes.includes(filterType)) {
+      setFilterType('all');
+    }
+  }, [hubId]);
+
   useEffect(() => {
     setPage(0);
     fetchActivities(0, false);
@@ -361,14 +375,28 @@ export function ActivityLog({ hubId, publicationId, userId, showFilters = true, 
                   <SelectItem value="campaign_delete">Campaign Deleted</SelectItem>
                   <SelectItem value="order_create">Order Created</SelectItem>
                   <SelectItem value="order_update">Order Updated</SelectItem>
+                  <SelectItem value="order_delete">Order Deleted</SelectItem>
                   <SelectItem value="package_create">Package Created</SelectItem>
                   <SelectItem value="package_update">Package Updated</SelectItem>
+                  <SelectItem value="package_delete">Package Deleted</SelectItem>
                   <SelectItem value="lead_create">Lead Created</SelectItem>
                   <SelectItem value="lead_update">Lead Updated</SelectItem>
+                  <SelectItem value="lead_delete">Lead Deleted</SelectItem>
+                  <SelectItem value="publication_create">Publication Created</SelectItem>
                   <SelectItem value="publication_update">Publication Updated</SelectItem>
+                  <SelectItem value="publication_delete">Publication Deleted</SelectItem>
                   <SelectItem value="inventory_update">Inventory Updated</SelectItem>
                   <SelectItem value="profile_update">Profile Updated</SelectItem>
                   <SelectItem value="storefront_update">Storefront Updated</SelectItem>
+                  <SelectItem value="settings_update">Settings Updated</SelectItem>
+                  {hubId === '__platform' && (
+                    <>
+                      <SelectItem value="user_login">User Login</SelectItem>
+                      <SelectItem value="user_logout">User Logout</SelectItem>
+                      <SelectItem value="password_reset_request">Password Reset Requested</SelectItem>
+                      <SelectItem value="password_reset">Password Reset</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>

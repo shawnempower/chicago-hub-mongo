@@ -382,7 +382,7 @@ export class AuthService {
   }
 
   // Reset password with token
-  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; userId?: string; error?: string }> {
     try {
       const user = await this.usersCollection.findOne({
         passwordResetToken: token,
@@ -414,9 +414,10 @@ export class AuthService {
       );
 
       // Sign out all sessions
-      await this.signOutAllSessions(user._id?.toString() || '');
+      const userId = user._id?.toString() || '';
+      await this.signOutAllSessions(userId);
 
-      return { success: true };
+      return { success: true, userId };
     } catch (error) {
       return { success: false, error: 'Failed to reset password' };
     }

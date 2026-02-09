@@ -248,6 +248,8 @@ export class PackageBuilderService {
         format, // Standardized format object
         audienceMetrics,  // Include channel-level audience metrics
         performanceMetrics,  // Include item-level performance metrics
+        // Add top-level monthlyImpressions for LineItemEditor compatibility (CPM frequency selector)
+        monthlyImpressions: audienceMetrics?.monthlyImpressions || performanceMetrics?.impressionsPerMonth,
         publicationId: publication.publicationId,
         publicationName: publication.basicInfo.publicationName
       };

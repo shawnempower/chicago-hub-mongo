@@ -30,30 +30,6 @@ export function LineItemEditor({
 }: LineItemEditorProps) {
   const [showFormulaLocal, setShowFormulaLocal] = useState(showFormula);
   
-  // Convert camelCase to Title Case
-  const camelToTitleCase = (str: string): string => {
-    const specialCases: Record<string, string> = {
-      'fileSize': 'File Size',
-      'thirdPartyTags': 'Third Party Tags',
-      'adFormat': 'Ad Format',
-      'bitrate': 'Bitrate',
-      'duration': 'Duration',
-      'format': 'Format',
-      'placement': 'Placement',
-      'size': 'Size',
-      'animationAllowed': 'Animation Allowed'
-    };
-    
-    if (specialCases[str]) {
-      return specialCases[str];
-    }
-    
-    return str
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, (s) => s.toUpperCase())
-      .trim();
-  };
-  
   const frequency = item.currentFrequency || item.quantity || 1;
   const unitPrice = item.itemPricing?.hubPrice || 0;
   const pricingModel = item.itemPricing?.pricingModel || 'flat';
@@ -144,13 +120,23 @@ export function LineItemEditor({
   const renderFrequencyControl = () => {
     // For impression-based pricing (CPM/CPV/CPC), show percentage selector
     if (isImpressionBased && (item as any).monthlyImpressions) {
+      const totalImpressions = (item as any).monthlyImpressions;
+      const selectedImpressions = Math.round((totalImpressions * frequency) / 100);
+      
+      // Format large numbers compactly (e.g., 10.5M, 105K)
+      const formatCompact = (num: number) => {
+        if (num >= 1000000) return `${(num / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
+        if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
+        return num.toLocaleString();
+      };
+      
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Select
             value={frequency.toString()}
             onValueChange={(value) => onFrequencyChange(publicationId, itemIndex, parseInt(value))}
           >
-            <SelectTrigger className="h-8 w-32">
+            <SelectTrigger className="h-8 w-20">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -180,8 +166,8 @@ export function LineItemEditor({
               <SelectItem value="100">100%</SelectItem>
             </SelectContent>
           </Select>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            ({Math.round(((item as any).monthlyImpressions * frequency) / 100).toLocaleString()} of {((item as any).monthlyImpressions).toLocaleString()} imp/mo)
+          <span className="text-xs text-muted-foreground">
+            ({formatCompact(selectedImpressions)} of {formatCompact(totalImpressions)})
           </span>
         </div>
       );
@@ -318,18 +304,7 @@ export function LineItemEditor({
             )}
           </div>
           
-          {item.format && Object.keys(item.format).length > 0 && (
-            <div className="flex items-center gap-3 flex-wrap text-xs">
-              {Object.entries(item.format)
-                .filter(([key, value]) => value)
-                .map(([key, value], idx) => (
-                  <span key={idx} className="flex items-center gap-1">
-                    <span className="text-gray-400 font-light">{camelToTitleCase(key)}</span>
-                    <span className="text-gray-700 font-normal">{value}</span>
-                  </span>
-                ))}
-            </div>
-          )}
+{/* Format details hidden for cleaner display */}
           
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>${unitPrice.toFixed(2)} / unit</span>
@@ -434,21 +409,7 @@ export function LineItemEditor({
         {renderCostFormula()}
       </div>
 
-      {/* Format Specifications */}
-      {item.format && Object.keys(item.format).length > 0 && (
-        <div className="pt-2 border-t">
-          <div className="flex items-center gap-3 flex-wrap text-xs">
-            {Object.entries(item.format)
-              .filter(([key, value]) => value)
-              .map(([key, value], idx) => (
-                <span key={idx} className="flex items-center gap-1">
-                  <span className="text-gray-400 font-light">{camelToTitleCase(key)}</span>
-                  <span className="text-gray-700 font-normal">{value}</span>
-                </span>
-              ))}
-          </div>
-        </div>
-      )}
+{/* Format specifications hidden for cleaner display */}
     </div>
   );
 }

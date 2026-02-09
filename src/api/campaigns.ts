@@ -325,5 +325,143 @@ export const campaignsApi = {
       throw error;
     }
   },
+
+  /**
+   * Add a placement to an existing publication order
+   */
+  async addPlacementToOrder(
+    campaignId: string,
+    publicationId: number,
+    placement: {
+      channel: string;
+      itemPath: string;
+      itemName: string;
+      quantity?: number;
+      frequency?: string;
+      duration?: string;
+      sourceName?: string;
+      currentFrequency?: number;
+      format?: {
+        dimensions?: string | string[];
+        fileFormats?: string[];
+        maxFileSize?: string;
+        colorSpace?: string;
+        resolution?: string;
+      };
+      itemPricing?: {
+        standardPrice: number;
+        hubPrice: number;
+        pricingModel: string;
+        totalCost?: number;
+      };
+      audienceMetrics?: Record<string, any>;
+      performanceMetrics?: {
+        impressionsPerMonth?: number;
+        audienceSize?: number;
+        guaranteed?: boolean;
+      };
+    }
+  ): Promise<{ success: boolean; message: string; updatedOrder?: any }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/orders/${campaignId}/${publicationId}/placement`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ placement }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add placement');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error adding placement:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Add a new publication with placements to a campaign
+   */
+  async addPublicationToOrder(
+    campaignId: string,
+    publicationId: number,
+    publicationName: string,
+    placements: Array<{
+      channel: string;
+      itemPath: string;
+      itemName: string;
+      quantity?: number;
+      frequency?: string;
+      duration?: string;
+      sourceName?: string;
+      currentFrequency?: number;
+      format?: {
+        dimensions?: string | string[];
+        fileFormats?: string[];
+        maxFileSize?: string;
+        colorSpace?: string;
+        resolution?: string;
+      };
+      itemPricing?: {
+        standardPrice: number;
+        hubPrice: number;
+        pricingModel: string;
+        totalCost?: number;
+      };
+      audienceMetrics?: Record<string, any>;
+      performanceMetrics?: {
+        impressionsPerMonth?: number;
+        audienceSize?: number;
+        guaranteed?: boolean;
+      };
+    }>
+  ): Promise<{ success: boolean; message: string; newOrder?: any }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/orders/${campaignId}/publication`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ publicationId, publicationName, placements }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add publication');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error adding publication:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Remove a placement from a publication order
+   */
+  async removePlacement(
+    campaignId: string,
+    publicationId: number,
+    placementId: string
+  ): Promise<{ success: boolean; message: string; updatedOrder?: any; deadlineInfo?: any }> {
+    try {
+      const encodedPlacementId = encodeURIComponent(placementId);
+      const response = await fetch(`${API_BASE_URL}/admin/orders/${campaignId}/${publicationId}/placement/${encodedPlacementId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to remove placement');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error removing placement:', error);
+      throw error;
+    }
+  },
 };
 

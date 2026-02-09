@@ -181,6 +181,20 @@ export interface PublicationInsertionOrder {
   };
 }
 
+/**
+ * Investment summary calculated at runtime from active orders
+ * - projected: All placements likely to be filled (pending, accepted, in_production, delivered)
+ * - confirmed: Only accepted/active placements (accepted, in_production, delivered)
+ */
+export interface CampaignInvestmentSummary {
+  projected: number;           // Total $ from all non-rejected/removed placements
+  confirmed: number;           // Total $ from accepted placements only
+  projectedPlacements: number; // Count of placements likely to be filled
+  confirmedPlacements: number; // Count of accepted placements
+  pendingAmount: number;       // projected - confirmed
+  pendingPlacements: number;   // projectedPlacements - confirmedPlacements
+}
+
 export interface Campaign {
   _id?: string | ObjectId;
   campaignId: string; // Unique identifier (e.g., "campaign-abc123")
@@ -267,6 +281,9 @@ export interface Campaign {
     rejectedAt?: Date;
     rejectionReason?: string;
   };
+  
+  // Investment summary (computed at runtime from active orders, not stored)
+  investmentSummary?: CampaignInvestmentSummary;
   
   // Metadata
   metadata: {
