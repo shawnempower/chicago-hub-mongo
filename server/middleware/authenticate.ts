@@ -28,7 +28,7 @@ export const authenticateToken = async (req: any, res: Response, next: NextFunct
     
     if (!decoded || !decoded.userId) {
       console.log('❌ Invalid token structure');
-      return res.status(403).json({ error: 'Invalid or expired token' });
+      return res.status(401).json({ error: 'Invalid or expired token' });
     }
     
     // Fetch full user from database (includes isAdmin from User record or Profile)
@@ -37,7 +37,7 @@ export const authenticateToken = async (req: any, res: Response, next: NextFunct
     
     if (!user) {
       console.log('❌ User not found in database');
-      return res.status(403).json({ error: 'User not found' });
+      return res.status(401).json({ error: 'User not found' });
     }
     
     req.user = user;
@@ -46,7 +46,7 @@ export const authenticateToken = async (req: any, res: Response, next: NextFunct
     next();
   } catch (error) {
     console.error('❌ Auth middleware error:', error);
-    return res.status(403).json({ error: 'Invalid or expired token' });
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 };
 

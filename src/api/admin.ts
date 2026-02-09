@@ -1,20 +1,7 @@
 // Admin API endpoints for user management
 import type { UserProfile } from "@/types/common";
 import { API_BASE_URL } from '@/config/api';
-
-// Get auth token from localStorage
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('auth_token');
-};
-
-// Create headers with auth token
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-};
+import { authenticatedFetch } from '@/api/client';
 
 export interface AdminCheckResponse {
   isAdmin: boolean;
@@ -34,9 +21,9 @@ export const adminApi = {
   // Check if current user is admin
   async checkAdminStatus(): Promise<AdminCheckResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/check`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/check`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -53,9 +40,9 @@ export const adminApi = {
   // Get all users (admin only)
   async getAllUsers(): Promise<UsersListResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/users`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/users`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -77,9 +64,9 @@ export const adminApi = {
     try {
       console.log(`API call: Updating admin status for userId=${userId}, isAdmin=${isAdmin}`);
       
-      const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/admin`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/users/${userId}/admin`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isAdmin }),
       });
 

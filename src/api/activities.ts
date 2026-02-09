@@ -5,17 +5,7 @@
  */
 
 import { API_BASE_URL } from '@/config/api';
-
-/**
- * Get auth headers with JWT token
- */
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('auth_token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-}
+import { authenticatedFetch } from '@/api/client';
 
 export interface UserInteraction {
   _id?: string;
@@ -69,8 +59,8 @@ export async function getMyActivities(options: ActivityQueryOptions = {}): Promi
   if (options.offset) params.append('offset', options.offset.toString());
   if (options.activityType) params.append('activityType', options.activityType);
   
-  const response = await fetch(`${API_BASE_URL}/activities/me?${params}`, {
-    headers: getAuthHeaders(),
+  const response = await authenticatedFetch(`${API_BASE_URL}/activities/me?${params}`, {
+    headers: { 'Content-Type': 'application/json' },
   });
   
   if (!response.ok) {
@@ -100,8 +90,8 @@ export async function getPublicationActivities(
     params.append('endDate', date);
   }
   
-  const response = await fetch(`${API_BASE_URL}/activities/publication/${publicationId}?${params}`, {
-    headers: getAuthHeaders(),
+  const response = await authenticatedFetch(`${API_BASE_URL}/activities/publication/${publicationId}?${params}`, {
+    headers: { 'Content-Type': 'application/json' },
   });
   
   if (!response.ok) {
@@ -131,8 +121,8 @@ export async function getHubActivities(
     params.append('endDate', date);
   }
   
-  const response = await fetch(`${API_BASE_URL}/activities/hub/${hubId}?${params}`, {
-    headers: getAuthHeaders(),
+  const response = await authenticatedFetch(`${API_BASE_URL}/activities/hub/${hubId}?${params}`, {
+    headers: { 'Content-Type': 'application/json' },
   });
   
   if (!response.ok) {
@@ -162,8 +152,8 @@ export async function getUserActivities(
     params.append('endDate', date);
   }
   
-  const response = await fetch(`${API_BASE_URL}/activities/user/${userId}?${params}`, {
-    headers: getAuthHeaders(),
+  const response = await authenticatedFetch(`${API_BASE_URL}/activities/user/${userId}?${params}`, {
+    headers: { 'Content-Type': 'application/json' },
   });
   
   if (!response.ok) {
@@ -182,9 +172,9 @@ export async function trackActivity(data: {
   publicationId?: string;
   metadata?: Record<string, any>;
 }): Promise<{ success: boolean; message: string }> {
-  const response = await fetch(`${API_BASE_URL}/activities/track`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/activities/track`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   
@@ -216,8 +206,8 @@ export async function getActivitySummary(options: {
     params.append('endDate', date);
   }
   
-  const response = await fetch(`${API_BASE_URL}/activities/summary?${params}`, {
-    headers: getAuthHeaders(),
+  const response = await authenticatedFetch(`${API_BASE_URL}/activities/summary?${params}`, {
+    headers: { 'Content-Type': 'application/json' },
   });
   
   if (!response.ok) {

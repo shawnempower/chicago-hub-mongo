@@ -1,19 +1,6 @@
 // Admin API endpoints for lead management
 import { API_BASE_URL } from '@/config/api';
-
-// Get auth token from localStorage
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('auth_token');
-};
-
-// Create headers with auth token
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-};
+import { authenticatedFetch } from '@/api/client';
 
 export type LeadSource = 'storefront_form' | 'ai_chat' | 'manual_entry' | 'other';
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'closed_won' | 'closed_lost';
@@ -176,9 +163,9 @@ export const leadsApi = {
       if (filters?.includeArchived) params.append('includeArchived', 'true');
 
       const url = `${API_BASE_URL}/admin/leads${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -198,9 +185,9 @@ export const leadsApi = {
   // Get single lead by ID (admin only)
   async getById(leadId: string): Promise<LeadResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/leads/${leadId}`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -223,9 +210,9 @@ export const leadsApi = {
   // Create new lead
   async create(leadData: Omit<Lead, '_id' | 'createdAt' | 'updatedAt'>): Promise<LeadResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/leads`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(leadData),
       });
 
@@ -243,9 +230,9 @@ export const leadsApi = {
   // Update lead (admin only)
   async update(leadId: string, updateData: Partial<Lead>): Promise<LeadResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/leads/${leadId}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
       });
 
@@ -269,9 +256,9 @@ export const leadsApi = {
   // Archive lead (admin only)
   async archive(leadId: string): Promise<LeadResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}/archive`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/leads/${leadId}/archive`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -294,9 +281,9 @@ export const leadsApi = {
   // Unarchive lead (admin only)
   async unarchive(leadId: string): Promise<LeadResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}/unarchive`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/leads/${leadId}/unarchive`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -320,9 +307,9 @@ export const leadsApi = {
   async getStats(hubId?: string): Promise<LeadStatsResponse> {
     try {
       const url = `${API_BASE_URL}/admin/leads-stats${hubId ? `?hubId=${hubId}` : ''}`;
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -344,9 +331,9 @@ export const leadsApi = {
   // Get all notes for a lead (admin only)
   async getNotes(leadId: string): Promise<LeadNotesResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}/notes`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/leads/${leadId}/notes`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -369,9 +356,9 @@ export const leadsApi = {
     noteData: { noteContent: string; noteType?: LeadNote['noteType']; metadata?: LeadNote['metadata'] }
   ): Promise<LeadNoteResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}/notes`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/leads/${leadId}/notes`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(noteData),
       });
 
@@ -396,9 +383,9 @@ export const leadsApi = {
     noteData: { noteContent: string; metadata?: LeadNote['metadata'] }
   ): Promise<LeadNoteResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}/notes/${noteId}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/leads/${leadId}/notes/${noteId}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(noteData),
       });
 
@@ -422,9 +409,9 @@ export const leadsApi = {
   // Delete a note (admin only)
   async deleteNote(leadId: string, noteId: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}/notes/${noteId}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/leads/${leadId}/notes/${noteId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -447,9 +434,9 @@ export const leadsApi = {
   // Get conversation history for a lead (admin only)
   async getConversation(leadId: string): Promise<ConversationResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}/conversation`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/leads/${leadId}/conversation`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {

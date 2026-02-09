@@ -1,5 +1,24 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { authAPI, AuthResponse } from '@/api/auth';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+/** Decode JWT payload to get exp (seconds). No verification - client only reads expiry for scheduling. */
+function getTokenExpiryMs(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
 
 export type UserRole = 'admin' | 'hub_user' | 'publication_user' | 'standard';
 
@@ -47,8 +66,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpiredOpen, setSessionExpiredOpen] = useState(false);
 
-  // Check for existing session on mount
+  // Session-expired modal: when any 401 after refresh fails, open modal; user clicks Sign in -> set user null so route guards redirect
+  useEffect(() => {
+    authAPI.registerSessionExpiredCallback(() => {
+      setSessionExpiredOpen((prev) => (prev ? prev : true));
+    });
+    return () => authAPI.registerSessionExpiredCallback(null);
+  }, []);
+
+  const handleSessionExpiredSignIn = () => {
+    setSessionExpiredOpen(false);
+    setUser(null);
+  };
+
+  // Check for existing session on mount (getCurrentUser already tries refresh on 401)
   useEffect(() => {
     const initAuth = async () => {
       const token = authAPI.getToken();
@@ -57,15 +90,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.user) {
           setUser(response.user);
         } else {
-          // Clear invalid token
           authAPI.clearToken();
         }
       }
       setLoading(false);
     };
-
     initAuth();
   }, []);
+
+  // Proactive token refresh before access token expires (~5 min before)
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    const token = authAPI.getToken();
+    if (!token) return;
+    const expMs = getTokenExpiryMs(token);
+    if (!expMs) return;
+    const refreshAt = expMs - 5 * 60 * 1000;
+    const delay = Math.max(0, refreshAt - Date.now());
+    refreshTimeoutRef.current = setTimeout(async () => {
+      refreshTimeoutRef.current = null;
+      const result = await authAPI.refresh();
+      if (result.user) setUser(result.user);
+    }, delay);
+    return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    };
+  }, [user]);
 
   const signUp = async (email: string, password: string, metadata?: {
     first_name?: string;
@@ -211,6 +262,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={value}>
       {children}
+      <AlertDialog open={sessionExpiredOpen} onOpenChange={(open) => { if (!open) handleSessionExpiredSignIn(); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Session expired</AlertDialogTitle>
+            <AlertDialogDescription>Please sign in again.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleSessionExpiredSignIn}>Sign in</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AuthContext.Provider>
   );
 }

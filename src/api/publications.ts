@@ -1,19 +1,6 @@
 import { PublicationFrontend, PublicationInsertFrontend } from '@/types/publication';
 import { API_BASE_URL } from '@/config/api';
-
-// Get auth token from localStorage
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('auth_token');
-};
-
-// Create headers with auth token
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-  };
-};
+import { authenticatedFetch } from '@/api/client';
 
 // Type for minimal publication data (for dropdowns)
 export interface PublicationMinimal {
@@ -83,9 +70,9 @@ export const getPublications = async (filters?: {
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     
     try {
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         signal: controller.signal,
-        headers: getAuthHeaders()
+        headers: { 'Content-Type': 'application/json' }
       });
       
       clearTimeout(timeoutId);
@@ -145,9 +132,9 @@ export const getPublicationsMinimal = async (): Promise<PublicationMinimal[]> =>
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for minimal data
     
     try {
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         signal: controller.signal,
-        headers: getAuthHeaders()
+        headers: { 'Content-Type': 'application/json' }
       });
       
       clearTimeout(timeoutId);
@@ -207,9 +194,9 @@ export const getPublicationsPaginated = async (options?: {
     const timeoutId = setTimeout(() => controller.abort(), 30000);
     
     try {
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         signal: controller.signal,
-        headers: getAuthHeaders()
+        headers: { 'Content-Type': 'application/json' }
       });
       
       clearTimeout(timeoutId);
@@ -257,7 +244,7 @@ export const getPublicationsPaginated = async (options?: {
 // Get a single publication by ID
 export const getPublicationById = async (id: string): Promise<PublicationFrontend | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/publications/${id}`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/${id}`);
     
     if (!response.ok) {
       if (response.status === 404) {
@@ -276,16 +263,13 @@ export const getPublicationById = async (id: string): Promise<PublicationFronten
 // Create a new publication
 export const createPublication = async (publicationData: PublicationInsertFrontend): Promise<PublicationFrontend> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/publications`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(publicationData),
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Authentication required');
-      }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to create publication');
     }
@@ -300,18 +284,13 @@ export const createPublication = async (publicationData: PublicationInsertFronte
 // Update an existing publication
 export const updatePublication = async (id: string, updates: Partial<PublicationInsertFrontend>): Promise<PublicationFrontend | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/publications/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/${id}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        // Clear invalid token and redirect to login
-        localStorage.removeItem('auth_token');
-        throw new Error('Authentication required. Please log in again.');
-      }
       if (response.status === 404) {
         return null;
       }
@@ -336,15 +315,12 @@ export const updatePublication = async (id: string, updates: Partial<Publication
 // Delete a publication
 export const deletePublication = async (id: string): Promise<boolean> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/publications/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/${id}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Authentication required');
-      }
       if (response.status === 403) {
         throw new Error('Admin access required');
       }
@@ -365,7 +341,7 @@ export const deletePublication = async (id: string): Promise<boolean> => {
 // Import multiple publications
 export const importPublications = async (publications: PublicationInsertFrontend[]): Promise<{ inserted: number; errors: any[] }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/publications/import`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -387,7 +363,7 @@ export const importPublications = async (publications: PublicationInsertFrontend
 // Enhanced import with options
 export const importPublicationsWithOptions = async (publications: PublicationInsertFrontend[], options: any) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/publications/import`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -409,7 +385,7 @@ export const importPublicationsWithOptions = async (publications: PublicationIns
 // Preview import changes
 export const previewPublicationsImport = async (publications: PublicationInsertFrontend[], options: any) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/publications/import-preview`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/import-preview`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -431,7 +407,7 @@ export const previewPublicationsImport = async (publications: PublicationInsertF
 // Get publication categories for filtering
 export const getPublicationCategories = async (): Promise<Array<{ id: string; name: string; count: number }>> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/publications/categories`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/categories`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch publication categories');
@@ -447,7 +423,7 @@ export const getPublicationCategories = async (): Promise<Array<{ id: string; na
 // Get publication types for filtering
 export const getPublicationTypes = async (): Promise<Array<{ id: string; name: string; count: number }>> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/publications/types`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/types`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch publication types');

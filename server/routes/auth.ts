@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authService } from '../../src/integrations/mongodb/authService';
+import { userProfilesService } from '../../src/integrations/mongodb/allServices';
 import { authenticateToken } from '../middleware/authenticate';
 
 const router = Router();
@@ -78,7 +79,8 @@ router.post('/signup', async (req: Request, res: Response) => {
 
     res.status(201).json({
       user: result.user,
-      token: result.token
+      token: result.token,
+      ...(result.refreshToken && { refreshToken: result.refreshToken }),
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -114,7 +116,8 @@ router.post('/signin', async (req: Request, res: Response) => {
 
     res.json({
       user: result.user,
-      token: result.token
+      token: result.token,
+      ...(result.refreshToken && { refreshToken: result.refreshToken }),
     });
   } catch (error) {
     console.error('Signin error:', error);
@@ -122,18 +125,58 @@ router.post('/signin', async (req: Request, res: Response) => {
   }
 });
 
-// Sign out
-router.post('/signout', authenticateToken, async (req: any, res: Response) => {
+// Refresh access token (no auth required; uses refresh token in body)
+router.post('/refresh', async (req: Request, res: Response) => {
   try {
-    const user = req.user;
-    await authService.signOut(req.token);
-    trackAuthActivity({
-      userId: user?.id ?? '',
-      interactionType: 'user_logout',
-      metadata: user?.email ? { userEmail: user.email, userName: [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined } : undefined,
-      ipAddress: req.ip || (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
-      userAgent: req.headers['user-agent'],
-    }).catch(() => {});
+    const { refreshToken } = req.body;
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      return res.status(400).json({ error: 'Refresh token required' });
+    }
+
+    const result = await authService.refreshTokens(refreshToken);
+    if ('error' in result) {
+      return res.status(401).json({ error: result.error });
+    }
+
+    res.json({
+      user: result.user,
+      token: result.token,
+      refreshToken: result.refreshToken,
+    });
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Sign out (by access token in Authorization header, or by refresh token in body when token expired)
+router.post('/signout', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const accessToken = authHeader && authHeader.split(' ')[1];
+    const refreshToken = req.body?.refreshToken;
+
+    if (accessToken) {
+      try {
+        const decoded = authService.verifyToken(accessToken);
+        if (decoded?.userId) {
+          await authService.signOut(accessToken);
+          const user = await authService.getUserById(decoded.userId);
+          trackAuthActivity({
+            userId: decoded.userId,
+            interactionType: 'user_logout',
+            metadata: user?.email ? { userEmail: user.email, userName: [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined } : undefined,
+            ipAddress: req.ip || (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
+            userAgent: req.headers['user-agent'],
+          }).catch(() => {});
+        }
+      } catch {
+        // Token invalid/expired; try refresh token if provided
+      }
+    }
+    if (refreshToken) {
+      await authService.signOutByRefreshToken(refreshToken);
+    }
     res.json({ success: true });
   } catch (error) {
     console.error('Signout error:', error);

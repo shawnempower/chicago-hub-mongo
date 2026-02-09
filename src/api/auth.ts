@@ -2,6 +2,9 @@
 // This is a client-side API wrapper that will make requests to your backend
 import { API_BASE_URL } from '@/config/api';
 
+const AUTH_TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'auth_refresh_token';
+
 export interface AuthResponse {
   user?: {
     id: string;
@@ -16,6 +19,7 @@ export interface AuthResponse {
     createdAt: string;
   };
   token?: string;
+  refreshToken?: string;
   error?: string;
 }
 
@@ -34,8 +38,21 @@ export interface SignUpData {
   companyName?: string;
 }
 
+/** Called when session is invalid (401 after refresh failed). Opens modal; modal then sets user null and redirects. */
+let onSessionExpired: (() => void) | null = null;
+
 class AuthAPI {
   private baseUrl = `${API_BASE_URL}/auth`; // This will be your backend endpoint
+
+  registerSessionExpiredCallback(cb: (() => void) | null): void {
+    onSessionExpired = cb;
+  }
+
+  /** Clear tokens and notify app to show session-expired modal. Does not set user to null (modal does that on dismiss). */
+  notifySessionExpired(): void {
+    this.clearToken();
+    onSessionExpired?.();
+  }
 
   async signUp(data: SignUpData): Promise<AuthResponse> {
     try {
@@ -53,11 +70,10 @@ class AuthAPI {
         return { error: result.error || 'Sign up failed' };
       }
 
-      // Store token in localStorage
       if (result.token) {
-        localStorage.setItem('auth_token', result.token);
+        localStorage.setItem(AUTH_TOKEN_KEY, result.token);
+        if (result.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, result.refreshToken);
       }
-
       return result;
     } catch (error) {
       console.error('Sign up error:', error);
@@ -81,11 +97,10 @@ class AuthAPI {
         return { error: result.error || 'Sign in failed' };
       }
 
-      // Store token in localStorage
       if (result.token) {
-        localStorage.setItem('auth_token', result.token);
+        localStorage.setItem(AUTH_TOKEN_KEY, result.token);
+        if (result.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, result.refreshToken);
       }
-
       return result;
     } catch (error) {
       console.error('Sign in error:', error);
@@ -93,59 +108,81 @@ class AuthAPI {
     }
   }
 
+  /** Refresh access token using refresh token. On success stores new tokens; on failure clears tokens. */
+  async refresh(): Promise<AuthResponse> {
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!refreshToken) return { error: 'No refresh token' };
+    try {
+      const response = await fetch(`${this.baseUrl}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        this.clearToken();
+        return { error: result.error || 'Refresh failed' };
+      }
+      if (result.token) {
+        localStorage.setItem(AUTH_TOKEN_KEY, result.token);
+        if (result.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, result.refreshToken);
+      }
+      return result;
+    } catch (error) {
+      console.error('Refresh error:', error);
+      this.clearToken();
+      return { error: 'Network error occurred' };
+    }
+  }
+
   async signOut(): Promise<{ success: boolean; error?: string }> {
     try {
-      const token = localStorage.getItem('auth_token');
-      
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
       const response = await fetch(`${this.baseUrl}/signout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
+        body: JSON.stringify(refreshToken ? { refreshToken } : {}),
       });
-
-      // Clear token regardless of response
-      localStorage.removeItem('auth_token');
-
-      if (!response.ok) {
-        return { success: false, error: 'Sign out failed' };
-      }
-
+      this.clearToken();
+      if (!response.ok) return { success: false, error: 'Sign out failed' };
       return { success: true };
     } catch (error) {
       console.error('Sign out error:', error);
-      // Still clear token on error
-      localStorage.removeItem('auth_token');
+      this.clearToken();
       return { success: false, error: 'Network error occurred' };
     }
   }
 
   async getCurrentUser(): Promise<AuthResponse> {
     try {
-      const token = localStorage.getItem('auth_token');
-      
-      if (!token) {
-        return { error: 'No authentication token found' };
-      }
+      let token = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (!token) return { error: 'No authentication token found' };
 
-      const response = await fetch(`${this.baseUrl}/me`, {
+      let response = await fetch(`${this.baseUrl}/me`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      const result = await response.json();
-      
-      if (!response.ok) {
-        // Clear invalid token
-        if (response.status === 401) {
-          localStorage.removeItem('auth_token');
+      if (response.status === 401) {
+        const refreshResult = await this.refresh();
+        if (refreshResult.token && refreshResult.user) {
+          response = await fetch(`${this.baseUrl}/me`, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${refreshResult.token}` },
+          });
+          const result = await response.json();
+          if (response.ok) return result;
         }
-        return { error: result.error || 'Failed to get user' };
+        this.notifySessionExpired();
+        return { error: refreshResult.error || 'Session expired' };
       }
 
+      const result = await response.json();
+      if (!response.ok) return { error: result.error || 'Failed to get user' };
       return result;
     } catch (error) {
       console.error('Get current user error:', error);
@@ -224,7 +261,7 @@ class AuthAPI {
 
   async updateProfile(data: UpdateProfileData): Promise<AuthResponse> {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       
       if (!token) {
         return { error: 'No authentication token found' };
@@ -254,7 +291,7 @@ class AuthAPI {
 
   async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       
       if (!token) {
         return { success: false, error: 'No authentication token found' };
@@ -283,11 +320,16 @@ class AuthAPI {
   }
 
   getToken(): string | null {
-    return localStorage.getItem('auth_token');
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
   }
 
   clearToken(): void {
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
   }
 }
 

@@ -1,20 +1,7 @@
 // API client for hub packages
 import { HubPackage } from '@/integrations/mongodb/hubPackageSchema';
 import { API_BASE_URL } from '@/config/api';
-
-// Get auth token from localStorage
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('auth_token');
-};
-
-// Create headers with auth token
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-};
+import { authenticatedFetch } from '@/api/client';
 
 export interface HubPackageFilters {
   active_only?: boolean;
@@ -34,7 +21,7 @@ export const hubPackagesApi = {
       if (filters?.hub_id) params.append('hub_id', filters.hub_id);
 
       const url = `${API_BASE_URL}/hub-packages${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await fetch(url);
+      const response = await authenticatedFetch(url);
       
       if (!response.ok) {
         throw new Error('Failed to fetch hub packages');
@@ -50,7 +37,7 @@ export const hubPackagesApi = {
   // Get a single hub package by ID
   async getById(id: string): Promise<{ package: HubPackage }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/hub-packages/${id}`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/hub-packages/${id}`);
       
       if (!response.ok) {
         throw new Error('Package not found');
@@ -66,7 +53,7 @@ export const hubPackagesApi = {
   // Search hub packages
   async search(query: string): Promise<{ packages: HubPackage[] }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/hub-packages/search/${encodeURIComponent(query)}`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/hub-packages/search/${encodeURIComponent(query)}`);
       
       if (!response.ok) {
         throw new Error('Search failed');
@@ -82,9 +69,9 @@ export const hubPackagesApi = {
   // Record package inquiry (requires auth)
   async inquire(id: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/hub-packages/${id}/inquire`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/hub-packages/${id}/inquire`, {
         method: 'POST',
-        headers: getAuthHeaders()
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {

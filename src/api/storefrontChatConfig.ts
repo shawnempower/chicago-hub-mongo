@@ -1,27 +1,14 @@
 import { API_BASE_URL } from '@/config/api';
 import { StorefrontChatConfig, StorefrontChatConfigInsert } from '@/integrations/mongodb/schemas';
-
-// Get auth token from localStorage
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('auth_token');
-};
-
-// Create headers with auth token
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-  };
-};
+import { authenticatedFetch } from '@/api/client';
 
 /**
  * Get chat config by publicationId
  */
 export const getStorefrontChatConfig = async (publicationId: string): Promise<StorefrontChatConfig | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront-chat-config/${publicationId}`, {
-      headers: getAuthHeaders(),
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront-chat-config/${publicationId}`, {
+      headers: { 'Content-Type': 'application/json' },
     });
     
     if (!response.ok) {
@@ -49,9 +36,9 @@ export const saveStorefrontChatConfig = async (
   publicationId: string, 
   configData: Partial<StorefrontChatConfigInsert>
 ): Promise<StorefrontChatConfig> => {
-  const response = await fetch(`${API_BASE_URL}/storefront-chat-config/${publicationId}`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/storefront-chat-config/${publicationId}`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(configData),
   });
   
@@ -67,9 +54,9 @@ export const saveStorefrontChatConfig = async (
  * Delete chat config
  */
 export const deleteStorefrontChatConfig = async (publicationId: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/storefront-chat-config/${publicationId}`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/storefront-chat-config/${publicationId}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
+    headers: { 'Content-Type': 'application/json' },
   });
   
   if (!response.ok) {
@@ -110,9 +97,9 @@ export const testStorefrontChat = async (
   configOverride?: Partial<StorefrontChatConfigInsert>,
   onChunk?: (chunk: string) => void
 ): Promise<string> => {
-  const response = await fetch(`${API_BASE_URL}/storefront-chat-config/${publicationId}/test`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/storefront-chat-config/${publicationId}/test`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ messages, configOverride }),
   });
   

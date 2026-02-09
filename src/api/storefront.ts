@@ -1,25 +1,12 @@
 import { StorefrontConfiguration, StorefrontConfigurationInsert } from '@/types/storefront';
 import { API_BASE_URL } from '@/config/api';
-
-// Get auth token from localStorage
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('auth_token');
-};
-
-// Create headers with auth token
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-  };
-};
+import { authenticatedFetch } from '@/api/client';
 
 // Get storefront configuration by publication ID
 export const getStorefrontConfiguration = async (publicationId: string): Promise<StorefrontConfiguration | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}`, {
-      headers: getAuthHeaders(),
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront/${publicationId}`, {
+      headers: { 'Content-Type': 'application/json' },
     });
     
     if (!response.ok) {
@@ -61,8 +48,8 @@ export const getStorefrontConfigurations = async (filters?: {
     if (filters?.isActive !== undefined) params.append('isActive', filters.isActive.toString());
 
     const url = `${API_BASE_URL}/storefront${params.toString() ? '?' + params.toString() : ''}`;
-    const response = await fetch(url, {
-      headers: getAuthHeaders(),
+    const response = await authenticatedFetch(url, {
+      headers: { 'Content-Type': 'application/json' },
     });
     
     if (!response.ok) {
@@ -79,16 +66,13 @@ export const getStorefrontConfigurations = async (filters?: {
 // Create a new storefront configuration
 export const createStorefrontConfiguration = async (configData: StorefrontConfigurationInsert): Promise<StorefrontConfiguration & { subdomainSetup?: any }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(configData),
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Authentication required');
-      }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to create storefront configuration');
     }
@@ -124,9 +108,9 @@ export const updateStorefrontConfiguration = async (publicationId: string, updat
       ? `${API_BASE_URL}/storefront/${publicationId}?isDraft=${isDraftParam}`
       : `${API_BASE_URL}/storefront/${publicationId}`;
     
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'PUT',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...updates,
         updatedAt: new Date(),
@@ -134,10 +118,6 @@ export const updateStorefrontConfiguration = async (publicationId: string, updat
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('auth_token');
-        throw new Error('Authentication required. Please log in again.');
-      }
       if (response.status === 404) {
         return null;
       }
@@ -162,9 +142,9 @@ export const updateStorefrontConfiguration = async (publicationId: string, updat
 // Delete a storefront configuration
 export const deleteStorefrontConfiguration = async (publicationId: string): Promise<boolean> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront/${publicationId}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     });
 
     if (!response.ok) {
@@ -185,16 +165,12 @@ export const deleteStorefrontConfiguration = async (publicationId: string): Prom
 // Publish a draft storefront configuration (replaces live with draft)
 export const publishStorefrontConfiguration = async (publicationId: string): Promise<StorefrontConfiguration | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}/publish`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront/${publicationId}/publish`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('auth_token');
-        throw new Error('Authentication required. Please log in again.');
-      }
       if (response.status === 404) {
         return null;
       }
@@ -212,16 +188,12 @@ export const publishStorefrontConfiguration = async (publicationId: string): Pro
 // Create a draft copy from the live version
 export const createDraftStorefrontConfiguration = async (publicationId: string): Promise<StorefrontConfiguration> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}/create-draft`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront/${publicationId}/create-draft`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('auth_token');
-        throw new Error('Authentication required. Please log in again.');
-      }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to create draft configuration');
     }
@@ -236,9 +208,9 @@ export const createDraftStorefrontConfiguration = async (publicationId: string):
 // Duplicate a storefront configuration for a new publication
 export const duplicateStorefrontConfiguration = async (sourcePublicationId: string, targetPublicationId: string, targetPublisherId: string): Promise<StorefrontConfiguration> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/${sourcePublicationId}/duplicate`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront/${sourcePublicationId}/duplicate`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         targetPublicationId,
         targetPublisherId,
@@ -246,10 +218,6 @@ export const duplicateStorefrontConfiguration = async (sourcePublicationId: stri
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('auth_token');
-        throw new Error('Authentication required. Please log in again.');
-      }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to duplicate storefront configuration');
     }
@@ -264,8 +232,8 @@ export const duplicateStorefrontConfiguration = async (sourcePublicationId: stri
 // Preview storefront configuration (get rendered HTML/data for preview)
 export const previewStorefrontConfiguration = async (publicationId: string): Promise<{ html: string; config: StorefrontConfiguration }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}/preview`, {
-      headers: getAuthHeaders(),
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront/${publicationId}/preview`, {
+      headers: { 'Content-Type': 'application/json' },
     });
     
     if (!response.ok) {
@@ -285,7 +253,7 @@ export const previewStorefrontConfiguration = async (publicationId: string): Pro
 // Validate storefront configuration
 export const validateStorefrontConfiguration = async (config: StorefrontConfigurationInsert): Promise<{ isValid: boolean; errors: string[] }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/validate`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront/validate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -316,8 +284,8 @@ export const checkSubdomainAvailability = async (subdomain: string, publicationI
       params.append('publicationId', publicationId);
     }
 
-    const response = await fetch(`${API_BASE_URL}/storefront/check-subdomain?${params}`, {
-      headers: getAuthHeaders(),
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront/check-subdomain?${params}`, {
+      headers: { 'Content-Type': 'application/json' },
     });
     
     if (!response.ok) {
@@ -334,8 +302,8 @@ export const checkSubdomainAvailability = async (subdomain: string, publicationI
 // Get storefront configuration templates
 export const getStorefrontTemplates = async (): Promise<Array<{ id: string; name: string; description: string; config: StorefrontConfigurationInsert }>> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/templates`, {
-      headers: getAuthHeaders(),
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront/templates`, {
+      headers: { 'Content-Type': 'application/json' },
     });
     
     if (!response.ok) {
@@ -357,15 +325,12 @@ export const setupStorefrontSubdomain = async (publicationId: string, isDraft: b
   error?: string;
 }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/storefront/${publicationId}/setup-subdomain?isDraft=${isDraft}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/storefront/${publicationId}/setup-subdomain?isDraft=${isDraft}`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Authentication required');
-      }
       if (response.status === 503) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Subdomain service unavailable');

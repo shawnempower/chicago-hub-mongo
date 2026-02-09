@@ -6,17 +6,7 @@
 
 import { Campaign, CampaignAnalysisRequest, CampaignAnalysisResponse, CampaignSummary } from '../integrations/mongodb/campaignSchema';
 import { API_BASE_URL } from '@/config/api';
-
-/**
- * Get auth headers with JWT token
- */
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('auth_token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-}
+import { authenticatedFetch } from '@/api/client';
 
 export interface CampaignListFilters {
   hubId?: string;
@@ -58,9 +48,9 @@ export const campaignsApi = {
    */
   async analyze(request: CampaignAnalysisRequest): Promise<CampaignAnalysisResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/campaigns/analyze`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/campaigns/analyze`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
       });
 
@@ -81,9 +71,9 @@ export const campaignsApi = {
    */
   async create(campaignData: CampaignCreateData): Promise<{ campaign: Campaign }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/campaigns`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/campaigns`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(campaignData),
       });
 
@@ -118,9 +108,9 @@ export const campaignsApi = {
       if (filters?.startDateFrom) params.append('startDateFrom', filters.startDateFrom);
       if (filters?.startDateTo) params.append('startDateTo', filters.startDateTo);
 
-      const response = await fetch(`${API_BASE_URL}/campaigns?${params.toString()}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/campaigns?${params.toString()}`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -139,9 +129,9 @@ export const campaignsApi = {
    */
   async getById(id: string): Promise<{ campaign: Campaign }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/campaigns/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/campaigns/${id}`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -163,9 +153,9 @@ export const campaignsApi = {
    */
   async update(id: string, updates: Partial<Campaign>): Promise<{ campaign: Campaign }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/campaigns/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/campaigns/${id}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       });
 
@@ -194,9 +184,9 @@ export const campaignsApi = {
     }
   ): Promise<{ campaign: Campaign }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/campaigns/${id}/status`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/campaigns/${id}/status`, {
         method: 'PATCH',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, approvalDetails }),
       });
 
@@ -220,9 +210,9 @@ export const campaignsApi = {
     format: 'html' | 'markdown' = 'html'
   ): Promise<{ campaign: Campaign; insertionOrder: any }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/campaigns/${id}/insertion-order`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/campaigns/${id}/insertion-order`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ format }),
       });
 
@@ -243,9 +233,9 @@ export const campaignsApi = {
    */
   async delete(id: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/campaigns/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/campaigns/${id}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -266,9 +256,9 @@ export const campaignsApi = {
   async getStatsByStatus(hubId?: string): Promise<{ stats: Record<Campaign['status'], number> }> {
     try {
       const params = hubId ? `?hubId=${hubId}` : '';
-      const response = await fetch(`${API_BASE_URL}/campaigns/stats/by-status${params}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/campaigns/stats/by-status${params}`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -287,9 +277,9 @@ export const campaignsApi = {
    */
   async getAlgorithms(): Promise<{ algorithms: Array<{ id: string; name: string; description: string; icon: string }> }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/campaigns/algorithms`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/campaigns/algorithms`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -309,9 +299,9 @@ export const campaignsApi = {
    */
   async generatePublicationOrders(campaignId: string): Promise<{ success: boolean; ordersGenerated: number; message: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/orders/generate/${campaignId}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/orders/generate/${campaignId}`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -363,9 +353,9 @@ export const campaignsApi = {
     }
   ): Promise<{ success: boolean; message: string; updatedOrder?: any }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/orders/${campaignId}/${publicationId}/placement`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/orders/${campaignId}/${publicationId}/placement`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ placement }),
       });
 
@@ -419,9 +409,9 @@ export const campaignsApi = {
     }>
   ): Promise<{ success: boolean; message: string; newOrder?: any }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/orders/${campaignId}/publication`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/orders/${campaignId}/publication`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ publicationId, publicationName, placements }),
       });
 
@@ -447,9 +437,9 @@ export const campaignsApi = {
   ): Promise<{ success: boolean; message: string; updatedOrder?: any; deadlineInfo?: any }> {
     try {
       const encodedPlacementId = encodeURIComponent(placementId);
-      const response = await fetch(`${API_BASE_URL}/admin/orders/${campaignId}/${publicationId}/placement/${encodedPlacementId}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/orders/${campaignId}/${publicationId}/placement/${encodedPlacementId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {

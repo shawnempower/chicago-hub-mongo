@@ -1,27 +1,14 @@
 import type { UserProfile } from "@/types/common";
 import { API_BASE_URL } from '@/config/api';
-
-// Get auth token from localStorage
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('auth_token');
-};
-
-// Create headers with auth token
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-};
+import { authenticatedFetch } from '@/api/client';
 
 export const userProfilesApi = {
   // Get user profile
   async getProfile(): Promise<UserProfile | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/profile`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/profile`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -39,9 +26,9 @@ export const userProfilesApi = {
   // Update user profile
   async updateProfile(profileData: Partial<UserProfile>): Promise<UserProfile | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/profile`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/profile`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profileData),
       });
 

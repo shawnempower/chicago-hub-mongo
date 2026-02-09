@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@/config/api';
+import { authenticatedFetch } from '@/api/client';
 
 /**
  * Permissions API Client
@@ -33,22 +34,14 @@ interface UpdateRoleParams {
 class PermissionsAPI {
   private baseUrl = `${API_BASE_URL}/permissions`;
 
-  private async getAuthHeaders() {
-    const token = localStorage.getItem('auth_token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : '',
-    };
-  }
-
   /**
    * Invite a user to a hub or publication
    */
   async inviteUser(params: InviteUserParams): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/invite`, {
+      const response = await authenticatedFetch(`${this.baseUrl}/invite`, {
         method: 'POST',
-        headers: await this.getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
       });
 
@@ -70,9 +63,9 @@ class PermissionsAPI {
    */
   async acceptInvitation(token: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/accept-invitation/${token}`, {
+      const response = await authenticatedFetch(`${this.baseUrl}/accept-invitation/${token}`, {
         method: 'POST',
-        headers: await this.getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       const result = await response.json();
@@ -93,7 +86,7 @@ class PermissionsAPI {
    */
   async getInvitation(token: string): Promise<{ invitation?: any; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/invitation/${token}`);
+      const response = await authenticatedFetch(`${this.baseUrl}/invitation/${token}`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -112,8 +105,8 @@ class PermissionsAPI {
    */
   async getHubUsers(hubId: string): Promise<{ users?: any[]; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/hub/${hubId}/users`, {
-        headers: await this.getAuthHeaders(),
+      const response = await authenticatedFetch(`${this.baseUrl}/hub/${hubId}/users`, {
+        headers: { 'Content-Type': 'application/json' },
       });
 
       const result = await response.json();
@@ -134,8 +127,8 @@ class PermissionsAPI {
    */
   async getPublicationUsers(publicationId: string): Promise<{ users?: any[]; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/publication/${publicationId}/users`, {
-        headers: await this.getAuthHeaders(),
+      const response = await authenticatedFetch(`${this.baseUrl}/publication/${publicationId}/users`, {
+        headers: { 'Content-Type': 'application/json' },
       });
 
       const result = await response.json();
@@ -159,8 +152,8 @@ class PermissionsAPI {
     resourceId: string
   ): Promise<{ invitations?: any[]; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/${resourceType}/${resourceId}/invitations`, {
-        headers: await this.getAuthHeaders(),
+      const response = await authenticatedFetch(`${this.baseUrl}/${resourceType}/${resourceId}/invitations`, {
+        headers: { 'Content-Type': 'application/json' },
       });
 
       const result = await response.json();
@@ -181,9 +174,9 @@ class PermissionsAPI {
    */
   async assignUserToHub(params: AssignUserParams): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/assign/hub`, {
+      const response = await authenticatedFetch(`${this.baseUrl}/assign/hub`, {
         method: 'POST',
-        headers: await this.getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: params.userId,
           hubId: params.hubId,
@@ -209,9 +202,9 @@ class PermissionsAPI {
    */
   async assignUserToPublication(params: AssignUserParams): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/assign/publication`, {
+      const response = await authenticatedFetch(`${this.baseUrl}/assign/publication`, {
         method: 'POST',
-        headers: await this.getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: params.userId,
           publicationId: params.publicationId,
@@ -236,9 +229,9 @@ class PermissionsAPI {
    */
   async revokeHubAccess(params: RevokeAccessParams): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/revoke/hub`, {
+      const response = await authenticatedFetch(`${this.baseUrl}/revoke/hub`, {
         method: 'DELETE',
-        headers: await this.getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: params.userId,
           hubId: params.hubId,
@@ -263,9 +256,9 @@ class PermissionsAPI {
    */
   async revokePublicationAccess(params: RevokeAccessParams): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/revoke/publication`, {
+      const response = await authenticatedFetch(`${this.baseUrl}/revoke/publication`, {
         method: 'DELETE',
-        headers: await this.getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: params.userId,
           publicationId: params.publicationId,
@@ -290,9 +283,9 @@ class PermissionsAPI {
    */
   async updateUserRole(params: UpdateRoleParams): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/role`, {
+      const response = await authenticatedFetch(`${this.baseUrl}/role`, {
         method: 'PATCH',
-        headers: await this.getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
       });
 
@@ -314,8 +307,8 @@ class PermissionsAPI {
    */
   async getMyResources(): Promise<{ hubs?: string[]; publications?: string[]; isAdmin?: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/my-resources`, {
-        headers: await this.getAuthHeaders(),
+      const response = await authenticatedFetch(`${this.baseUrl}/my-resources`, {
+        headers: { 'Content-Type': 'application/json' },
       });
 
       const result = await response.json();
@@ -336,9 +329,9 @@ class PermissionsAPI {
    */
   async cancelInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/invitation/${invitationId}`, {
+      const response = await authenticatedFetch(`${this.baseUrl}/invitation/${invitationId}`, {
         method: 'DELETE',
-        headers: await this.getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       const result = await response.json();
@@ -359,9 +352,9 @@ class PermissionsAPI {
    */
   async resendInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/invitation/${invitationId}/resend`, {
+      const response = await authenticatedFetch(`${this.baseUrl}/invitation/${invitationId}/resend`, {
         method: 'POST',
-        headers: await this.getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       const result = await response.json();

@@ -5,15 +5,7 @@
  */
 
 import { API_BASE_URL } from '@/config/api';
-
-// Helper to get auth headers
-function getAuthHeaders(includeContentType = true): HeadersInit {
-  const token = localStorage.getItem('auth_token');
-  return {
-    ...(includeContentType ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+import { authenticatedFetch } from '@/api/client';
 
 // ============================================
 // Types
@@ -85,9 +77,9 @@ export interface SendMessageResponse {
  * Create a new conversation
  */
 export async function createConversation(hubId: string): Promise<Conversation> {
-  const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/inventory-chat/conversations`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ hubId }),
   });
 
@@ -110,9 +102,9 @@ export async function listConversations(hubId?: string): Promise<Conversation[]>
 
   const url = `${API_BASE_URL}/inventory-chat/conversations${params.toString() ? '?' + params.toString() : ''}`;
   
-  const response = await fetch(url, {
+  const response = await authenticatedFetch(url, {
     method: 'GET',
-    headers: getAuthHeaders(),
+    headers: { 'Content-Type': 'application/json' },
   });
 
   if (!response.ok) {
@@ -128,9 +120,9 @@ export async function listConversations(hubId?: string): Promise<Conversation[]>
  * Get a specific conversation
  */
 export async function getConversation(conversationId: string): Promise<Conversation> {
-  const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}`, {
     method: 'GET',
-    headers: getAuthHeaders(),
+    headers: { 'Content-Type': 'application/json' },
   });
 
   if (!response.ok) {
@@ -150,9 +142,9 @@ export async function sendMessage(conversationId: string, message: string): Prom
   const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout for AI responses
 
   try {
-    const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}/messages`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}/messages`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message }),
       signal: controller.signal,
     });
@@ -178,9 +170,9 @@ export async function sendMessage(conversationId: string, message: string): Prom
  * Delete a conversation
  */
 export async function deleteConversation(conversationId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
+    headers: { 'Content-Type': 'application/json' },
   });
 
   if (!response.ok) {
@@ -193,9 +185,9 @@ export async function deleteConversation(conversationId: string): Promise<void> 
  * Update conversation title
  */
 export async function updateConversationTitle(conversationId: string, title: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}/title`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}/title`, {
     method: 'PATCH',
-    headers: getAuthHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
   });
 
@@ -219,11 +211,11 @@ export async function uploadAttachments(
   const formData = new FormData();
   files.forEach(file => formData.append('files', file));
 
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_BASE_URL}/inventory-chat/conversations/${conversationId}/attachments`,
     {
       method: 'POST',
-      headers: getAuthHeaders(false), // Don't include Content-Type for FormData
+      headers: {}, // FormData sets Content-Type with boundary
       body: formData,
     }
   );
@@ -241,11 +233,11 @@ export async function uploadAttachments(
  * List attachments for a conversation
  */
 export async function listAttachments(conversationId: string): Promise<ConversationAttachment[]> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_BASE_URL}/inventory-chat/conversations/${conversationId}/attachments`,
     {
       method: 'GET',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     }
   );
 
@@ -262,11 +254,11 @@ export async function listAttachments(conversationId: string): Promise<Conversat
  * Delete an attachment
  */
 export async function deleteAttachment(conversationId: string, attachmentId: string): Promise<void> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_BASE_URL}/inventory-chat/conversations/${conversationId}/attachments/${attachmentId}`,
     {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     }
   );
 
@@ -284,11 +276,11 @@ export async function deleteAttachment(conversationId: string, attachmentId: str
  * List generated files for a conversation
  */
 export async function listGeneratedFiles(conversationId: string): Promise<GeneratedFile[]> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_BASE_URL}/inventory-chat/conversations/${conversationId}/files`,
     {
       method: 'GET',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     }
   );
 
@@ -305,11 +297,11 @@ export async function listGeneratedFiles(conversationId: string): Promise<Genera
  * Get download URL for a generated file
  */
 export async function getFileDownloadUrl(conversationId: string, fileId: string): Promise<string> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_BASE_URL}/inventory-chat/conversations/${conversationId}/files/${fileId}/download`,
     {
       method: 'GET',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     }
   );
 
@@ -338,11 +330,11 @@ export async function downloadGeneratedFile(conversationId: string, fileId: stri
  * Get conversation context
  */
 export async function getConversationContext(conversationId: string): Promise<ConversationContext> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_BASE_URL}/inventory-chat/conversations/${conversationId}/context`,
     {
       method: 'GET',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     }
   );
 
@@ -362,11 +354,11 @@ export async function updateConversationContext(
   conversationId: string,
   context: Partial<ConversationContext>
 ): Promise<void> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_BASE_URL}/inventory-chat/conversations/${conversationId}/context`,
     {
       method: 'PATCH',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(context),
     }
   );
@@ -381,11 +373,11 @@ export async function updateConversationContext(
  * Clear conversation context
  */
 export async function clearConversationContext(conversationId: string): Promise<void> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_BASE_URL}/inventory-chat/conversations/${conversationId}/context`,
     {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
     }
   );
 

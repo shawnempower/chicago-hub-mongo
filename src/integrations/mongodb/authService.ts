@@ -189,16 +189,15 @@ export class AuthService {
       const result = await this.usersCollection.insertOne(newUser);
       const userId = result.insertedId.toString();
 
-      // Generate token
+      // Generate token and refresh token
       const token = this.generateToken(userId);
-
-      // Create session
-      await this.createSession(userId, token);
+      const refreshToken = this.generateRefreshToken();
+      await this.createSession(userId, token, refreshToken);
 
       // Return user without sensitive data
       const user = await this.userToAuthUser({ ...newUser, _id: result.insertedId });
       
-      return { user, token };
+      return { user, token, refreshToken };
     } catch (error) {
       return { user: {} as AuthUser, token: '', error: 'Failed to create account' };
     }
@@ -239,17 +238,13 @@ export class AuthService {
         }
       );
 
-      // Generate token
       const userId = user._id?.toString() || '';
       const token = this.generateToken(userId);
+      const refreshToken = this.generateRefreshToken();
+      await this.createSession(userId, token, refreshToken);
 
-      // Create session
-      await this.createSession(userId, token);
-
-      // Return user without sensitive data
       const authUser = await this.userToAuthUser(user);
-      
-      return { user: authUser, token };
+      return { user: authUser, token, refreshToken };
     } catch (error) {
       return { user: {} as AuthUser, token: '', error: 'Failed to sign in' };
     }
@@ -291,13 +286,21 @@ export class AuthService {
     }
   }
 
-  // Create session
-  private async createSession(userId: string, token: string, userAgent?: string, ipAddress?: string): Promise<void> {
+  // Create session with optional refresh token (7d expiry for refresh)
+  private async createSession(
+    userId: string,
+    token: string,
+    refreshToken?: string,
+    userAgent?: string,
+    ipAddress?: string
+  ): Promise<void> {
     try {
+      const refreshExpiryMs = 7 * 24 * 60 * 60 * 1000; // 7 days
       const session: UserSession = {
         userId,
         token,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        ...(refreshToken && { refreshToken }),
+        expiresAt: new Date(Date.now() + refreshExpiryMs),
         createdAt: new Date(),
         userAgent,
         ipAddress
@@ -305,13 +308,54 @@ export class AuthService {
 
       await this.sessionsCollection.insertOne(session);
     } catch (error) {
+      logger.error('Create session error:', error);
     }
   }
 
-  // Sign out (invalidate session)
+  // Refresh tokens: validate refresh token, rotate to new access + refresh, invalidate old (one-time use)
+  async refreshTokens(refreshToken: string): Promise<{ user: AuthUser; token: string; refreshToken: string } | { error: string }> {
+    try {
+      const session = await this.sessionsCollection.findOne({
+        refreshToken,
+        expiresAt: { $gt: new Date() }
+      });
+      if (!session) {
+        return { error: 'Invalid or expired refresh token' };
+      }
+
+      const userId = session.userId;
+      const user = await this.getUserById(userId);
+      if (!user) {
+        await this.sessionsCollection.deleteOne({ refreshToken });
+        return { error: 'User not found' };
+      }
+
+      const newToken = this.generateToken(userId);
+      const newRefreshToken = this.generateRefreshToken();
+
+      // Rotation: remove old session so the refresh token can't be reused
+      await this.sessionsCollection.deleteOne({ refreshToken });
+      await this.createSession(userId, newToken, newRefreshToken, session.userAgent, session.ipAddress);
+
+      return { user, token: newToken, refreshToken: newRefreshToken };
+    } catch (error) {
+      logger.error('Refresh tokens error:', error);
+      return { error: 'Failed to refresh' };
+    }
+  }
+
+  // Sign out (invalidate session by access token)
   async signOut(token: string): Promise<void> {
     try {
       await this.sessionsCollection.deleteOne({ token });
+    } catch (error) {
+    }
+  }
+
+  // Sign out by refresh token (e.g. client only has refresh token)
+  async signOutByRefreshToken(refreshToken: string): Promise<void> {
+    try {
+      await this.sessionsCollection.deleteOne({ refreshToken });
     } catch (error) {
     }
   }

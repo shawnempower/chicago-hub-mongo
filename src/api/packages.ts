@@ -1,20 +1,7 @@
 // Admin API endpoints for package management
 import type { DatabasePackage } from '@/hooks/usePackages';
 import { API_BASE_URL } from '@/config/api';
-
-// Get auth token from localStorage
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('auth_token');
-};
-
-// Create headers with auth token
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-};
+import { authenticatedFetch } from '@/api/client';
 
 export interface PackageCreateData {
   name: string;
@@ -39,9 +26,9 @@ export const packagesApi = {
   async getAll(activeOnly: boolean = false): Promise<PackagesListResponse> {
     try {
       const url = `${API_BASE_URL}/packages?active_only=${activeOnly}`;
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -58,9 +45,9 @@ export const packagesApi = {
   // Create new package (admin only)
   async create(packageData: PackageCreateData): Promise<{ package: any }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/packages`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/packages`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(packageData),
       });
 
@@ -81,9 +68,9 @@ export const packagesApi = {
   // Update package (admin only)
   async update(packageId: string, packageData: Partial<PackageCreateData>): Promise<{ package: any }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/packages/${packageId}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/packages/${packageId}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(packageData),
       });
 
@@ -108,9 +95,9 @@ export const packagesApi = {
   async delete(packageId: string, permanent: boolean = false): Promise<{ success: boolean }> {
     try {
       const url = `${API_BASE_URL}/admin/packages/${packageId}${permanent ? '?permanent=true' : ''}`;
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -136,9 +123,9 @@ export const packagesApi = {
     format: 'html' | 'markdown' = 'html'
   ): Promise<{ success: boolean; insertionOrder: { generatedAt: Date; format: string; content: string; version: number } }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/hub-packages/${packageId}/insertion-order`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/hub-packages/${packageId}/insertion-order`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ format }),
       });
 

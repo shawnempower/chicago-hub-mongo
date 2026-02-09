@@ -5,19 +5,7 @@
  */
 
 import { API_BASE_URL } from '@/config/api';
-
-const getAuthToken = () => {
-  return localStorage.getItem('auth_token');
-};
-
-// Create headers with auth token
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-  };
-};
+import { authenticatedFetch } from '@/api/client';
 
 export interface WebAnalyticsData {
   dataAvailable: boolean;
@@ -50,8 +38,8 @@ class WebAnalyticsAPI {
     const params = new URLSearchParams({ domain });
     const url = `${this.baseUrl}?${params}`;
     
-    const response = await fetch(url, {
-      headers: getAuthHeaders(),
+    const response = await authenticatedFetch(url, {
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
 
@@ -70,8 +58,8 @@ class WebAnalyticsAPI {
     const params = new URLSearchParams({ domain });
     const url = `${this.baseUrl}/tracking-script?${params}`;
     
-    const response = await fetch(url, {
-      headers: getAuthHeaders(),
+    const response = await authenticatedFetch(url, {
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
 
@@ -90,8 +78,8 @@ class WebAnalyticsAPI {
     const params = new URLSearchParams({ domain });
     const url = `${this.baseUrl}/check?${params}`;
     
-    const response = await fetch(url, {
-      headers: getAuthHeaders(),
+    const response = await authenticatedFetch(url, {
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
 

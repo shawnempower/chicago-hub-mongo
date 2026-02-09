@@ -6,19 +6,7 @@
 
 import { API_BASE_URL } from '@/config/api';
 import { Hub, HubInsert, HubUpdate } from '@/integrations/mongodb/hubSchema';
-
-const getAuthToken = () => {
-  return localStorage.getItem('auth_token');
-};
-
-// Create headers with auth token
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-  };
-};
+import { authenticatedFetch } from '@/api/client';
 
 export interface HubFilters {
   status?: 'active' | 'inactive' | 'pending' | 'archived';
@@ -42,9 +30,7 @@ class HubsAPI {
     if (filters?.includeInactive) params.append('includeInactive', 'true');
 
     const url = params.toString() ? `${this.baseUrl}?${params}` : this.baseUrl;
-    const response = await fetch(url, {
-      credentials: 'include',
-    });
+    const response = await authenticatedFetch(url, { credentials: 'include' });
 
     if (!response.ok) {
       const error = await response.json();
@@ -59,9 +45,7 @@ class HubsAPI {
    * Get hub by ID
    */
   async getById(id: string): Promise<Hub> {
-    const response = await fetch(`${this.baseUrl}/${id}`, {
-      credentials: 'include',
-    });
+    const response = await authenticatedFetch(`${this.baseUrl}/${id}`, { credentials: 'include' });
 
     if (!response.ok) {
       const error = await response.json();
@@ -76,9 +60,7 @@ class HubsAPI {
    * Get hub by slug
    */
   async getBySlug(hubId: string): Promise<Hub> {
-    const response = await fetch(`${this.baseUrl}/slug/${hubId}`, {
-      credentials: 'include',
-    });
+    const response = await authenticatedFetch(`${this.baseUrl}/slug/${hubId}`, { credentials: 'include' });
 
     if (!response.ok) {
       const error = await response.json();
@@ -93,9 +75,9 @@ class HubsAPI {
    * Create new hub (admin only)
    */
   async create(hubData: HubInsert): Promise<Hub> {
-    const response = await fetch(this.baseUrl, {
+    const response = await authenticatedFetch(this.baseUrl, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(hubData),
     });
@@ -113,9 +95,9 @@ class HubsAPI {
    * Update hub (admin only)
    */
   async update(id: string, updates: Partial<HubUpdate>): Promise<Hub> {
-    const response = await fetch(`${this.baseUrl}/${id}`, {
+    const response = await authenticatedFetch(`${this.baseUrl}/${id}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(updates),
     });
@@ -133,9 +115,9 @@ class HubsAPI {
    * Delete hub (admin only)
    */
   async delete(id: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/${id}`, {
+    const response = await authenticatedFetch(`${this.baseUrl}/${id}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
 
@@ -149,7 +131,7 @@ class HubsAPI {
    * Get hub statistics
    */
   async getStats(id: string): Promise<HubStats> {
-    const response = await fetch(`${this.baseUrl}/${id}/stats`, {
+    const response = await authenticatedFetch(`${this.baseUrl}/${id}/stats`, {
       credentials: 'include',
     });
 
@@ -166,7 +148,7 @@ class HubsAPI {
    * Get publications for a hub
    */
   async getPublications(hubId: string): Promise<any[]> {
-    const response = await fetch(`${this.baseUrl}/${hubId}/publications`, {
+    const response = await authenticatedFetch(`${this.baseUrl}/${hubId}/publications`, {
       credentials: 'include',
     });
 
@@ -183,9 +165,9 @@ class HubsAPI {
    * Assign publication to hubs (admin only)
    */
   async assignPublicationToHubs(publicationId: string, hubIds: string[]): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/publications/${publicationId}/hubs`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/${publicationId}/hubs`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ hubIds }),
     });
@@ -200,9 +182,9 @@ class HubsAPI {
    * Remove publication from hub (admin only)
    */
   async removePublicationFromHub(publicationId: string, hubId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/${hubId}/publications/${publicationId}`, {
+    const response = await authenticatedFetch(`${this.baseUrl}/${hubId}/publications/${publicationId}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
 
@@ -218,9 +200,9 @@ class HubsAPI {
   async bulkAssignPublications(publicationIds: string[], hubId: string): Promise<number> {
     console.log('Bulk assigning publications:', { publicationIds, hubId });
     
-    const response = await fetch(`${this.baseUrl}/${hubId}/publications/bulk`, {
+    const response = await authenticatedFetch(`${this.baseUrl}/${hubId}/publications/bulk`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ publicationIds }),
     });
@@ -240,7 +222,7 @@ class HubsAPI {
    * Get publications not assigned to any hub
    */
   async getUnassignedPublications(): Promise<any[]> {
-    const response = await fetch(`${API_BASE_URL}/publications/unassigned`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/unassigned`, {
       credentials: 'include',
     });
 
