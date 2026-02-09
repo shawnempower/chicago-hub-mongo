@@ -41,6 +41,7 @@ import { API_BASE_URL } from '@/config/api';
 import { format } from 'date-fns';
 import { OrderPerformanceView } from '../dashboard/OrderPerformanceView';
 import { TrackingScriptGenerator } from './TrackingScriptGenerator';
+import { formatDimensionsForDisplay } from '@/utils/dimensionValidation';
 
 interface OrderDetailData {
   _id?: string;
@@ -587,7 +588,7 @@ export function HubOrderDetail() {
                               </Badge>
                               {item.format?.dimensions && (
                                 <span className="text-xs text-muted-foreground">
-                                  {item.format.dimensions}
+                                  {formatDimensionsForDisplay(item.format.dimensions)}
                                 </span>
                               )}
                             </div>

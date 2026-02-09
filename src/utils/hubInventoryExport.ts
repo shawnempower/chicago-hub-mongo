@@ -6,6 +6,7 @@
  */
 
 import { PublicationFrontend, HubPricing } from '@/types/publication';
+import { formatDimensionsForDisplay } from '@/utils/dimensionValidation';
 
 interface InventoryRow {
   // Publication Info
@@ -99,7 +100,7 @@ function getHubPricingDisplayValues(hubPricing: HubPricing | undefined): {
 function formatFormat(format: any): string {
   if (!format) return '';
   const parts: string[] = [];
-  if (format.dimensions) parts.push(`Size: ${format.dimensions}`);
+  if (format.dimensions) parts.push(`Size: ${formatDimensionsForDisplay(format.dimensions)}`);
   if (format.fileFormats) parts.push(`Format: ${Array.isArray(format.fileFormats) ? format.fileFormats.join(', ') : format.fileFormats}`);
   if (format.maxFileSize) parts.push(`File Size: ${format.maxFileSize}`);
   if (format.resolution) parts.push(`Resolution: ${format.resolution}`);

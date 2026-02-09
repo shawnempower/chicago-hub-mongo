@@ -25,6 +25,7 @@ import {
   FileText,
   Eye
 } from 'lucide-react';
+import { formatDimensionsForDisplay } from '@/utils/dimensionValidation';
 
 export const PublicationInventory: React.FC = () => {
   const { selectedPublication, setSelectedPublication } = usePublication();
@@ -61,7 +62,7 @@ export const PublicationInventory: React.FC = () => {
           type: ad.name || 'Website Ad',
           channel: 'website',
           position: ad.location || 'Website',
-          size: ad.format?.dimensions || ad.adFormat || 'Standard',
+          size: formatDimensionsForDisplay(ad.format?.dimensions) || ad.adFormat || 'Standard',
           price: ad.pricing?.flatRate ? `$${ad.pricing.flatRate} ${ad.pricing.pricingModel === 'cpm' ? 'CPM' : ''}` : 'Contact for pricing',
           availability: ad.available ? 'Available' : 'Booked',
           impressions: ad.monthlyImpressions ? `${ad.monthlyImpressions.toLocaleString()}/month` : '-'
@@ -77,7 +78,7 @@ export const PublicationInventory: React.FC = () => {
             type: ad.name || 'Newsletter Ad',
             channel: 'newsletter',
             position: `${newsletter.name || `Newsletter ${newsletterIndex + 1}`} • ${ad.position || 'Standard'}`,
-            size: ad.format?.dimensions || 'Standard',
+            size: formatDimensionsForDisplay(ad.format?.dimensions) || 'Standard',
             price: ad.pricing?.flatRate ? `$${ad.pricing.flatRate} ${ad.pricing.pricingModel === 'per_send' ? '/send' : ''}` : 'Contact for pricing',
             availability: 'Available', // Default since newsletters don't have availability flag
             impressions: newsletter.subscribers ? `${newsletter.subscribers.toLocaleString()}/send` : '-',
@@ -123,7 +124,7 @@ export const PublicationInventory: React.FC = () => {
             type: ad.name || 'Print Ad',
             channel: 'print',
             position: `${printPub.name || `Print Publication ${printIndex + 1}`} • ${ad.location || 'Print'} • ${ad.adFormat || 'Standard'}${ad.color ? ` (${ad.color})` : ''}`,
-            size: ad.format?.dimensions || 'Standard',
+            size: formatDimensionsForDisplay(ad.format?.dimensions) || 'Standard',
             price: priceDisplay,
             availability: 'Available', // Default since print ads don't have availability flag
             impressions: printPub.circulation ? 

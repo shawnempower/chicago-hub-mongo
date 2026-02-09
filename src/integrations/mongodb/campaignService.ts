@@ -311,13 +311,17 @@ export class CampaignsService {
       });
 
       // Build asset references for placements
-      const assetReferences = (pub.inventoryItems || []).map((item: any) => ({
-        specGroupId: item.specGroupId || `${item.channel || 'general'}::dim:${item.format?.dimensions || 'default'}`,
-        placementId: item.itemPath || item.sourcePath,
-        placementName: item.itemName || item.sourceName,
-        channel: item.channel || 'general',
-        dimensions: item.format?.dimensions
-      }));
+      const assetReferences = (pub.inventoryItems || []).map((item: any) => {
+        const dims = item.format?.dimensions;
+        const dimStr = dims == null ? 'default' : (Array.isArray(dims) ? dims.join(',') : dims);
+        return {
+          specGroupId: item.specGroupId || `${item.channel || 'general'}::dim:${dimStr}`,
+          placementId: item.itemPath || item.sourcePath,
+          placementName: item.itemName || item.sourceName,
+          channel: item.channel || 'general',
+          dimensions: item.format?.dimensions
+        };
+      });
 
       // Create selectedInventory for this order (source of truth)
       const orderSelectedInventory = {
@@ -636,13 +640,17 @@ export class CampaignsService {
           }
         });
 
-        const assetReferences = (pub.inventoryItems || []).map((item: any) => ({
-          specGroupId: item.specGroupId || `${item.channel || 'general'}::dim:${item.format?.dimensions || 'default'}`,
-          placementId: item.itemPath || item.sourcePath,
-          placementName: item.itemName || item.sourceName,
-          channel: item.channel || 'general',
-          dimensions: item.format?.dimensions
-        }));
+        const assetReferences = (pub.inventoryItems || []).map((item: any) => {
+          const dims = item.format?.dimensions;
+          const dimStr = dims == null ? 'default' : (Array.isArray(dims) ? dims.join(',') : dims);
+          return {
+            specGroupId: item.specGroupId || `${item.channel || 'general'}::dim:${dimStr}`,
+            placementId: item.itemPath || item.sourcePath,
+            placementName: item.itemName || item.sourceName,
+            channel: item.channel || 'general',
+            dimensions: item.format?.dimensions
+          };
+        });
 
         const orderSelectedInventory = {
           publications: [{

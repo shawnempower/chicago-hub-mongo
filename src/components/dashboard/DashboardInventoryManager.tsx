@@ -47,6 +47,7 @@ import {
   getValidationClass
 } from '@/utils/fieldValidation';
 import { calculateRevenue } from '@/utils/pricingCalculations';
+import { formatDimensionsForDisplay } from '@/utils/dimensionValidation';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 import { useWebAnalytics } from '@/hooks/useWebAnalytics';
@@ -3057,18 +3058,7 @@ export const DashboardInventoryManager = () => {
                             })()}
                           </p>
                           <p className="text-sm text-gray-900">
-                            {(() => {
-                              // Prefer new format.dimensions
-                              if (opportunity.format?.dimensions) {
-                                const dims = opportunity.format.dimensions;
-                                return Array.isArray(dims) ? dims.join(', ') : dims;
-                              }
-                              // Fallback to legacy sizes
-                              if (opportunity.sizes && opportunity.sizes.length > 0) {
-                                return opportunity.sizes.filter((s: string) => s).join(', ');
-                              }
-                              return 'N/A';
-                            })()}
+                            {formatDimensionsForDisplay(opportunity.format?.dimensions) || (opportunity.sizes?.length ? opportunity.sizes.filter((s: string) => s).join(', ') : null) || 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -4151,7 +4141,7 @@ export const DashboardInventoryManager = () => {
                                   <div className="grid grid-cols-2 gap-x-4">
                                     <div>
                                       <p className="text-xs font-medium text-gray-500 mb-0.5">Dimensions</p>
-                                      <p className="text-xs text-gray-900">{ad.format?.dimensions || 'N/A'}</p>
+                                      <p className="text-xs text-gray-900">{formatDimensionsForDisplay(ad.format?.dimensions) || 'N/A'}</p>
                                     </div>
                                     <div>
                                       <p className="text-xs font-medium text-gray-500 mb-0.5">Color</p>
@@ -4666,15 +4656,7 @@ export const DashboardInventoryManager = () => {
                                 })()}
                               </p>
                               <p className="text-xs text-gray-900">
-                                {(() => {
-                                  // Prefer new format.dimensions
-                                  if (ad.format?.dimensions) {
-                                    const dims = ad.format.dimensions;
-                                    return Array.isArray(dims) ? dims.join(', ') : dims;
-                                  }
-                                  // Display dimensions from format
-                                  return ad.format?.dimensions || 'N/A';
-                                })()}
+                                {formatDimensionsForDisplay(ad.format?.dimensions) || 'N/A'}
                               </p>
                             </div>
                             {/* Revenue & Metrics */}
