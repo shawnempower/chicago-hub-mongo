@@ -11,6 +11,8 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -50,7 +52,8 @@ import {
   Copy,
   Check,
   Pencil,
-  Send
+  Send,
+  Search
 } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
@@ -111,6 +114,9 @@ export default function CampaignDetail() {
   const [showAddPlacementModal, setShowAddPlacementModal] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [publicationSearchTerm, setPublicationSearchTerm] = useState('');
+  const [channelFilter, setChannelFilter] = useState<string>('all');
+  const [placementStatusFilter, setPlacementStatusFilter] = useState<string>('all');
   
   // Copy campaign ID to clipboard
   const handleCopyId = async (e: React.MouseEvent) => {
@@ -183,7 +189,59 @@ export default function CampaignDetail() {
       totalInvestment
     };
   }, [publicationsFromOrders]);
-  
+
+  // Get unique channels across all publications for the channel filter dropdown
+  const availableChannels = useMemo(() => {
+    const channels = new Set<string>();
+    publicationsFromOrders.forEach(pub => {
+      (pub.inventoryItems || []).forEach((item: any) => {
+        if (item.channel) channels.add(item.channel);
+      });
+    });
+    return Array.from(channels).sort();
+  }, [publicationsFromOrders]);
+
+  // Filter publications by search term, channel, and order status
+  const filteredPublications = useMemo(() => {
+    return publicationsFromOrders.filter(pub => {
+      // Text search on publication name
+      if (publicationSearchTerm) {
+        const term = publicationSearchTerm.toLowerCase();
+        const nameMatch = pub.publicationName.toLowerCase().includes(term);
+        // Also check if any placement name matches
+        const placementMatch = (pub.inventoryItems || []).some(
+          (item: any) => item.itemName?.toLowerCase().includes(term)
+        );
+        if (!nameMatch && !placementMatch) return false;
+      }
+
+      // Channel filter - publication must have at least one item matching the channel
+      if (channelFilter !== 'all') {
+        const hasChannel = (pub.inventoryItems || []).some(
+          (item: any) => item.channel === channelFilter
+        );
+        if (!hasChannel) return false;
+      }
+
+      // Placement status filter - publication must have at least one placement with this status
+      if (placementStatusFilter !== 'all') {
+        const placementStatuses = Object.values(pub.placementStatuses || {});
+        // If no statuses recorded, all placements are "pending"
+        if (placementStatusFilter === 'pending') {
+          const itemCount = (pub.inventoryItems || []).length;
+          const recordedCount = placementStatuses.length;
+          const hasPending = recordedCount < itemCount || placementStatuses.some((s: any) => s === 'pending');
+          if (!hasPending) return false;
+        } else {
+          const hasStatus = placementStatuses.some((s: any) => s === placementStatusFilter);
+          if (!hasStatus) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [publicationsFromOrders, publicationSearchTerm, channelFilter, placementStatusFilter]);
+
   // Read tab from URL query params (e.g., ?tab=orders maps to insertion-order)
   const tabFromUrl = searchParams.get('tab');
   const initialTab = tabFromUrl === 'orders' ? 'insertion-order' : 
@@ -1177,13 +1235,89 @@ export default function CampaignDetail() {
                         <div className="flex items-baseline justify-between mb-4">
                           <h3 className="text-base font-semibold font-sans">Selected Publications & Inventory</h3>
                           <span className="text-sm text-muted-foreground">
-                            {ordersSummary.totalPlacements} placements across{' '}
-                            {ordersSummary.totalPublications} publications
+                            {filteredPublications.length !== publicationsFromOrders.length 
+                              ? `Showing ${filteredPublications.length} of ${ordersSummary.totalPublications} publications`
+                              : `${ordersSummary.totalPlacements} placements across ${ordersSummary.totalPublications} publications`
+                            }
                           </span>
                         </div>
+
+                        {/* Filter Controls */}
+                        {publicationsFromOrders.length > 0 && (
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="relative flex-1 max-w-sm">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Search publications or placements..."
+                                value={publicationSearchTerm}
+                                onChange={(e) => setPublicationSearchTerm(e.target.value)}
+                                className="pl-9 h-9"
+                              />
+                            </div>
+                            {availableChannels.length > 1 && (
+                              <Select value={channelFilter} onValueChange={setChannelFilter}>
+                                <SelectTrigger className="w-[160px] h-9">
+                                  <SelectValue placeholder="All Channels" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">All Channels</SelectItem>
+                                  {availableChannels.map(channel => (
+                                    <SelectItem key={channel} value={channel} className="capitalize">
+                                      {channel.charAt(0).toUpperCase() + channel.slice(1)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            <Select value={placementStatusFilter} onValueChange={setPlacementStatusFilter}>
+                              <SelectTrigger className="w-[180px] h-9">
+                                <SelectValue placeholder="All Placements" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Placements</SelectItem>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="accepted">Accepted</SelectItem>
+                                <SelectItem value="in_production">In Production</SelectItem>
+                                <SelectItem value="delivered">Delivered</SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {(publicationSearchTerm || channelFilter !== 'all' || placementStatusFilter !== 'all') && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-9 text-xs text-muted-foreground hover:text-foreground"
+                                onClick={() => {
+                                  setPublicationSearchTerm('');
+                                  setChannelFilter('all');
+                                  setPlacementStatusFilter('all');
+                                }}
+                              >
+                                Clear filters
+                              </Button>
+                            )}
+                          </div>
+                        )}
                         
                         <div className="space-y-6">
-                          {publicationsFromOrders.map((pub) => (
+                          {filteredPublications.length === 0 && publicationsFromOrders.length > 0 && (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">No publications match your filters.</p>
+                              <Button 
+                                variant="link" 
+                                size="sm" 
+                                onClick={() => {
+                                  setPublicationSearchTerm('');
+                                  setChannelFilter('all');
+                                  setPlacementStatusFilter('all');
+                                }}
+                              >
+                                Clear all filters
+                              </Button>
+                            </div>
+                          )}
+                          {filteredPublications.map((pub) => (
                             <Card key={pub.publicationId} className="bg-white">
                               <CardContent className="p-0">
                                 <Table>
