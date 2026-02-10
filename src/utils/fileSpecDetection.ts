@@ -642,15 +642,20 @@ export function autoMatchFileToSpecs(
         if (detectedSpecs.wordCount) {
           reasons.push(`${detectedSpecs.wordCount} words, ${detectedSpecs.characterCount} characters`);
         }
-      } else if (placementAcceptsText && (isRadio || isPodcast)) {
-        // Radio/Podcast text placements (host-read, live-read scripts)
+      } else if ((placementAcceptsText || (spec.fileFormats && spec.fileFormats.some(f => f.toUpperCase() === 'TXT'))) && (isRadio || isPodcast)) {
+        // Radio/Podcast text placements (host-read, live-read scripts, script-variant spots)
         const dims = (requiredDims[0] || '').toLowerCase();
         const isHostRead = dims.includes('host-read') || dims.includes('live-read') || dims.includes('script');
         
+        // Check if this spec is exclusively TXT (a script-variant spec like "30s spot - script")
+        const isScriptOnlySpec = spec.fileFormats && spec.fileFormats.length === 1 && spec.fileFormats[0].toUpperCase() === 'TXT';
+        
         if (isTxtFile) {
-          if (isHostRead) {
-            score += 80; // High confidence - script for host-read
-            reasons.push('Text script (.txt) matches host-read/live-read placement');
+          if (isHostRead || isScriptOnlySpec) {
+            score += 80; // High confidence - script for host-read or script-variant placement
+            reasons.push(isHostRead 
+              ? 'Text script (.txt) matches host-read/live-read placement'
+              : `Text script (.txt) matches ${spec.channel} script placement`);
           } else {
             score += 50; // Medium confidence - text for audio channel
             reasons.push(`Text file for ${spec.channel} placement (e.g., script or talking points)`);

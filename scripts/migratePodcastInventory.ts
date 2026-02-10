@@ -160,6 +160,11 @@ function inferDimensions(adFormat: string, duration?: number, name?: string): st
 function getFileFormats(adFormat: string, adName: string): string[] {
   const nameLower = adName.toLowerCase();
   
+  // Script-variant rolls (explicitly set)
+  if (adFormat.endsWith('_script')) {
+    return ['TXT'];
+  }
+  
   // Host reads and script-based formats need text
   if (adFormat === 'host_read' || 
       nameLower.includes('host read') || 

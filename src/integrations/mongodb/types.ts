@@ -239,7 +239,7 @@ export interface RadioStation {
   listeners?: number; // average weekly listeners
   advertisingOpportunities?: {
     name?: string;
-    adFormat?: "30_second_spot" | "60_second_spot" | "live_read" | "sponsorship" | "traffic_weather_sponsor";
+    adFormat?: "30_second_spot" | "60_second_spot" | "15_second_spot" | "15_second_spot_script" | "30_second_spot_script" | "60_second_spot_script" | "live_read" | "sponsorship" | "traffic_weather_sponsor";
     timeSlot?: "drive_time_morning" | "drive_time_evening" | "midday" | "weekend" | "overnight";
     pricing?: {
       perSpot?: number;

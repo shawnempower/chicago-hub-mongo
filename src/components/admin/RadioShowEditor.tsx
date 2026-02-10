@@ -92,9 +92,12 @@ const FREQUENCY_OPTIONS = [
 ];
 
 const AD_FORMAT_OPTIONS = [
-  { value: '15_second_spot', label: '15-second spot' },
-  { value: '30_second_spot', label: '30-second spot' },
-  { value: '60_second_spot', label: '60-second spot' },
+  { value: '15_second_spot', label: '15-second spot (audio)' },
+  { value: '30_second_spot', label: '30-second spot (audio)' },
+  { value: '60_second_spot', label: '60-second spot (audio)' },
+  { value: '15_second_spot_script', label: '15-second spot (script)' },
+  { value: '30_second_spot_script', label: '30-second spot (script)' },
+  { value: '60_second_spot_script', label: '60-second spot (script)' },
   { value: 'live_read', label: 'Live read' },
   { value: 'sponsorship', label: 'Sponsorship' },
   { value: 'traffic_weather_sponsor', label: 'Traffic/Weather sponsor' },
@@ -222,6 +225,9 @@ export const RadioShowEditor = forwardRef<{ openShowDialog: (show: RadioShow) =>
         '15_second_spot': { duration: 15, dimensions: '15s', fileFormats: ['MP3', 'WAV'] },
         '30_second_spot': { duration: 30, dimensions: '30s', fileFormats: ['MP3', 'WAV'] },
         '60_second_spot': { duration: 60, dimensions: '60s', fileFormats: ['MP3', 'WAV'] },
+        '15_second_spot_script': { duration: 15, dimensions: '15s', fileFormats: ['TXT'] },
+        '30_second_spot_script': { duration: 30, dimensions: '30s', fileFormats: ['TXT'] },
+        '60_second_spot_script': { duration: 60, dimensions: '60s', fileFormats: ['TXT'] },
         'live_read': { dimensions: 'live-read', fileFormats: ['TXT'] },
         'sponsorship': { dimensions: 'long-form', fileFormats: ['MP3', 'WAV', 'TXT'] },
         'traffic_weather_sponsor': { duration: 15, dimensions: '15s', fileFormats: ['MP3', 'WAV', 'TXT'] },

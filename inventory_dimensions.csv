@@ -32,17 +32,28 @@ print,BUSINESS_CARD,Business Card Ad,3.5x2 inches,Business card sized advertisem
 print,CLASSIFIED,Classified Ad,N/A,Classified advertisement typically text-based or small display,5MB,"PDF, JPG, TEXT"
 print,INSERT,Print Insert,N/A (varies),Separate insert to be included with publication. Customer usually provides pre-printed materials.,100MB,PDF
 print,CUSTOM,Custom Print Ad,N/A,Custom-sized print advertisement with publication-specific requirements,50MB,"PDF, TIFF, EPS"
-radio,SPOT_15,15-Second Spot,15s,Short radio spot typically for quick mentions or reminders.,10MB,"MP3, WAV"
-radio,SPOT_30,30-Second Spot,30s,Standard radio spot length. Most common format for radio advertising.,15MB,"MP3, WAV"
-radio,SPOT_60,60-Second Spot,60s,Full-length radio spot for detailed messaging.,25MB,"MP3, WAV"
+radio,SPOT_15_AUDIO,15-Second Spot - Audio,15s,Short pre-produced radio commercial.,10MB,"MP3, WAV"
+radio,SPOT_15_SCRIPT,15-Second Spot - Script,15s,Script for a short radio commercial (~35-40 words).,100KB,TXT
+radio,SPOT_30_AUDIO,30-Second Spot - Audio,30s,Standard pre-produced radio commercial.,15MB,"MP3, WAV"
+radio,SPOT_30_SCRIPT,30-Second Spot - Script,30s,Script for a standard radio commercial (~75 words).,100KB,TXT
+radio,SPOT_60_AUDIO,60-Second Spot - Audio,60s,Full-length pre-produced radio commercial.,25MB,"MP3, WAV"
+radio,SPOT_60_SCRIPT,60-Second Spot - Script,60s,Script for a full-length radio commercial (~150 words).,100KB,TXT
 radio,LIVE_READ,Live Read,live-read,Host-read advertisement. Provide script for on-air talent to read.,100KB,TXT
 radio,SPONSORSHIP,Sponsorship,sponsorship,"Show or segment sponsorship. ""Brought to you by..."" format.",10MB,"TXT, MP3, WAV"
 radio,LONG_FORM,Long-Form / Interview,long-form,"Extended format for interviews, takeovers, or special features.",100MB,"MP3, WAV, TXT"
 radio,CUSTOM,Custom Radio Ad,custom,Custom duration or format. Coordinate specifics with station.,50MB,"MP3, WAV, TXT"
-podcast,PRE_ROLL,Pre-Roll Ad,pre-roll,"Ad played at the beginning of the podcast episode, before main content.",10MB,"MP3, WAV"
-podcast,MID_ROLL_30,30-Second Mid-Roll,30s,Standard 30-second ad played during the middle of the episode.,15MB,"MP3, WAV"
-podcast,MID_ROLL_60,60-Second Mid-Roll,60s,Full-length 60-second ad played during the middle of the episode.,25MB,"MP3, WAV"
-podcast,POST_ROLL,Post-Roll Ad,post-roll,"Ad played at the end of the podcast episode, after main content.",10MB,"MP3, WAV"
+podcast,PRE_ROLL_30_AUDIO,Pre-Roll 30s - Audio,pre-roll,Pre-recorded 30-second ad at the beginning of the episode.,15MB,"MP3, WAV"
+podcast,PRE_ROLL_30_SCRIPT,Pre-Roll 30s - Script,pre-roll,Script for a 30-second ad read at the beginning of the episode.,100KB,TXT
+podcast,PRE_ROLL_60_AUDIO,Pre-Roll 60s - Audio,pre-roll,Pre-recorded 60-second ad at the beginning of the episode.,25MB,"MP3, WAV"
+podcast,PRE_ROLL_60_SCRIPT,Pre-Roll 60s - Script,pre-roll,Script for a 60-second ad read at the beginning of the episode.,100KB,TXT
+podcast,MID_ROLL_30_AUDIO,Mid-Roll 30s - Audio,30s,Pre-recorded 30-second ad played during the middle of the episode.,15MB,"MP3, WAV"
+podcast,MID_ROLL_30_SCRIPT,Mid-Roll 30s - Script,30s,Script for a 30-second ad read during the middle of the episode.,100KB,TXT
+podcast,MID_ROLL_60_AUDIO,Mid-Roll 60s - Audio,60s,Pre-recorded 60-second ad played during the middle of the episode.,25MB,"MP3, WAV"
+podcast,MID_ROLL_60_SCRIPT,Mid-Roll 60s - Script,60s,Script for a 60-second ad read during the middle of the episode.,100KB,TXT
+podcast,POST_ROLL_30_AUDIO,Post-Roll 30s - Audio,post-roll,Pre-recorded 30-second ad at the end of the episode.,15MB,"MP3, WAV"
+podcast,POST_ROLL_30_SCRIPT,Post-Roll 30s - Script,post-roll,Script for a 30-second ad read at the end of the episode.,100KB,TXT
+podcast,POST_ROLL_60_AUDIO,Post-Roll 60s - Audio,post-roll,Pre-recorded 60-second ad at the end of the episode.,25MB,"MP3, WAV"
+podcast,POST_ROLL_60_SCRIPT,Post-Roll 60s - Script,post-roll,Script for a 60-second ad read at the end of the episode.,100KB,TXT
 podcast,HOST_READ,Host-Read Ad,host-read,Host reads sponsor copy in their own voice. Most authentic and engaging format.,100KB,TXT
 podcast,SPONSORSHIP,Episode Sponsorship,sponsorship,"Full episode sponsorship with multiple mentions and ""presented by"" branding.",25MB,"TXT, MP3, WAV"
 podcast,CUSTOM,Custom Podcast Ad,custom,Custom format or duration. Coordinate specifics with podcast host.,50MB,"MP3, WAV, TXT"

@@ -668,6 +668,8 @@ export interface Publication {
         specifications?: {
           format?: 'mp3' | 'wav' | 'script';
           bitrate?: string;
+          fileFormats?: string[];  // e.g., ['MP3', 'WAV'] or ['TXT']
+          duration?: number;
         };
         available?: boolean;
       }>;
@@ -689,7 +691,7 @@ export interface Publication {
         averageListeners?: number;
         advertisingOpportunities?: Array<{
           name?: string;
-          adFormat?: '30_second_spot' | '60_second_spot' | '15_second_spot' | 'live_read' | 'sponsorship' | 'traffic_weather_sponsor';
+          adFormat?: '30_second_spot' | '60_second_spot' | '15_second_spot' | '15_second_spot_script' | '30_second_spot_script' | '60_second_spot_script' | 'live_read' | 'sponsorship' | 'traffic_weather_sponsor';
           spotsPerShow?: number;
           pricing?: {
             perSpot?: number;
@@ -724,7 +726,7 @@ export interface Publication {
       }>;
       advertisingOpportunities?: Array<{
         name?: string;
-        adFormat?: '30_second_spot' | '60_second_spot' | 'live_read' | 'sponsorship' | 'traffic_weather_sponsor';
+        adFormat?: '30_second_spot' | '60_second_spot' | '15_second_spot' | '15_second_spot_script' | '30_second_spot_script' | '60_second_spot_script' | 'live_read' | 'sponsorship' | 'traffic_weather_sponsor';
         timeSlot?: 'drive_time_morning' | 'drive_time_evening' | 'midday' | 'weekend' | 'overnight';
         pricing?: {
           perSpot?: number;

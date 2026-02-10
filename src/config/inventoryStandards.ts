@@ -848,18 +848,18 @@ export const PRINT_STANDARDS: Record<string, InventoryTypeStandard> = {
  * Duration-based formats (radio's equivalent of "dimensions")
  */
 export const RADIO_STANDARDS: Record<string, InventoryTypeStandard> = {
-  // Standard Spot Lengths
-  SPOT_15: {
-    id: 'radio_spot_15s',
+  // ===== 15-SECOND SPOTS =====
+  SPOT_15_AUDIO: {
+    id: 'radio_spot_15s_audio',
     channel: 'radio',
-    name: '15-Second Spot',
-    description: 'Short radio spot, typically for quick mentions or reminders.',
+    name: '15-Second Spot - Audio',
+    description: 'Short pre-produced radio commercial.',
     defaultSpecs: {
       dimensions: '15s',
       duration: 15,
       fileFormats: ['MP3', 'WAV'],
       maxFileSize: '10MB',
-      colorSpace: 'RGB', // Not applicable but required by interface
+      colorSpace: 'RGB',
       resolution: '44.1kHz',
       bitrate: '192kbps',
       additionalRequirements: 'Audio must be broadcast quality. Include 0.5s of silence at start and end.'
@@ -871,11 +871,33 @@ export const RADIO_STANDARDS: Record<string, InventoryTypeStandard> = {
     examples: ['Quick mention', 'Teaser spot', 'Reminder ad']
   },
 
-  SPOT_30: {
-    id: 'radio_spot_30s',
+  SPOT_15_SCRIPT: {
+    id: 'radio_spot_15s_script',
     channel: 'radio',
-    name: '30-Second Spot',
-    description: 'Standard radio spot length. Most common format for radio advertising.',
+    name: '15-Second Spot - Script',
+    description: 'Script for a short radio commercial (~35-40 words).',
+    defaultSpecs: {
+      dimensions: '15s',
+      duration: 15,
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script copy (~35-40 words for 15s read). Include pronunciation guides for brand names if needed.'
+    },
+    validation: {
+      required: ['duration'],
+      optional: []
+    },
+    examples: ['Quick mention script', 'Teaser spot copy']
+  },
+
+  // ===== 30-SECOND SPOTS =====
+  SPOT_30_AUDIO: {
+    id: 'radio_spot_30s_audio',
+    channel: 'radio',
+    name: '30-Second Spot - Audio',
+    description: 'Standard pre-produced radio commercial. Most common format for radio advertising.',
     defaultSpecs: {
       dimensions: '30s',
       duration: 30,
@@ -893,11 +915,33 @@ export const RADIO_STANDARDS: Record<string, InventoryTypeStandard> = {
     examples: ['Standard commercial', 'Product ad', 'Service promotion']
   },
 
-  SPOT_60: {
-    id: 'radio_spot_60s',
+  SPOT_30_SCRIPT: {
+    id: 'radio_spot_30s_script',
     channel: 'radio',
-    name: '60-Second Spot',
-    description: 'Full-length radio spot for detailed messaging.',
+    name: '30-Second Spot - Script',
+    description: 'Script for a standard radio commercial (~75 words).',
+    defaultSpecs: {
+      dimensions: '30s',
+      duration: 30,
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script copy (~50-75 words for 30s read). Include pronunciation guides for brand names if needed.'
+    },
+    validation: {
+      required: ['duration'],
+      optional: []
+    },
+    examples: ['Standard commercial script', 'Product ad copy']
+  },
+
+  // ===== 60-SECOND SPOTS =====
+  SPOT_60_AUDIO: {
+    id: 'radio_spot_60s_audio',
+    channel: 'radio',
+    name: '60-Second Spot - Audio',
+    description: 'Full-length pre-produced radio commercial for detailed messaging.',
     defaultSpecs: {
       dimensions: '60s',
       duration: 60,
@@ -913,6 +957,27 @@ export const RADIO_STANDARDS: Record<string, InventoryTypeStandard> = {
       optional: ['bitrate']
     },
     examples: ['Full commercial', 'Detailed product pitch', 'Story-based ad']
+  },
+
+  SPOT_60_SCRIPT: {
+    id: 'radio_spot_60s_script',
+    channel: 'radio',
+    name: '60-Second Spot - Script',
+    description: 'Script for a full-length radio commercial (~150 words).',
+    defaultSpecs: {
+      dimensions: '60s',
+      duration: 60,
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script copy (~100-150 words for 60s read). Include pronunciation guides for brand names if needed.'
+    },
+    validation: {
+      required: ['duration'],
+      optional: []
+    },
+    examples: ['Full commercial script', 'Detailed product pitch copy']
   },
 
   // Live Read / Script-based
@@ -1009,21 +1074,21 @@ export const RADIO_STANDARDS: Record<string, InventoryTypeStandard> = {
  * Position-based (pre/mid/post-roll) and duration-based formats
  */
 export const PODCAST_STANDARDS: Record<string, InventoryTypeStandard> = {
-  // Pre-Roll (beginning of episode)
-  PRE_ROLL: {
-    id: 'podcast_pre_roll',
+  // ===== PRE-ROLL (beginning of episode) =====
+  PRE_ROLL_30_AUDIO: {
+    id: 'podcast_pre_roll_30s_audio',
     channel: 'podcast',
-    name: 'Pre-Roll Ad',
-    description: 'Ad played at the beginning of the podcast episode, before main content.',
+    name: 'Pre-Roll 30s - Audio',
+    description: 'Pre-recorded 30-second ad at the beginning of the podcast episode.',
     defaultSpecs: {
       dimensions: 'pre-roll',
-      duration: 15,
+      duration: 30,
       fileFormats: ['MP3', 'WAV'],
-      maxFileSize: '10MB',
+      maxFileSize: '15MB',
       colorSpace: 'RGB',
       resolution: '44.1kHz',
       bitrate: '192kbps',
-      additionalRequirements: 'Typically 15-30 seconds. Audio must be podcast quality (44.1kHz, stereo).'
+      additionalRequirements: 'Audio must be podcast quality (44.1kHz, stereo).'
     },
     validation: {
       required: ['fileFormats'],
@@ -1032,12 +1097,76 @@ export const PODCAST_STANDARDS: Record<string, InventoryTypeStandard> = {
     examples: ['Opening sponsor', 'Episode intro ad', 'Presented by...']
   },
 
-  // Mid-Roll 30 seconds
-  MID_ROLL_30: {
-    id: 'podcast_mid_roll_30s',
+  PRE_ROLL_30_SCRIPT: {
+    id: 'podcast_pre_roll_30s_script',
     channel: 'podcast',
-    name: '30-Second Mid-Roll',
-    description: 'Standard 30-second ad played during the middle of the episode.',
+    name: 'Pre-Roll 30s - Script',
+    description: 'Script for a 30-second ad read at the beginning of the podcast episode.',
+    defaultSpecs: {
+      dimensions: 'pre-roll',
+      duration: 30,
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script/talking points (~50-75 words for 30s read). Host may personalize delivery.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration']
+    },
+    examples: ['Opening sponsor script', 'Episode intro copy']
+  },
+
+  PRE_ROLL_60_AUDIO: {
+    id: 'podcast_pre_roll_60s_audio',
+    channel: 'podcast',
+    name: 'Pre-Roll 60s - Audio',
+    description: 'Pre-recorded 60-second ad at the beginning of the podcast episode.',
+    defaultSpecs: {
+      dimensions: 'pre-roll',
+      duration: 60,
+      fileFormats: ['MP3', 'WAV'],
+      maxFileSize: '25MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      bitrate: '192kbps',
+      additionalRequirements: 'Audio must be podcast quality (44.1kHz, stereo).'
+    },
+    validation: {
+      required: ['fileFormats'],
+      optional: ['duration', 'bitrate']
+    },
+    examples: ['Extended opening sponsor', 'Detailed intro ad']
+  },
+
+  PRE_ROLL_60_SCRIPT: {
+    id: 'podcast_pre_roll_60s_script',
+    channel: 'podcast',
+    name: 'Pre-Roll 60s - Script',
+    description: 'Script for a 60-second ad read at the beginning of the podcast episode.',
+    defaultSpecs: {
+      dimensions: 'pre-roll',
+      duration: 60,
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script/talking points (~100-150 words for 60s read). Host may personalize delivery.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration']
+    },
+    examples: ['Extended opening sponsor script', 'Detailed intro copy']
+  },
+
+  // ===== MID-ROLL 30 seconds =====
+  MID_ROLL_30_AUDIO: {
+    id: 'podcast_mid_roll_30s_audio',
+    channel: 'podcast',
+    name: 'Mid-Roll 30s - Audio',
+    description: 'Pre-recorded 30-second ad played during the middle of the episode.',
     defaultSpecs: {
       dimensions: '30s',
       duration: 30,
@@ -1055,12 +1184,33 @@ export const PODCAST_STANDARDS: Record<string, InventoryTypeStandard> = {
     examples: ['Standard podcast ad', 'Product commercial', 'Service promotion']
   },
 
-  // Mid-Roll 60 seconds
-  MID_ROLL_60: {
-    id: 'podcast_mid_roll_60s',
+  MID_ROLL_30_SCRIPT: {
+    id: 'podcast_mid_roll_30s_script',
     channel: 'podcast',
-    name: '60-Second Mid-Roll',
-    description: 'Full-length 60-second ad played during the middle of the episode.',
+    name: 'Mid-Roll 30s - Script',
+    description: 'Script for a 30-second ad read during the middle of the episode.',
+    defaultSpecs: {
+      dimensions: '30s',
+      duration: 30,
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script/talking points (~50-75 words for 30s read). Host may personalize delivery.'
+    },
+    validation: {
+      required: ['duration'],
+      optional: []
+    },
+    examples: ['Standard podcast ad script', 'Product ad copy']
+  },
+
+  // ===== MID-ROLL 60 seconds =====
+  MID_ROLL_60_AUDIO: {
+    id: 'podcast_mid_roll_60s_audio',
+    channel: 'podcast',
+    name: 'Mid-Roll 60s - Audio',
+    description: 'Pre-recorded 60-second ad played during the middle of the episode.',
     defaultSpecs: {
       dimensions: '60s',
       duration: 60,
@@ -1078,27 +1228,112 @@ export const PODCAST_STANDARDS: Record<string, InventoryTypeStandard> = {
     examples: ['Extended product pitch', 'Story-based ad', 'Detailed promotion']
   },
 
-  // Post-Roll (end of episode)
-  POST_ROLL: {
-    id: 'podcast_post_roll',
+  MID_ROLL_60_SCRIPT: {
+    id: 'podcast_mid_roll_60s_script',
     channel: 'podcast',
-    name: 'Post-Roll Ad',
-    description: 'Ad played at the end of the podcast episode, after main content.',
+    name: 'Mid-Roll 60s - Script',
+    description: 'Script for a 60-second ad read during the middle of the episode.',
+    defaultSpecs: {
+      dimensions: '60s',
+      duration: 60,
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script/talking points (~100-150 words for 60s read). Host may personalize delivery.'
+    },
+    validation: {
+      required: ['duration'],
+      optional: []
+    },
+    examples: ['Extended product pitch script', 'Story-based ad copy']
+  },
+
+  // ===== POST-ROLL (end of episode) =====
+  POST_ROLL_30_AUDIO: {
+    id: 'podcast_post_roll_30s_audio',
+    channel: 'podcast',
+    name: 'Post-Roll 30s - Audio',
+    description: 'Pre-recorded 30-second ad at the end of the podcast episode.',
     defaultSpecs: {
       dimensions: 'post-roll',
-      duration: 15,
+      duration: 30,
       fileFormats: ['MP3', 'WAV'],
-      maxFileSize: '10MB',
+      maxFileSize: '15MB',
       colorSpace: 'RGB',
       resolution: '44.1kHz',
       bitrate: '192kbps',
-      additionalRequirements: 'Typically 15-30 seconds. Lower completion rate but often more affordable.'
+      additionalRequirements: 'Audio must be podcast quality. Lower completion rate but often more affordable.'
     },
     validation: {
       required: ['fileFormats'],
       optional: ['duration', 'bitrate']
     },
     examples: ['Closing sponsor', 'Call-to-action', 'Next episode promo']
+  },
+
+  POST_ROLL_30_SCRIPT: {
+    id: 'podcast_post_roll_30s_script',
+    channel: 'podcast',
+    name: 'Post-Roll 30s - Script',
+    description: 'Script for a 30-second ad read at the end of the podcast episode.',
+    defaultSpecs: {
+      dimensions: 'post-roll',
+      duration: 30,
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script/talking points (~50-75 words for 30s read). Host may personalize delivery.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration']
+    },
+    examples: ['Closing sponsor script', 'Call-to-action copy']
+  },
+
+  POST_ROLL_60_AUDIO: {
+    id: 'podcast_post_roll_60s_audio',
+    channel: 'podcast',
+    name: 'Post-Roll 60s - Audio',
+    description: 'Pre-recorded 60-second ad at the end of the podcast episode.',
+    defaultSpecs: {
+      dimensions: 'post-roll',
+      duration: 60,
+      fileFormats: ['MP3', 'WAV'],
+      maxFileSize: '25MB',
+      colorSpace: 'RGB',
+      resolution: '44.1kHz',
+      bitrate: '192kbps',
+      additionalRequirements: 'Audio must be podcast quality.'
+    },
+    validation: {
+      required: ['fileFormats'],
+      optional: ['duration', 'bitrate']
+    },
+    examples: ['Extended closing sponsor', 'Detailed call-to-action']
+  },
+
+  POST_ROLL_60_SCRIPT: {
+    id: 'podcast_post_roll_60s_script',
+    channel: 'podcast',
+    name: 'Post-Roll 60s - Script',
+    description: 'Script for a 60-second ad read at the end of the podcast episode.',
+    defaultSpecs: {
+      dimensions: 'post-roll',
+      duration: 60,
+      fileFormats: ['TXT'],
+      maxFileSize: '100KB',
+      colorSpace: 'RGB',
+      resolution: 'N/A',
+      additionalRequirements: 'Provide script/talking points (~100-150 words for 60s read). Host may personalize delivery.'
+    },
+    validation: {
+      required: [],
+      optional: ['duration']
+    },
+    examples: ['Extended closing sponsor script']
   },
 
   // Host Read
@@ -1426,23 +1661,29 @@ export function findRadioStandard(searchTerm: string | number): InventoryTypeSta
     if (byNumericDuration) return byNumericDuration;
   }
   
-  // Try fuzzy match on common terms
+  // Try fuzzy match on common terms (defaults to audio variant)
   const fuzzyMap: Record<string, string> = {
-    '15': 'SPOT_15',
-    '15s': 'SPOT_15',
-    '15 second': 'SPOT_15',
-    '15-second': 'SPOT_15',
-    '15_second_spot': 'SPOT_15',
-    '30': 'SPOT_30',
-    '30s': 'SPOT_30',
-    '30 second': 'SPOT_30',
-    '30-second': 'SPOT_30',
-    '30_second_spot': 'SPOT_30',
-    '60': 'SPOT_60',
-    '60s': 'SPOT_60',
-    '60 second': 'SPOT_60',
-    '60-second': 'SPOT_60',
-    '60_second_spot': 'SPOT_60',
+    '15': 'SPOT_15_AUDIO',
+    '15s': 'SPOT_15_AUDIO',
+    '15 second': 'SPOT_15_AUDIO',
+    '15-second': 'SPOT_15_AUDIO',
+    '15_second_spot': 'SPOT_15_AUDIO',
+    '15 audio': 'SPOT_15_AUDIO',
+    '15 script': 'SPOT_15_SCRIPT',
+    '30': 'SPOT_30_AUDIO',
+    '30s': 'SPOT_30_AUDIO',
+    '30 second': 'SPOT_30_AUDIO',
+    '30-second': 'SPOT_30_AUDIO',
+    '30_second_spot': 'SPOT_30_AUDIO',
+    '30 audio': 'SPOT_30_AUDIO',
+    '30 script': 'SPOT_30_SCRIPT',
+    '60': 'SPOT_60_AUDIO',
+    '60s': 'SPOT_60_AUDIO',
+    '60 second': 'SPOT_60_AUDIO',
+    '60-second': 'SPOT_60_AUDIO',
+    '60_second_spot': 'SPOT_60_AUDIO',
+    '60 audio': 'SPOT_60_AUDIO',
+    '60 script': 'SPOT_60_SCRIPT',
     'live read': 'LIVE_READ',
     'live-read': 'LIVE_READ',
     'live_read': 'LIVE_READ',
@@ -1465,9 +1706,9 @@ export function findRadioStandard(searchTerm: string | number): InventoryTypeSta
  * Infer radio format from duration in seconds
  */
 export function inferRadioFormatFromDuration(durationSeconds: number): InventoryTypeStandard | null {
-  if (durationSeconds <= 15) return RADIO_STANDARDS.SPOT_15;
-  if (durationSeconds <= 30) return RADIO_STANDARDS.SPOT_30;
-  if (durationSeconds <= 60) return RADIO_STANDARDS.SPOT_60;
+  if (durationSeconds <= 15) return RADIO_STANDARDS.SPOT_15_AUDIO;
+  if (durationSeconds <= 30) return RADIO_STANDARDS.SPOT_30_AUDIO;
+  if (durationSeconds <= 60) return RADIO_STANDARDS.SPOT_60_AUDIO;
   if (durationSeconds > 120) return RADIO_STANDARDS.LONG_FORM;
   return RADIO_STANDARDS.CUSTOM;
 }
@@ -1513,37 +1754,49 @@ export function findPodcastStandard(searchTerm: string | number): InventoryTypeS
     if (byNumericDuration) return byNumericDuration;
   }
   
-  // Try fuzzy match on common terms
+  // Try fuzzy match on common terms (defaults to audio variant)
   const fuzzyMap: Record<string, string> = {
-    // Pre-roll variants
-    'pre-roll': 'PRE_ROLL',
-    'pre roll': 'PRE_ROLL',
-    'preroll': 'PRE_ROLL',
-    'pre_roll': 'PRE_ROLL',
-    'opening': 'PRE_ROLL',
+    // Pre-roll variants (default to 30s audio)
+    'pre-roll': 'PRE_ROLL_30_AUDIO',
+    'pre roll': 'PRE_ROLL_30_AUDIO',
+    'preroll': 'PRE_ROLL_30_AUDIO',
+    'pre_roll': 'PRE_ROLL_30_AUDIO',
+    'opening': 'PRE_ROLL_30_AUDIO',
+    'pre-roll 30 audio': 'PRE_ROLL_30_AUDIO',
+    'pre-roll 30 script': 'PRE_ROLL_30_SCRIPT',
+    'pre-roll 60 audio': 'PRE_ROLL_60_AUDIO',
+    'pre-roll 60 script': 'PRE_ROLL_60_SCRIPT',
     
     // Mid-roll 30s variants
-    '30': 'MID_ROLL_30',
-    '30s': 'MID_ROLL_30',
-    '30 second': 'MID_ROLL_30',
-    '30-second': 'MID_ROLL_30',
-    'mid-roll': 'MID_ROLL_30',
-    'mid roll': 'MID_ROLL_30',
-    'midroll': 'MID_ROLL_30',
-    'mid_roll': 'MID_ROLL_30',
+    '30': 'MID_ROLL_30_AUDIO',
+    '30s': 'MID_ROLL_30_AUDIO',
+    '30 second': 'MID_ROLL_30_AUDIO',
+    '30-second': 'MID_ROLL_30_AUDIO',
+    'mid-roll': 'MID_ROLL_30_AUDIO',
+    'mid roll': 'MID_ROLL_30_AUDIO',
+    'midroll': 'MID_ROLL_30_AUDIO',
+    'mid_roll': 'MID_ROLL_30_AUDIO',
+    'mid-roll 30 audio': 'MID_ROLL_30_AUDIO',
+    'mid-roll 30 script': 'MID_ROLL_30_SCRIPT',
     
     // Mid-roll 60s variants
-    '60': 'MID_ROLL_60',
-    '60s': 'MID_ROLL_60',
-    '60 second': 'MID_ROLL_60',
-    '60-second': 'MID_ROLL_60',
+    '60': 'MID_ROLL_60_AUDIO',
+    '60s': 'MID_ROLL_60_AUDIO',
+    '60 second': 'MID_ROLL_60_AUDIO',
+    '60-second': 'MID_ROLL_60_AUDIO',
+    'mid-roll 60 audio': 'MID_ROLL_60_AUDIO',
+    'mid-roll 60 script': 'MID_ROLL_60_SCRIPT',
     
-    // Post-roll variants
-    'post-roll': 'POST_ROLL',
-    'post roll': 'POST_ROLL',
-    'postroll': 'POST_ROLL',
-    'post_roll': 'POST_ROLL',
-    'closing': 'POST_ROLL',
+    // Post-roll variants (default to 30s audio)
+    'post-roll': 'POST_ROLL_30_AUDIO',
+    'post roll': 'POST_ROLL_30_AUDIO',
+    'postroll': 'POST_ROLL_30_AUDIO',
+    'post_roll': 'POST_ROLL_30_AUDIO',
+    'closing': 'POST_ROLL_30_AUDIO',
+    'post-roll 30 audio': 'POST_ROLL_30_AUDIO',
+    'post-roll 30 script': 'POST_ROLL_30_SCRIPT',
+    'post-roll 60 audio': 'POST_ROLL_60_AUDIO',
+    'post-roll 60 script': 'POST_ROLL_60_SCRIPT',
     
     // Host read variants
     'host read': 'HOST_READ',
@@ -1573,13 +1826,7 @@ export function findPodcastStandard(searchTerm: string | number): InventoryTypeS
 export function inferPodcastFormatFromName(adName: string, durationSeconds?: number): InventoryTypeStandard | null {
   const name = adName.toLowerCase();
   
-  // Check for position-based formats first
-  if (name.includes('pre-roll') || name.includes('preroll') || name.includes('pre roll') || name.includes('opening')) {
-    return PODCAST_STANDARDS.PRE_ROLL;
-  }
-  if (name.includes('post-roll') || name.includes('postroll') || name.includes('post roll') || name.includes('closing')) {
-    return PODCAST_STANDARDS.POST_ROLL;
-  }
+  // Check for host-read / script-based formats first
   if (name.includes('host read') || name.includes('host-read')) {
     return PODCAST_STANDARDS.HOST_READ;
   }
@@ -1587,36 +1834,52 @@ export function inferPodcastFormatFromName(adName: string, durationSeconds?: num
     return PODCAST_STANDARDS.SPONSORSHIP;
   }
   
-  // Check for duration in name
-  if (name.includes('60') || name.includes(':60')) {
-    return PODCAST_STANDARDS.MID_ROLL_60;
+  // Determine duration from name or argument
+  let dur = durationSeconds;
+  if (!dur) {
+    if (name.includes('60') || name.includes(':60')) dur = 60;
+    else if (name.includes('30') || name.includes(':30')) dur = 30;
+    else if (name.includes('15') || name.includes(':15')) dur = 15;
   }
-  if (name.includes('30') || name.includes(':30')) {
-    return PODCAST_STANDARDS.MID_ROLL_30;
+  
+  // Check for position-based formats (defaults to audio)
+  if (name.includes('pre-roll') || name.includes('preroll') || name.includes('pre roll') || name.includes('opening')) {
+    return dur && dur >= 45 ? PODCAST_STANDARDS.PRE_ROLL_60_AUDIO : PODCAST_STANDARDS.PRE_ROLL_30_AUDIO;
   }
-  if (name.includes('15') || name.includes(':15')) {
-    return PODCAST_STANDARDS.PRE_ROLL; // 15s often pre/post roll
+  if (name.includes('post-roll') || name.includes('postroll') || name.includes('post roll') || name.includes('closing')) {
+    return dur && dur >= 45 ? PODCAST_STANDARDS.POST_ROLL_60_AUDIO : PODCAST_STANDARDS.POST_ROLL_30_AUDIO;
+  }
+  
+  // Mid-roll by duration (defaults to audio)
+  if (name.includes('mid-roll') || name.includes('midroll') || name.includes('mid roll')) {
+    return dur && dur >= 45 ? PODCAST_STANDARDS.MID_ROLL_60_AUDIO : PODCAST_STANDARDS.MID_ROLL_30_AUDIO;
+  }
+  
+  // Duration-based fallback (defaults to audio mid-roll)
+  if (dur) {
+    if (dur >= 45) return PODCAST_STANDARDS.MID_ROLL_60_AUDIO;
+    return PODCAST_STANDARDS.MID_ROLL_30_AUDIO;
   }
   
   // Use duration if provided
   if (durationSeconds) {
-    if (durationSeconds <= 20) return PODCAST_STANDARDS.PRE_ROLL;
-    if (durationSeconds <= 40) return PODCAST_STANDARDS.MID_ROLL_30;
-    if (durationSeconds <= 70) return PODCAST_STANDARDS.MID_ROLL_60;
+    if (durationSeconds <= 20) return PODCAST_STANDARDS.PRE_ROLL_30_AUDIO;
+    if (durationSeconds <= 40) return PODCAST_STANDARDS.MID_ROLL_30_AUDIO;
+    if (durationSeconds <= 70) return PODCAST_STANDARDS.MID_ROLL_60_AUDIO;
     return PODCAST_STANDARDS.SPONSORSHIP;
   }
   
-  // Default to mid-roll 30s if nothing else matches
-  return PODCAST_STANDARDS.MID_ROLL_30;
+  // Default to mid-roll 30s audio if nothing else matches
+  return PODCAST_STANDARDS.MID_ROLL_30_AUDIO;
 }
 
 /**
  * Infer podcast format from duration in seconds
  */
 export function inferPodcastFormatFromDuration(durationSeconds: number): InventoryTypeStandard | null {
-  if (durationSeconds <= 20) return PODCAST_STANDARDS.PRE_ROLL;
-  if (durationSeconds <= 40) return PODCAST_STANDARDS.MID_ROLL_30;
-  if (durationSeconds <= 70) return PODCAST_STANDARDS.MID_ROLL_60;
+  if (durationSeconds <= 20) return PODCAST_STANDARDS.PRE_ROLL_30_AUDIO;
+  if (durationSeconds <= 40) return PODCAST_STANDARDS.MID_ROLL_30_AUDIO;
+  if (durationSeconds <= 70) return PODCAST_STANDARDS.MID_ROLL_60_AUDIO;
   if (durationSeconds > 120) return PODCAST_STANDARDS.SPONSORSHIP;
   return PODCAST_STANDARDS.CUSTOM;
 }

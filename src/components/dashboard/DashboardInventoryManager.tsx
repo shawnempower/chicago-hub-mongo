@@ -813,6 +813,12 @@ export const DashboardInventoryManager = () => {
       const duration = itemCopy.format?.duration || itemCopy.duration;
       setCustomDurationMode(!duration || ![15, 30, 60, 90, 120].includes(duration));
     }
+    
+    // For podcast ads, seed format.fileFormats from specifications.fileFormats if not already set
+    if (type === 'podcast-ad' && !itemCopy.format?.fileFormats && itemCopy.specifications?.fileFormats) {
+      itemCopy.format = { ...itemCopy.format, fileFormats: itemCopy.specifications.fileFormats };
+      setEditingItem(itemCopy);
+    }
   };
 
   const closeEditDialog = () => {
@@ -1028,6 +1034,15 @@ export const DashboardInventoryManager = () => {
               };
             } else if (duration && !enrichedPodcastAd.format?.duration) {
               enrichedPodcastAd.format = { ...enrichedPodcastAd.format, duration: duration };
+            }
+            
+            // Sync specifications.fileFormats from format.fileFormats for creative asset matching
+            if (enrichedPodcastAd.format?.fileFormats) {
+              enrichedPodcastAd.specifications = {
+                ...enrichedPodcastAd.specifications,
+                fileFormats: enrichedPodcastAd.format.fileFormats,
+                ...(duration && { duration })
+              };
             }
             
             if (isAdding) {
@@ -5631,69 +5646,82 @@ export const DashboardInventoryManager = () => {
                     </div>
                     <div>
                       <Label htmlFor="position">Position</Label>
-                      <Input
-                        id="position"
+                      <Select
                         value={editingItem.position || ''}
-                        onChange={(e) => setEditingItem({ ...editingItem, position: e.target.value })}
-                        placeholder="Pre-roll, Mid-roll, Post-roll"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="duration">Duration</Label>
-                    <Select 
-                      value={
-                        customDurationMode
-                          ? 'custom'
-                          : (editingItem.duration && [15, 30, 60, 90, 120].includes(editingItem.duration)
-                            ? String(editingItem.duration)
-                            : 'custom')
-                      }
-                      onValueChange={(value) => {
-                        if (value === 'custom') {
-                          // Enter custom mode and clear duration
-                          setCustomDurationMode(true);
-                          setEditingItem({ ...editingItem, duration: undefined });
-                          return;
-                        }
-                        // Exit custom mode and set standard duration
-                        setCustomDurationMode(false);
-                        const duration = parseInt(value);
-                        setEditingItem({ ...editingItem, duration });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select duration..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15">15 seconds (:15)</SelectItem>
-                        <SelectItem value="30">30 seconds (:30)</SelectItem>
-                        <SelectItem value="60">60 seconds (:60)</SelectItem>
-                        <SelectItem value="90">90 seconds (:90)</SelectItem>
-                        <SelectItem value="120">120 seconds (:120)</SelectItem>
-                        <SelectItem value="custom">Custom...</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Custom duration input - shown for non-standard durations */}
-                  {(customDurationMode || (!editingItem.duration || ![15, 30, 60, 90, 120].includes(editingItem.duration))) && (
-                    <div>
-                      <Label htmlFor="customDuration">Custom Duration (seconds)</Label>
-                      <Input
-                        id="customDuration"
-                        type="number"
-                        value={editingItem.duration || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          const numVal = val === '' ? undefined : parseInt(val, 10);
-                          setEditingItem({ ...editingItem, duration: isNaN(numVal) ? undefined : numVal });
+                        onValueChange={(value) => {
+                          const updates: any = { ...editingItem, position: value };
+                          // Auto-set creative type to Script for host-read
+                          if (value === 'host-read') {
+                            updates.format = { ...updates.format, fileFormats: ['TXT'] };
+                          }
+                          setEditingItem(updates);
                         }}
-                        placeholder="Enter seconds (e.g., 45, 180, 600)"
-                      />
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select position..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pre-roll">Pre-roll</SelectItem>
+                          <SelectItem value="mid-roll">Mid-roll</SelectItem>
+                          <SelectItem value="post-roll">Post-roll</SelectItem>
+                          <SelectItem value="host-read">Host Live Read</SelectItem>
+                          <SelectItem value="sponsorship">Sponsorship / Takeover</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="creativeType">Creative Type</Label>
+                      <Select
+                        value={
+                          editingItem.format?.fileFormats?.length === 1 && editingItem.format.fileFormats[0] === 'TXT'
+                            ? 'script'
+                            : 'audio'
+                        }
+                        onValueChange={(value) => {
+                          const fileFormats = value === 'script' ? ['TXT'] : ['MP3', 'WAV'];
+                          setEditingItem({
+                            ...editingItem,
+                            format: { ...editingItem.format, fileFormats }
+                          });
+                        }}
+                        disabled={editingItem.position === 'host-read'}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="audio">Audio (MP3/WAV)</SelectItem>
+                          <SelectItem value="script">Script (TXT)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {editingItem.position === 'host-read' && (
+                        <p className="text-xs text-muted-foreground mt-1">Host live reads are always scripts</p>
+                      )}
+                    </div>
+                    {['pre-roll', 'mid-roll', 'post-roll'].includes(editingItem.position || '') && (
+                      <div>
+                        <Label htmlFor="duration">Duration</Label>
+                        <Select
+                          value={editingItem.duration ? String(editingItem.duration) : '30'}
+                          onValueChange={(value) => {
+                            const duration = parseInt(value);
+                            setEditingItem({ ...editingItem, duration });
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select duration..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="30">30 seconds (:30)</SelectItem>
+                            <SelectItem value="60">60 seconds (:60)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
 
                   <HubPricingEditor
                     defaultPricing={editingItem.pricing || {}}

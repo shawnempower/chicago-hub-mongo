@@ -752,7 +752,8 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                 name: 'New Podcast Ad',
                 adFormat: 'pre-roll',
                 duration: 30,
-                pricing: { flatRate: 25, pricingModel: 'cpd' }
+                pricing: { flatRate: 25, pricingModel: 'cpd' },
+                specifications: { fileFormats: ['MP3', 'WAV'], duration: 30 }
               }
             ]
           } : podcast
@@ -1054,6 +1055,26 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
               aIndex === adIndex ? { 
                 ...ad, 
                 pricing: { ...ad.pricing, [field]: value }
+              } : ad
+            )
+          } : podcast
+        )
+      }
+    }));
+  };
+
+  const updatePodcastAdSpecifications = (podcastIndex: number, adIndex: number, field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      distributionChannels: {
+        ...prev.distributionChannels,
+        podcasts: prev.distributionChannels?.podcasts?.map((podcast, pIndex) =>
+          pIndex === podcastIndex ? {
+            ...podcast,
+            advertisingOpportunities: podcast.advertisingOpportunities?.map((ad, aIndex) =>
+              aIndex === adIndex ? {
+                ...ad,
+                specifications: { ...ad.specifications, [field]: value }
               } : ad
             )
           } : podcast
@@ -2458,7 +2479,7 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                         </Button>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                         <div>
                           <Label>Ad Name</Label>
                           <Input
@@ -2472,7 +2493,13 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                           <Label>Ad Format</Label>
                           <Select 
                             value={ad.adFormat || ''}
-                            onValueChange={(value) => updatePodcastAd(podcastIndex, adIndex, 'adFormat', value)}
+                            onValueChange={(value) => {
+                              updatePodcastAd(podcastIndex, adIndex, 'adFormat', value);
+                              // Auto-set creative type to Script for host-read
+                              if (value === 'host-read') {
+                                updatePodcastAdSpecifications(podcastIndex, adIndex, 'fileFormats', ['TXT']);
+                              }
+                            }}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -2481,32 +2508,44 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                               <SelectItem value="pre-roll">Pre-roll</SelectItem>
                               <SelectItem value="mid-roll">Mid-roll</SelectItem>
                               <SelectItem value="post-roll">Post-roll</SelectItem>
-                              <SelectItem value="host-read">Host Read</SelectItem>
+                              <SelectItem value="host-read">Host Live Read</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                        
+
                         <div>
-                          <Label>Duration</Label>
-                          <div className="space-y-2">
-                            <Select 
-                              value={
-                                customDurationMode[`podcast-${podcastIndex}-${adIndex}`] 
-                                  ? 'custom'
-                                  : (ad.duration && [15, 30, 60, 90, 120].includes(ad.duration)
-                                    ? String(ad.duration)
-                                    : 'custom')
-                              }
+                          <Label>Creative Type</Label>
+                          <Select
+                            value={
+                              ad.specifications?.fileFormats?.length === 1 && ad.specifications.fileFormats[0] === 'TXT'
+                                ? 'script'
+                                : 'audio'
+                            }
+                            onValueChange={(value) => {
+                              const fileFormats = value === 'script' ? ['TXT'] : ['MP3', 'WAV'];
+                              updatePodcastAdSpecifications(podcastIndex, adIndex, 'fileFormats', fileFormats);
+                            }}
+                            disabled={ad.adFormat === 'host-read'}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="audio">Audio (MP3/WAV)</SelectItem>
+                              <SelectItem value="script">Script (TXT)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {ad.adFormat === 'host-read' && (
+                            <p className="text-xs text-muted-foreground mt-1">Host live reads are always scripts</p>
+                          )}
+                        </div>
+                        
+                        {['pre-roll', 'mid-roll', 'post-roll'].includes(ad.adFormat || '') && (
+                          <div>
+                            <Label>Duration</Label>
+                            <Select
+                              value={ad.duration ? String(ad.duration) : '30'}
                               onValueChange={(value) => {
-                                const key = `podcast-${podcastIndex}-${adIndex}`;
-                                if (value === 'custom') {
-                                  // Enter custom mode and clear duration
-                                  setCustomDurationMode({ ...customDurationMode, [key]: true });
-                                  updatePodcastAd(podcastIndex, adIndex, 'duration', undefined);
-                                  return;
-                                }
-                                // Exit custom mode and set standard duration
-                                setCustomDurationMode({ ...customDurationMode, [key]: false });
                                 const duration = parseInt(value);
                                 updatePodcastAd(podcastIndex, adIndex, 'duration', duration);
                               }}
@@ -2515,28 +2554,12 @@ export const EditableInventoryManager: React.FC<EditableInventoryManagerProps> =
                                 <SelectValue placeholder="Select duration..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="15">15 seconds (:15)</SelectItem>
                                 <SelectItem value="30">30 seconds (:30)</SelectItem>
                                 <SelectItem value="60">60 seconds (:60)</SelectItem>
-                                <SelectItem value="90">90 seconds (:90)</SelectItem>
-                                <SelectItem value="120">120 seconds (:120)</SelectItem>
-                                <SelectItem value="custom">Custom...</SelectItem>
                               </SelectContent>
                             </Select>
-                            {(customDurationMode[`podcast-${podcastIndex}-${adIndex}`] || (!ad.duration || ![15, 30, 60, 90, 120].includes(ad.duration))) && (
-                              <Input
-                                type="number"
-                                value={ad.duration || ''}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  const numVal = val === '' ? undefined : parseInt(val, 10);
-                                  updatePodcastAd(podcastIndex, adIndex, 'duration', isNaN(numVal) ? undefined : numVal);
-                                }}
-                                placeholder="Enter seconds (e.g., 45, 180, 600)"
-                              />
-                            )}
                           </div>
-                        </div>
+                        )}
                         
                         <div>
                           <Label>Price ($)</Label>

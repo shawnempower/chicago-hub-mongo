@@ -258,9 +258,10 @@ export function formatDimensions(
   if (channel) {
     const channelLower = channel.toLowerCase();
     
-    // Audio channels without dimensions
+    // Audio channels without dimensions - distinguish audio vs script
     if (channelLower === 'radio' || channelLower === 'podcast') {
-      return 'Audio spot';
+      const isScriptOnly = fileFormats && fileFormats.length === 1 && fileFormats[0].toUpperCase() === 'TXT';
+      return isScriptOnly ? 'Script' : 'Audio spot';
     }
     
     // If we have file formats, show them

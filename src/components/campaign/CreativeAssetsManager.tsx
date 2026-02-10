@@ -173,10 +173,15 @@ function formatAudioSpec(spec: {
   channel: string; 
   dimensions?: string | string[]; 
   duration?: number;
+  fileFormats?: string[];
   placements?: Array<{ placementName: string }>;
 }): string {
   const dims = Array.isArray(spec.dimensions) ? spec.dimensions[0] : spec.dimensions;
   const dimsLower = (dims || '').toLowerCase().trim();
+  
+  // Determine if this is a script-only spec (TXT only, no audio)
+  const isScriptOnly = spec.fileFormats && spec.fileFormats.length === 1 && spec.fileFormats[0].toUpperCase() === 'TXT';
+  const typeSuffix = isScriptOnly ? ' - Script' : '';
   
   // Check if dimensions contains a podcast position
   const podcastPositions = ['pre-roll', 'mid-roll', 'post-roll', 'host-read', 'live-read'];
@@ -195,21 +200,21 @@ function formatAudioSpec(spec: {
       
       // Append duration if available
       if (spec.duration && !dimsLower.includes('host') && !dimsLower.includes('live')) {
-        return `${position} (${spec.duration}s)`;
+        return `${position} (${spec.duration}s)${typeSuffix}`;
       }
-      return position;
+      return `${position}${typeSuffix}`;
     }
     
     // Try to infer from placement name
     const placementName = spec.placements?.[0]?.placementName?.toLowerCase() || '';
     if (placementName.includes('pre-roll') || placementName.includes('preroll')) {
-      return spec.duration ? `Pre-roll (${spec.duration}s)` : 'Pre-roll';
+      return spec.duration ? `Pre-roll (${spec.duration}s)${typeSuffix}` : `Pre-roll${typeSuffix}`;
     }
     if (placementName.includes('mid-roll') || placementName.includes('midroll')) {
-      return spec.duration ? `Mid-roll (${spec.duration}s)` : 'Mid-roll';
+      return spec.duration ? `Mid-roll (${spec.duration}s)${typeSuffix}` : `Mid-roll${typeSuffix}`;
     }
     if (placementName.includes('post-roll') || placementName.includes('postroll')) {
-      return spec.duration ? `Post-roll (${spec.duration}s)` : 'Post-roll';
+      return spec.duration ? `Post-roll (${spec.duration}s)${typeSuffix}` : `Post-roll${typeSuffix}`;
     }
     if (placementName.includes('host') || placementName.includes('live read')) {
       return 'Host-read';
@@ -217,18 +222,19 @@ function formatAudioSpec(spec: {
     
     // Fallback to duration if available
     if (spec.duration) {
-      return `${spec.duration} second spot`;
+      return `${spec.duration} second spot${typeSuffix}`;
     }
     
-    return 'Podcast ad';
+    return isScriptOnly ? 'Podcast script' : 'Podcast ad';
   }
   
   // Radio: show duration
   if (spec.channel === 'radio') {
+    if (dimsLower === 'live-read') return 'Live read';
     if (spec.duration) {
-      return `${spec.duration} second spot`;
+      return `${spec.duration} second spot${typeSuffix}`;
     }
-    return 'Radio spot';
+    return isScriptOnly ? 'Radio script' : 'Radio spot';
   }
   
   return dims || 'Audio ad';
@@ -273,19 +279,19 @@ function getChannelRecommendedSpecs(channel: string): {
       };
     case 'radio':
       return {
-        formats: 'MP3, WAV',
+        formats: 'MP3, WAV (audio) or TXT (scripts)',
         colorSpace: 'N/A',
         resolution: 'N/A',
-        maxSize: '10MB',
-        notes: 'MP3: 128-320kbps. WAV: 16-bit, 44.1kHz. Include 0.5s silence at start/end.'
+        maxSize: '25MB (audio), 100KB (script)',
+        notes: 'Audio spots: MP3 128-320kbps or WAV 16-bit 44.1kHz. Include 0.5s silence at start/end. Scripts/live reads: upload TXT with copy.'
       };
     case 'podcast':
       return {
-        formats: 'MP3, WAV',
+        formats: 'MP3, WAV (audio) or TXT (scripts)',
         colorSpace: 'N/A',
         resolution: 'N/A',
-        maxSize: '10MB',
-        notes: 'MP3: 128-192kbps recommended. Match podcast audio quality. Host-read spots: provide script instead.'
+        maxSize: '25MB (audio), 100KB (script)',
+        notes: 'Audio ads: MP3 128-192kbps recommended. Host-read/script placements: provide TXT with talking points (50-200 words).'
       };
     case 'streaming':
       return {
@@ -730,15 +736,15 @@ export function CreativeAssetsManager({
       label: 'Radio', 
       icon: '📻', 
       color: 'bg-orange-500',
-      acceptedTypes: 'WAV, MP3 (15s, 30s, 60s)',
-      description: 'Audio spots and commercials'
+      acceptedTypes: 'WAV, MP3 (15s, 30s, 60s) or TXT (scripts)',
+      description: 'Audio spots, scripts, and live reads'
     },
     podcast: { 
       label: 'Podcast', 
       icon: '🎙️', 
       color: 'bg-green-500',
-      acceptedTypes: 'WAV, MP3',
-      description: 'Podcast ad reads'
+      acceptedTypes: 'WAV, MP3 or TXT (scripts)',
+      description: 'Audio ads and host-read scripts'
     },
     streaming: { 
       label: 'Streaming', 

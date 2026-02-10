@@ -64,6 +64,11 @@ function durationToDimensions(duration: number): string {
 function getFileFormats(adFormat: string, adName: string): string[] {
   const nameLower = adName.toLowerCase();
   
+  // Script-variant spots (explicitly set)
+  if (adFormat.endsWith('_script')) {
+    return ['TXT'];
+  }
+  
   // Live reads and text-based formats
   if (adFormat === 'live_read' || 
       nameLower.includes('live read') || 

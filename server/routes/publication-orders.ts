@@ -1124,21 +1124,14 @@ router.post('/:campaignId/:publicationId/confirm', async (req: any, res: Respons
         const hub = await db.collection(COLLECTIONS.HUBS).findOne({ hubId: order.hubId });
         const hubName = hub?.basicInfo?.name;
         
-        // Find hub admins from permissions
+        // Find hub admins from permissions (scoped to this hub only)
         const hubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
           'hubAccess.hubId': order.hubId,
           role: { $in: ['admin', 'hub_user'] }
         }).toArray();
         
-        // Also find system admins from user_profiles
-        const systemAdmins = await db.collection(COLLECTIONS.USER_PROFILES).find({
-          isAdmin: true
-        }).toArray();
-        
-        // Combine user IDs, avoiding duplicates
         const notifyUserIds = new Set<string>();
         hubPermissions.forEach(p => notifyUserIds.add(p.userId));
-        systemAdmins.forEach(a => notifyUserIds.add(a.userId));
         
         const campaignUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/campaigns/${campaignId}`;
         
@@ -1465,21 +1458,14 @@ router.post('/:campaignId/:publicationId/messages', async (req: any, res: Respon
           const hub = order.hubId ? await db.collection(COLLECTIONS.HUBS).findOne({ hubId: order.hubId }) : null;
           const hubName = hub?.basicInfo?.name;
           
-          // Find hub admin users from permissions
+          // Find hub admin users from permissions (scoped to this hub only)
           const hubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
             'hubAccess.hubId': order.hubId,
             role: { $in: ['admin', 'hub_user'] }
           }).toArray();
           
-          // Also find system admins from user_profiles
-          const systemAdmins = await db.collection(COLLECTIONS.USER_PROFILES).find({
-            isAdmin: true
-          }).toArray();
-          
-          // Combine user IDs, avoiding duplicates
           const notifyUserIds = new Set<string>();
           hubPermissions.forEach(p => notifyUserIds.add(p.userId));
-          systemAdmins.forEach(a => notifyUserIds.add(a.userId));
           
           for (const recipientUserId of notifyUserIds) {
             await notifyMessageReceived({
@@ -1729,21 +1715,14 @@ router.put('/:campaignId/:publicationId/placement-status', async (req: any, res:
         const hub = await db.collection(COLLECTIONS.HUBS).findOne({ hubId: order.hubId });
         const hubName = hub?.basicInfo?.name;
         
-        // Find hub admins from permissions
+        // Find hub admins from permissions (scoped to this hub only)
         const hubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
           'hubAccess.hubId': order.hubId,
           role: { $in: ['admin', 'hub_user'] }
         }).toArray();
         
-        // Also find system admins from user_profiles
-        const systemAdmins = await db.collection(COLLECTIONS.USER_PROFILES).find({
-          isAdmin: true
-        }).toArray();
-        
-        // Combine user IDs, avoiding duplicates
         const notifyUserIds = new Set<string>();
         hubPermissions.forEach(p => notifyUserIds.add(p.userId));
-        systemAdmins.forEach(a => notifyUserIds.add(a.userId));
         
         const campaignUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/campaigns/${campaignId}`;
         
