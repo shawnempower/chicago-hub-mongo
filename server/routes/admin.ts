@@ -919,18 +919,81 @@ router.get('/users', authenticateToken, async (req: any, res: Response) => {
     const db = getDatabase();
     const usersCollection = db.collection(COLLECTIONS.USERS);
     const profilesCollection = db.collection(COLLECTIONS.USER_PROFILES);
+    const permissionsCollection = db.collection(COLLECTIONS.USER_PERMISSIONS);
+    const hubsCollection = db.collection(COLLECTIONS.HUBS);
+    const pubAccessCollection = db.collection(COLLECTIONS.USER_PUBLICATION_ACCESS);
+    const pubsCollection = db.collection(COLLECTIONS.PUBLICATIONS);
     
+    // Pre-fetch all hubs for name lookup (small collection)
+    const allHubs = await hubsCollection.find({}, { projection: { hubId: 1, name: 1, hubName: 1 } }).toArray();
+    const hubNameMap = new Map<string, string>();
+    allHubs.forEach((h: any) => hubNameMap.set(h.hubId || h._id?.toString(), h.name || h.hubName || 'Unknown Hub'));
+
     // Get all users
     const users = await usersCollection.find({}).sort({ createdAt: -1 }).toArray();
     
-    // Enhance with profile data
+    // Batch-fetch all permissions and publication access records
+    const allPermissions = await permissionsCollection.find({}).toArray();
+    const permMap = new Map<string, any>();
+    allPermissions.forEach((p: any) => permMap.set(p.userId, p));
+
+    const allPubAccess = await pubAccessCollection.find({}).toArray();
+    const pubAccessMap = new Map<string, any[]>();
+    allPubAccess.forEach((a: any) => {
+      if (!pubAccessMap.has(a.userId)) pubAccessMap.set(a.userId, []);
+      pubAccessMap.get(a.userId)!.push(a);
+    });
+
+    // Collect all publication IDs we need to look up names for
+    const allPubIds = new Set<string>();
+    allPubAccess.forEach((a: any) => allPubIds.add(a.publicationId));
+    // Also collect pubs from hub-based access
+    const allHubIds = new Set<string>();
+    allPermissions.forEach((p: any) => {
+      if (p.hubAccess) p.hubAccess.forEach((h: any) => allHubIds.add(h.hubId));
+    });
+
+    // Pre-fetch publication names for directly-assigned publications
+    const pubNameMap = new Map<string, string>();
+    if (allPubIds.size > 0) {
+      const numericIds = Array.from(allPubIds).map(id => parseInt(id)).filter(id => !isNaN(id));
+      const pubs = await pubsCollection.find(
+        { publicationId: { $in: numericIds } },
+        { projection: { publicationId: 1, 'basicInfo.publicationName': 1 } }
+      ).toArray();
+      pubs.forEach((p: any) => pubNameMap.set(String(p.publicationId), p.basicInfo?.publicationName || `Pub #${p.publicationId}`));
+    }
+    
+    // Enhance with profile data + permission summary
     const enrichedUsers = await Promise.all(
       users.map(async (user: any) => {
-        const profile = await profilesCollection.findOne({ userId: user._id.toString() });
-        
+        const userId = user._id.toString();
+        const profile = await profilesCollection.findOne({ userId });
+        const perms = permMap.get(userId);
+        const directPubAccess = pubAccessMap.get(userId) || [];
+
+        // Build hub names list
+        const hubNames: string[] = [];
+        if (perms?.hubAccess) {
+          for (const h of perms.hubAccess) {
+            hubNames.push(hubNameMap.get(h.hubId) || h.hubId);
+          }
+        }
+
+        // Build publication names list -- only for publication_user role (direct assignments).
+        // Hub users see their pubs via hub membership (hub names suffice), admins see everything.
+        const pubNames: string[] = [];
+        const isAdminUser = profile?.isAdmin || perms?.role === 'admin';
+        const isHubUser = perms?.role === 'hub_user';
+        if (!isAdminUser && !isHubUser) {
+          for (const access of directPubAccess) {
+            pubNames.push(pubNameMap.get(access.publicationId) || `#${access.publicationId}`);
+          }
+        }
+
         return {
-          userId: user._id.toString(),
-          _id: user._id.toString(),
+          userId,
+          _id: userId,
           email: user.email,
           firstName: user.firstName || '',
           lastName: user.lastName || '',
@@ -938,8 +1001,12 @@ router.get('/users', authenticateToken, async (req: any, res: Response) => {
           isAdmin: profile?.isAdmin || false,
           isEmailVerified: user.isEmailVerified,
           lastLoginAt: user.lastLoginAt,
+          role: perms?.role || user.role || null,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
+          // Permission summary for table display
+          hubNames,
+          pubNames,
           // Include extended profile data if available
           ...( profile && {
             jobTitle: profile.jobTitle,
@@ -1003,6 +1070,180 @@ router.put('/users/:userId/admin', authenticateToken, async (req: any, res: Resp
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update admin status' });
+  }
+});
+
+// Get user permissions detail (admin only) - for admin user inspector
+router.get('/users/:userId/permissions', authenticateToken, async (req: any, res: Response) => {
+  try {
+    if (!isUserAdmin(req.user)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { userId } = req.params;
+    const db = getDatabase();
+
+    // Get the permissions record
+    const permissions = await permissionsService.getPermissions(userId);
+
+    // Get hub access with names
+    const hubAccess: Array<{ hubId: string; hubName: string; accessLevel: string }> = [];
+    if (permissions?.hubAccess && permissions.hubAccess.length > 0) {
+      const hubsCollection = db.collection(COLLECTIONS.HUBS);
+      for (const access of permissions.hubAccess) {
+        const hub = await hubsCollection.findOne({ hubId: access.hubId });
+        hubAccess.push({
+          hubId: access.hubId,
+          hubName: hub?.name || hub?.hubName || access.hubId,
+          accessLevel: access.accessLevel || 'full',
+        });
+      }
+    }
+
+    // Get direct publication access with names.
+    // Skip for admins (they see everything) and hub_user (their access comes via hubs).
+    const isAdminRole = permissions?.role === 'admin';
+    const isHubUserRole = permissions?.role === 'hub_user';
+    const publicationAccess: Array<{ publicationId: string; publicationName: string; grantedVia: string }> = [];
+
+    if (!isAdminRole && !isHubUserRole) {
+      const junctionCollection = db.collection(COLLECTIONS.USER_PUBLICATION_ACCESS);
+      const directRecords = await junctionCollection.find({ userId }).toArray();
+
+      if (directRecords.length > 0) {
+        const pubsCollection = db.collection(COLLECTIONS.PUBLICATIONS);
+        for (const record of directRecords) {
+          const pub = await pubsCollection.findOne({
+            $or: [
+              { publicationId: parseInt(record.publicationId) || -1 },
+              { _id: record.publicationId },
+            ]
+          });
+          publicationAccess.push({
+            publicationId: record.publicationId,
+            publicationName: pub?.basicInfo?.publicationName || `Pub #${record.publicationId}`,
+            grantedVia: record.grantedVia || 'direct',
+          });
+        }
+      }
+    }
+
+    res.json({
+      userId,
+      role: permissions?.role || null,
+      accessScope: permissions?.accessScope || null,
+      hubAccess,
+      publicationAccess,
+      canInviteUsers: permissions?.canInviteUsers || false,
+      canManageGroups: permissions?.canManageGroups || false,
+      hasPermissionsRecord: !!permissions,
+    });
+  } catch (error) {
+    console.error('Error fetching user permissions:', error);
+    res.status(500).json({ error: 'Failed to fetch user permissions' });
+  }
+});
+
+// Check if a user can access a specific resource (admin diagnostic tool)
+router.get('/users/:userId/check-access', authenticateToken, async (req: any, res: Response) => {
+  try {
+    if (!isUserAdmin(req.user)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { userId } = req.params;
+    const { resourceType, resourceId } = req.query;
+
+    if (!resourceType || !resourceId) {
+      return res.status(400).json({ error: 'resourceType and resourceId query parameters are required' });
+    }
+
+    if (resourceType !== 'hub' && resourceType !== 'publication') {
+      return res.status(400).json({ error: 'resourceType must be "hub" or "publication"' });
+    }
+
+    const db = getDatabase();
+    const permissions = await permissionsService.getPermissions(userId);
+    const reasons: string[] = [];
+
+    // Check if user even exists
+    const usersCollection = db.collection(COLLECTIONS.USERS);
+    const user = await usersCollection.findOne({ _id: new (require('mongodb').ObjectId)(userId) });
+    if (!user) {
+      return res.json({ hasAccess: false, reasons: ['User not found in the system'] });
+    }
+
+    // Check admin status
+    const profilesCollection = db.collection(COLLECTIONS.USER_PROFILES);
+    const profile = await profilesCollection.findOne({ userId });
+    const isAdmin = profile?.isAdmin === true || permissions?.role === 'admin' || user.role === 'admin';
+
+    if (isAdmin) {
+      reasons.push('User is an admin — has access to all resources');
+      return res.json({ hasAccess: true, reasons });
+    }
+
+    if (!permissions) {
+      reasons.push('No permissions record found for this user');
+      return res.json({ hasAccess: false, reasons });
+    }
+
+    let hasAccess = false;
+
+    if (resourceType === 'hub') {
+      hasAccess = await permissionsService.canAccessHub(userId, resourceId as string);
+      if (hasAccess) {
+        const hubEntry = permissions.hubAccess?.find(h => h.hubId === resourceId);
+        reasons.push(`User has direct hub access (level: ${hubEntry?.accessLevel || 'unknown'})`);
+      } else {
+        reasons.push('User does not have this hub in their hubAccess array');
+        if (!permissions.hubAccess || permissions.hubAccess.length === 0) {
+          reasons.push('User has no hub assignments at all');
+        } else {
+          reasons.push(`User is assigned to hubs: ${permissions.hubAccess.map(h => h.hubId).join(', ')}`);
+        }
+      }
+    } else {
+      hasAccess = await permissionsService.canAccessPublication(userId, resourceId as string);
+      if (hasAccess) {
+        reasons.push('User has access to this publication (via direct assignment or hub membership)');
+      } else {
+        reasons.push('User does not have access to this publication');
+        // Try to explain why
+        const junctionCollection = db.collection(COLLECTIONS.USER_PUBLICATION_ACCESS);
+        const directAccess = await junctionCollection.findOne({ userId, publicationId: resourceId as string });
+        if (!directAccess) {
+          reasons.push('No direct publication access record found');
+        }
+        if (!permissions.hubAccess || permissions.hubAccess.length === 0) {
+          reasons.push('User has no hub assignments (so no hub-based publication access)');
+        } else {
+          // Check if publication belongs to any of the user's hubs
+          const pubsCollection = db.collection(COLLECTIONS.PUBLICATIONS);
+          const pub = await pubsCollection.findOne({
+            $or: [
+              { publicationId: parseInt(resourceId as string) || -1 },
+              { _id: resourceId },
+            ]
+          });
+          if (pub && pub.hubIds) {
+            const userHubIds = permissions.hubAccess.map(h => h.hubId);
+            const pubHubIds = Array.isArray(pub.hubIds) ? pub.hubIds : [pub.hubIds];
+            const overlap = userHubIds.filter(id => pubHubIds.includes(id));
+            if (overlap.length === 0) {
+              reasons.push(`Publication belongs to hub(s) [${pubHubIds.join(', ')}] but user is assigned to hub(s) [${userHubIds.join(', ')}] — no overlap`);
+            }
+          } else if (!pub) {
+            reasons.push(`Publication with ID "${resourceId}" was not found in the database`);
+          }
+        }
+      }
+    }
+
+    res.json({ hasAccess, reasons });
+  } catch (error) {
+    console.error('Error checking user access:', error);
+    res.status(500).json({ error: 'Failed to check user access' });
   }
 });
 

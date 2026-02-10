@@ -1,14 +1,21 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { adminApi } from '@/api/admin';
 import type { UserProfile } from '@/types/common';
+import type { UserPermissionDetail } from '@/api/admin';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/hooks/use-toast';
-import { API_BASE_URL } from '@/config/api';
-import { Shield, Users, Building2, FileText } from 'lucide-react';
-import { permissionsAPI } from '@/api/permissions';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -16,13 +23,265 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Shield,
+  Users,
+  Search,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
+  Mail,
+  Building2,
+  FileText,
+  Clock,
+} from 'lucide-react';
+
+type RoleFilter = 'all' | 'admin' | 'hub_user' | 'publication_user' | 'standard' | 'no_role';
+
+// Inline user detail panel - loaded on demand
+function UserDetailPanel({ user }: { user: UserProfile }) {
+  const [permissions, setPermissions] = useState<UserPermissionDetail | null>(null);
+  const [permLoading, setPermLoading] = useState(true);
+  const [permError, setPermError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadPermissions();
+  }, [user.userId]);
+
+  const loadPermissions = async () => {
+    if (!user.userId) return;
+    try {
+      setPermLoading(true);
+      setPermError(null);
+      const data = await adminApi.getUserPermissions(user.userId);
+      setPermissions(data);
+    } catch (err: any) {
+      setPermError(err.message || 'Failed to load permissions');
+    } finally {
+      setPermLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 1500);
+  };
+
+  const CopyButton = ({ text, field }: { text: string; field: string }) => (
+    <button
+      onClick={() => copyToClipboard(text, field)}
+      className="ml-1 text-muted-foreground hover:text-foreground transition-colors inline-flex items-center"
+      title="Copy to clipboard"
+    >
+      {copiedField === field ? (
+        <CheckCircle2 className="h-3 w-3 text-green-500" />
+      ) : (
+        <Copy className="h-3 w-3" />
+      )}
+    </button>
+  );
+
+  return (
+    <div className="px-4 pb-4 space-y-4">
+      {/* Identity Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Identity</h4>
+          <div className="text-sm space-y-1">
+            <div>
+              <span className="text-muted-foreground">User ID:</span>{' '}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">{user.userId}</code>
+              <CopyButton text={user.userId} field="userId" />
+            </div>
+            {user.email && (
+              <div>
+                <span className="text-muted-foreground">Email:</span>{' '}
+                <a href={`mailto:${user.email}`} className="text-primary hover:underline">{user.email}</a>
+                <CopyButton text={user.email} field="email" />
+              </div>
+            )}
+            {user.companyName && (
+              <div><span className="text-muted-foreground">Company:</span> {user.companyName}</div>
+            )}
+            {user.industry && (
+              <div><span className="text-muted-foreground">Industry:</span> {user.industry}</div>
+            )}
+            {user.phone && (
+              <div><span className="text-muted-foreground">Phone:</span> {user.phone}</div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Profile</h4>
+          <div className="text-sm space-y-1">
+            <div>
+              <span className="text-muted-foreground">Profile Completion:</span>{' '}
+              {(user.profileCompletionScore || 0) > 0 ? (
+                <span>{user.profileCompletionScore}%</span>
+              ) : (
+                <span className="text-yellow-600">Not started</span>
+              )}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Email Verified:</span>{' '}
+              {(user as any).isEmailVerified ? (
+                <span className="text-green-600">Yes</span>
+              ) : (
+                <span className="text-yellow-600">No</span>
+              )}
+            </div>
+            {(user as any).lastLoginAt && (
+              <div>
+                <span className="text-muted-foreground">Last Login:</span>{' '}
+                {new Date((user as any).lastLoginAt).toLocaleString()}
+              </div>
+            )}
+            <div>
+              <span className="text-muted-foreground">Created:</span>{' '}
+              {new Date(user.createdAt).toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Permissions Section */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Permissions</h4>
+          {!permLoading && (
+            <button onClick={loadPermissions} className="text-xs text-muted-foreground hover:text-foreground">
+              <RefreshCw className="h-3 w-3 inline mr-1" />Refresh
+            </button>
+          )}
+        </div>
+
+        {permLoading ? (
+          <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+            <Spinner size="sm" /> Loading permissions...
+          </div>
+        ) : permError ? (
+          <div className="text-sm text-destructive flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" /> {permError}
+          </div>
+        ) : permissions ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Role:</span>{' '}
+                <span className="font-medium">{formatRoleLabel(permissions.role || user.role || 'standard')}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Scope:</span>{' '}
+                <span className="font-medium">{permissions.accessScope || 'none'}</span>
+              </div>
+              {permissions.canInviteUsers && (
+                <Badge variant="outline" className="text-xs">Can Invite</Badge>
+              )}
+              {permissions.canManageGroups && (
+                <Badge variant="outline" className="text-xs">Can Manage Groups</Badge>
+              )}
+              {!permissions.hasPermissionsRecord && (
+                <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-300">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  No permissions record
+                </Badge>
+              )}
+            </div>
+
+            {/* Hub Access */}
+            {permissions.hubAccess.length > 0 ? (
+              <div>
+                <div className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                  <Building2 className="h-3 w-3" /> Hubs ({permissions.hubAccess.length})
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {permissions.hubAccess.map(hub => (
+                    <Badge key={hub.hubId} variant="secondary" className="text-xs">
+                      {hub.hubName}
+                      {hub.accessLevel === 'limited' && (
+                        <span className="ml-1 text-yellow-600">(limited)</span>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <Building2 className="h-3 w-3" /> No hub assignments
+              </div>
+            )}
+
+            {/* Publication Access -- only shown for publication_user or users with direct assignments.
+                Hub users get pub access via hub membership (shown above). Admins see everything. */}
+            {permissions.publicationAccess.length > 0 && (
+              <div>
+                <div className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                  <FileText className="h-3 w-3" /> Direct Publications ({permissions.publicationAccess.length})
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {permissions.publicationAccess.slice(0, 20).map(pub => (
+                    <Badge key={pub.publicationId} variant="outline" className="text-xs">
+                      {pub.publicationName}
+                    </Badge>
+                  ))}
+                  {permissions.publicationAccess.length > 20 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{permissions.publicationAccess.length - 20} more
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground">No permissions data available</div>
+        )}
+      </div>
+
+    </div>
+  );
+}
+
+/** Map role value to a human-readable label */
+function formatRoleLabel(role: string): string {
+  switch (role) {
+    case 'admin': return 'Admin';
+    case 'hub_user': return 'Hub User';
+    case 'publication_user': return 'Publication User';
+    case 'standard': return 'Standard';
+    default: return role || 'Unknown';
+  }
+}
 
 export function UserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingUsers, setUpdatingUsers] = useState<Set<string>>(new Set());
-  const [makingMeAdmin, setMakingMeAdmin] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [adminConfirmUser, setAdminConfirmUser] = useState<UserProfile | null>(null);
   const { toast } = useToast();
+
+  // Search & filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
 
   useEffect(() => {
     loadUsers();
@@ -32,32 +291,6 @@ export function UserManagement() {
     try {
       setLoading(true);
       const response = await adminApi.getAllUsers();
-      console.log('📋 Loaded users:', response.users);
-      
-      // Debug: Check which users are missing userId
-      const usersWithoutUserId = response.users.filter(u => !u.userId);
-      if (usersWithoutUserId.length > 0) {
-        console.warn('⚠️ Users without userId:', usersWithoutUserId);
-      }
-      
-      // Debug: Log user structure for Ron Fields
-      const ronFields = response.users.find(u => 
-        u.firstName?.toLowerCase().includes('ron') && 
-        u.lastName?.toLowerCase().includes('fields')
-      );
-      if (ronFields) {
-        console.log('🔍 Ron Fields data:', {
-          userId: ronFields.userId,
-          _id: ronFields._id,
-          email: ronFields.email,
-          firstName: ronFields.firstName,
-          lastName: ronFields.lastName,
-          isAdmin: ronFields.isAdmin,
-          hasUserId: !!ronFields.userId,
-          hasId: !!ronFields._id
-        });
-      }
-      
       setUsers(response.users);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -71,48 +304,71 @@ export function UserManagement() {
     }
   };
 
+  // Filtered users
+  const filteredUsers = useMemo(() => {
+    let result = users;
+
+    // Text search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(u =>
+        (u.firstName && u.firstName.toLowerCase().includes(q)) ||
+        (u.lastName && u.lastName.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.companyName && u.companyName.toLowerCase().includes(q)) ||
+        (u.userId && u.userId.toLowerCase().includes(q)) ||
+        (`${u.firstName || ''} ${u.lastName || ''}`.toLowerCase().includes(q))
+      );
+    }
+
+    // Role filter
+    if (roleFilter !== 'all') {
+      if (roleFilter === 'admin') {
+        result = result.filter(u => u.isAdmin);
+      } else if (roleFilter === 'no_role') {
+        result = result.filter(u => !u.role || u.role === 'standard');
+      } else {
+        result = result.filter(u => u.role === roleFilter);
+      }
+    }
+
+    return result;
+  }, [users, searchQuery, roleFilter]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const total = users.length;
+    const admins = users.filter(u => u.isAdmin).length;
+    const hubUsers = users.filter(u => u.role === 'hub_user').length;
+    const pubUsers = users.filter(u => u.role === 'publication_user').length;
+    const noProfile = users.filter(u => (u.profileCompletionScore || 0) === 0).length;
+    const verified = users.filter(u => (u as any).isEmailVerified).length;
+    return { total, admins, hubUsers, pubUsers, noProfile, verified };
+  }, [users]);
+
   const toggleAdminStatus = async (user: UserProfile) => {
     if (!user.userId) {
-      console.error('Cannot update admin status: missing userId', user);
-      toast({
-        title: 'Error',
-        description: 'User is missing required user ID.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'User is missing required user ID.', variant: 'destructive' });
       return;
     }
 
     const userId = user.userId;
     const newAdminStatus = !user.isAdmin;
 
-    console.log(`Attempting to ${newAdminStatus ? 'grant' : 'revoke'} admin status for user:`, {
-      userId,
-      email: user.email,
-      currentStatus: user.isAdmin,
-      newStatus: newAdminStatus
-    });
-
     try {
       setUpdatingUsers(prev => new Set(prev).add(userId));
-      
-      const response = await adminApi.updateUserAdminStatus(userId, newAdminStatus);
-      console.log('Admin status update response:', response);
-      
-      // Update local state
-      setUsers(prev => prev.map(u => 
+      await adminApi.updateUserAdminStatus(userId, newAdminStatus);
+      setUsers(prev => prev.map(u =>
         u.userId === userId ? { ...u, isAdmin: newAdminStatus } : u
       ));
-
       toast({
         title: 'Success',
         description: `User ${newAdminStatus ? 'granted' : 'revoked'} admin privileges.`,
       });
     } catch (error: any) {
-      console.error('Error updating admin status:', error);
-      const errorMessage = error.message || 'Failed to update admin status. Please try again.';
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: error.message || 'Failed to update admin status.',
         variant: 'destructive',
       });
     } finally {
@@ -124,46 +380,33 @@ export function UserManagement() {
     }
   };
 
-  const makeMeAdmin = async () => {
-    try {
-      setMakingMeAdmin(true);
-      const token = localStorage.getItem('auth_token');
-      
-      const response = await fetch(`${API_BASE_URL}/admin/make-me-admin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-      });
+  const toggleExpand = (userId: string) => {
+    setExpandedUserId(prev => prev === userId ? null : userId);
+  };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to grant admin privileges');
-      }
+  const getUserDisplayName = (user: UserProfile) => {
+    if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
+    if (user.firstName) return user.firstName;
+    if (user.companyName) return user.companyName;
+    return user.email || 'Unknown User';
+  };
 
-      const data = await response.json();
-      console.log('Make me admin response:', data);
-
-      toast({
-        title: 'Success',
-        description: 'You have been granted admin privileges! Please refresh the page.',
-      });
-
-      // Reload users after a short delay
-      setTimeout(() => {
-        loadUsers();
-      }, 1000);
-    } catch (error: any) {
-      console.error('Error making yourself admin:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to grant admin privileges.',
-        variant: 'destructive',
-      });
-    } finally {
-      setMakingMeAdmin(false);
+  const getRoleBadge = (user: UserProfile) => {
+    if (user.isAdmin) {
+      return (
+        <Badge variant="destructive" className="gap-1 text-xs">
+          <Shield className="h-3 w-3" />
+          Admin
+        </Badge>
+      );
     }
+    if (user.role === 'hub_user') {
+      return <Badge variant="secondary" className="text-xs">Hub User</Badge>;
+    }
+    if (user.role === 'publication_user') {
+      return <Badge variant="secondary" className="text-xs">Pub User</Badge>;
+    }
+    return <Badge variant="outline" className="text-xs text-muted-foreground">Standard</Badge>;
   };
 
   if (loading) {
@@ -174,173 +417,285 @@ export function UserManagement() {
     );
   }
 
-  const hasAdmins = users.some(u => u.isAdmin);
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">User Management</h2>
-        <div className="flex gap-2">
-          <Button 
-            onClick={makeMeAdmin} 
-            variant="outline"
-            disabled={makingMeAdmin}
-            className="gap-2"
-          >
-            {makingMeAdmin ? (
-              <Spinner size="sm" />
-            ) : (
-              <Shield className="h-4 w-4" />
-            )}
-            Make Me Admin
-          </Button>
-          <Button onClick={loadUsers} variant="outline">
-            Refresh
-          </Button>
+        <div>
+          <h2 className="text-2xl font-bold">User Management</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Look up users, inspect permissions, and diagnose access issues.
+          </p>
         </div>
+        <Button onClick={loadUsers} variant="outline" size="sm" className="gap-1.5">
+          <RefreshCw className="h-3.5 w-3.5" />
+          Refresh
+        </Button>
       </div>
 
-      {!hasAdmins && users.length > 0 && (
-        <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <Shield className="h-5 w-5 text-yellow-600 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
-                  No Admin Users Found
-                </h3>
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  There are currently no admin users in the system. Click the "Make Me Admin" button above to grant yourself admin privileges, 
-                  or use the command-line tool: <code className="bg-yellow-100 dark:bg-yellow-900 px-1 rounded">npm run make-admin your@email.com</code>
-                </p>
-              </div>
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        {[
+          { label: 'Total', value: stats.total, icon: Users },
+          { label: 'Admins', value: stats.admins, icon: Shield },
+          { label: 'Hub Users', value: stats.hubUsers, icon: Building2 },
+          { label: 'Pub Users', value: stats.pubUsers, icon: FileText },
+          { label: 'No Profile', value: stats.noProfile, icon: AlertTriangle },
+          { label: 'Verified', value: stats.verified, icon: CheckCircle2 },
+        ].map(stat => (
+          <Card key={stat.label} className="p-3">
+            <div className="flex items-center gap-2">
+              <stat.icon className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">{stat.label}</span>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid gap-4">
-        {users.map((user) => (
-          <Card key={user._id?.toString() || user.userId}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-lg">
-                    {user.firstName && user.lastName 
-                      ? `${user.firstName} ${user.lastName}`
-                      : user.companyName || user.email || 'Unknown User'
-                    }
-                  </CardTitle>
-                  {(user.profileCompletionScore || 0) === 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      No Profile
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {user.isAdmin && (
-                    <Badge variant="destructive" className="gap-1">
-                      <Shield className="h-3 w-3" />
-                      Admin
-                    </Badge>
-                  )}
-                  {user.role && user.role !== 'standard' && !user.isAdmin && (
-                    <Badge variant="secondary">
-                      {user.role === 'hub_user' ? 'Hub User' : user.role === 'publication_user' ? 'Publication User' : user.role}
-                    </Badge>
-                  )}
-                  <Button
-                    onClick={() => toggleAdminStatus(user)}
-                    disabled={!user.userId || updatingUsers.has(user.userId || '')}
-                    variant={user.isAdmin ? "destructive" : "default"}
-                    size="sm"
-                  >
-                    {updatingUsers.has(user.userId || '') ? (
-                      <Spinner size="sm" />
-                    ) : (
-                      user.isAdmin ? 'Remove Admin' : 'Make Admin'
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  {user.email && (
-                    <div><strong>Email:</strong> {user.email}</div>
-                  )}
-                  <div><strong>User ID:</strong> {user.userId}</div>
-                  {user.companyName && (
-                    <div><strong>Company:</strong> {user.companyName}</div>
-                  )}
-                  {user.industry && (
-                    <div><strong>Industry:</strong> {user.industry}</div>
-                  )}
-                  {user.role && (
-                    <div><strong>System Role:</strong> {user.role}</div>
-                  )}
-                  {user.profileCompletionScore !== undefined && user.profileCompletionScore > 0 && (
-                    <div><strong>Profile Completion:</strong> {user.profileCompletionScore}%</div>
-                  )}
-                  <div>
-                    <strong>Created:</strong> {' '}
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-                
-                {!user.isAdmin && (
-                  <div className="pt-4 border-t space-y-3">
-                    <p className="text-sm font-medium">Access & Permissions</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="justify-start gap-2"
-                        onClick={async () => {
-                          // TODO: Open dialog to assign user to hubs
-                          toast({
-                            title: 'Coming Soon',
-                            description: 'Hub assignment interface will be available soon'
-                          });
-                        }}
-                      >
-                        <Building2 className="h-4 w-4" />
-                        Assign Hubs
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="justify-start gap-2"
-                        onClick={async () => {
-                          // TODO: Open dialog to assign user to publications
-                          toast({
-                            title: 'Coming Soon',
-                            description: 'Publication assignment interface will be available soon'
-                          });
-                        }}
-                      >
-                        <FileText className="h-4 w-4" />
-                        Assign Publications
-                      </Button>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      💡 Tip: Use the "User Management" features in individual Hub or Publication pages to assign access
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
+            <div className="text-lg font-bold mt-0.5">{stat.value}</div>
           </Card>
         ))}
       </div>
 
-      {users.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          No users found.
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, email, company, or user ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
-      )}
+        <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as RoleFilter)}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Filter by role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="admin">Admins</SelectItem>
+            <SelectItem value="hub_user">Hub Users</SelectItem>
+            <SelectItem value="publication_user">Pub Users</SelectItem>
+            <SelectItem value="standard">Standard</SelectItem>
+            <SelectItem value="no_role">No Role Set</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Results count */}
+      {searchQuery || roleFilter !== 'all' ? (
+        <div className="text-xs text-muted-foreground">
+          Showing {filteredUsers.length} of {users.length} users
+          {searchQuery && <> matching &ldquo;{searchQuery}&rdquo;</>}
+        </div>
+      ) : null}
+
+      {/* Users Table */}
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-8"></TableHead>
+              <TableHead>User</TableHead>
+              <TableHead className="hidden sm:table-cell">Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead className="hidden md:table-cell">Access</TableHead>
+              <TableHead className="hidden lg:table-cell">Status</TableHead>
+              <TableHead className="hidden xl:table-cell">Created</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  {searchQuery || roleFilter !== 'all'
+                    ? 'No users match your search criteria.'
+                    : 'No users found.'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredUsers.map(user => {
+                const isExpanded = expandedUserId === user.userId;
+                const rowKey = user.userId || user._id?.toString();
+                return (
+                  <React.Fragment key={rowKey}>
+                    <TableRow
+                      className={`group cursor-pointer ${isExpanded ? 'bg-muted/30 border-b-0' : ''}`}
+                      onClick={() => user.userId && toggleExpand(user.userId)}
+                    >
+                      <TableCell className="pr-0">
+                        <div className="p-1">
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="font-medium text-sm">
+                              {getUserDisplayName(user)}
+                            </div>
+                            {/* Show email on small screens since column is hidden */}
+                            <div className="text-xs text-muted-foreground sm:hidden">
+                              {user.email}
+                            </div>
+                            {(user.profileCompletionScore || 0) === 0 && (
+                              <span className="text-xs text-yellow-600">No profile</span>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <span className="text-sm">{user.email || '—'}</span>
+                      </TableCell>
+                      <TableCell>
+                        {getRoleBadge(user)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {user.isAdmin ? (
+                            <span className="text-xs text-muted-foreground italic">All (admin)</span>
+                          ) : (
+                            <>
+                              {((user as any).hubNames || []).map((name: string, i: number) => (
+                                <Badge key={`h-${i}`} variant="secondary" className="text-[10px] px-1.5 py-0">
+                                  <Building2 className="h-2.5 w-2.5 mr-0.5" />{name}
+                                </Badge>
+                              ))}
+                              {((user as any).pubNames || []).slice(0, 3).map((name: string, i: number) => (
+                                <Badge key={`p-${i}`} variant="outline" className="text-[10px] px-1.5 py-0">
+                                  <FileText className="h-2.5 w-2.5 mr-0.5" />{name}
+                                </Badge>
+                              ))}
+                              {((user as any).pubNames || []).length > 3 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  +{(user as any).pubNames.length - 3} pubs
+                                </span>
+                              )}
+                              {((user as any).hubNames || []).length === 0 && ((user as any).pubNames || []).length === 0 && (
+                                <span className="text-xs text-muted-foreground">None</span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="flex items-center gap-1.5">
+                          {(user as any).isEmailVerified ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" title="Email verified" />
+                          ) : (
+                            <Mail className="h-3.5 w-3.5 text-yellow-500" title="Email not verified" />
+                          )}
+                          {(user as any).lastLoginAt ? (
+                            <span className="text-xs text-muted-foreground flex items-center gap-0.5" title={`Last login: ${new Date((user as any).lastLoginAt).toLocaleString()}`}>
+                              <Clock className="h-3 w-3" />
+                              {formatRelativeDate((user as any).lastLoginAt)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Never logged in</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAdminConfirmUser(user);
+                          }}
+                          disabled={!user.userId || updatingUsers.has(user.userId || '')}
+                          variant={user.isAdmin ? 'destructive' : 'outline'}
+                          size="sm"
+                          className="text-xs h-7"
+                        >
+                          {updatingUsers.has(user.userId || '') ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            user.isAdmin ? 'Remove Admin' : 'Make Admin'
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    {isExpanded && (
+                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                        <TableCell colSpan={8} className="p-0">
+                          <div className="border-l-2 border-primary/30 ml-4">
+                            <UserDetailPanel
+                              user={user}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Admin toggle confirmation dialog */}
+      <AlertDialog open={!!adminConfirmUser} onOpenChange={(open) => !open && setAdminConfirmUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {adminConfirmUser?.isAdmin ? 'Remove Admin Privileges' : 'Grant Admin Privileges'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                {adminConfirmUser?.isAdmin
+                  ? <>Are you sure you want to remove admin privileges from <strong>{getUserDisplayName(adminConfirmUser)}</strong>?</>
+                  : <>Are you sure you want to grant admin privileges to <strong>{adminConfirmUser ? getUserDisplayName(adminConfirmUser) : ''}</strong>?</>
+                }
+              </span>
+              {adminConfirmUser?.email && (
+                <span className="block text-xs">{adminConfirmUser.email}</span>
+              )}
+              <span className="block text-xs">
+                {adminConfirmUser?.isAdmin
+                  ? 'This user will lose access to admin tools and will be restricted to their assigned resources.'
+                  : 'This user will gain full access to all hubs, publications, and admin tools across the entire platform.'}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={adminConfirmUser?.isAdmin ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+              onClick={() => {
+                if (adminConfirmUser) {
+                  toggleAdminStatus(adminConfirmUser);
+                  setAdminConfirmUser(null);
+                }
+              }}
+            >
+              {adminConfirmUser?.isAdmin ? 'Yes, Remove Admin' : 'Yes, Grant Admin'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
+/** Format a date relative to now (e.g., "2h ago", "3d ago") */
+function formatRelativeDate(dateStr: string | Date): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
