@@ -1248,11 +1248,14 @@ export function CreativeAssetsManager({
           ? filteredGroupedSpecs 
           : filteredGroupedSpecs.filter(g => g.channel === activeChannel);
         const matches = autoMatchFileToSpecs(processedFile.detectedSpecs, channelFilteredSpecs);
+        const goodMatches = matches.filter(m => m.matchScore >= 50);
         const bestMatch = matches.length > 0 ? matches[0] : null;
         const matchConfidence = bestMatch ? bestMatch.matchScore : 0;
 
         console.log(`[ZIP] Found ${matches.length} matches for ${processedFile.fileName} in ${activeChannel === 'all' ? 'all channels' : activeChannel} (pub filter: ${publicationFilterMode})`);
-        if (bestMatch) {
+        if (goodMatches.length > 1 && activeChannel === 'all') {
+          console.log(`[ZIP] Cross-channel: ${goodMatches.length} spec groups matched across channels:`, goodMatches.map(m => `${m.specGroupId} (${m.matchScore}%)`));
+        } else if (bestMatch) {
           console.log(`[ZIP] Best match: ${bestMatch.specGroupId} with ${matchConfidence}% confidence`);
           console.log(`[ZIP] Match reasons:`, bestMatch.matchReasons);
           if (bestMatch.mismatches.length > 0) {
@@ -1261,27 +1264,38 @@ export function CreativeAssetsManager({
         }
 
         // Auto-assign if good match (score >= 50)
-        if (bestMatch && matchConfidence >= 50) {
-          console.log(`✅ [ZIP] Auto-assigning ${processedFile.fileName} → ${bestMatch.specGroupId} (${matchConfidence}%)`);
+        // When on "All" tab, assign to ALL matching spec groups across channels (e.g., website + newsletter)
+        if (goodMatches.length > 0) {
+          const matchesToAssign = activeChannel === 'all' ? goodMatches : goodMatches.slice(0, 1);
+          let assignedAny = false;
           
-          const matchingGroup = filteredGroupedSpecs.find(g => g.specGroupId === bestMatch.specGroupId);
-          if (matchingGroup) {
-            updatedAssets.set(matchingGroup.specGroupId, {
-              specGroupId: matchingGroup.specGroupId,
-              file: processedFile.file,
-              previewUrl,
-              uploadStatus: 'pending',
-              detectedSpecs: processedFile.detectedSpecs,
-              appliesTo: matchingGroup.placements.map(p => ({
-                placementId: p.placementId,
-                publicationId: p.publicationId,
-                publicationName: p.publicationName
-              }))
-            });
-            console.log(`✅ [ZIP] Successfully assigned to spec group`);
+          for (const match of matchesToAssign) {
+            const matchingGroup = filteredGroupedSpecs.find(g => g.specGroupId === match.specGroupId);
+            if (matchingGroup) {
+              updatedAssets.set(matchingGroup.specGroupId, {
+                specGroupId: matchingGroup.specGroupId,
+                file: processedFile.file,
+                previewUrl,
+                uploadStatus: 'pending',
+                detectedSpecs: processedFile.detectedSpecs,
+                appliesTo: matchingGroup.placements.map(p => ({
+                  placementId: p.placementId,
+                  publicationId: p.publicationId,
+                  publicationName: p.publicationName
+                }))
+              });
+              console.log(`✅ [ZIP] Auto-assigning ${processedFile.fileName} → ${matchingGroup.specGroupId} (${match.matchScore}%) [${matchingGroup.channel}]`);
+              assignedAny = true;
+            } else {
+              console.warn(`⚠️ [ZIP] Could not find matching group for ${match.specGroupId}`);
+            }
+          }
+          
+          if (assignedAny) {
+            if (matchesToAssign.length > 1) {
+              console.log(`✅ [ZIP] Successfully assigned to ${matchesToAssign.length} spec groups across channels`);
+            }
             continue; // Skip adding to pending
-          } else {
-            console.warn(`⚠️ [ZIP] Could not find matching group for ${bestMatch.specGroupId}`);
           }
         }
 
@@ -1532,9 +1546,12 @@ export function CreativeAssetsManager({
           ? filteredGroupedSpecs 
           : filteredGroupedSpecs.filter(g => g.channel === activeChannel);
         const matches = autoMatchFileToSpecs(detectedSpecs, channelFilteredSpecs);
+        const goodMatches = matches.filter(m => m.matchScore >= 50);
         console.log(`[File Matching] Found ${matches.length} potential matches for ${file.name} in ${activeChannel === 'all' ? 'all channels' : activeChannel} (pub filter: ${publicationFilterMode})`);
         
-        if (matches.length > 0) {
+        if (goodMatches.length > 1 && activeChannel === 'all') {
+          console.log(`[File Matching] Cross-channel: ${goodMatches.length} spec groups matched across channels:`, goodMatches.map(m => `${m.specGroupId} (${m.matchScore}%)`));
+        } else if (matches.length > 0) {
           console.log(`[File Matching] Top 3 matches:`, matches.slice(0, 3).map(m => ({
             spec: m.specGroupId,
             score: m.matchScore,
@@ -1578,28 +1595,34 @@ export function CreativeAssetsManager({
         }
         
         // Auto-assign if good match (score >= 50)
-        if (bestMatch && matchConfidence >= 50) {
-          console.log(`✅ Auto-assigning ${file.name} → ${bestMatch.specGroupId} (${matchConfidence}%)`);
-          console.log(`   Matched requirements:`, bestMatch.matchReasons);
+        // When on "All" tab, assign to ALL matching spec groups across channels (e.g., website + newsletter)
+        if (goodMatches.length > 0) {
+          const matchesToAssign = activeChannel === 'all' ? goodMatches : goodMatches.slice(0, 1);
+          let assignedAny = false;
           
-          // Auto-assign to the best matching spec group (from filtered specs)
-          const matchingGroup = filteredGroupedSpecs.find(g => g.specGroupId === bestMatch.specGroupId);
-          if (matchingGroup) {
-            console.log(`   Found matching group:`, matchingGroup.channel, matchingGroup.dimensions);
-            
-            // Add to uploadedAssets
-            const updatedAssets = new Map(uploadedAssets);
-            updatedAssets.set(matchingGroup.specGroupId, {
-              specGroupId: matchingGroup.specGroupId,
-              file,
-              previewUrl,
-              uploadStatus: 'pending',
-              appliesTo: matchingGroup.placements.map(p => ({
-                placementId: p.placementId,
-                publicationId: p.publicationId,
-                publicationName: p.publicationName
-              }))
-            });
+          const updatedAssets = new Map(uploadedAssets);
+          for (const match of matchesToAssign) {
+            const matchingGroup = filteredGroupedSpecs.find(g => g.specGroupId === match.specGroupId);
+            if (matchingGroup) {
+              updatedAssets.set(matchingGroup.specGroupId, {
+                specGroupId: matchingGroup.specGroupId,
+                file,
+                previewUrl,
+                uploadStatus: 'pending',
+                appliesTo: matchingGroup.placements.map(p => ({
+                  placementId: p.placementId,
+                  publicationId: p.publicationId,
+                  publicationName: p.publicationName
+                }))
+              });
+              console.log(`✅ Auto-assigning ${file.name} → ${matchingGroup.specGroupId} (${match.matchScore}%) [${matchingGroup.channel}]`);
+              assignedAny = true;
+            } else {
+              console.warn(`   ⚠️ Could not find matching group for ${match.specGroupId}`);
+            }
+          }
+          
+          if (assignedAny) {
             onAssetsChange(updatedAssets);
             
             // Remove from pending files since it's auto-assigned
@@ -1609,12 +1632,14 @@ export function CreativeAssetsManager({
               return next;
             });
             
-            console.log(`   ✅ Successfully auto-assigned and removed from pending!`);
+            if (matchesToAssign.length > 1) {
+              console.log(`   ✅ Successfully assigned to ${matchesToAssign.length} spec groups across channels`);
+            } else {
+              console.log(`   ✅ Successfully auto-assigned and removed from pending!`);
+            }
             
             // Don't add to pending files
             continue;
-          } else {
-            console.warn(`   ⚠️ Could not find matching group for ${bestMatch.specGroupId}`);
           }
         } else if (matchConfidence > 0) {
           console.log(`⚠️ Low match confidence for ${file.name} (${matchConfidence}%), leaving in "Ready to Assign"`);
