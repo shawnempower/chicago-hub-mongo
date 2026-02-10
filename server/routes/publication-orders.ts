@@ -50,7 +50,7 @@ router.get('/', async (req: any, res: Response) => {
       publicationIds = Array.from(uniquePubIds);
       console.log('Admin - found orders for publications:', publicationIds);
     } else {
-      // Regular publication user - get their assigned publications
+      // Get user's assigned publications (includes hub-based publications)
       try {
         publicationIds = await permissionsService.getUserPublications(userId);
         console.log('Publications from permissions service:', publicationIds);
@@ -87,8 +87,15 @@ router.get('/', async (req: any, res: Response) => {
         publicationsToQuery = [requestedPubId];
         console.log('Filtering to specific publication:', requestedPubId);
       } else {
-        console.log('User does not have access to publication:', requestedPubId);
-        return res.status(403).json({ error: 'Access denied to this publication' });
+        // Fallback: check via canAccessPublication which handles hub-level access
+        const hasAccess = await permissionsService.canAccessPublication(userId, requestedPubId);
+        if (hasAccess) {
+          publicationsToQuery = [requestedPubId];
+          console.log('Hub-level access granted to publication:', requestedPubId);
+        } else {
+          console.log('User does not have access to publication:', requestedPubId);
+          return res.status(403).json({ error: 'Access denied to this publication' });
+        }
       }
     }
 

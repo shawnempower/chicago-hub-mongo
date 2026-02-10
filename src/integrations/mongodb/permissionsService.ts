@@ -185,6 +185,7 @@ export class PermissionsService {
   /**
    * Get all publication IDs a user can access
    * Returns empty array for admins (signals "all publications")
+   * For hub users, resolves all publications belonging to their assigned hubs
    */
   async getUserPublications(userId: string): Promise<string[]> {
     try {
@@ -196,12 +197,39 @@ export class PermissionsService {
         return [];
       }
       
-      // Query access junction table
+      // Collect publication IDs from multiple access sources
+      const publicationIdSet = new Set<string>();
+      
+      // 1. Query access junction table (direct and group-based access)
       const accessRecords = await this.accessJunctionCollection
         .find({ userId })
         .toArray();
       
-      return accessRecords.map(record => record.publicationId);
+      accessRecords.forEach(record => publicationIdSet.add(record.publicationId));
+      
+      // 2. Resolve hub-based access: find all publications belonging to user's hubs
+      // Hub users get publication access dynamically via hub membership
+      if (permissions.hubAccess && permissions.hubAccess.length > 0) {
+        const hubIds = permissions.hubAccess.map(h => h.hubId);
+        const publicationsCollection = getDatabase().collection(COLLECTIONS.PUBLICATIONS);
+        
+        const hubPublications = await publicationsCollection
+          .find(
+            { hubIds: { $in: hubIds } },
+            { projection: { publicationId: 1 } }
+          )
+          .toArray();
+        
+        hubPublications.forEach(pub => {
+          if (pub.publicationId != null) {
+            publicationIdSet.add(String(pub.publicationId));
+          }
+        });
+        
+        logger.debug(`Resolved ${hubPublications.length} publications from ${hubIds.length} hub(s) for user ${userId}`);
+      }
+      
+      return Array.from(publicationIdSet);
     } catch (error) {
       logger.error('Error getting user publications:', error);
       return [];
