@@ -2167,12 +2167,12 @@ export function PublicationOrderDetail() {
                                             );
                                           })()}
 
-                                          {script.creative.clickUrl && (
+                                          {script.urls?.clickTracker && (
                                             <div className="mt-2 pt-2 border-t flex items-center gap-1 text-xs text-muted-foreground">
                                               <span>Destination:</span>
-                                              <a href={script.creative.clickUrl} target="_blank" rel="noopener noreferrer" 
+                                              <a href={script.urls.clickTracker} target="_blank" rel="noopener noreferrer" 
                                                  className="text-blue-600 hover:underline flex items-center gap-1 truncate max-w-[250px]">
-                                                {script.creative.clickUrl}
+                                                {script.urls.clickTracker}
                                                 <ExternalLink className="h-3 w-3 flex-shrink-0" />
                                               </a>
                                             </div>
@@ -2538,16 +2538,16 @@ export function PublicationOrderDetail() {
               </div>
 
               {/* Destination URL */}
-              {testingScript.creative.clickUrl && (
+              {testingScript.urls?.clickTracker && (
                 <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-xs font-medium text-blue-800 mb-1">Landing Page:</p>
                   <a 
-                    href={testingScript.creative.clickUrl} 
+                    href={testingScript.urls.clickTracker} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                   >
-                    {testingScript.creative.clickUrl}
+                    {testingScript.urls.clickTracker}
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
