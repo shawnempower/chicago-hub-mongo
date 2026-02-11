@@ -77,6 +77,7 @@ import {
   Eye,
   Search,
   Filter,
+  Pencil,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -696,6 +697,15 @@ export function CreativeAssetsManager({
     specGroupId: string;
     specGroup: GroupedCreativeRequirement;
     clickUrl: string;
+  } | null>(null);
+
+  // Click URL editing state for uploaded assets
+  const [editingClickUrl, setEditingClickUrl] = useState<Map<string, string>>(new Map());
+  const [savingClickUrl, setSavingClickUrl] = useState<Set<string>>(new Set());
+  const [clickUrlConfirmDialog, setClickUrlConfirmDialog] = useState<{
+    specGroupId: string;
+    oldUrl: string;
+    newUrl: string;
   } | null>(null);
 
   // Publication filter state for ZIP upload targeting
@@ -1924,6 +1934,99 @@ export function CreativeAssetsManager({
       toast({
         title: 'Upload complete',
         description: `${successCount} assets uploaded successfully`,
+      });
+    }
+  };
+
+  // Initiate click URL save — shows confirmation modal if URL actually changed
+  const handleSaveClickUrl = (specGroupId: string) => {
+    const asset = uploadedAssets.get(specGroupId);
+    if (!asset?.assetId) return;
+
+    const newClickUrl = editingClickUrl.get(specGroupId);
+    if (newClickUrl === undefined || newClickUrl === (asset.clickUrl || '')) {
+      // No change — just exit edit mode
+      setEditingClickUrl(prev => {
+        const next = new Map(prev);
+        next.delete(specGroupId);
+        return next;
+      });
+      return;
+    }
+
+    // Show confirmation dialog before saving
+    setClickUrlConfirmDialog({
+      specGroupId,
+      oldUrl: asset.clickUrl || '(none)',
+      newUrl: newClickUrl.trim(),
+    });
+  };
+
+  // Actually persist the click URL change after user confirms
+  const handleConfirmClickUrlSave = async () => {
+    if (!clickUrlConfirmDialog) return;
+
+    const { specGroupId, newUrl } = clickUrlConfirmDialog;
+    const asset = uploadedAssets.get(specGroupId);
+    if (!asset?.assetId) return;
+
+    setClickUrlConfirmDialog(null);
+    setSavingClickUrl(prev => new Set(prev).add(specGroupId));
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/creative-assets/${asset.assetId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          digitalAdProperties: {
+            clickUrl: newUrl,
+            altText: asset.altText,
+            headline: asset.headline,
+            body: asset.body,
+            ctaText: asset.ctaText,
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update click URL');
+      }
+
+      // Update local state
+      const newAssetsMap = new Map(uploadedAssets);
+      newAssetsMap.set(specGroupId, {
+        ...asset,
+        clickUrl: newUrl,
+      });
+      onAssetsChange(newAssetsMap);
+
+      // Exit edit mode
+      setEditingClickUrl(prev => {
+        const next = new Map(prev);
+        next.delete(specGroupId);
+        return next;
+      });
+
+      toast({
+        title: 'Click URL Updated',
+        description: 'The click-through URL has been updated and tracking scripts will be regenerated.',
+      });
+    } catch (error) {
+      console.error('Error updating click URL:', error);
+      toast({
+        title: 'Update Failed',
+        description: 'Failed to update the click-through URL. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingClickUrl(prev => {
+        const next = new Set(prev);
+        next.delete(specGroupId);
+        return next;
       });
     }
   };
@@ -3497,7 +3600,7 @@ export function CreativeAssetsManager({
                                                 <Link className="h-3 w-3" />
                                                 Click-Through URL
                                               </Label>
-                                              {/* Editable for pending assets, read-only for uploaded */}
+                                              {/* Editable for pending assets, editable with save for uploaded */}
                                               {asset.uploadStatus === 'pending' ? (
                                                 <div className="flex items-center gap-1">
                                                   <Input
@@ -3519,6 +3622,69 @@ export function CreativeAssetsManager({
                                                     }}
                                                   />
                                                 </div>
+                                              ) : editingClickUrl.has(spec.specGroupId) ? (
+                                                <div className="flex items-center gap-1">
+                                                  <Input
+                                                    type="url"
+                                                    placeholder="https://advertiser.com/landing"
+                                                    className="h-7 text-xs flex-1"
+                                                    value={editingClickUrl.get(spec.specGroupId) || ''}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onChange={(e) => {
+                                                      setEditingClickUrl(prev => {
+                                                        const next = new Map(prev);
+                                                        next.set(spec.specGroupId, e.target.value);
+                                                        return next;
+                                                      });
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                      if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleSaveClickUrl(spec.specGroupId);
+                                                      } else if (e.key === 'Escape') {
+                                                        setEditingClickUrl(prev => {
+                                                          const next = new Map(prev);
+                                                          next.delete(spec.specGroupId);
+                                                          return next;
+                                                        });
+                                                      }
+                                                    }}
+                                                    autoFocus
+                                                    disabled={savingClickUrl.has(spec.specGroupId)}
+                                                  />
+                                                  <Button
+                                                    size="sm"
+                                                    variant="default"
+                                                    className="h-7 px-2 text-xs"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleSaveClickUrl(spec.specGroupId);
+                                                    }}
+                                                    disabled={savingClickUrl.has(spec.specGroupId)}
+                                                  >
+                                                    {savingClickUrl.has(spec.specGroupId) ? (
+                                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                                    ) : (
+                                                      <CheckCircle2 className="h-3 w-3" />
+                                                    )}
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-7 w-7 p-0"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setEditingClickUrl(prev => {
+                                                        const next = new Map(prev);
+                                                        next.delete(spec.specGroupId);
+                                                        return next;
+                                                      });
+                                                    }}
+                                                    disabled={savingClickUrl.has(spec.specGroupId)}
+                                                  >
+                                                    <X className="h-3 w-3" />
+                                                  </Button>
+                                                </div>
                                               ) : asset.clickUrl ? (
                                                 <div className="flex items-center gap-1">
                                                   <span 
@@ -3531,6 +3697,23 @@ export function CreativeAssetsManager({
                                                     size="sm"
                                                     variant="ghost"
                                                     className="h-7 w-7 p-0"
+                                                    title="Edit click URL"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setEditingClickUrl(prev => {
+                                                        const next = new Map(prev);
+                                                        next.set(spec.specGroupId, asset.clickUrl || '');
+                                                        return next;
+                                                      });
+                                                    }}
+                                                  >
+                                                    <Pencil className="h-3 w-3" />
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-7 w-7 p-0"
+                                                    title="Open URL in new tab"
                                                     onClick={(e) => {
                                                       e.stopPropagation();
                                                       window.open(asset.clickUrl, '_blank');
@@ -3540,9 +3723,22 @@ export function CreativeAssetsManager({
                                                   </Button>
                                                 </div>
                                               ) : (
-                                                <p className="text-xs text-amber-600">
-                                                  ⚠️ No URL set - required for tracking
-                                                </p>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  className="h-7 text-xs text-amber-600 border-amber-300 hover:bg-amber-50"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingClickUrl(prev => {
+                                                      const next = new Map(prev);
+                                                      next.set(spec.specGroupId, '');
+                                                      return next;
+                                                    });
+                                                  }}
+                                                >
+                                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                                  Add Click URL
+                                                </Button>
                                               )}
                                             </div>
                                           )}
@@ -4123,6 +4319,48 @@ export function CreativeAssetsManager({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Click URL Change Confirmation Dialog */}
+      <AlertDialog open={!!clickUrlConfirmDialog} onOpenChange={(open) => {
+        if (!open) setClickUrlConfirmDialog(null);
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Confirm Click URL Change
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Changing the click-through URL will have the following effects:
+                </p>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  <li>All tracking scripts for this asset will be <strong>automatically regenerated</strong> with the new URL.</li>
+                  <li>Publications with accepted orders will be <strong>notified</strong> of the change.</li>
+                  <li>Any tracking tags already deployed to ad servers or email platforms will still use the <strong>old URL</strong> until the publication replaces them with the updated tags.</li>
+                </ul>
+                <div className="rounded-md bg-muted p-3 space-y-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Old URL: </span>
+                    <span className="font-mono text-xs break-all">{clickUrlConfirmDialog?.oldUrl}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">New URL: </span>
+                    <span className="font-mono text-xs break-all">{clickUrlConfirmDialog?.newUrl}</span>
+                  </div>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClickUrlSave}>
+              Update Click URL
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

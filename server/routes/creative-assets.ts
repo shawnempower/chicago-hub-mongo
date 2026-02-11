@@ -632,13 +632,44 @@ router.put('/:id', async (req: any, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    // Detect if click URL is changing (for downstream updates)
+    const oldClickUrl = asset.digitalAdProperties?.clickUrl || '';
+    const newClickUrl = updates.digitalAdProperties?.clickUrl || '';
+    const clickUrlChanged = updates.digitalAdProperties !== undefined && newClickUrl !== oldClickUrl;
+
     // Update asset
     const updatedAsset = await creativesService.update(id, updates);
 
+    // If click URL changed, regenerate tracking scripts for all affected orders
+    if (clickUrlChanged && updatedAsset?.associations?.campaignId) {
+      try {
+        const { refreshScriptsForOrder } = await import('../../src/services/trackingScriptService');
+        const { insertionOrderService } = await import('../../src/services/insertionOrderService');
+        
+        const campaignId = updatedAsset.associations.campaignId;
+        const orders = await insertionOrderService.getOrdersForCampaign(campaignId);
+        
+        let scriptsRegenerated = 0;
+        for (const order of orders) {
+          try {
+            const result = await refreshScriptsForOrder(campaignId, order.publicationId);
+            scriptsRegenerated += result.scriptsGenerated;
+          } catch (regenError) {
+            console.error(`Error regenerating scripts for order ${order.publicationId}:`, regenError);
+          }
+        }
+        
+        console.log(`🔄 Regenerated ${scriptsRegenerated} tracking scripts after click URL change (campaign: ${campaignId})`);
+      } catch (regenError) {
+        console.error('Error regenerating tracking scripts:', regenError);
+        // Don't fail the request if script regeneration fails
+      }
+    }
+
     // Send notification to publication users if this asset is associated with orders
+    // Only notify publications that have accepted/confirmed orders
     try {
       if (updatedAsset?.associations?.campaignId) {
-        const { notifyAssetUpdated } = await import('../../src/services/notificationService');
         const { getDatabase } = await import('../../src/integrations/mongodb/client');
         const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
         const { insertionOrderService } = await import('../../src/services/insertionOrderService');
@@ -648,26 +679,62 @@ router.put('/:id', async (req: any, res: Response) => {
         
         // Get all orders for this campaign
         const orders = await insertionOrderService.getOrdersForCampaign(campaignId);
+
+        // Get placement names from the asset for context
+        const assetPlacements = updatedAsset.associations?.placements || [];
         
         for (const order of orders) {
+          // Only notify for orders that have been accepted (confirmed status)
+          // This means the publication has accepted all placements.
+          // Orders in draft or sent status are not yet accepted.
+          if (order.status !== 'confirmed') {
+            continue;
+          }
+
+          // Find placement names relevant to this publication
+          const pubPlacementNames = assetPlacements
+            .filter((p: any) => p.publicationId === order.publicationId)
+            .map((p: any) => p.placementName)
+            .filter(Boolean);
+
           // Find users with access to this publication
           const permissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
             'publications.publicationId': order.publicationId
           }).toArray();
           
-          for (const perm of permissions) {
-            await notifyAssetUpdated({
-              userId: perm.userId,
-              publicationId: order.publicationId,
-              campaignId,
-              campaignName: order.campaignName,
-              orderId: order._id?.toString() || '',
-              assetName: updatedAsset.metadata?.fileName || 'Creative Asset'
-            });
+          if (clickUrlChanged) {
+            // Use specific click URL changed notification
+            const { notifyClickUrlChanged } = await import('../../src/services/notificationService');
+            for (const perm of permissions) {
+              await notifyClickUrlChanged({
+                userId: perm.userId,
+                publicationId: order.publicationId,
+                campaignId,
+                campaignName: order.campaignName,
+                orderId: order._id?.toString() || '',
+                assetName: updatedAsset.metadata?.fileName || 'Creative Asset',
+                placementNames: pubPlacementNames,
+                oldUrl: oldClickUrl,
+                newUrl: newClickUrl,
+              });
+            }
+          } else {
+            // Generic asset updated notification
+            const { notifyAssetUpdated } = await import('../../src/services/notificationService');
+            for (const perm of permissions) {
+              await notifyAssetUpdated({
+                userId: perm.userId,
+                publicationId: order.publicationId,
+                campaignId,
+                campaignName: order.campaignName,
+                orderId: order._id?.toString() || '',
+                assetName: updatedAsset.metadata?.fileName || 'Creative Asset'
+              });
+            }
           }
         }
         
-        console.log(`📧 Sent asset updated notifications for campaign ${campaignId}`);
+        console.log(`📧 Sent asset updated notifications for confirmed orders in campaign ${campaignId}`);
       }
     } catch (notifyError) {
       console.error('Error sending asset updated notifications:', notifyError);

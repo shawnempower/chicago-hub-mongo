@@ -362,6 +362,34 @@ export async function notifyAssetUpdated(params: {
   });
 }
 
+export async function notifyClickUrlChanged(params: {
+  userId: string;
+  publicationId: number;
+  campaignId: string;
+  campaignName: string;
+  orderId: string;
+  assetName: string;
+  placementNames: string[];
+  oldUrl: string;
+  newUrl: string;
+}): Promise<void> {
+  const placementList = params.placementNames.length > 0
+    ? params.placementNames.join(', ')
+    : 'associated placements';
+
+  await notificationService.create({
+    userId: params.userId,
+    publicationId: params.publicationId,
+    type: 'asset_updated',
+    title: 'Click-Through URL Changed',
+    message: `The click-through URL for "${params.assetName}" in "${params.campaignName}" has been updated (${placementList}). Tracking scripts have been regenerated — please re-deploy updated tags.`,
+    campaignId: params.campaignId,
+    orderId: params.orderId,
+    link: `/dashboard?tab=order-detail&campaignId=${params.campaignId}&publicationId=${params.publicationId}`,
+    groupKey: `click_url_changed:${params.orderId}:${params.assetName}`
+  });
+}
+
 export async function notifyPlacementAccepted(params: {
   userId: string;
   hubId: string;
