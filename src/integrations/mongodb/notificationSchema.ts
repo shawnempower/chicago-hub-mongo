@@ -12,6 +12,8 @@ export type NotificationType =
   | 'order_confirmed'    // Publication confirmed an order
   | 'order_rejected'     // Publication rejected placements
   | 'message_received'   // New message in order thread
+  | 'direct_message'     // New standalone direct message
+  | 'broadcast_message'  // New broadcast message from hub
   | 'asset_updated'      // Hub replaced/updated an asset
   | 'placement_accepted' // Placement accepted by publication
   | 'placement_rejected' // Placement rejected by publication
@@ -37,6 +39,7 @@ export interface NotificationDocument {
   campaignId?: string;
   orderId?: string;
   messageId?: string;          // If this is a message notification
+  conversationId?: string;     // If this is a messaging conversation notification
   
   // Navigation
   link?: string;               // URL to navigate to when clicked

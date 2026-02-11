@@ -36,7 +36,7 @@ export default function UserProfile() {
       setFirstName(user.firstName || '');
       setLastName(user.lastName || '');
       setCompanyName(user.companyName || '');
-      // Phone might come from profile, not user object
+      setPhone(user.phone || '');
     }
   }, [user]);
 

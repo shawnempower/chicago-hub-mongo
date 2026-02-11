@@ -140,6 +140,26 @@ interface MessageNotificationEmailData {
   hubName?: string;
 }
 
+interface ConversationEmailData {
+  recipientEmail: string;
+  recipientName?: string;
+  senderName: string;
+  subject: string;
+  messageContent: string;
+  conversationUrl: string;
+  hubName?: string;
+}
+
+interface BroadcastEmailData {
+  recipientEmail: string;
+  recipientName?: string;
+  senderName: string;
+  broadcastSubject: string;
+  messageContent: string;
+  conversationUrl: string;
+  hubName?: string;
+}
+
 export class EmailService {
   private mg: any;
   private config: EmailConfig;
@@ -1309,6 +1329,154 @@ export class EmailService {
       subject: `[${hubBrandName}] New Message: ${data.campaignName}`,
       html,
       fromName: data.hubName
+    });
+  }
+
+  // Direct conversation email (standalone messaging system)
+  async sendConversationEmail(data: ConversationEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send conversation email to ${data.recipientEmail} re: "${data.subject}"`);
+      return { success: true, skipped: true };
+    }
+
+    const messagePreviewHtml = `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+        <tr>
+          <td style="background-color: ${this.BRAND_COLORS.cream}; border: 1px solid ${this.BRAND_COLORS.border}; border-radius: 6px; padding: 16px;">
+            <p style="margin: 0; color: ${this.BRAND_COLORS.navy}; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">
+              ${data.messageContent}
+            </p>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        You have a new message from <strong>${data.senderName}</strong>.
+      </p>
+      
+      ${data.subject ? this.generateInfoBox(`
+        <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+          <strong style="color: ${this.BRAND_COLORS.navy};">Subject:</strong> ${data.subject}<br>
+          <strong style="color: ${this.BRAND_COLORS.navy};">From:</strong> ${data.senderName}
+        </p>
+      `) : ''}
+      
+      ${messagePreviewHtml}
+      
+      <p style="margin: 0 0 16px 0;">
+        Click the button below to view the full conversation and reply:
+      </p>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('View Conversation', data.conversationUrl)}
+      </div>
+      
+      <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${data.conversationUrl}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${data.conversationUrl}</a>
+      </p>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>The ${data.hubName || this.config.fromName} Team</strong>
+      </p>
+    `;
+
+    const hubBrandName = data.hubName || this.config.fromName;
+    const html = this.generateEmailTemplate({
+      title: data.subject || 'New Message',
+      preheader: `${data.senderName} sent you a message`,
+      content,
+      headerColor: this.BRAND_COLORS.navy,
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName,
+    });
+
+    return await this.sendEmail({
+      to: data.recipientEmail,
+      subject: `[${hubBrandName}] ${data.subject || 'New Message'}`,
+      html,
+      fromName: data.hubName,
+    });
+  }
+
+  // Broadcast email (hub -> publications)
+  async sendBroadcastEmail(data: BroadcastEmailData): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    if (!this.isNotificationEmailEnabled()) {
+      console.log(`📧 [EMAIL DISABLED] Would send broadcast email to ${data.recipientEmail} re: "${data.broadcastSubject}"`);
+      return { success: true, skipped: true };
+    }
+
+    const messagePreviewHtml = `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+        <tr>
+          <td style="background-color: ${this.BRAND_COLORS.cream}; border: 1px solid ${this.BRAND_COLORS.border}; border-radius: 6px; padding: 16px;">
+            <p style="margin: 0; color: ${this.BRAND_COLORS.navy}; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">
+              ${data.messageContent}
+            </p>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    const content = `
+      <h2 style="margin: 0 0 20px 0; color: ${this.BRAND_COLORS.navy}; font-family: 'Hedvig Letters Serif', Georgia, serif; font-size: 24px; font-weight: 600;">
+        Hi ${data.recipientName || 'there'}!
+      </h2>
+      
+      <p style="margin: 0 0 20px 0;">
+        <strong>${data.senderName}</strong> has sent a message to your publication network.
+      </p>
+      
+      ${this.generateInfoBox(`
+        <p style="margin: 0; line-height: 1.8; font-size: 15px;">
+          <strong style="color: ${this.BRAND_COLORS.navy};">Subject:</strong> ${data.broadcastSubject}<br>
+          <strong style="color: ${this.BRAND_COLORS.navy};">From:</strong> ${data.senderName}
+        </p>
+      `)}
+      
+      ${messagePreviewHtml}
+      
+      <p style="margin: 0 0 16px 0;">
+        Click the button below to view the message and reply:
+      </p>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        ${this.generateButton('View Message', data.conversationUrl)}
+      </div>
+      
+      <p style="margin: 16px 0 0 0; font-size: 14px; color: ${this.BRAND_COLORS.mediumGray};">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${data.conversationUrl}" style="color: ${this.BRAND_COLORS.orange}; word-break: break-all;">${data.conversationUrl}</a>
+      </p>
+      
+      <p style="margin: 24px 0 0 0; color: ${this.BRAND_COLORS.navy};">
+        Best regards,<br>
+        <strong>The ${data.hubName || this.config.fromName} Team</strong>
+      </p>
+    `;
+
+    const hubBrandName = data.hubName || this.config.fromName;
+    const html = this.generateEmailTemplate({
+      title: data.broadcastSubject,
+      preheader: `Broadcast from ${data.senderName}: ${data.broadcastSubject}`,
+      content,
+      headerColor: this.BRAND_COLORS.orange,
+      recipientEmail: data.recipientEmail,
+      hubName: data.hubName,
+    });
+
+    return await this.sendEmail({
+      to: data.recipientEmail,
+      subject: `[${hubBrandName}] ${data.broadcastSubject}`,
+      html,
+      fromName: data.hubName,
     });
   }
 }

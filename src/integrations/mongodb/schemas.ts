@@ -1596,6 +1596,7 @@ export const COLLECTIONS = {
   STOREFRONT_CONVERSATIONS: 'storefront_conversations', // Full chat conversation history from storefronts
   PUBLICATION_EARNINGS: 'publication_earnings', // Publication earnings per campaign/order
   HUB_BILLING: 'hub_billing', // Platform fees owed by hubs
+  MESSAGING_CONVERSATIONS: 'messaging_conversations', // Unified messaging system
 } as const;
 
 // MongoDB Indexes Configuration

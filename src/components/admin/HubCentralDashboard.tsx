@@ -9,6 +9,7 @@ import { HubDataQuality } from './HubDataQuality';
 import { HubTeamManagement } from './HubTeamManagement';
 import { HubPricingAnalytics } from './HubPricingAnalytics';
 import { InventoryChatContainer } from '../inventory-chat/InventoryChatContainer';
+import { MessagingInbox } from '../messaging/MessagingInbox';
 import { HubOrdersManagement } from './HubOrdersManagement';
 import { HubOrderDetail } from './HubOrderDetail';
 import { HubPayoutsView } from './HubPayoutsView';
@@ -243,7 +244,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               className={`bg-muted/50 cursor-pointer hover:shadow-md transition-shadow ${
                 (stats?.unreadMessages ?? 0) > 0 ? 'border-blue-300 bg-blue-50/30' : ''
               }`}
-              onClick={() => onTabChange('orders')}
+              onClick={() => onTabChange('messages')}
             >
               <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
                 <MessageSquare className={`h-4 w-4 ${(stats?.unreadMessages ?? 0) > 0 ? 'text-blue-600' : 'text-muted-foreground'}`} />
@@ -890,6 +891,10 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
       return <HubPricingAnalytics pricingAnalytics={stats?.pricingAnalytics} publications={publications} loading={loading || loadingPubs} />;
     }
     
+    if (activeTab === 'messages') {
+      return <MessagingInbox userType="hub" hubId={selectedHubId} />;
+    }
+
     if (activeTab === 'team') {
       return <HubTeamManagement />;
     }

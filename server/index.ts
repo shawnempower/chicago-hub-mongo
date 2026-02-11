@@ -78,6 +78,7 @@ import webAnalyticsRouter from './routes/web-analytics';
 import storefrontChatConfigRouter from './routes/storefront-chat-config';
 import earningsRouter from './routes/earnings';
 import hubBillingRouter from './routes/hub-billing';
+import messagesRouter from './routes/messages';
 import { authenticateToken } from './middleware/authenticate';
 import { activityTrackingMiddleware } from './middleware/activityTracking';
 import { createLogger } from '../src/utils/logger';
@@ -230,6 +231,7 @@ app.use('/api/web-analytics', webAnalyticsRouter); // Real-time web analytics fr
 app.use('/api/storefront-chat-config', activityTrackingMiddleware, storefrontChatConfigRouter); // Storefront AI chat configuration
 app.use('/api/earnings', activityTrackingMiddleware, earningsRouter); // Publication earnings and payouts
 app.use('/api/hub-billing', activityTrackingMiddleware, hubBillingRouter); // Hub platform billing
+app.use('/api/messages', activityTrackingMiddleware, messagesRouter); // Unified messaging system
 
 // ===== STANDALONE ROUTES =====
 // Health check
@@ -368,6 +370,10 @@ async function startServer() {
     initializeAuthService();
     initializeServices();
     console.log('✅ MongoDB services initialized successfully!');
+
+    // Initialize messaging indexes
+    const { messagingService } = await import('./services/messagingService');
+    await messagingService.ensureIndexes();
 
 
     // API routes are defined at module load time (no function call needed)

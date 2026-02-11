@@ -12,6 +12,7 @@ import { PublicationFullSummary } from "@/components/dashboard/PublicationFullSu
 import { PublicationOrders } from "@/components/dashboard/PublicationOrders";
 import { PublicationOrderDetail } from "@/components/dashboard/PublicationOrderDetail";
 import { PublicationEarnings } from "@/components/dashboard/PublicationEarnings";
+import { MessagingInbox } from "@/components/messaging/MessagingInbox";
 import { useAuth } from "@/contexts/CustomAuthContext";
 import { Navigate, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { usePublication } from "@/contexts/PublicationContext";
@@ -28,7 +29,8 @@ import {
   Users,
   Mail,
   RefreshCw,
-  DollarSign
+  DollarSign,
+  MessageSquare
 } from "lucide-react";
 
 // Main Dashboard Component
@@ -51,6 +53,7 @@ export default function Dashboard() {
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'orders', label: 'Orders', icon: FileText },
     { id: 'earnings', label: 'Earnings', icon: DollarSign },
+    { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'storefront', label: 'Storefront', icon: Store },
   ];
@@ -68,9 +71,10 @@ export default function Dashboard() {
         {currentTab === 'order-detail' && <PublicationOrderDetail />}
         {currentTab === 'earnings' && selectedPublication?.publicationId && <PublicationEarnings publicationId={selectedPublication.publicationId} />}
         {currentTab === 'settings' && <PublicationSettings />}
+        {currentTab === 'messages' && <MessagingInbox userType="publication" hubIds={selectedPublication?.hubIds} />}
         {currentTab === 'storefront' && <PublicationStorefront />}
         {currentTab === 'summary' && <PublicationFullSummary onBack={() => handleTabChange('dashboard')} />}
-        {!['dashboard', 'profile', 'inventory', 'leads', 'orders', 'order-detail', 'earnings', 'settings', 'storefront', 'summary'].includes(currentTab) && <DashboardOverview />}
+        {!['dashboard', 'profile', 'inventory', 'leads', 'orders', 'order-detail', 'earnings', 'settings', 'messages', 'storefront', 'summary'].includes(currentTab) && <DashboardOverview />}
       </>
     );
   };
