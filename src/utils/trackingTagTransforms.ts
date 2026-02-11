@@ -92,12 +92,18 @@ export function transformForAdServer(
   const width = sizeMatch?.[1] || '300';
   const height = sizeMatch?.[2] || '250';
 
+  // For noscript fallback: use CloudFront tracking URLs with a static cache buster
+  // (can't use JS Date.now() in noscript, so use generation-time timestamp)
+  const noscriptCacheBuster = Date.now().toString();
+  const noscriptClickUrl = clickMatch?.[1]?.replace(/CACHE_BUSTER/g, noscriptCacheBuster) || clickUrl || '#';
+  const noscriptPixelUrl = pixelMatch?.[1]?.replace(/CACHE_BUSTER/g, noscriptCacheBuster) || '';
+
   // Return a JavaScript snippet with bot protection and lazy loading
   return `<!-- Direct Ad Tag with Bot Protection -->
 <div id="ad-container-${Date.now()}" style="width:${width}px;height:${height}px;">
   <noscript>
-    <!-- Fallback for no-JS (rare, but good practice) -->
-    <a href="${clickUrl || '#'}"><img src="${imgUrl}" width="${width}" height="${height}" alt="${altText}" /></a>
+    <!-- Fallback for no-JS -->
+    <a href="${noscriptClickUrl}"><img src="${imgUrl}" width="${width}" height="${height}" alt="${altText}" /></a>${noscriptPixelUrl ? `\n    <img src="${noscriptPixelUrl}" width="1" height="1" style="display:none;" />` : ''}
   </noscript>
 </div>
 <script>
