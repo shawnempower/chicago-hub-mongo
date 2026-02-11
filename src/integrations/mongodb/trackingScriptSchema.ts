@@ -38,14 +38,15 @@ export interface TrackingCreativeInfo {
 /**
  * Generated tracking URLs
  * 
- * URL Format: https://{cloudfront-domain}/pxl.png?oid={orderId}&cid={campaignId}&p={pubCode}&ch={channel}&t={eventType}&...
+ * Impressions: https://{cloudfront-domain}/pxl.png?oid={orderId}&cid={campaignId}&pid={pubId}&ch={channel}&t=display&...
+ * Clicks:      https://{cloudfront-domain}/c?oid={orderId}&cid={campaignId}&pid={pubId}&ch={channel}&t=click&r={landingUrl}&...
  * 
- * Required params: oid, cid, p, ch, t, cb
- * Optional params: cr, pid, s, ip
+ * Required params: oid, cid, pid, ch, t, cb
+ * Optional params: cr, s, ip, eid
  */
 export interface TrackingUrls {
-  impressionPixel: string;   // e.g., "https://dxafls8akrlrp.cloudfront.net/pxl.png?oid=xxx&cid=camp_xxx&p=chireader&ch=website&t=display&s=300x250&cb=..."
-  clickTracker: string;      // e.g., "https://dxafls8akrlrp.cloudfront.net/pxl.png?oid=xxx&cid=camp_xxx&p=chireader&ch=website&t=click&cb=..."
+  impressionPixel: string;   // e.g., "https://dxafls8akrlrp.cloudfront.net/pxl.png?oid=xxx&cid=camp_xxx&pid=4001&ch=website&t=display&s=300x250&cb=..."
+  clickTracker: string;      // e.g., "https://dxafls8akrlrp.cloudfront.net/c?oid=xxx&cid=camp_xxx&pid=4001&ch=website&t=click&r=https%3A%2F%2Flanding.com&cb=..."
   creativeUrl: string;       // e.g., "https://cdn.network.com/a/xxx.jpg"
 }
 
