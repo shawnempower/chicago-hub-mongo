@@ -93,6 +93,7 @@ export const messagesApi = {
     recipientUserId?: string;          // Direct message to a specific user (e.g. admin)
     initialMessage?: string;
     deliveryChannel?: DeliveryChannel;
+    attachments?: MessageAttachment[];  // Attachments for the initial message
   }): Promise<ConversationDetailResponse> {
     const response = await authenticatedFetch(`${API_BASE_URL}/messages/conversations`, {
       method: 'POST',
@@ -263,6 +264,27 @@ export const messagesApi = {
 
     const data: OrderMessageStatsResponse = await response.json();
     return data.stats;
+  },
+
+  /**
+   * Upload a file attachment for a message. Returns attachment metadata with S3 URL.
+   */
+  async uploadAttachment(file: File): Promise<MessageAttachment> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/messages/upload`, {
+      method: 'POST',
+      body: formData,
+      // Do NOT set Content-Type header — browser sets it with boundary for multipart
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to upload attachment');
+    }
+
+    return response.json();
   },
 
   /**

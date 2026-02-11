@@ -8,6 +8,7 @@ import {
   Paperclip,
   Loader2,
   ArrowLeft,
+  X,
 } from 'lucide-react';
 
 import { messagesApi } from '@/api/messages';
@@ -15,6 +16,7 @@ import type {
   ConversationDocument,
   ConversationMessage,
   DeliveryChannel,
+  MessageAttachment,
 } from '@/integrations/mongodb/messagingSchema';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -69,9 +71,15 @@ export function ConversationThread({
   const [messageText, setMessageText] = useState('');
   const [deliveryChannel, setDeliveryChannel] = useState<DeliveryChannel>('in_app');
   const [sending, setSending] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_FILES = 5;
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
   // ----- Fetch conversation -----
 
@@ -100,17 +108,65 @@ export function ConversationThread({
     }
   }, [conversation?.messages?.length]);
 
+  // ----- File attachment handlers -----
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newFiles: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      if (f.size > MAX_FILE_SIZE) {
+        alert(`"${f.name}" exceeds the 10MB limit and was not added.`);
+        continue;
+      }
+      newFiles.push(f);
+    }
+
+    setPendingFiles((prev) => {
+      const combined = [...prev, ...newFiles];
+      if (combined.length > MAX_FILES) {
+        alert(`You can attach up to ${MAX_FILES} files per message.`);
+        return combined.slice(0, MAX_FILES);
+      }
+      return combined;
+    });
+
+    // Reset the input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   // ----- Send message -----
 
   const handleSend = async () => {
     const trimmed = messageText.trim();
-    if (!trimmed || !conversation) return;
+    if (!trimmed && pendingFiles.length === 0) return;
+    if (!conversation) return;
 
     setSending(true);
     try {
+      // Upload pending files first
+      let attachments: MessageAttachment[] | undefined;
+      if (pendingFiles.length > 0) {
+        setUploading(true);
+        try {
+          attachments = await Promise.all(
+            pendingFiles.map((f) => messagesApi.uploadAttachment(f))
+          );
+        } finally {
+          setUploading(false);
+        }
+      }
+
       const { message: sentMessage } = await messagesApi.sendMessage(conversationId, {
-        content: trimmed,
+        content: trimmed || '(attachment)',
         deliveryChannel: userType === 'hub' ? deliveryChannel : undefined,
+        attachments,
       });
 
       // Optimistic update — append the returned message (or a local stub)
@@ -123,6 +179,7 @@ export function ConversationThread({
       }
 
       setMessageText('');
+      setPendingFiles([]);
       textareaRef.current?.focus();
     } catch {
       // Could surface a toast here
@@ -322,7 +379,52 @@ export function ConversationThread({
           </div>
         )}
 
+        {/* Pending file chips */}
+        {pendingFiles.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {pendingFiles.map((f, i) => (
+              <span
+                key={`${f.name}-${i}`}
+                className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+              >
+                <Paperclip className="h-3 w-3" />
+                <span className="max-w-[140px] truncate">{f.name}</span>
+                <span className="text-[10px]">({(f.size / 1024).toFixed(0)}KB)</span>
+                <button
+                  type="button"
+                  onClick={() => removePendingFile(i)}
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-background"
+                  disabled={sending}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFileSelect}
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+        />
+
         <div className="flex items-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-[42px] w-[42px] shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending || pendingFiles.length >= MAX_FILES}
+            title="Attach files"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
           <Textarea
             ref={textareaRef}
             value={messageText}
@@ -336,10 +438,12 @@ export function ConversationThread({
           <Button
             size="icon"
             className="h-[42px] w-[42px] shrink-0"
-            disabled={sending || !messageText.trim()}
+            disabled={sending || (!messageText.trim() && pendingFiles.length === 0)}
             onClick={handleSend}
           >
             {sending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : uploading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />

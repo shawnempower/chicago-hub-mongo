@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Send, Loader2, Mail } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Send, Loader2, Mail, Paperclip, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { API_BASE_URL } from '@/config/api';
 import { authenticatedFetch } from '@/api/client';
 import { messagesApi } from '@/api/messages';
-import type { DeliveryChannel } from '@/integrations/mongodb/messagingSchema';
+import type { DeliveryChannel, MessageAttachment } from '@/integrations/mongodb/messagingSchema';
 
 interface Publication {
   id: number;
@@ -75,6 +75,11 @@ export function NewConversationDialog({
   const [loadingHubs, setLoadingHubs] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_FILES = 5;
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
   // Multi-hub support for publication users
   const allHubIds = hubIds && hubIds.length > 0 ? hubIds : (hubId ? [hubId] : []);
@@ -191,18 +196,57 @@ export function NewConversationDialog({
       setMessage('');
       setDeliveryChannel('in_app');
       setError(null);
+      setPendingFiles([]);
     }
   }, [open]);
 
   const effectiveHubId = userType === 'publication' ? selectedHubId : hubId;
 
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newFiles: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      if (f.size > MAX_FILE_SIZE) {
+        alert(`"${f.name}" exceeds the 10MB limit and was not added.`);
+        continue;
+      }
+      newFiles.push(f);
+    }
+
+    setPendingFiles((prev) => {
+      const combined = [...prev, ...newFiles];
+      if (combined.length > MAX_FILES) {
+        alert(`You can attach up to ${MAX_FILES} files per message.`);
+        return combined.slice(0, MAX_FILES);
+      }
+      return combined;
+    });
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function removePendingFile(index: number) {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() && pendingFiles.length === 0) return;
 
     setSubmitting(true);
     setError(null);
     try {
+      // Upload pending files first
+      let attachments: MessageAttachment[] | undefined;
+      if (pendingFiles.length > 0) {
+        attachments = await Promise.all(
+          pendingFiles.map((f) => messagesApi.uploadAttachment(f))
+        );
+      }
+
       const result = await messagesApi.createConversation({
         hubId: effectiveHubId,
         subject: subject.trim() || undefined,
@@ -214,8 +258,9 @@ export function NewConversationDialog({
           userType === 'hub' && recipientType === 'team_member'
             ? selectedUserId
             : undefined,
-        initialMessage: message.trim(),
+        initialMessage: message.trim() || '(attachment)',
         deliveryChannel: userType === 'hub' ? deliveryChannel : undefined,
+        attachments,
       });
 
       const conversationId =
@@ -233,7 +278,8 @@ export function NewConversationDialog({
   }
 
   // Validation
-  let canSubmit = message.trim().length > 0;
+  const hasContent = message.trim().length > 0 || pendingFiles.length > 0;
+  let canSubmit = hasContent;
   if (userType === 'hub') {
     if (recipientType === 'publication') canSubmit = canSubmit && selectedPublicationId !== '';
     if (recipientType === 'team_member') canSubmit = canSubmit && selectedUserId !== '';
@@ -394,6 +440,50 @@ export function NewConversationDialog({
               rows={5}
               className="resize-none"
             />
+          </div>
+
+          {/* Attachments */}
+          <div className="space-y-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={submitting || pendingFiles.length >= MAX_FILES}
+            >
+              <Paperclip className="mr-1.5 h-4 w-4" />
+              Attach Files
+            </Button>
+            {pendingFiles.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {pendingFiles.map((f, i) => (
+                  <span
+                    key={`${f.name}-${i}`}
+                    className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                  >
+                    <Paperclip className="h-3 w-3" />
+                    <span className="max-w-[140px] truncate">{f.name}</span>
+                    <span className="text-[10px]">({(f.size / 1024).toFixed(0)}KB)</span>
+                    <button
+                      type="button"
+                      onClick={() => removePendingFile(i)}
+                      className="ml-0.5 rounded-full p-0.5 hover:bg-background"
+                      disabled={submitting}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Delivery Channel (hub only) */}

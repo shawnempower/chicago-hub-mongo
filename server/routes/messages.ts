@@ -6,10 +6,14 @@
  */
 
 import { Router, Response } from 'express';
+import multer from 'multer';
+import crypto from 'crypto';
+import path from 'path';
 import { authenticateToken } from '../middleware/authenticate';
 import { messagingService } from '../services/messagingService';
 import { notificationService } from '../../src/services/notificationService';
 import { emailService } from '../emailService';
+import { getS3Service } from '../s3Service';
 import { getDatabase } from '../../src/integrations/mongodb/client';
 import { COLLECTIONS } from '../../src/integrations/mongodb/schemas';
 import { ObjectId } from 'mongodb';
@@ -17,7 +21,33 @@ import {
   ConversationParticipant,
   DeliveryChannel,
   SenderType,
+  MessageAttachment,
 } from '../../src/integrations/mongodb/messagingSchema';
+
+// Configure multer for message attachment uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB per file
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedMimes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain', 'text/html', 'text/csv',
+      'application/zip', 'application/x-zip-compressed',
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type ${file.mimetype} is not allowed for message attachments`));
+    }
+  },
+});
 
 const router = Router();
 
@@ -109,6 +139,63 @@ async function getHubParticipants(hubId: string): Promise<ConversationParticipan
 
   return participants;
 }
+
+// ==========================================================
+// POST /upload
+// Upload a file attachment for a message (returns S3 URL)
+// ==========================================================
+router.post('/upload', upload.single('file'), async (req: any, res: Response) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    const s3 = getS3Service();
+    if (!s3) {
+      return res.status(503).json({ error: 'File storage service is not available' });
+    }
+
+    const userId = req.user.id;
+    const timestamp = Date.now();
+    const randomStr = crypto.randomBytes(8).toString('hex');
+    const ext = path.extname(file.originalname);
+    const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
+    const key = `users/${userId}/message-attachments/${timestamp}_${randomStr}_${baseName}${ext}`;
+
+    const result = await s3.uploadFileWithCustomKey(
+      key,
+      file.buffer,
+      file.mimetype,
+      {
+        originalName: file.originalname,
+        userId,
+        folder: 'message-attachments',
+        uploadedAt: new Date().toISOString(),
+      },
+      true, // public
+    );
+
+    if (!result.success || !result.url) {
+      return res.status(500).json({ error: result.error || 'Upload failed' });
+    }
+
+    const attachment: MessageAttachment = {
+      fileName: file.originalname,
+      fileUrl: result.url,
+      fileType: file.mimetype,
+      fileSize: file.size,
+    };
+
+    res.json(attachment);
+  } catch (error: any) {
+    console.error('Error uploading message attachment:', error);
+    if (error.message?.includes('not allowed')) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
 
 // ==========================================================
 // GET /conversations
@@ -208,6 +295,7 @@ router.post('/conversations', async (req: any, res: Response) => {
       recipientUserId,           // Direct message to a specific user (e.g. admin)
       initialMessage,
       deliveryChannel = 'in_app',
+      attachments,               // Attachments for the initial message
     } = req.body;
 
     if (!hubId) {
@@ -287,6 +375,7 @@ router.post('/conversations', async (req: any, res: Response) => {
         senderName,
         senderId: userId,
         deliveryChannel: deliveryChannel as DeliveryChannel,
+        attachments: attachments as MessageAttachment[] | undefined,
       } : undefined
     );
 
