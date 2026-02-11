@@ -941,6 +941,8 @@ export function CreativeAssetsManager({
           const data = await response.json();
           
           const newAssetsMap = new Map<string, UploadedAssetWithSpecs>();
+          // Assets come sorted by uploadedAt DESC (newest first).
+          // Only keep the NEWEST asset per specGroupId to handle any duplicates.
           data.assets.forEach((asset: any) => {
             // Extract digital ad properties (clickUrl, altText, etc.)
             // Note: digitalAdProperties is stored at root level, not in metadata
@@ -948,9 +950,13 @@ export function CreativeAssetsManager({
             
             // specGroupId can be in associations (schema) or metadata (legacy) - check both
             const assetSpecGroupId = asset.associations?.specGroupId || asset.metadata?.specGroupId;
+            const specKey = assetSpecGroupId || `library_${asset._id}`;
+            
+            // Skip if we already have a newer asset for this specGroupId
+            if (newAssetsMap.has(specKey)) return;
             
             const reconstructedAsset: UploadedAssetWithSpecs = {
-              specGroupId: assetSpecGroupId || `library_${asset._id}`,
+              specGroupId: specKey,
               fileName: asset.metadata.fileName,
               previewUrl: asset.metadata.fileUrl,
               uploadStatus: 'uploaded',
@@ -978,7 +984,7 @@ export function CreativeAssetsManager({
               body: digitalAdProps.body,
               ctaText: digitalAdProps.ctaText,
             };
-            newAssetsMap.set(reconstructedAsset.specGroupId, reconstructedAsset);
+            newAssetsMap.set(specKey, reconstructedAsset);
           });
           onAssetsChange(newAssetsMap);
         }

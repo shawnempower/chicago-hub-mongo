@@ -164,8 +164,24 @@ export async function generateScriptsForOrder(
 
     console.log(`Found ${creatives.length} total creatives for campaign ${campaignId}`);
 
-    // Filter to digital channels only
+    // Filter to digital channels only — exclude print, radio, podcast assets
+    const NON_DIGITAL_PREFIXES = ['print', 'radio', 'podcast'];
+    
     const digitalCreatives = creatives.filter(c => {
+      // First check: exclude assets whose specGroupId clearly marks them as non-digital
+      const specGroupId = (c.associations?.specGroupId || c.metadata?.specGroupId || '').toLowerCase();
+      if (NON_DIGITAL_PREFIXES.some(prefix => specGroupId.startsWith(prefix))) {
+        return false;
+      }
+      
+      // Second check: exclude non-digital file types (InDesign, PDF, text scripts, audio, video)
+      const fileName = c.originalFilename || c.metadata?.originalFileName || '';
+      const fileNameLower = fileName.toLowerCase();
+      const nonDigitalExtensions = ['.indd', '.pdf', '.txt', '.doc', '.docx', '.mp3', '.wav', '.mp4', '.mov'];
+      if (nonDigitalExtensions.some(ext => fileNameLower.endsWith(ext))) {
+        return false;
+      }
+      
       const channel = (
         c.associations?.channel || 
         c.specifications?.channel || 
@@ -178,10 +194,9 @@ export async function generateScriptsForOrder(
       
       // Also check by file type for images (likely digital ads)
       const fileType = c.fileType || c.metadata?.fileType || '';
-      const fileName = c.originalFilename || c.metadata?.originalFileName || '';
       const isImage = fileType.startsWith('image/') || 
                       ['jpg', 'jpeg', 'png', 'gif', 'webp'].some(ext => 
-                        fileName.toLowerCase().endsWith(`.${ext}`)
+                        fileNameLower.endsWith(`.${ext}`)
                       );
       
       // Include if it's explicitly digital OR if it's an image (likely display ad)
@@ -425,6 +440,14 @@ export async function generateScriptsForAsset(
     }
 
     // Check if this is a digital asset (image files for web/newsletter/streaming)
+    // Exclude print, radio, podcast assets based on specGroupId and file extension
+    const NON_DIGITAL_PREFIXES = ['print', 'radio', 'podcast'];
+    const specGroupId = (asset.associations?.specGroupId || asset.metadata?.specGroupId || '').toLowerCase();
+    if (NON_DIGITAL_PREFIXES.some(prefix => specGroupId.startsWith(prefix))) {
+      console.log(`[TrackingScripts] Asset specGroupId "${specGroupId}" is non-digital, skipping`);
+      return { success: true, scriptsGenerated: 0 };
+    }
+    
     const assetChannel = (
       asset.associations?.channel ||
       asset.specifications?.channel ||
@@ -434,9 +457,18 @@ export async function generateScriptsForAsset(
 
     const fileType = asset.fileType || asset.metadata?.fileType || '';
     const fileName = asset.originalFilename || asset.metadata?.originalFileName || '';
+    const fileNameLower = fileName.toLowerCase();
+    
+    // Exclude non-digital file types (InDesign, PDF, text scripts, audio, video)
+    const nonDigitalExtensions = ['.indd', '.pdf', '.txt', '.doc', '.docx', '.mp3', '.wav', '.mp4', '.mov'];
+    if (nonDigitalExtensions.some(ext => fileNameLower.endsWith(ext))) {
+      console.log(`[TrackingScripts] Asset "${fileName}" has non-digital file extension, skipping`);
+      return { success: true, scriptsGenerated: 0 };
+    }
+    
     const isImage = fileType.startsWith('image/') || 
                     ['jpg', 'jpeg', 'png', 'gif', 'webp'].some(ext => 
-                      fileName.toLowerCase().endsWith(`.${ext}`)
+                      fileNameLower.endsWith(`.${ext}`)
                     );
     
     const isDigitalChannel = DIGITAL_CHANNELS.some(dc => assetChannel.includes(dc));

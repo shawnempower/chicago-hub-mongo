@@ -163,6 +163,32 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
       ? `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() 
       : undefined;
 
+    // Soft-delete any existing assets for this spec group to prevent duplicates
+    // When a user re-uploads to the same spec group, the old asset should be replaced
+    if (specGroupId && campaignId) {
+      try {
+        const { getDatabase } = await import('../../src/integrations/mongodb/client');
+        const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+        const db = getDatabase();
+        
+        const deleteResult = await db.collection(COLLECTIONS.CREATIVE_ASSETS || 'creative_assets').updateMany(
+          {
+            'associations.campaignId': campaignId,
+            'associations.specGroupId': specGroupId,
+            deletedAt: { $exists: false }
+          },
+          { $set: { deletedAt: new Date(), deletedBy: userId } }
+        );
+        
+        if (deleteResult.modifiedCount > 0) {
+          console.log(`🗑️ Soft-deleted ${deleteResult.modifiedCount} existing asset(s) for spec group ${specGroupId} before re-upload`);
+        }
+      } catch (cleanupError) {
+        console.error('Error cleaning up existing assets:', cleanupError);
+        // Don't fail the upload if cleanup fails
+      }
+    }
+
     // Create asset record with specifications and detected specs
     const asset = await creativesService.create({
       metadata: {
@@ -640,8 +666,10 @@ router.put('/:id', async (req: any, res: Response) => {
     // Update asset
     const updatedAsset = await creativesService.update(id, updates);
 
-    // If click URL changed, also update all other assets in the same campaign that share the old click URL
-    // This handles the case where the same creative file is uploaded to multiple spec groups
+    // If click URL changed, update ALL other digital assets in the same campaign that
+    // don't already have the new URL. This is broader than just matching the old URL —
+    // it catches assets with any wrong URL (e.g., multiple different Dropbox links).
+    // Non-digital assets (print, radio, podcast) are excluded since they don't use click URLs.
     let siblingAssetsUpdated = 0;
     if (clickUrlChanged && updatedAsset?.associations?.campaignId) {
       try {
@@ -650,11 +678,15 @@ router.put('/:id', async (req: any, res: Response) => {
         const db = getDatabase();
         const campaignId = updatedAsset.associations.campaignId;
 
-        // Find all other assets in the same campaign with the same old click URL
+        // Non-digital spec group prefixes that should NOT be cascade-updated
+        const nonDigitalPrefixes = /^(print|radio|podcast)/i;
+
+        // Find all other digital assets in the campaign that don't have the new click URL
         const updateResult = await db.collection(COLLECTIONS.CREATIVE_ASSETS || 'creative_assets').updateMany(
           {
             'associations.campaignId': campaignId,
-            'digitalAdProperties.clickUrl': oldClickUrl,
+            'digitalAdProperties.clickUrl': { $nin: [newClickUrl, null] }, // has a URL, but not the correct one
+            'associations.specGroupId': { $not: nonDigitalPrefixes }, // exclude print/radio/podcast
             assetId: { $ne: updatedAsset.assetId }, // exclude the one we already updated
             deletedAt: { $exists: false }
           },
