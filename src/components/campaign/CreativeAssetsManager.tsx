@@ -1996,12 +1996,20 @@ export function CreativeAssetsManager({
         throw new Error('Failed to update click URL');
       }
 
-      // Update local state
+      const result = await response.json();
+      const siblingCount = result.siblingAssetsUpdated || 0;
+
+      // Update local state — update this asset AND any siblings with the same old URL
+      const oldUrl = clickUrlConfirmDialog?.oldUrl || '';
       const newAssetsMap = new Map(uploadedAssets);
-      newAssetsMap.set(specGroupId, {
-        ...asset,
-        clickUrl: newUrl,
-      });
+      for (const [sgId, existingAsset] of newAssetsMap) {
+        if (sgId === specGroupId || (existingAsset.clickUrl === oldUrl && oldUrl !== '(none)')) {
+          newAssetsMap.set(sgId, {
+            ...existingAsset,
+            clickUrl: newUrl,
+          });
+        }
+      }
       onAssetsChange(newAssetsMap);
 
       // Exit edit mode
@@ -2011,9 +2019,12 @@ export function CreativeAssetsManager({
         return next;
       });
 
+      const totalUpdated = 1 + siblingCount;
       toast({
         title: 'Click URL Updated',
-        description: 'The click-through URL has been updated and tracking scripts will be regenerated.',
+        description: totalUpdated > 1
+          ? `Updated click-through URL on ${totalUpdated} assets and regenerated tracking scripts.`
+          : 'The click-through URL has been updated and tracking scripts will be regenerated.',
       });
     } catch (error) {
       console.error('Error updating click URL:', error);
@@ -4336,7 +4347,8 @@ export function CreativeAssetsManager({
                   Changing the click-through URL will have the following effects:
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-sm">
-                  <li>All tracking scripts for this asset will be <strong>automatically regenerated</strong> with the new URL.</li>
+                  <li><strong>All assets</strong> in this campaign using the same click URL will be updated.</li>
+                  <li>All tracking scripts will be <strong>automatically regenerated</strong> with the new URL.</li>
                   <li>Publications with accepted orders will be <strong>notified</strong> of the change.</li>
                   <li>Any tracking tags already deployed to ad servers or email platforms will still use the <strong>old URL</strong> until the publication replaces them with the updated tags.</li>
                 </ul>

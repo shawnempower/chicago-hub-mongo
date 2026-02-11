@@ -640,6 +640,39 @@ router.put('/:id', async (req: any, res: Response) => {
     // Update asset
     const updatedAsset = await creativesService.update(id, updates);
 
+    // If click URL changed, also update all other assets in the same campaign that share the old click URL
+    // This handles the case where the same creative file is uploaded to multiple spec groups
+    let siblingAssetsUpdated = 0;
+    if (clickUrlChanged && updatedAsset?.associations?.campaignId) {
+      try {
+        const { getDatabase } = await import('../../src/integrations/mongodb/client');
+        const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+        const db = getDatabase();
+        const campaignId = updatedAsset.associations.campaignId;
+
+        // Find all other assets in the same campaign with the same old click URL
+        const updateResult = await db.collection(COLLECTIONS.CREATIVE_ASSETS || 'creative_assets').updateMany(
+          {
+            'associations.campaignId': campaignId,
+            'digitalAdProperties.clickUrl': oldClickUrl,
+            assetId: { $ne: updatedAsset.assetId }, // exclude the one we already updated
+            deletedAt: { $exists: false }
+          },
+          {
+            $set: { 'digitalAdProperties.clickUrl': newClickUrl }
+          }
+        );
+        siblingAssetsUpdated = updateResult.modifiedCount;
+        
+        if (siblingAssetsUpdated > 0) {
+          console.log(`🔄 Also updated click URL on ${siblingAssetsUpdated} other assets in campaign ${campaignId}`);
+        }
+      } catch (siblingError) {
+        console.error('Error updating sibling assets:', siblingError);
+        // Don't fail the request
+      }
+    }
+
     // If click URL changed, regenerate tracking scripts for all affected orders
     if (clickUrlChanged && updatedAsset?.associations?.campaignId) {
       try {
@@ -741,7 +774,12 @@ router.put('/:id', async (req: any, res: Response) => {
       // Don't fail the request if notifications fail
     }
 
-    res.json({ success: true, asset: updatedAsset });
+    res.json({ 
+      success: true, 
+      asset: updatedAsset,
+      clickUrlChanged,
+      siblingAssetsUpdated: siblingAssetsUpdated || 0
+    });
   } catch (error) {
     console.error('Error updating creative asset:', error);
     res.status(500).json({ error: 'Failed to update asset' });
