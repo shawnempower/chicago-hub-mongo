@@ -50,9 +50,52 @@ import {
   Send,
   UserPlus,
   X,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from 'lucide-react';
 
 type RoleFilter = 'all' | 'admin' | 'hub_user' | 'publication_user' | 'standard' | 'no_role';
+type SortField = 'name' | 'email' | 'role' | 'status' | 'created';
+type SortDirection = 'asc' | 'desc';
+
+/** Sortable column header helper */
+function SortableHeader({
+  label,
+  field,
+  currentField,
+  currentDirection,
+  onSort,
+  className,
+}: {
+  label: string;
+  field: SortField;
+  currentField: SortField;
+  currentDirection: SortDirection;
+  onSort: (field: SortField) => void;
+  className?: string;
+}) {
+  const isActive = currentField === field;
+  return (
+    <TableHead className={className}>
+      <button
+        onClick={(e) => { e.stopPropagation(); onSort(field); }}
+        className="flex items-center gap-1 hover:text-foreground transition-colors -ml-1 px-1 py-0.5 rounded"
+      >
+        {label}
+        {isActive ? (
+          currentDirection === 'asc' ? (
+            <ArrowUp className="h-3 w-3" />
+          ) : (
+            <ArrowDown className="h-3 w-3" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-40" />
+        )}
+      </button>
+    </TableHead>
+  );
+}
 
 // Inline user detail panel - loaded on demand
 function UserDetailPanel({ user }: { user: UserProfile }) {
@@ -584,6 +627,19 @@ export function UserManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
 
+  // Sorting
+  const [sortField, setSortField] = useState<SortField>('created');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -635,6 +691,51 @@ export function UserManagement() {
 
     return result;
   }, [users, searchQuery, roleFilter]);
+
+  // Sorted users
+  const sortedUsers = useMemo(() => {
+    const getRoleWeight = (u: UserProfile) => {
+      if (u.isAdmin) return 0;
+      if (u.role === 'hub_user') return 1;
+      if (u.role === 'publication_user') return 2;
+      return 3;
+    };
+
+    const sorted = [...filteredUsers].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'name': {
+          const nameA = `${a.firstName || ''} ${a.lastName || ''}`.trim().toLowerCase() || a.email?.toLowerCase() || '';
+          const nameB = `${b.firstName || ''} ${b.lastName || ''}`.trim().toLowerCase() || b.email?.toLowerCase() || '';
+          cmp = nameA.localeCompare(nameB);
+          break;
+        }
+        case 'email': {
+          cmp = (a.email || '').toLowerCase().localeCompare((b.email || '').toLowerCase());
+          break;
+        }
+        case 'role': {
+          cmp = getRoleWeight(a) - getRoleWeight(b);
+          break;
+        }
+        case 'status': {
+          const loginA = (a as any).lastLoginAt ? new Date((a as any).lastLoginAt).getTime() : 0;
+          const loginB = (b as any).lastLoginAt ? new Date((b as any).lastLoginAt).getTime() : 0;
+          cmp = loginA - loginB;
+          break;
+        }
+        case 'created': {
+          const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          cmp = createdA - createdB;
+          break;
+        }
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+
+    return sorted;
+  }, [filteredUsers, sortField, sortDirection]);
 
   // Stats
   const stats = useMemo(() => {
@@ -817,7 +918,7 @@ export function UserManagement() {
       {/* Results count */}
       {searchQuery || roleFilter !== 'all' ? (
         <div className="text-xs text-muted-foreground">
-          Showing {filteredUsers.length} of {users.length} users
+          Showing {sortedUsers.length} of {users.length} users
           {searchQuery && <> matching &ldquo;{searchQuery}&rdquo;</>}
         </div>
       ) : null}
@@ -828,17 +929,17 @@ export function UserManagement() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-8"></TableHead>
-              <TableHead>User</TableHead>
-              <TableHead className="hidden sm:table-cell">Email</TableHead>
-              <TableHead>Role</TableHead>
+              <SortableHeader label="User" field="name" currentField={sortField} currentDirection={sortDirection} onSort={handleSort} />
+              <SortableHeader label="Email" field="email" currentField={sortField} currentDirection={sortDirection} onSort={handleSort} className="hidden sm:table-cell" />
+              <SortableHeader label="Role" field="role" currentField={sortField} currentDirection={sortDirection} onSort={handleSort} />
               <TableHead className="hidden md:table-cell">Access</TableHead>
-              <TableHead className="hidden lg:table-cell">Status</TableHead>
-              <TableHead className="hidden xl:table-cell">Created</TableHead>
+              <SortableHeader label="Status" field="status" currentField={sortField} currentDirection={sortDirection} onSort={handleSort} className="hidden lg:table-cell" />
+              <SortableHeader label="Created" field="created" currentField={sortField} currentDirection={sortDirection} onSort={handleSort} className="hidden xl:table-cell" />
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.length === 0 ? (
+            {sortedUsers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   {searchQuery || roleFilter !== 'all'
@@ -847,7 +948,7 @@ export function UserManagement() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers.map(user => {
+              sortedUsers.map(user => {
                 const isExpanded = expandedUserId === user.userId;
                 const rowKey = user.userId || user._id?.toString();
                 return (
