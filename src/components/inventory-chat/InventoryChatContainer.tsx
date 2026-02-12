@@ -65,6 +65,26 @@ export const InventoryChatContainer: React.FC = () => {
     loadConversations();
   }, [selectedHubId]);
 
+  // Auto-create a new chat when loading finishes with no conversation selected
+  useEffect(() => {
+    if (isLoadingConversations || !selectedHubId || selectedConversationId) return;
+
+    const autoCreate = async () => {
+      setIsCreating(true);
+      try {
+        const newConversation = await createConversation(selectedHubId);
+        setConversations(prev => [newConversation, ...prev]);
+        setSelectedConversationId(newConversation.conversationId);
+      } catch (error) {
+        console.error('Error auto-creating chat:', error);
+      } finally {
+        setIsCreating(false);
+      }
+    };
+
+    autoCreate();
+  }, [isLoadingConversations, selectedHubId, selectedConversationId]);
+
   // Load generated files when conversation changes
   useEffect(() => {
     if (!selectedConversationId) {
@@ -222,7 +242,7 @@ export const InventoryChatContainer: React.FC = () => {
               )}
             >
               <span className="font-medium text-slate-700 max-w-[200px] truncate">
-                {selectedConversationId ? currentTitle : 'Select a chat'}
+                Chat History
               </span>
               <ChevronDown className={cn(
                 "h-4 w-4 text-slate-400 transition-transform",

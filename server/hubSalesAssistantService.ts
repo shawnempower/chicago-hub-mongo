@@ -564,7 +564,8 @@ export class HubSalesAssistantService {
     userId: string,
     userMessage: string,
     conversationHistory: ChatMessage[] = [],
-    attachments?: ConversationAttachment[]
+    attachments?: ConversationAttachment[],
+    onStatus?: (status: string) => void
   ): Promise<ChatResponse> {
     try {
       logger.info(`Processing message for conversation: ${conversationId}`);
@@ -661,6 +662,16 @@ export class HubSalesAssistantService {
       // Agentic loop - handle tool calls
       let iterations = 0;
       let response: Anthropic.Message;
+
+      // Friendly labels for tool status updates
+      const toolStatusLabels: Record<string, string> = {
+        'web_search': 'Searching the web',
+        'get_inventory': 'Analyzing inventory',
+        'update_context': 'Updating context',
+        'generate_file': 'Generating document',
+      };
+      
+      onStatus?.('Thinking...');
       
       while (iterations < MAX_TOOL_ITERATIONS) {
         iterations++;
@@ -691,6 +702,9 @@ export class HubSalesAssistantService {
         const toolResults: Anthropic.ToolResultBlockParam[] = [];
         
         for (const toolUse of toolUseBlocks) {
+          const label = toolStatusLabels[toolUse.name] || `Running ${toolUse.name}`;
+          onStatus?.(label);
+          
           const { result, file } = await executeTool(
             toolUse.name,
             toolUse.input,
@@ -719,8 +733,12 @@ export class HubSalesAssistantService {
           role: 'user',
           content: toolResults
         });
+
+        onStatus?.('Thinking...');
       }
       
+      onStatus?.('Composing response...');
+
       // Extract final text response
       const textBlocks = response!.content.filter(
         (block): block is Anthropic.TextBlock => block.type === 'text'

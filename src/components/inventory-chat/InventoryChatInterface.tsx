@@ -75,6 +75,7 @@ export const InventoryChatInterface: React.FC<InventoryChatInterfaceProps> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [statusText, setStatusText] = useState('Thinking...');
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [attachments, setAttachments] = useState<ConversationAttachment[]>([]);
   const [generatedFiles, setGeneratedFiles] = useState<GeneratedFile[]>([]);
@@ -272,9 +273,12 @@ export const InventoryChatInterface: React.FC<InventoryChatInterfaceProps> = ({
     
     setMessages(prev => [...prev, newUserMessage]);
     setIsLoading(true);
+    setStatusText('Thinking...');
 
     try {
-      const response = await sendMessage(conversationId, userMessage);
+      const response = await sendMessage(conversationId, userMessage, (status) => {
+        setStatusText(status);
+      });
       
       // Add assistant response
       const assistantMessage: Message = {
@@ -379,39 +383,10 @@ export const InventoryChatInterface: React.FC<InventoryChatInterfaceProps> = ({
             </div>
           </div>
           
-          {/* Title & Description */}
+          {/* Title */}
           <div className="space-y-3">
             <h3 className="text-2xl font-semibold text-slate-800">Hub Sales Assistant</h3>
-            <p className="text-slate-500 leading-relaxed max-w-md mx-auto">
-              Research brands, plan campaigns, and create proposals using your publication inventory. 
-              I can search the web, analyze your inventory, and generate downloadable documents.
-            </p>
           </div>
-          
-          {/* Example prompts */}
-          <div className="space-y-3">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Try asking</p>
-            <div className="flex flex-col items-center gap-2">
-              {[
-                { icon: '🔍', text: "Research Portillo's restaurant chain" },
-                { icon: '📊', text: "Plan a $50K campaign for 3 months" },
-                { icon: '📄', text: "Generate a proposal for this campaign" }
-              ].map((example, i) => (
-                <div 
-                  key={i} 
-                  className="flex items-center gap-3 text-sm px-4 py-3 rounded-xl bg-white hover:bg-slate-50 transition-colors border border-slate-200 shadow-sm cursor-default w-full max-w-sm"
-                >
-                  <span className="text-lg">{example.icon}</span>
-                  <span className="text-slate-600">"{example.text}"</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* Start prompt */}
-          <p className="text-xs text-slate-400">
-            Click "New Chat" to get started
-          </p>
         </div>
       </div>
     );
@@ -531,7 +506,7 @@ export const InventoryChatInterface: React.FC<InventoryChatInterfaceProps> = ({
                       <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                       <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
-                    <span className="text-sm text-slate-500 ml-1">Thinking...</span>
+                    <span className="text-sm text-slate-500 ml-1 transition-all duration-300">{statusText}</span>
                   </div>
                 </div>
               </div>

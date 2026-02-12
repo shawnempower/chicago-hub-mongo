@@ -141,12 +141,24 @@ export async function getConversation(conversationId: string): Promise<Conversat
 }
 
 /**
- * Send a message and get AI response
- * Uses a 90-second timeout since AI responses can take 10-30+ seconds
+ * Send a message and get AI response via SSE stream.
+ * The server sends heartbeats to keep the connection alive,
+ * status events for real-time progress updates, and a final data event with the response.
+ * Uses a 5-minute timeout that resets on every received event (heartbeat or status).
  */
-export async function sendMessage(conversationId: string, message: string): Promise<SendMessageResponse> {
+export async function sendMessage(
+  conversationId: string,
+  message: string,
+  onStatus?: (status: string) => void
+): Promise<SendMessageResponse> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout for AI responses
+  let timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min initial timeout
+
+  // Reset the timeout whenever we receive any data from the server
+  const resetTimeout = () => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => controller.abort(), 300000);
+  };
 
   try {
     const response = await authenticatedFetch(`${API_BASE_URL}/inventory-chat/conversations/${conversationId}/messages`, {
@@ -156,14 +168,71 @@ export async function sendMessage(conversationId: string, message: string): Prom
       signal: controller.signal,
     });
 
-    clearTimeout(timeoutId);
-
     if (!response.ok) {
+      clearTimeout(timeoutId);
       const error = await response.json().catch(() => ({ error: 'Failed to send message' }));
       throw new Error(error.error || 'Failed to send message');
     }
 
-    return response.json();
+    // Read SSE stream
+    const reader = response.body?.getReader();
+    if (!reader) {
+      clearTimeout(timeoutId);
+      throw new Error('Failed to read response stream');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let result: SendMessageResponse | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      resetTimeout();
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse SSE events from the buffer
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete last line in buffer
+
+      let eventType = '';
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          eventType = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          try {
+            const parsed = JSON.parse(data);
+            if (eventType === 'status') {
+              onStatus?.(parsed.status);
+            } else if (eventType === 'error') {
+              throw new Error(parsed.error || 'An error occurred');
+            } else {
+              // Default data event — this is the final response
+              result = parsed;
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              // Not valid JSON, ignore (could be partial)
+            } else {
+              throw e;
+            }
+          }
+          eventType = '';
+        } else if (line.startsWith(':')) {
+          // SSE comment (heartbeat), just reset timeout (already done above)
+        }
+      }
+    }
+
+    clearTimeout(timeoutId);
+
+    if (!result) {
+      throw new Error('No response received from server');
+    }
+
+    return result;
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {

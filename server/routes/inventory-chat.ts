@@ -132,19 +132,46 @@ router.delete('/conversations/:id', authenticateToken, async (req: any, res: Res
  * POST /api/inventory-chat/conversations/:id/messages
  */
 router.post('/conversations/:id/messages', authenticateToken, async (req: any, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { message } = req.body;
-    
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return res.status(400).json({ error: 'Message is required' });
-    }
+  const { id } = req.params;
+  const { message } = req.body;
 
+  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+
+  // Set up SSE headers so the connection stays alive during long AI processing
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering if present
+  res.flushHeaders();
+
+  // Send heartbeat every 10 seconds to keep the connection alive
+  const heartbeatInterval = setInterval(() => {
+    try {
+      res.write(': heartbeat\n\n');
+    } catch {
+      // Connection already closed
+      clearInterval(heartbeatInterval);
+    }
+  }, 10000);
+
+  // Track whether the client disconnected
+  let clientDisconnected = false;
+  req.on('close', () => {
+    clientDisconnected = true;
+    clearInterval(heartbeatInterval);
+  });
+
+  try {
     // Fetch conversation to verify ownership and get hubId
     const conversation = await ConversationService.getConversation(id, req.user.id);
     
     if (!conversation) {
-      return res.status(404).json({ error: 'Conversation not found' });
+      clearInterval(heartbeatInterval);
+      res.write(`event: error\ndata: ${JSON.stringify({ error: 'Conversation not found' })}\n\n`);
+      res.end();
+      return;
     }
 
     // Add user message to conversation
@@ -162,15 +189,26 @@ router.post('/conversations/:id/messages', authenticateToken, async (req: any, r
     // Get attachments for context
     const attachments = conversation.attachments || [];
     
-    // Call Hub Sales Assistant service
+    // Call Hub Sales Assistant service with status callback for real-time updates
     logger.info(`Processing message for conversation ${id}, hub ${conversation.hubId}`);
+    const onStatus = (status: string) => {
+      if (!clientDisconnected) {
+        try {
+          res.write(`event: status\ndata: ${JSON.stringify({ status })}\n\n`);
+        } catch {
+          // Connection already closed
+        }
+      }
+    };
+
     const response = await HubSalesAssistantService.chat(
       conversation.hubId,
       id,
       req.user.id,
       message.trim(),
       recentMessages.slice(0, -1), // Exclude the message we just added
-      attachments
+      attachments,
+      onStatus
     );
 
     // Add assistant response to conversation
@@ -188,24 +226,33 @@ router.post('/conversations/:id/messages', authenticateToken, async (req: any, r
 
     logger.info(`Generated response for conversation ${id} (${response.usage?.outputTokens} tokens)`);
 
-    res.json({
-      message: response.content,
-      generatedFiles: response.generatedFiles,
-      usage: response.usage,
-    });
+    clearInterval(heartbeatInterval);
+
+    if (!clientDisconnected) {
+      res.write(`data: ${JSON.stringify({
+        message: response.content,
+        generatedFiles: response.generatedFiles,
+        usage: response.usage,
+      })}\n\n`);
+      res.end();
+    }
   } catch (error: any) {
     logger.error('Error processing message:', error);
-    
-    // Handle specific error cases
+    clearInterval(heartbeatInterval);
+
+    if (clientDisconnected) return;
+
+    let errorPayload: { error: string };
     if (error.message.includes('Rate limit')) {
-      return res.status(429).json({ error: error.message });
-    }
-    
-    if (error.message.includes('API key')) {
-      return res.status(500).json({ error: 'AI service configuration error' });
+      errorPayload = { error: error.message };
+    } else if (error.message.includes('API key')) {
+      errorPayload = { error: 'AI service configuration error' };
+    } else {
+      errorPayload = { error: error.message || 'Failed to process message' };
     }
 
-    res.status(500).json({ error: error.message || 'Failed to process message' });
+    res.write(`event: error\ndata: ${JSON.stringify(errorPayload)}\n\n`);
+    res.end();
   }
 });
 
