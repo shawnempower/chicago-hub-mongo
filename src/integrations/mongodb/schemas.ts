@@ -46,6 +46,7 @@ export type PublicationESP =
   | 'mailer_lite'
   | 'drip'
   | 'aweber'
+  | 'salesforce'
   | 'other';
 
 export interface UserSession {

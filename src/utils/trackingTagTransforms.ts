@@ -252,6 +252,12 @@ export const ESP_MERGE_TAGS: Record<PublicationESP, {
     cacheBuster: '{!date_sent}',
     instructions: 'Paste into your AWeber message using the HTML editor.'
   },
+  salesforce: {
+    name: 'Salesforce Marketing Cloud',
+    emailId: '%%SubscriberKey%%',
+    cacheBuster: '%%=Format(Now(), "yyyyMMddHHmmss")=%%',
+    instructions: 'Paste into an HTML content block in Salesforce Marketing Cloud (Content Builder). AMPscript merge tags will be processed at send time.'
+  },
   other: {
     name: 'Other / Unknown',
     emailId: 'EMAIL_ID',

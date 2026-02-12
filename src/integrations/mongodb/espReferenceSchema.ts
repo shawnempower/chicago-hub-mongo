@@ -68,6 +68,7 @@ export const ESP_SEED_DATA: ESPReferenceInsert[] = [
   { name: 'Emma', slug: 'emma', htmlSupport: 'full', isActive: true },
   { name: 'Sailthru', slug: 'sailthru', htmlSupport: 'full', isActive: true },
   { name: 'Pardot', slug: 'pardot', htmlSupport: 'full', isActive: true },
+  { name: 'Salesforce Marketing Cloud', slug: 'salesforce', htmlSupport: 'full', isActive: true },
   { name: 'Second Street', slug: 'second-street', htmlSupport: 'full', isActive: true },
   
   // Full HTML Support - Additional Platforms
