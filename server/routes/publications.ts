@@ -6,6 +6,7 @@ import { permissionsService } from '../../src/integrations/mongodb/permissionsSe
 import { s3Service } from '../s3Service';
 import multer from 'multer';
 import { ObjectId } from 'mongodb';
+import { getDatabase } from '../../src/integrations/mongodb/client';
 
 const router = Router();
 
@@ -280,6 +281,193 @@ router.put('/:id', authenticateToken, requirePublicationAccess('id'), async (req
   } catch (error) {
     console.error('Error updating publication:', error);
     res.status(500).json({ error: 'Failed to update publication' });
+  }
+});
+
+// Generate or refresh AI profile for a publication using Perplexity
+router.post('/:id/generate-ai-profile', authenticateToken, async (req: any, res: Response) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    
+    // Import WebSearchService dynamically to avoid circular deps
+    const { WebSearchService } = await import('../services/webSearchService');
+    
+    if (!WebSearchService.isConfigured()) {
+      return res.status(503).json({ error: 'Perplexity API is not configured. Set PERPLEXITY_API_KEY environment variable.' });
+    }
+
+    // Get the publication to extract context for the search
+    const publication = await publicationsService.getById(id);
+    if (!publication) {
+      return res.status(404).json({ error: 'Publication not found' });
+    }
+
+    const pubName = publication.basicInfo?.publicationName || `Publication ${id}`;
+    const currentVersion = publication.aiProfile?.version || 0;
+
+    // Research the publication via Perplexity
+    const searchResponse = await WebSearchService.researchPublication(pubName, {
+      websiteUrl: publication.basicInfo?.websiteUrl,
+      publicationType: publication.basicInfo?.publicationType,
+      serviceArea: publication.basicInfo?.primaryServiceArea,
+      contentType: publication.basicInfo?.contentType,
+    });
+
+    if (!searchResponse.answer) {
+      return res.status(502).json({ error: 'No response from Perplexity API' });
+    }
+
+    // Parse the structured response into profile sections
+    const profileSections = WebSearchService.parsePublicationProfile(searchResponse.answer);
+
+    const aiProfile = {
+      summary: profileSections.summary,
+      fullProfile: profileSections.fullProfile,
+      audienceInsight: profileSections.audienceInsight,
+      communityRole: profileSections.communityRole,
+      citations: searchResponse.results.map(r => r.url).filter(Boolean),
+      generatedAt: new Date(),
+      generatedBy: 'perplexity-sonar-pro' as const,
+      version: currentVersion + 1,
+    };
+
+    // Update the publication document with the new profile
+    const updated = await publicationsService.update(id, {
+      aiProfile,
+      'metadata.lastUpdated': new Date(),
+    });
+
+    if (!updated) {
+      return res.status(500).json({ error: 'Failed to update publication with AI profile' });
+    }
+
+    res.json({
+      success: true,
+      publicationId: publication.publicationId,
+      publicationName: pubName,
+      aiProfile,
+    });
+  } catch (error: any) {
+    console.error('Error generating AI profile:', error);
+    res.status(500).json({ error: `Failed to generate AI profile: ${error.message}` });
+  }
+});
+
+// Bulk generate AI profiles for publications that don't have one (admin only)
+router.post('/bulk-generate-ai-profiles', authenticateToken, async (req: any, res: Response) => {
+  try {
+    // Check if user is admin
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { WebSearchService } = await import('../services/webSearchService');
+    
+    if (!WebSearchService.isConfigured()) {
+      return res.status(503).json({ error: 'Perplexity API is not configured. Set PERPLEXITY_API_KEY environment variable.' });
+    }
+
+    const { limit = 10 } = req.body;
+    const maxLimit = Math.min(Number(limit) || 10, 50);
+
+    // Query only publications that lack AI profiles, with minimal projection
+    const db = getDatabase();
+    const pubsWithoutProfile = await db.collection('publications')
+      .find({ 
+        $or: [
+          { 'aiProfile.summary': { $exists: false } },
+          { 'aiProfile.summary': null },
+          { 'aiProfile.summary': '' },
+        ]
+      })
+      .project({
+        _id: 1,
+        publicationId: 1,
+        'basicInfo.publicationName': 1,
+        'basicInfo.websiteUrl': 1,
+        'basicInfo.publicationType': 1,
+        'basicInfo.primaryServiceArea': 1,
+        'basicInfo.contentType': 1,
+      })
+      .limit(maxLimit)
+      .sort({ 'basicInfo.publicationName': 1 })
+      .toArray();
+
+    if (pubsWithoutProfile.length === 0) {
+      return res.json({ success: true, message: 'All publications already have AI profiles', generated: 0 });
+    }
+
+    const results: Array<{ publicationId: number; publicationName: string; success: boolean; error?: string }> = [];
+
+    for (const pub of pubsWithoutProfile) {
+      try {
+        const pubName = pub.basicInfo?.publicationName || `Publication ${pub.publicationId}`;
+
+        // Rate limit: wait 1 second between requests to avoid API throttling
+        if (results.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        const searchResponse = await WebSearchService.researchPublication(pubName, {
+          websiteUrl: pub.basicInfo?.websiteUrl,
+          publicationType: pub.basicInfo?.publicationType,
+          serviceArea: pub.basicInfo?.primaryServiceArea,
+          contentType: pub.basicInfo?.contentType,
+        });
+
+        if (!searchResponse.answer) {
+          results.push({ publicationId: pub.publicationId, publicationName: pubName, success: false, error: 'No response from Perplexity' });
+          continue;
+        }
+
+        const profileSections = WebSearchService.parsePublicationProfile(searchResponse.answer);
+
+        const aiProfile = {
+          summary: profileSections.summary,
+          fullProfile: profileSections.fullProfile,
+          audienceInsight: profileSections.audienceInsight,
+          communityRole: profileSections.communityRole,
+          citations: searchResponse.results.map(r => r.url).filter(Boolean),
+          generatedAt: new Date(),
+          generatedBy: 'perplexity-sonar-pro' as const,
+          version: 1,
+        };
+
+        const pubId = pub._id?.toString() || pub.publicationId?.toString();
+        await publicationsService.update(pubId, {
+          aiProfile,
+          'metadata.lastUpdated': new Date(),
+        });
+
+        results.push({ publicationId: pub.publicationId, publicationName: pubName, success: true });
+      } catch (err: any) {
+        results.push({ 
+          publicationId: pub.publicationId, 
+          publicationName: pub.basicInfo?.publicationName || 'Unknown',
+          success: false, 
+          error: err.message 
+        });
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    res.json({
+      success: true,
+      generated: successCount,
+      failed: results.length - successCount,
+      total: pubsWithoutProfile.length,
+      results,
+    });
+  } catch (error: any) {
+    console.error('Error bulk generating AI profiles:', error);
+    res.status(500).json({ error: `Failed to bulk generate AI profiles: ${error.message}` });
   }
 });
 

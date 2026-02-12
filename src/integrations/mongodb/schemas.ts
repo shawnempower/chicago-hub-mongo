@@ -927,6 +927,18 @@ export interface Publication {
     /** Days before campaign start that cancellation is allowed (default 14 = two weeks) */
     cancellationDeadlineDays?: number;
   };
+
+  /** AI-generated publication profile from Perplexity web search */
+  aiProfile?: {
+    summary: string;
+    fullProfile: string;
+    audienceInsight: string;
+    communityRole: string;
+    citations: string[];
+    generatedAt: Date;
+    generatedBy: 'perplexity-sonar-pro';
+    version: number;
+  };
 }
 
 export interface PublicationInsert extends Omit<Publication, '_id'> {}

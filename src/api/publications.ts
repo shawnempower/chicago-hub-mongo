@@ -404,6 +404,67 @@ export const previewPublicationsImport = async (publications: PublicationInsertF
   }
 };
 
+// Generate AI profile for a single publication using Perplexity
+export const generateAiProfile = async (id: string): Promise<{
+  success: boolean;
+  publicationId: number;
+  publicationName: string;
+  aiProfile: {
+    summary: string;
+    fullProfile: string;
+    audienceInsight: string;
+    communityRole: string;
+    citations: string[];
+    generatedAt: string;
+    generatedBy: string;
+    version: number;
+  };
+}> => {
+  try {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/${id}/generate-ai-profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to generate AI profile: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error generating AI profile:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to generate AI profile');
+  }
+};
+
+// Bulk generate AI profiles for publications that don't have one
+export const bulkGenerateAiProfiles = async (limit = 10): Promise<{
+  success: boolean;
+  generated: number;
+  failed: number;
+  total: number;
+  results: Array<{ publicationId: number; publicationName: string; success: boolean; error?: string }>;
+}> => {
+  try {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/bulk-generate-ai-profiles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ limit }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to bulk generate AI profiles: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error bulk generating AI profiles:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to bulk generate AI profiles');
+  }
+};
+
 // Get publication categories for filtering
 export const getPublicationCategories = async (): Promise<Array<{ id: string; name: string; count: number }>> => {
   try {

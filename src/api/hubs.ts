@@ -234,6 +234,39 @@ class HubsAPI {
     const data = await response.json();
     return data.publications;
   }
+  /**
+   * Generate AI network summary for a hub
+   * Calls Perplexity to synthesize a value proposition from all publication profiles
+   */
+  async generateNetworkSummary(hubId: string): Promise<{
+    success: boolean;
+    hubId: string;
+    hubName: string;
+    networkSummary: {
+      valueProposition: string;
+      audienceHighlights: string;
+      marketCoverage: string;
+      channelStrengths: string;
+      citations: string[];
+      generatedAt: string;
+      generatedBy: string;
+      publicationCount: number;
+      version: number;
+    };
+  }> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/hubs/${hubId}/generate-network-summary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Failed to generate network summary: ${response.status}`);
+    }
+
+    return await response.json();
+  }
 }
 
 export const hubsApi = new HubsAPI();

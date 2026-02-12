@@ -311,6 +311,11 @@ router.put('/:id', async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Performance entry not found' });
     }
     
+    // Prevent editing of automated (digital tracking) entries
+    if (existing.source === 'automated') {
+      return res.status(403).json({ error: 'Automated performance entries cannot be edited' });
+    }
+    
     // Build update
     const updateData: any = {
       ...req.body,
@@ -395,6 +400,11 @@ router.delete('/:id', async (req: any, res: Response) => {
     
     if (!existing) {
       return res.status(404).json({ error: 'Performance entry not found' });
+    }
+    
+    // Prevent deletion of automated (digital tracking) entries
+    if (existing.source === 'automated') {
+      return res.status(403).json({ error: 'Automated performance entries cannot be deleted' });
     }
     
     // Soft delete

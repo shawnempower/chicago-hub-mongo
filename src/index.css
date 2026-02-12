@@ -192,3 +192,50 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print styles for campaign performance reports */
+@media print {
+  /* Hide non-essential UI elements */
+  nav, aside, header,
+  .print\\:hidden,
+  [data-radix-popper-content-wrapper],
+  button:not(.print-visible) {
+    display: none !important;
+  }
+
+  /* Reset page background and use full width */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11px !important;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  .card, [class*="Card"] {
+    box-shadow: none !important;
+    border: 1px solid #e5e5e5 !important;
+    break-inside: avoid;
+  }
+
+  /* Ensure charts and progress bars are visible */
+  .recharts-wrapper {
+    break-inside: avoid;
+  }
+
+  /* Expand all publication cards for print */
+  [data-expanded="false"] {
+    display: block !important;
+  }
+
+  /* Page margins */
+  @page {
+    margin: 0.75in;
+    size: letter;
+  }
+
+  /* Ensure colors print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

@@ -1,113 +1,34 @@
 /**
- * Seed Performance Data Script
+ * Seed Performance Data
  * 
- * Creates sample performance entries, proofs, and tracking scripts
- * using existing campaigns and insertion orders from the database.
+ * Inserts realistic performance entries into the staging database
+ * for testing the campaign performance dashboard improvements.
  * 
- * Run with: npx tsx scripts/seedPerformanceData.ts
+ * Usage: npx tsx scripts/seedPerformanceData.ts
  */
 
 import { MongoClient, ObjectId } from 'mongodb';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const DATABASE_NAME = 'staging-chicago-hub';
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-// Sample performance data generators
-function randomBetween(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+const MONGODB_URI = process.env.MONGODB_URI!;
+const DB_NAME = process.env.MONGODB_DB_NAME || 'staging-chicago-hub';
 
-function randomFloat(min: number, max: number, decimals: number = 2): number {
-  return parseFloat((Math.random() * (max - min) + min).toFixed(decimals));
-}
-
-function getRandomDate(start: Date, end: Date): Date {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-}
-
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-// Channel-specific metric generators
-function generateDigitalMetrics(channel: string) {
-  const impressions = randomBetween(5000, 50000);
-  const clicks = randomBetween(Math.floor(impressions * 0.005), Math.floor(impressions * 0.03));
-  return {
-    impressions,
-    clicks,
-    ctr: parseFloat(((clicks / impressions) * 100).toFixed(2)),
-    viewability: randomFloat(60, 95)
-  };
-}
-
-function generatePrintMetrics() {
-  const circulation = randomBetween(10000, 100000);
-  return {
-    insertions: randomBetween(1, 4),
-    circulation,
-    reach: Math.floor(circulation * randomFloat(0.4, 0.7))
-  };
-}
-
-function generateRadioMetrics() {
-  return {
-    spotsAired: randomBetween(10, 50),
-    reach: randomBetween(5000, 50000),
-    frequency: randomFloat(2, 5, 1)
-  };
-}
-
-function generatePodcastMetrics() {
-  const downloads = randomBetween(1000, 20000);
-  return {
-    downloads,
-    listens: Math.floor(downloads * randomFloat(0.6, 0.9)),
-    completionRate: randomFloat(40, 80)
-  };
-}
-
-function generateSocialMetrics() {
-  const posts = randomBetween(2, 10);
-  return {
-    posts,
-    engagements: randomBetween(100, 5000),
-    shares: randomBetween(10, 500),
-    reach: randomBetween(2000, 30000),
-    videoViews: randomBetween(500, 10000)
-  };
-}
-
-function generateEventsMetrics() {
-  return {
-    attendance: randomBetween(50, 500)
-  };
-}
-
-function getMetricsForChannel(channel: string) {
-  switch (channel) {
-    case 'website':
-    case 'newsletter':
-    case 'streaming':
-      return generateDigitalMetrics(channel);
-    case 'print':
-      return generatePrintMetrics();
-    case 'radio':
-      return generateRadioMetrics();
-    case 'podcast':
-      return generatePodcastMetrics();
-    case 'social':
-      return generateSocialMetrics();
-    case 'events':
-      return generateEventsMetrics();
-    default:
-      return generateDigitalMetrics(channel);
-  }
+interface SeedPublication {
+  publicationId: number;
+  publicationName: string;
+  channels: Array<{
+    channel: string;
+    itemPath: string;
+    itemName: string;
+    dimensions?: string;
+  }>;
 }
 
 async function seedPerformanceData() {
@@ -115,288 +36,282 @@ async function seedPerformanceData() {
   
   try {
     await client.connect();
-    console.log('Connected to MongoDB');
+    console.log('Connected to MongoDB:', DB_NAME);
     
-    const db = client.db(DATABASE_NAME);
-    console.log(`Using database: ${DATABASE_NAME}`);
+    const db = client.db(DB_NAME);
+    const campaignsCol = db.collection('campaigns');
+    const publicationsCol = db.collection('publications');
+    const ordersCol = db.collection('publication_insertion_orders');
+    const perfCol = db.collection('performance_entries');
     
-    // Find existing campaigns
-    const campaigns = await db.collection('campaigns').find({
-      deletedAt: { $exists: false }
-    }).sort({ createdAt: -1 }).limit(5).toArray();
+    // 1. Find ALL campaigns to seed data for
+    const campaigns = await campaignsCol.find({}).sort({ createdAt: -1 }).toArray();
     
     if (campaigns.length === 0) {
-      console.log('No campaigns found. Please create a campaign first.');
+      console.log('No campaigns found in database. Cannot seed performance data.');
       return;
     }
     
-    console.log(`Found ${campaigns.length} campaign(s)`);
-    campaigns.forEach(c => {
-      console.log(`  - ${c.basicInfo?.name || c.campaignId} (${c.campaignId})`);
-    });
+    console.log(`Found ${campaigns.length} campaigns to seed data for`);
     
-    // Find existing insertion orders
-    const orders = await db.collection('publication_insertion_orders').find({
-      deletedAt: { $exists: false }
-    }).sort({ generatedAt: -1 }).toArray();
+    // 2. Get publications
+    const publications = await publicationsCol.find({}).project({
+      publicationId: 1,
+      'basicInfo.publicationName': 1,
+    }).limit(20).toArray();
     
-    if (orders.length === 0) {
-      console.log('No insertion orders found. Please generate orders first.');
+    if (publications.length === 0) {
+      console.log('No publications found. Cannot seed performance data.');
       return;
     }
     
-    console.log(`\nFound ${orders.length} insertion order(s)`);
+    console.log(`Found ${publications.length} publications`);
     
-    // Collections
-    const perfEntries = db.collection('performance_entries');
-    const proofs = db.collection('proof_of_performance');
-    const trackingScripts = db.collection('tracking_scripts');
+    // 3. For each campaign, create performance entries across multiple publications
+    let totalInserted = 0;
     
-    // Clear existing sample data (optional - comment out to append)
-    console.log('\nClearing existing performance data...');
-    await perfEntries.deleteMany({});
-    await proofs.deleteMany({});
-    await trackingScripts.deleteMany({});
-    
-    let entriesCreated = 0;
-    let proofsCreated = 0;
-    let scriptsCreated = 0;
-    
-    for (const order of orders) {
-      const campaign = campaigns.find(c => c.campaignId === order.campaignId);
-      if (!campaign) {
-        console.log(`  Skipping order for unknown campaign: ${order.campaignId}`);
-        continue;
-      }
+    for (const campaign of campaigns) {
+      const campaignId = campaign.campaignId || campaign._id.toString();
+      const campaignName = campaign.basicInfo?.name || 'Unknown Campaign';
       
-      console.log(`\nProcessing order for: ${order.publicationName} (Campaign: ${campaign.basicInfo?.name || order.campaignId})`);
+      console.log(`\nSeeding data for campaign: ${campaignName} (${campaignId})`);
       
-      // Get placements from the order or campaign
-      const publication = campaign.selectedInventory?.publications?.find(
-        (p: any) => p.publicationId === order.publicationId
-      );
-      const placements = publication?.inventoryItems || [];
+      // Check for existing insertion orders
+      const existingOrders = await ordersCol.find({ campaignId }).toArray();
       
-      if (placements.length === 0) {
-        console.log(`  No placements found for this order`);
-        continue;
-      }
+      // Pick 4-8 publications for this campaign
+      const numPubs = Math.min(4 + Math.floor(Math.random() * 5), publications.length);
+      const shuffled = [...publications].sort(() => Math.random() - 0.5);
+      const selectedPubs = shuffled.slice(0, numPubs);
       
-      console.log(`  Found ${placements.length} placement(s)`);
+      // ~30 day campaigns: 25-35 days of data
+      const now = new Date();
+      const daysOfData = 25 + Math.floor(Math.random() * 11);
+      const startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - daysOfData);
       
-      // Determine date range for performance data
-      const startDate = campaign.timeline?.startDate 
-        ? new Date(campaign.timeline.startDate) 
-        : addDays(new Date(), -30);
-      const endDate = campaign.timeline?.endDate 
-        ? new Date(campaign.timeline.endDate) 
-        : new Date();
+      const entries: any[] = [];
       
-      // Generate performance entries for each placement
-      for (const placement of placements) {
-        const channel = placement.channel || 'website';
-        const itemPath = placement.itemPath || placement.sourcePath || `placement-${placements.indexOf(placement)}`;
-        const itemName = placement.itemName || 'Unknown Placement';
-        const dimensions = placement.format?.dimensions || '';
+      for (const pub of selectedPubs) {
+        const pubId = pub.publicationId;
+        const pubName = pub.basicInfo?.publicationName || `Publication ${pubId}`;
         
-        console.log(`    - ${itemName} (${channel})`);
+        // Find or use a placeholder orderId
+        const matchingOrder = existingOrders.find((o: any) => o.publicationId === pubId);
+        const orderId = matchingOrder?._id?.toString() || new ObjectId().toString();
         
-        // Generate 3-10 performance entries over the campaign period
-        const numEntries = randomBetween(3, 10);
-        const daysBetween = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * numEntries)));
+        // Decide which channels this publication contributes
+        const channelOptions = [
+          {
+            channel: 'website',
+            placements: [
+              { itemPath: 'distributionChannels.website[0].advertisingOpportunities[0]', itemName: 'Leaderboard Banner', dimensions: '728x90' },
+              { itemPath: 'distributionChannels.website[0].advertisingOpportunities[1]', itemName: 'Medium Rectangle', dimensions: '300x250' },
+            ]
+          },
+          {
+            channel: 'newsletter',
+            placements: [
+              { itemPath: 'distributionChannels.newsletter[0].advertisingOpportunities[0]', itemName: 'Newsletter Sponsor Banner', dimensions: '600x200' },
+            ]
+          },
+          {
+            channel: 'print',
+            placements: [
+              { itemPath: 'distributionChannels.print[0].advertisingOpportunities[0]', itemName: 'Half Page Ad', dimensions: 'Half Page' },
+            ]
+          },
+          {
+            channel: 'social',
+            placements: [
+              { itemPath: 'distributionChannels.social[0].advertisingOpportunities[0]', itemName: 'Sponsored Social Post' },
+            ]
+          },
+          {
+            channel: 'radio',
+            placements: [
+              { itemPath: 'distributionChannels.radio[0].advertisingOpportunities[0]', itemName: '30-Second Spot', dimensions: '30 seconds' },
+            ]
+          },
+        ];
         
-        for (let i = 0; i < numEntries; i++) {
-          const entryDate = addDays(startDate, i * daysBetween + randomBetween(0, 2));
-          if (entryDate > new Date()) break; // Don't create future entries
-          
-          const metrics = getMetricsForChannel(channel);
-          
-          const entry = {
-            orderId: order._id.toString(),
-            campaignId: order.campaignId,
-            publicationId: order.publicationId,
-            publicationName: order.publicationName,
-            itemPath,
-            itemName,
-            channel,
-            dimensions,
-            dateStart: entryDate,
-            dateEnd: channel === 'print' || channel === 'radio' ? addDays(entryDate, randomBetween(1, 7)) : undefined,
-            metrics,
-            source: Math.random() > 0.7 ? 'import' : 'manual',
-            enteredBy: 'seed-script',
-            enteredAt: new Date(),
-            notes: i === 0 ? `Initial ${channel} performance data` : undefined
-          };
-          
-          await perfEntries.insertOne(entry);
-          entriesCreated++;
-        }
+        // Pick 2-4 channels per publication for a richer mix
+        const numChannels = 2 + Math.floor(Math.random() * 3);
+        const selectedChannels = channelOptions.sort(() => Math.random() - 0.5).slice(0, numChannels);
         
-        // Create proof of performance for some placements
-        if (Math.random() > 0.3) {
-          const proofTypes = {
-            print: ['tearsheet', 'invoice'],
-            radio: ['affidavit', 'audio_log'],
-            podcast: ['report', 'screenshot'],
-            social: ['screenshot', 'report'],
-            events: ['screenshot', 'report'],
-            website: ['screenshot', 'report'],
-            newsletter: ['screenshot', 'report'],
-            streaming: ['report', 'video_clip']
-          };
-          
-          const fileType = (proofTypes[channel as keyof typeof proofTypes] || ['other'])[
-            randomBetween(0, (proofTypes[channel as keyof typeof proofTypes] || ['other']).length - 1)
-          ];
-          
-          const proof = {
-            orderId: order._id.toString(),
-            campaignId: order.campaignId,
-            publicationId: order.publicationId,
-            publicationName: order.publicationName,
-            itemPath,
-            itemName,
-            channel,
-            dimensions,
-            fileType,
-            fileName: `${channel}_proof_${order.publicationId}_${Date.now()}.${fileType === 'audio_log' ? 'mp3' : fileType === 'video_clip' ? 'mp4' : 'pdf'}`,
-            fileUrl: `https://example-bucket.s3.amazonaws.com/proofs/${order.campaignId}/${fileType}_sample.pdf`,
-            s3Key: `proofs/${order.campaignId}/${fileType}_sample.pdf`,
-            fileSize: randomBetween(100000, 5000000),
-            mimeType: fileType === 'audio_log' ? 'audio/mpeg' : fileType === 'video_clip' ? 'video/mp4' : 'application/pdf',
-            description: `${channel.charAt(0).toUpperCase() + channel.slice(1)} proof of performance for ${itemName}`,
-            runDate: getRandomDate(startDate, endDate),
-            uploadedBy: 'seed-script',
-            uploadedAt: new Date(),
-            verificationStatus: Math.random() > 0.5 ? 'verified' : Math.random() > 0.5 ? 'pending' : 'rejected',
-            verifiedBy: Math.random() > 0.5 ? 'seed-script-admin' : undefined,
-            verifiedAt: Math.random() > 0.5 ? new Date() : undefined,
-            verificationNotes: Math.random() > 0.7 ? 'Verified - looks good!' : undefined
-          };
-          
-          await proofs.insertOne(proof);
-          proofsCreated++;
-        }
-        
-        // Create tracking script for digital placements
-        if (['website', 'newsletter', 'streaming'].includes(channel)) {
-          const trackingChannel = channel === 'newsletter' ? 'newsletter_image' : channel;
-          const channelCode = channel === 'website' ? 'display' : channel === 'newsletter' ? 'nli' : 'stream';
-          const pubCode = order.publicationName?.toLowerCase().replace(/[^a-z]/g, '').slice(0, 4) || 'pub1';
-          
-          const creativeId = `creative_${order.campaignId}_${randomBetween(1, 5)}`;
-          const sizeStr = (dimensions && typeof dimensions === 'string') ? dimensions : '300x250';
-          const sizeParts = sizeStr.includes('x') ? sizeStr.split('x') : ['300', '250'];
-          const adWidth = parseInt(sizeParts[0]) || 300;
-          const adHeight = parseInt(sizeParts[1]) || 250;
-          
-          const script = {
-            campaignId: order.campaignId,
-            creativeId,
-            publicationId: order.publicationId,
-            publicationCode: pubCode,
-            publicationName: order.publicationName,
-            channel: trackingChannel,
-            creative: {
-              name: `${campaign.basicInfo?.advertiserName || 'Advertiser'} - ${sizeStr}`,
-              clickUrl: `https://advertiser.example.com/landing?utm_source=${pubCode}&utm_campaign=${order.campaignId}`,
-              imageUrl: `https://cdn.example.com/creatives/${creativeId}.jpg`,
-              width: adWidth,
-              height: adHeight,
-              altText: `${campaign.basicInfo?.advertiserName || 'Advertiser'} Ad`
-            },
-            urls: {
-              impressionPixel: `https://track.yournetwork.com/i.gif?cr=${creativeId}&p=${pubCode}&t=${channelCode}&s=${sizeStr}`,
-              clickTracker: `https://track.yournetwork.com/c?cr=${creativeId}&p=${pubCode}&t=${channelCode}`,
-              creativeUrl: `https://cdn.yournetwork.com/a/${creativeId}.jpg`
-            },
-            tags: {
-              fullTag: `<!-- ${campaign.basicInfo?.advertiserName || 'Advertiser'} | ${campaign.basicInfo?.name || 'Campaign'} | ${sizeStr} -->
-<a href="https://track.yournetwork.com/c?cr=${creativeId}&p=${pubCode}&t=${channelCode}">
-  <img src="https://cdn.yournetwork.com/a/${creativeId}.jpg" 
-       width="${adWidth}" height="${adHeight}" border="0" alt="${campaign.basicInfo?.advertiserName || 'Advertiser'} Ad" />
-</a>
-<img src="https://track.yournetwork.com/i.gif?cr=${creativeId}&p=${pubCode}&t=${channelCode}&s=${sizeStr}" 
-     width="1" height="1" style="display:none;" />`,
-              simplifiedTag: channel === 'newsletter' ? `<!-- Simplified for limited HTML -->
-<!-- Image URL: https://track.yournetwork.com/c?cr=${creativeId}&p=${pubCode}&t=${channelCode} -->
-<!-- Image source: https://cdn.yournetwork.com/a/${creativeId}.jpg -->` : undefined,
-              comments: `<!-- ${campaign.basicInfo?.advertiserName || 'Advertiser'} | ${campaign.basicInfo?.name || 'Campaign'} | ${trackingChannel} | ${order.publicationName} -->`
-            },
-            espCompatibility: 'full',
-            generatedAt: new Date(),
-            generatedBy: 'seed-script',
-            version: 1
-          };
-          
-          await trackingScripts.insertOne(script);
-          scriptsCreated++;
-        }
-      }
-      
-      // Update order with delivery summary
-      const orderEntries = await perfEntries.find({ orderId: order._id.toString() }).toArray();
-      const totalDelivered = orderEntries.reduce((sum, e) => {
-        return sum + (e.metrics?.impressions || 0) + (e.metrics?.insertions || 0) * 10000 + (e.metrics?.spotsAired || 0) * 1000;
-      }, 0);
-      
-      const totalGoal = randomBetween(100000, 500000);
-      
-      await db.collection('publication_insertion_orders').updateOne(
-        { _id: order._id },
-        {
-          $set: {
-            deliveryGoals: placements.reduce((acc: any, p: any, idx: number) => {
-              const path = p.itemPath || p.sourcePath || `placement-${idx}`;
-              acc[path] = {
-                goalType: ['website', 'newsletter', 'streaming'].includes(p.channel) ? 'impressions' : 'units',
-                goalValue: randomBetween(10000, 100000),
-                description: `Target for ${p.itemName}`
+        for (const channelConfig of selectedChannels) {
+          for (const placement of channelConfig.placements) {
+            // Generate daily entries
+            for (let d = 0; d < daysOfData; d++) {
+              const entryDate = new Date(startDate);
+              entryDate.setDate(entryDate.getDate() + d);
+              
+              // Skip weekends for some channels with ~50% probability
+              const dayOfWeek = entryDate.getDay();
+              if ((dayOfWeek === 0 || dayOfWeek === 6) && Math.random() > 0.4) continue;
+              
+              // Generate realistic metrics based on channel
+              const metrics = generateMetrics(channelConfig.channel, d, daysOfData);
+              
+              // Skip days with no meaningful data
+              if (!metrics) continue;
+              
+              const entry = {
+                orderId,
+                campaignId,
+                publicationId: pubId,
+                publicationName: pubName,
+                itemPath: placement.itemPath,
+                itemName: placement.itemName,
+                channel: channelConfig.channel,
+                dimensions: placement.dimensions,
+                dateStart: entryDate,
+                dateEnd: entryDate,
+                metrics,
+                source: 'manual' as const,
+                enteredBy: 'seed-script',
+                enteredAt: new Date(),
+                notes: 'Seeded test data',
+                createdAt: new Date(),
+                updatedAt: new Date(),
               };
-              return acc;
-            }, {}),
-            deliverySummary: {
-              totalGoalValue: totalGoal,
-              totalDelivered,
-              percentComplete: Math.min(100, Math.round((totalDelivered / totalGoal) * 100)),
-              lastUpdated: new Date()
-            },
-            proofOfPerformanceRequired: true,
-            proofCount: await proofs.countDocuments({ orderId: order._id.toString() })
+              
+              entries.push(entry);
+            }
           }
         }
-      );
+      }
+      
+      if (entries.length > 0) {
+        // Remove any existing seed data for this campaign
+        const deleteResult = await perfCol.deleteMany({
+          campaignId,
+          enteredBy: 'seed-script',
+        });
+        if (deleteResult.deletedCount > 0) {
+          console.log(`  Removed ${deleteResult.deletedCount} existing seed entries`);
+        }
+        
+        const result = await perfCol.insertMany(entries);
+        totalInserted += result.insertedCount;
+        console.log(`  Inserted ${result.insertedCount} performance entries across ${selectedPubs.length} publications`);
+        
+        // Print breakdown
+        const channelBreakdown: Record<string, number> = {};
+        for (const e of entries) {
+          channelBreakdown[e.channel] = (channelBreakdown[e.channel] || 0) + 1;
+        }
+        console.log('  Channel breakdown:', channelBreakdown);
+      }
     }
     
-    console.log('\n========================================');
-    console.log('Performance Data Seeding Complete!');
-    console.log('========================================');
-    console.log(`Performance Entries: ${entriesCreated}`);
-    console.log(`Proof of Performance: ${proofsCreated}`);
-    console.log(`Tracking Scripts: ${scriptsCreated}`);
-    console.log('========================================');
+    console.log(`\nDone! Total entries inserted: ${totalInserted}`);
     
-    // Show sample of created data
-    console.log('\nSample Performance Entry:');
-    const sampleEntry = await perfEntries.findOne({});
-    if (sampleEntry) {
-      console.log(JSON.stringify({
-        publicationName: sampleEntry.publicationName,
-        itemName: sampleEntry.itemName,
-        channel: sampleEntry.channel,
-        dateStart: sampleEntry.dateStart,
-        metrics: sampleEntry.metrics
-      }, null, 2));
-    }
+    // Print some stats for verification
+    const totalEntries = await perfCol.countDocuments({ deletedAt: { $exists: false } });
+    console.log(`Total performance entries in DB: ${totalEntries}`);
     
   } catch (error) {
-    console.error('Error seeding data:', error);
+    console.error('Error seeding performance data:', error);
   } finally {
     await client.close();
-    console.log('\nDisconnected from MongoDB');
   }
 }
 
-// Run the script
+function generateMetrics(channel: string, dayIndex: number, totalDays: number): any | null {
+  // Create a ramp-up effect (metrics grow over time with variance)
+  const progress = dayIndex / totalDays;
+  const rampMultiplier = 0.5 + (progress * 0.7); // Starts at 50%, grows to 120% of base
+  const dailyVariance = 0.6 + (Math.random() * 0.8); // 60%-140% daily variance
+  
+  // Occasionally skip a day (5% chance)
+  if (Math.random() < 0.05) return null;
+  
+  switch (channel) {
+    case 'website': {
+      const baseImpressions = 800 + Math.floor(Math.random() * 2000);
+      const impressions = Math.round(baseImpressions * rampMultiplier * dailyVariance);
+      const clickRate = 0.005 + (Math.random() * 0.025); // 0.5% - 3% CTR
+      const clicks = Math.round(impressions * clickRate);
+      const reach = Math.round(impressions * (0.6 + Math.random() * 0.3));
+      return {
+        impressions,
+        clicks,
+        ctr: Number(((clicks / impressions) * 100).toFixed(2)),
+        reach,
+        viewability: Math.round(65 + Math.random() * 30), // 65-95%
+      };
+    }
+    
+    case 'newsletter': {
+      const baseImpressions = 2000 + Math.floor(Math.random() * 5000);
+      const impressions = Math.round(baseImpressions * rampMultiplier * dailyVariance);
+      const clickRate = 0.01 + (Math.random() * 0.04); // 1% - 5% CTR (higher for newsletter)
+      const clicks = Math.round(impressions * clickRate);
+      const reach = Math.round(impressions * 0.9); // Newsletter reach is closer to impressions
+      return {
+        impressions,
+        clicks,
+        ctr: Number(((clicks / impressions) * 100).toFixed(2)),
+        reach,
+      };
+    }
+    
+    case 'print': {
+      // Print is weekly, so only generate on some days
+      if (dayIndex % 7 !== 0) return null;
+      const circulation = 15000 + Math.floor(Math.random() * 35000);
+      return {
+        insertions: 1,
+        circulation,
+        impressions: circulation, // Approximate impressions = circulation for print
+        reach: Math.round(circulation * (0.4 + Math.random() * 0.3)),
+      };
+    }
+    
+    case 'radio': {
+      const spotsAired = 2 + Math.floor(Math.random() * 6);
+      const reachPerSpot = 5000 + Math.floor(Math.random() * 15000);
+      return {
+        spotsAired,
+        impressions: spotsAired * reachPerSpot,
+        reach: Math.round(reachPerSpot * (1 + Math.random() * 0.5)),
+        frequency: Number((1.5 + Math.random() * 3).toFixed(1)),
+      };
+    }
+    
+    case 'social': {
+      // Social posts are less frequent
+      if (Math.random() < 0.6) return null; // Only ~40% of days
+      const posts = 1 + Math.floor(Math.random() * 2);
+      const impressions = Math.round((1000 + Math.random() * 8000) * dailyVariance);
+      const engagementRate = 0.01 + Math.random() * 0.06;
+      return {
+        posts,
+        impressions,
+        reach: Math.round(impressions * (0.5 + Math.random() * 0.4)),
+        engagements: Math.round(impressions * engagementRate),
+        shares: Math.floor(Math.random() * 20),
+        clicks: Math.round(impressions * (0.005 + Math.random() * 0.02)),
+      };
+    }
+    
+    case 'podcast': {
+      // Podcasts are weekly typically
+      if (dayIndex % 7 !== 2) return null;
+      const downloads = 500 + Math.floor(Math.random() * 3000);
+      return {
+        downloads,
+        listens: Math.round(downloads * (0.6 + Math.random() * 0.3)),
+        impressions: downloads,
+        reach: Math.round(downloads * 0.85),
+        completionRate: Math.round(55 + Math.random() * 35),
+      };
+    }
+    
+    default:
+      return { impressions: Math.floor(Math.random() * 1000), reach: Math.floor(Math.random() * 500) };
+  }
+}
+
 seedPerformanceData();

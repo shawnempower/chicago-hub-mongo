@@ -14,7 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { updatePublication } from '@/api/publications';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { updatePublication, generateAiProfile } from '@/api/publications';
 import { getPublicationBrandColor, prefetchBrandColors } from '@/config/publicationBrandColors';
 import { DEFAULT_BRAND_HEX } from '@/constants/brand';
 import { 
@@ -37,7 +38,9 @@ import {
   MessageCircle,
   Phone,
   User,
-  Briefcase
+  Briefcase,
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { SchemaField, SchemaSection, SchemaFieldLegend } from './SchemaField';
 import { transformers } from '@/config/publicationFieldMapping';
@@ -66,6 +69,7 @@ import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
 export const PublicationProfile: React.FC = () => {
   const { selectedPublication, setSelectedPublication } = usePublication();
   const { toast } = useToast();
+  const { isAdmin } = useAdminAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<PublicationFrontend>>({});
@@ -73,6 +77,7 @@ export const PublicationProfile: React.FC = () => {
   const [differentiators, setDifferentiators] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showActivityLog, setShowActivityLog] = useState(false);
+  const [generatingAiProfile, setGeneratingAiProfile] = useState(false);
 
   useEffect(() => {
     if (selectedPublication && isEditing) {
@@ -88,6 +93,31 @@ export const PublicationProfile: React.FC = () => {
       prefetchBrandColors([selectedPublication.publicationId]);
     }
   }, [selectedPublication?.publicationId]);
+
+  const handleGenerateAiProfile = async () => {
+    if (!selectedPublication?._id) return;
+    setGeneratingAiProfile(true);
+    try {
+      const result = await generateAiProfile(selectedPublication._id);
+      // Update local publication data with the new AI profile
+      setSelectedPublication({
+        ...selectedPublication,
+        aiProfile: result.aiProfile as any,
+      });
+      toast({
+        title: 'AI Profile Generated',
+        description: `Profile for ${result.publicationName} has been created using Perplexity research.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Profile Generation Failed',
+        description: error.message || 'Failed to generate AI profile. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingAiProfile(false);
+    }
+  };
 
   if (!selectedPublication) {
     return (
@@ -1139,9 +1169,28 @@ export const PublicationProfile: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button 
+                variant="outline"
+                onClick={handleGenerateAiProfile}
+                disabled={generatingAiProfile || isEditing}
+                className="gap-2"
+              >
+                {generatingAiProfile ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                {generatingAiProfile 
+                  ? 'Generating...' 
+                  : selectedPublication?.aiProfile?.summary 
+                    ? 'Refresh AI Profile' 
+                    : 'Generate AI Profile'}
+              </Button>
+            )}
             <Button 
               onClick={() => setIsEditing(true)}
-              className="ml-4"
+              className="ml-2"
             >
               <Edit3 className="w-4 h-4 mr-2" />
               Edit Profile
@@ -1150,6 +1199,67 @@ export const PublicationProfile: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* AI PROFILE (if generated) */}
+      {selectedPublication?.aiProfile?.summary && !isEditing && (
+        <Card className="rounded-xl bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200/50">
+          <div className="flex items-center justify-between py-3 px-6">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              <h2 className="text-sm font-semibold font-sans text-purple-700">Publication Profile</h2>
+            </div>
+            {selectedPublication.aiProfile.generatedAt && (
+              <span className="text-xs text-muted-foreground">
+                Last updated: {new Date(selectedPublication.aiProfile.generatedAt).toLocaleDateString()}
+                {selectedPublication.aiProfile.version && ` (v${selectedPublication.aiProfile.version})`}
+              </span>
+            )}
+          </div>
+          <div className="bg-white rounded-xl p-6 space-y-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-2">Summary</p>
+              <p className="text-sm leading-relaxed text-foreground">{selectedPublication.aiProfile.summary}</p>
+            </div>
+            {selectedPublication.aiProfile.fullProfile && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-2">Full Profile</p>
+                <div className="text-sm leading-relaxed text-foreground space-y-2">
+                  {selectedPublication.aiProfile.fullProfile.split(/\n\n+/).map((paragraph, i) => (
+                    <p key={i}>{paragraph}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+            {selectedPublication.aiProfile.audienceInsight && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-2">Audience Insight</p>
+                <div className="text-sm leading-relaxed text-foreground space-y-2">
+                  {selectedPublication.aiProfile.audienceInsight.split(/\n\n+/).map((paragraph, i) => (
+                    <p key={i}>{paragraph}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+            {selectedPublication.aiProfile.communityRole && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-2">Community Role</p>
+                <div className="text-sm leading-relaxed text-foreground space-y-2">
+                  {selectedPublication.aiProfile.communityRole.split(/\n\n+/).map((paragraph, i) => (
+                    <p key={i}>{paragraph}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+            {selectedPublication.aiProfile.citations && selectedPublication.aiProfile.citations.length > 0 && (
+              <div className="pt-2 border-t border-purple-100">
+                <p className="text-xs text-muted-foreground">
+                  Sources: {selectedPublication.aiProfile.citations.length} reference{selectedPublication.aiProfile.citations.length !== 1 ? 's' : ''} used
+                </p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* ESSENTIAL INFORMATION */}
       <Card className="rounded-xl bg-muted">

@@ -103,23 +103,222 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       { $sort: { impressions: -1 } }
     ]).toArray();
     
-    // Look up publication names for entries where publicationName is null
+    // Look up full publication documents for all publications in the breakdown
     const publicationsCollection = db.collection(COLLECTIONS.PUBLICATIONS);
-    const publicationIdsToLookup = publicationBreakdown
-      .filter(pub => !pub._id.publicationName && pub._id.publicationId)
-      .map(pub => pub._id.publicationId);
+    const allPublicationIds = publicationBreakdown.map(pub => pub._id.publicationId).filter(Boolean);
     
     let publicationNamesMap: Record<number, string> = {};
-    if (publicationIdsToLookup.length > 0) {
+    let publicationContextMap: Record<number, any> = {};
+    
+    if (allPublicationIds.length > 0) {
       const publications = await publicationsCollection
-        .find({ publicationId: { $in: publicationIdsToLookup } })
-        .project({ publicationId: 1, name: 1 })
+        .find({ publicationId: { $in: allPublicationIds } })
+        .project({
+          publicationId: 1,
+          'basicInfo.publicationName': 1,
+          'basicInfo.publicationType': 1,
+          'basicInfo.contentType': 1,
+          'basicInfo.websiteUrl': 1,
+          'basicInfo.founded': 1,
+          'basicInfo.geographicCoverage': 1,
+          'basicInfo.primaryServiceArea': 1,
+          'basicInfo.secondaryMarkets': 1,
+          'basicInfo.serviceAreas': 1,
+          'audienceDemographics': 1,
+          'editorialInfo.contentFocus': 1,
+          'editorialInfo.contentPillars': 1,
+          'editorialInfo.specialSections': 1,
+          'competitiveInfo.uniqueValueProposition': 1,
+          'competitiveInfo.keyDifferentiators': 1,
+          'awards': 1,
+          'distributionChannels.website.metrics': 1,
+          'distributionChannels.newsletters': 1,
+          'distributionChannels.print': 1,
+          'distributionChannels.podcasts': 1,
+          'distributionChannels.radioStations': 1,
+          'distributionChannels.socialMedia': 1,
+          'distributionChannels.events': 1,
+          'distributionChannels.streamingVideo': 1,
+          'aiProfile': 1,
+        })
         .toArray();
       
-      publicationNamesMap = publications.reduce((acc, pub) => {
-        acc[pub.publicationId] = pub.name;
-        return acc;
-      }, {} as Record<number, string>);
+      for (const pub of publications) {
+        const id = pub.publicationId;
+        publicationNamesMap[id] = pub.basicInfo?.publicationName || pub.name;
+        
+        // Build channel-specific audience metrics from distribution channels
+        const channelAudience: Record<string, any> = {};
+        
+        if (pub.distributionChannels?.website?.metrics) {
+          channelAudience.website = {
+            monthlyVisitors: pub.distributionChannels.website.metrics.monthlyVisitors,
+            monthlyPageViews: pub.distributionChannels.website.metrics.monthlyPageViews,
+            bounceRate: pub.distributionChannels.website.metrics.bounceRate,
+            mobilePercentage: pub.distributionChannels.website.metrics.mobilePercentage,
+          };
+        }
+        
+        if (pub.distributionChannels?.newsletters?.length > 0) {
+          channelAudience.newsletters = pub.distributionChannels.newsletters.map((nl: any) => ({
+            name: nl.name,
+            subscribers: nl.subscribers,
+            openRate: nl.openRate,
+            clickThroughRate: nl.clickThroughRate,
+            frequency: nl.frequency,
+          }));
+        }
+        
+        if (pub.distributionChannels?.print?.length > 0) {
+          channelAudience.print = pub.distributionChannels.print.map((p: any) => ({
+            name: p.name,
+            circulation: p.circulation,
+            paidCirculation: p.paidCirculation,
+            freeCirculation: p.freeCirculation,
+            distributionArea: p.distributionArea,
+            frequency: p.frequency,
+          }));
+        }
+        
+        if (pub.distributionChannels?.podcasts?.length > 0) {
+          channelAudience.podcasts = pub.distributionChannels.podcasts.map((pc: any) => ({
+            name: pc.name,
+            averageDownloads: pc.averageDownloads,
+            averageListeners: pc.averageListeners,
+            episodeCount: pc.episodeCount,
+            platforms: pc.platforms,
+            frequency: pc.frequency,
+          }));
+        }
+        
+        if (pub.distributionChannels?.radioStations?.length > 0) {
+          channelAudience.radio = pub.distributionChannels.radioStations.map((rs: any) => ({
+            callSign: rs.callSign,
+            frequency: rs.frequency,
+            format: rs.format,
+            coverageArea: rs.coverageArea,
+            listeners: rs.listeners,
+          }));
+        }
+        
+        if (pub.distributionChannels?.socialMedia?.length > 0) {
+          channelAudience.social = pub.distributionChannels.socialMedia.map((sm: any) => ({
+            platform: sm.platform,
+            handle: sm.handle,
+            followers: sm.metrics?.followers,
+            engagementRate: sm.metrics?.engagementRate,
+            averageReach: sm.metrics?.averageReach,
+          }));
+        }
+        
+        if (pub.distributionChannels?.events?.length > 0) {
+          channelAudience.events = pub.distributionChannels.events.map((ev: any) => ({
+            name: ev.name,
+            type: ev.type,
+            averageAttendance: ev.averageAttendance,
+            location: ev.location,
+            frequency: ev.frequency,
+          }));
+        }
+        
+        publicationContextMap[id] = {
+          // Identity
+          publicationType: pub.basicInfo?.publicationType,
+          contentType: pub.basicInfo?.contentType,
+          websiteUrl: pub.basicInfo?.websiteUrl,
+          founded: pub.basicInfo?.founded,
+          // Geography
+          geographicCoverage: pub.basicInfo?.geographicCoverage,
+          primaryServiceArea: pub.basicInfo?.primaryServiceArea,
+          secondaryMarkets: pub.basicInfo?.secondaryMarkets,
+          // Audience demographics
+          audienceDemographics: pub.audienceDemographics ? {
+            totalAudience: pub.audienceDemographics.totalAudience,
+            ageGroups: pub.audienceDemographics.ageGroups,
+            gender: pub.audienceDemographics.gender,
+            householdIncome: pub.audienceDemographics.householdIncome,
+            education: pub.audienceDemographics.education,
+            interests: pub.audienceDemographics.interests,
+            targetMarkets: pub.audienceDemographics.targetMarkets,
+          } : undefined,
+          // Editorial
+          editorialInfo: pub.editorialInfo ? {
+            contentFocus: pub.editorialInfo.contentFocus,
+            contentPillars: pub.editorialInfo.contentPillars,
+            specialSections: pub.editorialInfo.specialSections,
+          } : undefined,
+          // Competitive
+          competitiveInfo: pub.competitiveInfo ? {
+            uniqueValueProposition: pub.competitiveInfo.uniqueValueProposition,
+            keyDifferentiators: pub.competitiveInfo.keyDifferentiators,
+          } : undefined,
+          // Awards
+          awards: pub.awards,
+          // Channel-specific audience metrics
+          channelAudience,
+          // AI profile
+          aiProfile: pub.aiProfile || undefined,
+        };
+      }
+    }
+    
+    // Look up insertion orders for campaign activity context per publication
+    const ioCollection = db.collection('publication_insertion_orders');
+    let publicationOrderMap: Record<number, any> = {};
+    
+    if (allPublicationIds.length > 0) {
+      const campaignObjectId = campaign._id?.toString() || '';
+      const campaignIdString = campaign.campaignId || '';
+      
+      const orders = await ioCollection.find({
+        $or: [
+          { campaignObjectId: campaignObjectId },
+          { campaignId: campaignIdString }
+        ],
+        publicationId: { $in: allPublicationIds },
+        deletedAt: { $exists: false },
+      }).project({
+        publicationId: 1,
+        status: 1,
+        deliveryGoals: 1,
+        deliverySummary: 1,
+        assetStatus: 1,
+        placementStatuses: 1,
+        proofOfPerformanceComplete: 1,
+        proofCount: 1,
+        orderTotal: 1,
+        'selectedInventory.publications': 1,
+      }).toArray();
+      
+      for (const order of orders) {
+        const pubId = order.publicationId;
+        
+        // Extract channel mix from the order's inventory items
+        const inventoryItems = order.selectedInventory?.publications?.[0]?.inventoryItems || [];
+        const channelMix = inventoryItems.map((item: any) => ({
+          channel: item.channel,
+          itemName: item.itemName,
+          itemPath: item.itemPath,
+          placementStatus: order.placementStatuses?.[item.itemPath],
+        }));
+        
+        publicationOrderMap[pubId] = {
+          orderStatus: order.status,
+          deliveryGoals: order.deliveryGoals,
+          deliverySummary: order.deliverySummary,
+          assetStatus: order.assetStatus ? {
+            totalPlacements: order.assetStatus.totalPlacements,
+            placementsWithAssets: order.assetStatus.placementsWithAssets,
+            allAssetsReady: order.assetStatus.allAssetsReady,
+          } : undefined,
+          proofStatus: {
+            complete: order.proofOfPerformanceComplete || false,
+            proofCount: order.proofCount || 0,
+          },
+          orderTotal: order.orderTotal,
+          channelMix,
+        };
+      }
     }
     
     const totals = aggregation[0] || {
@@ -271,33 +470,48 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       ? Math.round(channelPercents.reduce((sum, p) => sum + p, 0) / channelPercents.length)
       : 0;
     
-    // Calculate pacing if campaign has goals
+    // Calculate pacing if campaign has goals and valid timeline dates
     let pacing = null;
-    if (campaign.objectives?.budget?.totalBudget || campaign.selectedInventory) {
-      const startDate = new Date(campaign.timeline?.startDate);
-      const endDate = new Date(campaign.timeline?.endDate);
+    if ((campaign.objectives?.budget?.totalBudget || campaign.selectedInventory) && 
+        campaign.timeline?.startDate && campaign.timeline?.endDate) {
+      const startDate = new Date(campaign.timeline.startDate);
+      const endDate = new Date(campaign.timeline.endDate);
       const now = new Date();
       
-      const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      const daysPassed = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // Use our calculated delivery percent
-      pacing = calculatePacingStatus(overallDeliveryPercent, 100, Math.min(daysPassed, totalDays), totalDays);
-      pacing = {
-        ...pacing,
-        totalDays,
-        daysPassed: Math.min(daysPassed, totalDays),
-        daysRemaining: Math.max(totalDays - daysPassed, 0),
-      };
+      // Guard against invalid dates
+      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate > startDate) {
+        const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        const daysPassed = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Use our calculated delivery percent
+        pacing = calculatePacingStatus(overallDeliveryPercent, 100, Math.min(daysPassed, totalDays), totalDays);
+        pacing = {
+          ...pacing,
+          totalDays,
+          daysPassed: Math.min(daysPassed, totalDays),
+          daysRemaining: Math.max(totalDays - daysPassed, 0),
+        };
+      }
     }
     
     res.json({
       campaignId: campaign.campaignId || campaignId,
       campaignName: campaign.basicInfo?.name,
+      advertiserName: campaign.basicInfo?.advertiserName,
+      status: campaign.status,
       dateRange: {
         start: campaign.timeline?.startDate,
         end: campaign.timeline?.endDate,
       },
+      budget: campaign.objectives?.budget ? {
+        totalBudget: campaign.objectives.budget.totalBudget,
+        monthlyBudget: campaign.objectives.budget.monthlyBudget,
+        currency: campaign.objectives.budget.currency || 'USD',
+      } : undefined,
+      pricing: campaign.pricing ? {
+        total: campaign.pricing.total,
+        monthlyTotal: campaign.pricing.monthlyTotal,
+      } : undefined,
       performanceRange: {
         earliest: totals.earliestDate,
         latest: totals.latestDate,
@@ -330,16 +544,27 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
         reach: ch.reach,
         units: ch.units,
       })),
-      byPublication: publicationBreakdown.map(pub => ({
-        publicationId: pub._id.publicationId,
-        publicationName: pub._id.publicationName || publicationNamesMap[pub._id.publicationId] || `Publication ${pub._id.publicationId}`,
-        entries: pub.entries,
-        impressions: pub.impressions,
-        clicks: pub.clicks,
-        ctr: computeCTR(pub.clicks, pub.impressions),
-        reach: pub.reach,
-        units: pub.units,
-      })),
+      byPublication: publicationBreakdown.map(pub => {
+        const pubId = pub._id.publicationId;
+        const context = publicationContextMap[pubId];
+        const order = publicationOrderMap[pubId];
+        
+        return {
+          // Core performance metrics
+          publicationId: pubId,
+          publicationName: pub._id.publicationName || publicationNamesMap[pubId] || `Publication ${pubId}`,
+          entries: pub.entries,
+          impressions: pub.impressions,
+          clicks: pub.clicks,
+          ctr: computeCTR(pub.clicks, pub.impressions),
+          reach: pub.reach,
+          units: pub.units,
+          // Publication context (from publication document)
+          context: context || undefined,
+          // Campaign activity (from insertion order)
+          activity: order || undefined,
+        };
+      }),
       pacing,
     });
   } catch (error) {
@@ -359,6 +584,17 @@ router.get('/campaign/:campaignId/daily', async (req: any, res: Response) => {
     
     const db = getDatabase();
     const perfCollection = db.collection<PerformanceEntry>(COLLECTIONS.PERFORMANCE_ENTRIES);
+    const campaignCollection = db.collection(COLLECTIONS.CAMPAIGNS);
+    
+    // Resolve campaignId the same way as the summary endpoint
+    let campaign = null;
+    try {
+      campaign = await campaignCollection.findOne({ _id: new ObjectId(campaignId) });
+    } catch {
+      campaign = await campaignCollection.findOne({ campaignId });
+    }
+    
+    const resolvedCampaignId = campaign?.campaignId || campaignId;
     
     // Build date filter
     const dateFilter: any = {};
@@ -366,7 +602,7 @@ router.get('/campaign/:campaignId/daily', async (req: any, res: Response) => {
     if (dateTo) dateFilter.$lte = new Date(dateTo as string);
     
     const match: any = { 
-      campaignId, 
+      campaignId: resolvedCampaignId, 
       deletedAt: { $exists: false } 
     };
     if (Object.keys(dateFilter).length > 0) {

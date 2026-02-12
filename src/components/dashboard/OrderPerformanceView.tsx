@@ -56,11 +56,13 @@ import {
   Pencil,
   Trash2,
   MoreHorizontal,
+  Lock,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/config/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ReportResultsForm } from './ReportResultsForm';
 import { EditPerformanceEntryForm } from './EditPerformanceEntryForm';
 import { PACING_STATUS_LABELS, PacingStatus } from '@/integrations/mongodb/dailyAggregateSchema';
@@ -585,9 +587,16 @@ export function OrderPerformanceView({
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              {entry.channel}
-                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="capitalize">
+                                {entry.channel}
+                              </Badge>
+                              {entry.source === 'automated' && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
+                                  Auto-tracked
+                                </Badge>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="space-y-0.5">
@@ -604,27 +613,42 @@ export function OrderPerformanceView({
                             </div>
                           </TableCell>
                           <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditEntry(entry)}>
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  onClick={() => setDeletingEntryId(entry._id?.toString() || null)}
-                                  className="text-red-600 focus:text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {entry.source === 'automated' ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center justify-center h-8 w-8">
+                                      <Lock className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Auto-tracked digital results cannot be edited or deleted</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditEntry(entry)}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    onClick={() => setDeletingEntryId(entry._id?.toString() || null)}
+                                    className="text-red-600 focus:text-red-600"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </TableCell>
                         </TableRow>
                       );

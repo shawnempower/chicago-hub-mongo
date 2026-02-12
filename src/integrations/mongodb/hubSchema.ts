@@ -118,6 +118,29 @@ export interface Hub {
   // Defines how this hub is charged by the platform (revenue share + CPM on tracked impressions)
   platformBilling?: HubPlatformBilling;
   
+  // AI-Generated Network Summary
+  // Synthesized from all publication AI profiles and audience data
+  networkSummary?: {
+    /** Concise pitch: why advertise across this network */
+    valueProposition: string;
+    /** Key audience highlights aggregated across all publications */
+    audienceHighlights: string;
+    /** Geographic reach and market coverage narrative */
+    marketCoverage: string;
+    /** Channel mix and cross-platform strengths */
+    channelStrengths: string;
+    /** Source citations from Perplexity */
+    citations: string[];
+    /** When this summary was generated */
+    generatedAt: Date;
+    /** Model used */
+    generatedBy: string;
+    /** Number of publications included in the synthesis */
+    publicationCount: number;
+    /** Incremented on each refresh */
+    version: number;
+  };
+
   // Status and Metadata
   status: 'active' | 'inactive' | 'pending' | 'archived';
   

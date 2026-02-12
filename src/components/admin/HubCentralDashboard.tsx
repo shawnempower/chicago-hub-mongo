@@ -19,11 +19,13 @@ import { useHubContext } from '@/contexts/HubContext';
 import { useHubPublications } from '@/hooks/useHubs';
 import { CHANNEL_COLORS } from '@/constants/channelColors';
 import { DEFAULT_BRAND_HEX } from '@/constants/brand';
-import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle, Download, Megaphone, CheckCircle2, MessageSquare } from 'lucide-react';
+import { Users, Package, Radio, Bot, UserCog, BookOpen, ArrowRightLeft, Target, Search, Loader2, DollarSign, TrendingUp, MapPin, Eye, Info, HelpCircle, Download, Megaphone, CheckCircle2, MessageSquare, Sparkles, RefreshCw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { exportHubInventoryToCSV } from '@/utils/hubInventoryExport';
 import { toast } from '@/components/ui/use-toast';
 import { calculateDataQuality } from './PublicationDataQuality';
+import { hubsApi } from '@/api/hubs';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 interface HubCentralDashboardProps {
   activeTab: string;
@@ -34,8 +36,34 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
   const { selectedHub, selectedHubId } = useHubContext();
   const { stats, loading, error } = useDashboardStats(selectedHubId);
   const { publications, loading: loadingPubs } = useHubPublications(selectedHubId);
+  const { isAdmin } = useAdminAuth();
   const [pricingTimeframe, setPricingTimeframe] = useState<'day' | 'month' | 'quarter'>('month');
   const inventoryQualityRef = useRef<HTMLDivElement>(null);
+  const [generatingNetworkSummary, setGeneratingNetworkSummary] = useState(false);
+
+  const handleGenerateNetworkSummary = async () => {
+    if (!selectedHubId) return;
+    setGeneratingNetworkSummary(true);
+    try {
+      const result = await hubsApi.generateNetworkSummary(selectedHubId);
+      // Force a page-level re-fetch of hub data by reloading
+      // The hub context will pick up the new networkSummary field
+      toast({
+        title: 'Network Summary Generated',
+        description: `Summary created from ${result.networkSummary.publicationCount} publications using Perplexity research.`,
+      });
+      // Reload the page to pick up the updated hub document
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: 'Generation Failed',
+        description: error.message || 'Failed to generate network summary.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingNetworkSummary(false);
+    }
+  };
 
   // Helper to convert monthly values to selected timeframe
   const convertToTimeframe = (monthlyValue: number): number => {
@@ -193,7 +221,7 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
               </CardContent>
             </Card>
           )}
-          
+
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card className="bg-muted/50">
               <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
@@ -221,21 +249,6 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                     <Loader2 className="h-6 w-6 animate-spin" />
                   ) : (
                     stats?.publications ?? 0
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-muted/50">
-              <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
-                <Bot className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-sm font-medium">Conversations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {loading ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  ) : (
-                    stats?.conversations ?? 0
                   )}
                 </div>
               </CardContent>
@@ -737,119 +750,94 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
             </Card>
           </div>
 
-          {/* Quick Actions & Recent Activity */}
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Quick Actions */}
-            <Card className="bg-muted/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-sans text-base">
-                  <Package className="h-5 w-5" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start h-auto p-4"
-                  onClick={() => onTabChange('packages')}
-                >
-                  <Package className="h-4 w-4 mr-3" />
-                  <div className="text-left">
-                    <div className="font-medium">Create Package</div>
-                    <div className="text-xs text-muted-foreground">Add new advertising package</div>
+          {/* Network Value Proposition */}
+          <Card className="rounded-xl border-purple-200/50 bg-gradient-to-r from-purple-50/50 to-blue-50/50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  <CardTitle className="text-base font-sans text-purple-700">Network Value Proposition</CardTitle>
+                </div>
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateNetworkSummary}
+                    disabled={generatingNetworkSummary || publications.length === 0}
+                    className="gap-2 text-xs"
+                  >
+                    {generatingNetworkSummary ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : selectedHub?.networkSummary?.valueProposition ? (
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
+                    {generatingNetworkSummary 
+                      ? 'Generating...' 
+                      : selectedHub?.networkSummary?.valueProposition 
+                        ? 'Refresh Summary' 
+                        : 'Generate Summary'}
+                  </Button>
+                )}
+              </div>
+              {selectedHub?.networkSummary?.generatedAt && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Based on {selectedHub.networkSummary.publicationCount} publications 
+                  {' · '}Last updated {new Date(selectedHub.networkSummary.generatedAt).toLocaleDateString()}
+                  {selectedHub.networkSummary.version > 1 && ` (v${selectedHub.networkSummary.version})`}
+                </p>
+              )}
+            </CardHeader>
+            <CardContent className="pt-0">
+              {selectedHub?.networkSummary?.valueProposition ? (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm leading-relaxed text-foreground">
+                      {selectedHub.networkSummary.valueProposition}
+                    </p>
                   </div>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start h-auto p-4"
-                  onClick={() => onTabChange('leads')}
-                >
-                  <Users className="h-4 w-4 mr-3" />
-                  <div className="text-left">
-                    <div className="font-medium">Review Leads</div>
-                    <div className="text-xs text-muted-foreground">Check new inquiries</div>
-                  </div>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Geographic & Content Distribution */}
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="bg-muted/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-sans text-base">
-                  <MapPin className="h-5 w-5" />
-                  Geographic Coverage
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
-                    <span className="text-xs font-medium">Local</span>
-                    <span className="font-semibold text-sm">
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.local ?? 0)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
-                    <span className="text-xs font-medium">Regional</span>
-                    <span className="font-semibold text-sm">
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.regional ?? 0)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
-                    <span className="text-xs font-medium">State</span>
-                    <span className="font-semibold text-sm">
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.state ?? 0)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
-                    <span className="text-xs font-medium">National</span>
-                    <span className="font-semibold text-sm">
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.geographicCoverage?.national ?? 0)}
-                    </span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    {selectedHub.networkSummary.audienceHighlights && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-600">Audience</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {selectedHub.networkSummary.audienceHighlights}
+                        </p>
+                      </div>
+                    )}
+                    {selectedHub.networkSummary.marketCoverage && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-600">Market Coverage</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {selectedHub.networkSummary.marketCoverage}
+                        </p>
+                      </div>
+                    )}
+                    {selectedHub.networkSummary.channelStrengths && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-600">Channel Strengths</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {selectedHub.networkSummary.channelStrengths}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-muted/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-sans text-base">
-                  <BookOpen className="h-5 w-5" />
-                  Content Types
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
-                    <span className="text-xs font-medium">News</span>
-                    <span className="font-semibold text-sm">
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.news ?? 0)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
-                    <span className="text-xs font-medium">Business</span>
-                    <span className="font-semibold text-sm">
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.business ?? 0)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
-                    <span className="text-xs font-medium">Lifestyle</span>
-                    <span className="font-semibold text-sm">
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.lifestyle ?? 0)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50">
-                    <span className="text-xs font-medium">Mixed</span>
-                    <span className="font-semibold text-sm">
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.contentTypes?.mixed ?? 0)}
-                    </span>
-                  </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground">
+                    {isAdmin 
+                      ? 'Generate an AI-powered network summary that synthesizes your publications\' profiles into a unified value proposition for advertisers.'
+                      : 'No network summary has been generated yet.'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {publications.length} publication{publications.length !== 1 ? 's' : ''} in this network
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Inventory Quality - Full Width at Bottom */}
           <div ref={inventoryQualityRef}>

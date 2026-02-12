@@ -655,6 +655,26 @@ export interface PublicationFrontend {
     /** Days before campaign start that cancellation is allowed (default 14 = two weeks) */
     cancellationDeadlineDays?: number;
   };
+
+  /** AI-generated publication profile from Perplexity web search */
+  aiProfile?: {
+    /** 2-3 sentence overview suitable for client-facing display */
+    summary: string;
+    /** Longer narrative about community role, editorial voice, audience character */
+    fullProfile: string;
+    /** Description of who reads/listens/watches and why they're valuable to advertisers */
+    audienceInsight: string;
+    /** The publication's role and significance in the local community */
+    communityRole: string;
+    /** Perplexity source URLs used to generate the profile */
+    citations: string[];
+    /** When this profile was generated */
+    generatedAt: Date;
+    /** Model used to generate the profile */
+    generatedBy: 'perplexity-sonar-pro';
+    /** Incremented on each refresh */
+    version: number;
+  };
 }
 
 export type PublicationInsertFrontend = Omit<PublicationFrontend, '_id'>;
