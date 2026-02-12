@@ -33,6 +33,12 @@ interface Message {
   timestamp: string;
 }
 
+interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  messageCount: number;
+}
+
 // Supported file types
 const SUPPORTED_TYPES = [
   'application/pdf',
@@ -63,6 +69,7 @@ export const InventoryChatInterface: React.FC<InventoryChatInterfaceProps> = ({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ inputTokens: 0, outputTokens: 0, messageCount: 0 });
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -75,6 +82,7 @@ export const InventoryChatInterface: React.FC<InventoryChatInterfaceProps> = ({
       setAttachments([]);
       setGeneratedFiles([]);
       setPendingFiles([]);
+      setTokenUsage({ inputTokens: 0, outputTokens: 0, messageCount: 0 });
       return;
     }
 
@@ -85,6 +93,16 @@ export const InventoryChatInterface: React.FC<InventoryChatInterfaceProps> = ({
         setMessages(conversation.messages || []);
         setAttachments(conversation.attachments || []);
         setGeneratedFiles(conversation.generatedFiles || []);
+        // Load persisted token usage
+        if (conversation.tokenUsage) {
+          setTokenUsage({
+            inputTokens: conversation.tokenUsage.totalInputTokens || 0,
+            outputTokens: conversation.tokenUsage.totalOutputTokens || 0,
+            messageCount: conversation.tokenUsage.exchangeCount || 0,
+          });
+        } else {
+          setTokenUsage({ inputTokens: 0, outputTokens: 0, messageCount: 0 });
+        }
       } catch (error) {
         console.error('Error loading conversation:', error);
         toast({
@@ -254,6 +272,15 @@ export const InventoryChatInterface: React.FC<InventoryChatInterfaceProps> = ({
       };
       
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Accumulate token usage
+      if (response.usage) {
+        setTokenUsage(prev => ({
+          inputTokens: prev.inputTokens + response.usage!.inputTokens,
+          outputTokens: prev.outputTokens + response.usage!.outputTokens,
+          messageCount: prev.messageCount + 1,
+        }));
+      }
       
       // Add any generated files and notify parent
       if (response.generatedFiles && response.generatedFiles.length > 0) {
@@ -557,10 +584,20 @@ export const InventoryChatInterface: React.FC<InventoryChatInterfaceProps> = ({
                 </button>
               </div>
               
-              {/* Hint text */}
-              <p className="text-xs text-slate-400 text-center mt-2">
-                Press Enter to send • Shift+Enter for new line • Drop files to attach
-              </p>
+              {/* Hint text + token counter */}
+              <div className="flex items-center justify-between mt-2 px-1">
+                <p className="text-xs text-slate-400">
+                  Press Enter to send • Shift+Enter for new line • Drop files to attach
+                </p>
+                {tokenUsage.messageCount > 0 && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400" title={`Input: ${tokenUsage.inputTokens.toLocaleString()} • Output: ${tokenUsage.outputTokens.toLocaleString()} • ${tokenUsage.messageCount} exchange${tokenUsage.messageCount !== 1 ? 's' : ''}`}>
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                    </svg>
+                    <span>{(tokenUsage.inputTokens + tokenUsage.outputTokens).toLocaleString()} tokens</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

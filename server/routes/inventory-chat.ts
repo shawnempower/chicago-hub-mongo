@@ -176,6 +176,16 @@ router.post('/conversations/:id/messages', authenticateToken, async (req: any, r
     // Add assistant response to conversation
     await ConversationService.addMessage(id, req.user.id, 'assistant', response.content);
 
+    // Persist token usage to conversation
+    if (response.usage) {
+      await ConversationService.addTokenUsage(
+        id,
+        req.user.id,
+        response.usage.inputTokens,
+        response.usage.outputTokens
+      );
+    }
+
     logger.info(`Generated response for conversation ${id} (${response.usage?.outputTokens} tokens)`);
 
     res.json({

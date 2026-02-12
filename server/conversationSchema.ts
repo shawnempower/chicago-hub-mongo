@@ -64,6 +64,16 @@ export interface ConversationContext {
 }
 
 /**
+ * Cumulative token usage for a conversation
+ */
+export interface ConversationTokenUsage {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  /** Number of AI exchanges (user message + assistant response pairs) */
+  exchangeCount: number;
+}
+
+/**
  * Main conversation document
  */
 export interface Conversation {
@@ -82,6 +92,9 @@ export interface Conversation {
   
   /** Brand/campaign context tracked across the conversation */
   context?: ConversationContext;
+  
+  /** Cumulative token usage across all messages */
+  tokenUsage?: ConversationTokenUsage;
   
   /** @deprecated Use attachments instead */
   contextFiles?: {

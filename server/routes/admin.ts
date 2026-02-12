@@ -6,6 +6,7 @@ import { hubPackagesService } from '../../src/integrations/mongodb/hubPackageSer
 import { permissionsService } from '../../src/integrations/mongodb/permissionsService';
 import { authenticateToken } from '../middleware/authenticate';
 import { calculateRevenue, inferOccurrencesFromFrequency } from '../../src/utils/pricingCalculations';
+import { PromptConfigService, PROMPT_KEYS } from '../services/promptConfigService';
 
 const router = Router();
 
@@ -2155,6 +2156,149 @@ router.post('/hub-packages/:id/restore', authenticateToken, async (req: any, res
   } catch (error) {
     res.status(500).json({ error: 'Failed to restore hub package' });
   }
+});
+
+// ===== ASSISTANT PROMPT MANAGEMENT =====
+
+// GET all active prompts (grouped by category)
+router.get('/assistant-prompts', authenticateToken, async (req: any, res: Response) => {
+  if (!isUserAdmin(req.user)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  try {
+    const prompts = await PromptConfigService.getAllActivePrompts();
+    
+    // Group by category
+    const grouped: Record<string, any[]> = { system: [], tool: [], search: [], model: [] };
+    for (const p of prompts) {
+      const meta = PROMPT_KEYS.find(pk => pk.key === p.promptKey);
+      grouped[p.category]?.push({
+        ...p,
+        _id: p._id?.toString() || null,
+        description: meta?.description || '',
+      });
+    }
+
+    res.json({ prompts: grouped, promptKeys: PROMPT_KEYS });
+  } catch (error: any) {
+    console.error('Error fetching assistant prompts:', error);
+    res.status(500).json({ error: 'Failed to fetch assistant prompts' });
+  }
+});
+
+// GET version history for a prompt key
+router.get('/assistant-prompts/:promptKey/history', authenticateToken, async (req: any, res: Response) => {
+  if (!isUserAdmin(req.user)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  try {
+    const { promptKey } = req.params;
+    const history = await PromptConfigService.getVersionHistory(promptKey);
+    
+    res.json({
+      promptKey,
+      versions: history.map(h => ({
+        ...h,
+        _id: h._id?.toString(),
+      })),
+    });
+  } catch (error: any) {
+    console.error('Error fetching prompt history:', error);
+    res.status(500).json({ error: 'Failed to fetch prompt history' });
+  }
+});
+
+// POST save a new version of a prompt
+router.post('/assistant-prompts', authenticateToken, async (req: any, res: Response) => {
+  if (!isUserAdmin(req.user)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  try {
+    const { promptKey, content, version } = req.body;
+
+    if (!promptKey || !content || !version) {
+      return res.status(400).json({ error: 'promptKey, content, and version are required' });
+    }
+
+    // Validate promptKey
+    if (!PROMPT_KEYS.find(pk => pk.key === promptKey)) {
+      return res.status(400).json({ error: `Invalid promptKey: ${promptKey}` });
+    }
+
+    const saved = await PromptConfigService.saveNewVersion(
+      promptKey,
+      content,
+      version,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      prompt: { ...saved, _id: saved._id?.toString() },
+    });
+  } catch (error: any) {
+    console.error('Error saving prompt version:', error);
+    res.status(500).json({ error: error.message || 'Failed to save prompt version' });
+  }
+});
+
+// PUT activate a specific version
+router.put('/assistant-prompts/:id/activate', authenticateToken, async (req: any, res: Response) => {
+  if (!isUserAdmin(req.user)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  try {
+    const { id } = req.params;
+    const activated = await PromptConfigService.activateVersion(id);
+
+    if (!activated) {
+      return res.status(404).json({ error: 'Prompt version not found' });
+    }
+
+    res.json({
+      success: true,
+      prompt: { ...activated, _id: activated._id?.toString() },
+    });
+  } catch (error: any) {
+    console.error('Error activating prompt version:', error);
+    res.status(500).json({ error: 'Failed to activate prompt version' });
+  }
+});
+
+// POST seed default prompts (one-time setup)
+router.post('/assistant-prompts/seed', authenticateToken, async (req: any, res: Response) => {
+  if (!isUserAdmin(req.user)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  try {
+    const result = await PromptConfigService.seedDefaults(req.user.id);
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('Error seeding default prompts:', error);
+    res.status(500).json({ error: 'Failed to seed default prompts' });
+  }
+});
+
+// GET default content for a prompt key (for "Reset to Default" feature)
+router.get('/assistant-prompts/:promptKey/default', authenticateToken, async (req: any, res: Response) => {
+  if (!isUserAdmin(req.user)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  const { promptKey } = req.params;
+  if (!PROMPT_KEYS.find(pk => pk.key === promptKey)) {
+    return res.status(400).json({ error: `Invalid promptKey: ${promptKey}` });
+  }
+
+  res.json({
+    promptKey,
+    content: PromptConfigService.getDefaultContent(promptKey),
+  });
 });
 
 export default router;

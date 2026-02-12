@@ -33,6 +33,38 @@ export interface AccessCheckResult {
   reasons: string[];
 }
 
+// Assistant prompt types
+export interface AssistantPrompt {
+  _id: string | null;
+  promptKey: string;
+  label: string;
+  category: 'system' | 'tool' | 'search' | 'model';
+  content: string;
+  version: string;
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  description?: string;
+}
+
+export interface PromptKeyMeta {
+  key: string;
+  label: string;
+  category: 'system' | 'tool' | 'search' | 'model';
+  description: string;
+}
+
+export interface AssistantPromptsResponse {
+  prompts: Record<string, AssistantPrompt[]>;
+  promptKeys: PromptKeyMeta[];
+}
+
+export interface PromptHistoryResponse {
+  promptKey: string;
+  versions: AssistantPrompt[];
+}
+
 export const adminApi = {
   // Check if current user is admin
   async checkAdminStatus(): Promise<AdminCheckResponse> {
@@ -158,6 +190,72 @@ export const adminApi = {
       console.error('Error updating user role:', error);
       throw error;
     }
+  },
+
+  // ===== Assistant Prompt Management =====
+
+  // Get all active assistant prompts (grouped by category)
+  async getAssistantPrompts(): Promise<AssistantPromptsResponse> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin/assistant-prompts`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+  },
+
+  // Get version history for a specific prompt key
+  async getPromptHistory(promptKey: string): Promise<PromptHistoryResponse> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin/assistant-prompts/${promptKey}/history`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+  },
+
+  // Save a new version of a prompt
+  async savePromptVersion(promptKey: string, content: string, version: string): Promise<{ success: boolean; prompt: AssistantPrompt }> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin/assistant-prompts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ promptKey, content, version }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  },
+
+  // Activate a specific prompt version
+  async activatePromptVersion(id: string): Promise<{ success: boolean; prompt: AssistantPrompt }> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin/assistant-prompts/${id}/activate`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+  },
+
+  // Seed default prompts (one-time setup)
+  async seedPromptDefaults(): Promise<{ success: boolean; seeded: string[]; skipped: string[] }> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin/assistant-prompts/seed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+  },
+
+  // Get default content for a prompt key (for "Reset to Default")
+  async getPromptDefault(promptKey: string): Promise<{ promptKey: string; content: string }> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/admin/assistant-prompts/${promptKey}/default`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
   },
 };
 

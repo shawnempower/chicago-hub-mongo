@@ -12,6 +12,7 @@ import {
   ConversationAttachment,
   GeneratedFile,
   ConversationContext,
+  ConversationTokenUsage,
   CONVERSATION_COLLECTION,
   MAX_FILES_PER_CONVERSATION,
 } from './conversationSchema';
@@ -423,6 +424,49 @@ export class ConversationService {
       );
 
     return result.modifiedCount > 0;
+  }
+
+  // ============================================
+  // Token Usage Methods
+  // ============================================
+
+  /**
+   * Add token usage from a single exchange to the running total
+   */
+  static async addTokenUsage(
+    conversationId: string,
+    userId: string,
+    inputTokens: number,
+    outputTokens: number
+  ): Promise<boolean> {
+    const db = getDatabase();
+
+    const result = await db
+      .collection(CONVERSATION_COLLECTION)
+      .updateOne(
+        { conversationId, userId },
+        {
+          $inc: {
+            'tokenUsage.totalInputTokens': inputTokens,
+            'tokenUsage.totalOutputTokens': outputTokens,
+            'tokenUsage.exchangeCount': 1,
+          },
+          $set: { 'metadata.updatedAt': new Date() }
+        }
+      );
+
+    return result.modifiedCount > 0;
+  }
+
+  /**
+   * Get token usage for a conversation
+   */
+  static async getTokenUsage(
+    conversationId: string,
+    userId: string
+  ): Promise<ConversationTokenUsage> {
+    const conversation = await this.getConversation(conversationId, userId);
+    return conversation?.tokenUsage || { totalInputTokens: 0, totalOutputTokens: 0, exchangeCount: 0 };
   }
 }
 

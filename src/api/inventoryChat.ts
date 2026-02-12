@@ -40,6 +40,12 @@ export interface ConversationContext {
   notes?: string;
 }
 
+export interface ConversationTokenUsage {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  exchangeCount: number;
+}
+
 export interface Conversation {
   _id?: string;
   conversationId: string;
@@ -50,6 +56,7 @@ export interface Conversation {
   attachments?: ConversationAttachment[];
   generatedFiles?: GeneratedFile[];
   context?: ConversationContext;
+  tokenUsage?: ConversationTokenUsage;
   metadata: {
     createdAt: string;
     updatedAt: string;

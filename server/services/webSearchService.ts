@@ -6,6 +6,7 @@
  */
 
 import { createLogger } from '../../src/utils/logger';
+import { PromptConfigService } from './promptConfigService';
 
 const logger = createLogger('WebSearchService');
 
@@ -62,10 +63,12 @@ export class WebSearchService {
   ): Promise<SearchResponse> {
     const apiKey = this.getApiKey();
     
-    const {
-      model = 'sonar',
-      systemPrompt = 'You are a helpful research assistant. Provide concise, factual information based on your search results. Include relevant details like company locations, target audience, brand positioning, and recent news when available.',
-    } = options;
+    // If no systemPrompt provided, load default from DB
+    let model = options.model || 'sonar';
+    let systemPrompt = options.systemPrompt;
+    if (!systemPrompt) {
+      systemPrompt = await PromptConfigService.getActivePrompt('search_default');
+    }
 
     logger.info(`Searching with Perplexity: "${query}" (model: ${model})`);
 
@@ -135,9 +138,15 @@ export class WebSearchService {
       ? `Research ${brandName} (website: ${brandUrl}). Include: company overview, brand positioning, target customers, Chicago/local presence, products/services, community involvement, and recent news or marketing campaigns.`
       : `Research ${brandName}. Include: company overview, brand positioning, target customers, locations, products/services, community involvement, and recent news or marketing campaigns.`;
 
+    // Load prompt and model config from DB
+    const [brandPrompt, modelConfig] = await Promise.all([
+      PromptConfigService.getActivePrompt('search_brand_research'),
+      PromptConfigService.getModelConfig(),
+    ]);
+
     return this.search(query, {
-      model: 'sonar-pro', // Use pro for deeper research
-      systemPrompt: 'You are a media sales research assistant. Provide comprehensive brand research that helps identify advertising opportunities. Focus on: company background, brand values, target demographics, geographic presence, community involvement, and marketing history.',
+      model: modelConfig.searchModelPro || 'sonar-pro',
+      systemPrompt: brandPrompt,
     });
   }
 
@@ -147,9 +156,15 @@ export class WebSearchService {
   static async searchCompanyNews(companyName: string): Promise<SearchResponse> {
     const query = `What are the latest news and announcements about ${companyName}? Focus on marketing campaigns, new products, expansions, and community initiatives from the past 6 months.`;
     
+    // Load prompt and model config from DB
+    const [newsPrompt, modelConfig] = await Promise.all([
+      PromptConfigService.getActivePrompt('search_company_news'),
+      PromptConfigService.getModelConfig(),
+    ]);
+
     return this.search(query, {
-      model: 'sonar',
-      systemPrompt: 'You are a news research assistant. Summarize recent news and announcements. Focus on business developments, marketing activities, and community involvement.',
+      model: modelConfig.searchModelDefault || 'sonar',
+      systemPrompt: newsPrompt,
     });
   }
 
@@ -163,9 +178,15 @@ export class WebSearchService {
     const industryContext = industry ? ` in the ${industry} industry` : '';
     const query = `Who are the main competitors of ${brandName}${industryContext}? How does ${brandName} differentiate itself? What is their market position?`;
 
+    // Load prompt and model config from DB
+    const [competitorsPrompt, modelConfig] = await Promise.all([
+      PromptConfigService.getActivePrompt('search_competitors'),
+      PromptConfigService.getModelConfig(),
+    ]);
+
     return this.search(query, {
-      model: 'sonar',
-      systemPrompt: 'You are a competitive analysis assistant. Provide clear comparisons between companies, highlighting key differentiators and market positioning.',
+      model: modelConfig.searchModelDefault || 'sonar',
+      systemPrompt: competitorsPrompt,
     });
   }
 

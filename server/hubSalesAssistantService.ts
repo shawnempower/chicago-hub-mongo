@@ -19,6 +19,7 @@ import { ConversationService } from './conversationService';
 import { ConversationAttachment, ConversationContext, GeneratedFile } from './conversationSchema';
 import { getS3Service } from './s3Service';
 import { ObjectId } from 'mongodb';
+import { PromptConfigService } from './services/promptConfigService';
 
 const logger = createLogger('HubSalesAssistantService');
 
@@ -36,141 +37,154 @@ function getAnthropicClient(): Anthropic {
   return anthropic;
 }
 
-// Model configuration
-const MODEL = 'claude-opus-4-5-20251101';
-const MAX_TOKENS = 8192;
-const MAX_TOOL_ITERATIONS = 10;
+// Default model configuration (overridden by DB values)
+const DEFAULT_MODEL = 'claude-opus-4-5-20251101';
+const DEFAULT_MAX_TOKENS = 8192;
+const DEFAULT_MAX_TOOL_ITERATIONS = 10;
 
 // ============================================
 // Tool Definitions
 // ============================================
 
-const TOOLS: Anthropic.Tool[] = [
-  {
-    name: 'web_search',
-    description: 'Search the web for information about brands, companies, competitors, or industry topics. Choose the appropriate search_type for best results.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        search_type: {
-          type: 'string',
-          enum: ['general', 'brand_research', 'company_news', 'competitors'],
-          description: 'Type of search: general (default), brand_research (deep dive on a company), company_news (recent announcements), competitors (competitive analysis)'
+/**
+ * Build the tools array dynamically, reading descriptions from PromptConfigService.
+ * The input_schema stays fixed (structural), but descriptions are editable.
+ */
+async function buildTools(): Promise<Anthropic.Tool[]> {
+  const [webSearchDesc, getInventoryDesc, updateContextDesc, generateFileDesc] = await Promise.all([
+    PromptConfigService.getActivePrompt('tool_web_search'),
+    PromptConfigService.getActivePrompt('tool_get_inventory'),
+    PromptConfigService.getActivePrompt('tool_update_context'),
+    PromptConfigService.getActivePrompt('tool_generate_file'),
+  ]);
+
+  return [
+    {
+      name: 'web_search',
+      description: webSearchDesc,
+      input_schema: {
+        type: 'object' as const,
+        properties: {
+          search_type: {
+            type: 'string',
+            enum: ['general', 'brand_research', 'company_news', 'competitors'],
+            description: 'Type of search: general (default), brand_research (deep dive on a company), company_news (recent announcements), competitors (competitive analysis)'
+          },
+          query: {
+            type: 'string',
+            description: 'The search query or brand/company name'
+          },
+          brand_url: {
+            type: 'string',
+            description: 'Optional: brand website URL for more targeted brand research'
+          },
+          industry: {
+            type: 'string',
+            description: 'Optional: industry context for competitor analysis'
+          }
         },
-        query: {
-          type: 'string',
-          description: 'The search query or brand/company name'
+        required: ['query']
+      }
+    },
+    {
+      name: 'get_inventory',
+      description: getInventoryDesc,
+      input_schema: {
+        type: 'object' as const,
+        properties: {
+          query_type: {
+            type: 'string',
+            enum: ['all_publishers', 'publisher_details', 'placements_by_channel', 'search', 'summary'],
+            description: 'Type of query: all_publishers (list all), publisher_details (specific publisher), placements_by_channel (filter by channel), search (text search), summary (aggregate stats)'
+          },
+          publisher_id: {
+            type: 'string',
+            description: 'Specific publisher ID (for publisher_details)'
+          },
+          channel: {
+            type: 'string',
+            enum: ['print', 'digital', 'newsletter', 'radio', 'podcast', 'events', 'social'],
+            description: 'Channel to filter by (for placements_by_channel)'
+          },
+          search_term: {
+            type: 'string',
+            description: 'Search term for finding publishers (for search query_type)'
+          }
         },
-        brand_url: {
-          type: 'string',
-          description: 'Optional: brand website URL for more targeted brand research'
-        },
-        industry: {
-          type: 'string',
-          description: 'Optional: industry context for competitor analysis'
-        }
-      },
-      required: ['query']
-    }
-  },
-  {
-    name: 'get_inventory',
-    description: 'Query the hub\'s publisher and inventory data. Use this to find publishers, placements, pricing, audience data, and available channels.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        query_type: {
-          type: 'string',
-          enum: ['all_publishers', 'publisher_details', 'placements_by_channel', 'search', 'summary'],
-          description: 'Type of query: all_publishers (list all), publisher_details (specific publisher), placements_by_channel (filter by channel), search (text search), summary (aggregate stats)'
-        },
-        publisher_id: {
-          type: 'string',
-          description: 'Specific publisher ID (for publisher_details)'
-        },
-        channel: {
-          type: 'string',
-          enum: ['print', 'digital', 'newsletter', 'radio', 'podcast', 'events', 'social'],
-          description: 'Channel to filter by (for placements_by_channel)'
-        },
-        search_term: {
-          type: 'string',
-          description: 'Search term for finding publishers (for search query_type)'
-        }
-      },
-      required: ['query_type']
-    }
-  },
-  {
-    name: 'update_context',
-    description: 'Save or update the conversation context with brand/campaign information. Use this when the user provides information about a brand, budget, timeline, or campaign details that should be remembered.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        brand_name: {
-          type: 'string',
-          description: 'Name of the brand/company'
-        },
-        brand_url: {
-          type: 'string',
-          description: 'Brand website URL'
-        },
-        budget_monthly: {
-          type: 'number',
-          description: 'Monthly budget amount'
-        },
-        budget_total: {
-          type: 'number',
-          description: 'Total campaign budget'
-        },
-        campaign_duration: {
-          type: 'string',
-          description: 'Campaign duration (e.g., "3 months", "Q2 2026")'
-        },
-        target_audience: {
-          type: 'string',
-          description: 'Target audience description'
-        },
-        geographic_focus: {
-          type: 'string',
-          description: 'Geographic focus areas'
-        },
-        objectives: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Campaign objectives'
-        },
-        notes: {
-          type: 'string',
-          description: 'Additional notes'
+        required: ['query_type']
+      }
+    },
+    {
+      name: 'update_context',
+      description: updateContextDesc,
+      input_schema: {
+        type: 'object' as const,
+        properties: {
+          brand_name: {
+            type: 'string',
+            description: 'Name of the brand/company'
+          },
+          brand_url: {
+            type: 'string',
+            description: 'Brand website URL'
+          },
+          budget_monthly: {
+            type: 'number',
+            description: 'Monthly budget amount'
+          },
+          budget_total: {
+            type: 'number',
+            description: 'Total campaign budget'
+          },
+          campaign_duration: {
+            type: 'string',
+            description: 'Campaign duration (e.g., "3 months", "Q2 2026")'
+          },
+          target_audience: {
+            type: 'string',
+            description: 'Target audience description'
+          },
+          geographic_focus: {
+            type: 'string',
+            description: 'Geographic focus areas'
+          },
+          objectives: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Campaign objectives'
+          },
+          notes: {
+            type: 'string',
+            description: 'Additional notes'
+          }
         }
       }
-    }
-  },
-  {
-    name: 'generate_file',
-    description: 'Generate a downloadable file. Use this when the user asks for a proposal (markdown) or package export (CSV). The content should be complete and well-formatted.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        file_type: {
-          type: 'string',
-          enum: ['proposal_md', 'package_csv'],
-          description: 'Type of file to generate'
+    },
+    {
+      name: 'generate_file',
+      description: generateFileDesc,
+      input_schema: {
+        type: 'object' as const,
+        properties: {
+          file_type: {
+            type: 'string',
+            enum: ['proposal_md', 'package_csv'],
+            description: 'Type of file to generate'
+          },
+          filename: {
+            type: 'string',
+            description: 'Suggested filename (without extension, will be added automatically)'
+          },
+          content: {
+            type: 'string',
+            description: 'Complete file content (markdown for proposals, CSV for packages)'
+          }
         },
-        filename: {
-          type: 'string',
-          description: 'Suggested filename (without extension, will be added automatically)'
-        },
-        content: {
-          type: 'string',
-          description: 'Complete file content (markdown for proposals, CSV for packages)'
-        }
-      },
-      required: ['file_type', 'content']
+        required: ['file_type', 'content']
+      }
     }
-  }
-];
+  ];
+}
 
 // ============================================
 // Types
@@ -509,60 +523,14 @@ async function executeTool(
 // System Prompt
 // ============================================
 
-function buildSystemPrompt(hubName?: string, context?: ConversationContext | null): string {
+async function buildSystemPrompt(hubName?: string, context?: ConversationContext | null): Promise<string> {
   const hubDisplayName = hubName || 'your hub';
   
-  let prompt = `You are the Hub Sales Assistant, an AI-powered tool that helps Authorized Sales Partners research prospects, plan campaigns, and develop proposals for local media advertising.
-
-You operate within ${hubDisplayName}, a curated network of local media publishers.
-
-## Your Capabilities
-
-You have access to the following tools:
-
-1. **web_search** - Research brands, competitors, and industry topics online
-   - Use search_type="brand_research" for comprehensive company profiles (uses deeper analysis)
-   - Use search_type="company_news" for recent announcements, campaigns, expansions
-   - Use search_type="competitors" for competitive analysis and market positioning
-   - Use search_type="general" for other queries
-2. **get_inventory** - Query publisher data, placements, pricing, and audience information
-3. **update_context** - Save brand/campaign details to remember across the conversation
-4. **generate_file** - Create downloadable proposals (Markdown) or package exports (CSV)
-
-## How to Help Users
-
-### Brand Research
-When asked to research a brand:
-- Use web_search to find company info, positioning, target audience, locations
-- Identify strategic alignment with hub publishers
-- Suggest relevant community segments and publishers
-- Save key info with update_context for later use
-
-### Campaign Planning
-When asked to plan a campaign:
-- Ask for missing info (budget, timeline, objectives) if not provided
-- Use get_inventory to find matching publishers and placements
-- Allocate budget across channels based on objectives
-- Provide clear rationale for recommendations
-
-### Proposal Generation
-When asked for a proposal:
-- Ensure you have: brand info, publishers, placements, pricing, budget
-- Use generate_file with file_type "proposal_md"
-- Follow this structure: Executive Summary, Strategic Alignment, Recommended Publishers, Investment Summary, Next Steps
-
-### Package Export
-When asked for a CSV/package export:
-- Use generate_file with file_type "package_csv"
-- Include columns: publisher_name, placement_name, channel, format, unit_rate, quantity, total_cost
-
-## Guidelines
-
-- Always use real data from get_inventory - never fabricate pricing or reach numbers
-- Save important context (brand, budget, timeline) using update_context
-- Be strategic, not just tactical - explain the "why" behind recommendations
-- If data is missing, acknowledge it honestly and ask for clarification
-- End responses with clear next steps or suggestions`;
+  // Read the system prompt from DB (falls back to hardcoded default)
+  let promptTemplate = await PromptConfigService.getActivePrompt('system_prompt');
+  
+  // Replace {{HUB_NAME}} placeholder with actual hub name
+  let prompt = promptTemplate.replace(/\{\{HUB_NAME\}\}/g, hubDisplayName);
 
   // Add current context if available
   if (context && Object.keys(context).some(k => context[k as keyof ConversationContext])) {
@@ -608,8 +576,16 @@ export class HubSalesAssistantService {
       // Get current context
       const context = await ConversationService.getContext(conversationId, userId);
       
-      // Build system prompt
-      const systemPrompt = buildSystemPrompt(hubName, context);
+      // Load dynamic config from DB (prompts, tools, model)
+      const [systemPrompt, tools, modelConfig] = await Promise.all([
+        buildSystemPrompt(hubName, context),
+        buildTools(),
+        PromptConfigService.getModelConfig(),
+      ]);
+      
+      const MODEL = modelConfig.anthropicModel || DEFAULT_MODEL;
+      const MAX_TOKENS = modelConfig.maxTokens || DEFAULT_MAX_TOKENS;
+      const MAX_TOOL_ITERATIONS = modelConfig.maxToolIterations || DEFAULT_MAX_TOOL_ITERATIONS;
       
       // Build messages array
       const messages: Anthropic.MessageParam[] = [];
@@ -694,7 +670,7 @@ export class HubSalesAssistantService {
           model: MODEL,
           max_tokens: MAX_TOKENS,
           system: systemPrompt,
-          tools: TOOLS,
+          tools,
           messages
         });
         
