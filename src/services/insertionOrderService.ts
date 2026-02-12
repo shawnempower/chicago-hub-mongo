@@ -228,6 +228,18 @@ export class InsertionOrderService {
       const campaignMap = new Map<string, any>();
       campaigns.forEach(c => campaignMap.set(c.campaignId, c));
 
+      // Filter out orders whose parent campaigns have been soft-deleted
+      const deletedCampaignIds = new Set<string>();
+      campaigns.forEach(c => {
+        if (c.deletedAt) {
+          deletedCampaignIds.add(c.campaignId);
+        }
+      });
+
+      const activeOrders = deletedCampaignIds.size > 0
+        ? orders.filter(o => !deletedCampaignIds.has(o.campaignId))
+        : orders;
+
       // Get all creative assets for these campaigns to calculate fresh asset status
       const creativeAssetsCollection = getDatabase().collection(COLLECTIONS.CREATIVE_ASSETS);
       const allCampaignAssets = await creativeAssetsCollection.find({
@@ -248,7 +260,7 @@ export class InsertionOrderService {
       });
 
       // Enrich each order with campaign data and fresh asset status
-      return orders.map(order => {
+      return activeOrders.map(order => {
         const campaign = campaignMap.get(order.campaignId);
         const campaignAssets = assetsByCampaign.get(order.campaignId) || [];
         
@@ -411,6 +423,19 @@ export class InsertionOrderService {
       const campaignMap = new Map<string, Campaign>();
       campaigns.forEach(c => campaignMap.set(c.campaignId, c));
 
+      // Filter out orders whose parent campaigns have been soft-deleted
+      // This catches orphaned orders that weren't cleaned up during campaign deletion
+      const deletedCampaignIds = new Set<string>();
+      campaigns.forEach(c => {
+        if (c.deletedAt) {
+          deletedCampaignIds.add(c.campaignId);
+        }
+      });
+
+      const activeOrders = deletedCampaignIds.size > 0
+        ? orders.filter(o => !deletedCampaignIds.has(o.campaignId))
+        : orders;
+
       // Get all creative assets for matching to placements
       const allCampaignAssets = await creativeAssetsCollection.find({
         'associations.campaignId': { $in: campaignIds },
@@ -430,7 +455,7 @@ export class InsertionOrderService {
       });
 
       // Enrich orders with campaign data, message counts, and fresh asset status
-      return orders.map(order => {
+      return activeOrders.map(order => {
         const campaign = campaignMap.get(order.campaignId);
         const pub = campaign?.selectedInventory?.publications?.find(
           (p: any) => p.publicationId === order.publicationId
@@ -756,6 +781,11 @@ export class InsertionOrderService {
       
       if (!campaign) {
         return { success: false, ordersGenerated: 0, error: 'Campaign not found' };
+      }
+
+      // Reject if campaign has been soft-deleted
+      if (campaign.deletedAt) {
+        return { success: false, ordersGenerated: 0, error: 'Cannot generate orders for a deleted campaign' };
       }
 
       // Check if orders already exist for this campaign
