@@ -104,7 +104,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     ]).toArray();
     
     // Look up publication names for entries where publicationName is null
-    const publicationsCollection = db.collection(COLLECTIONS.HUB_PUBLICATIONS);
+    const publicationsCollection = db.collection(COLLECTIONS.PUBLICATIONS);
     const publicationIdsToLookup = publicationBreakdown
       .filter(pub => !pub._id.publicationName && pub._id.publicationId)
       .map(pub => pub._id.publicationId);
@@ -702,7 +702,7 @@ router.post('/compute-aggregates', async (req: any, res: Response) => {
     ]).toArray();
     
     // Look up publication names for aggregates where publicationName is null
-    const publicationsCollection = db.collection(COLLECTIONS.HUB_PUBLICATIONS);
+    const publicationsCollection = db.collection(COLLECTIONS.PUBLICATIONS);
     const publicationIdsToLookup = aggregation
       .filter(agg => !agg.publicationName && agg._id.publicationId)
       .map(agg => agg._id.publicationId);
