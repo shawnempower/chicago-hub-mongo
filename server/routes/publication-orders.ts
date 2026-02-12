@@ -1796,7 +1796,7 @@ router.put('/:campaignId/:publicationId/placement-status', async (req: any, res:
       // Don't fail the request if notifications fail
     }
 
-    res.json({ success: true, orderConfirmed: result.orderConfirmed });
+    res.json({ success: true, orderConfirmed: result.orderConfirmed, orderRejected: result.orderRejected });
   } catch (error) {
     console.error('Error updating placement status:', error);
     res.status(500).json({ error: 'Failed to update placement status' });

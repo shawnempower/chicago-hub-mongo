@@ -229,20 +229,37 @@ export function PublicationActionCenter({
       
       // Check order status
       if (order.status === 'sent') {
-        // Needs acceptance
-        items.push({
-          id: `accept-${orderId}`,
-          type: 'needs_acceptance',
-          priority: 'urgent',
-          title: 'New order to review',
-          subtitle: `${placements.length} placement${placements.length !== 1 ? 's' : ''} • Review and accept`,
-          campaignId: order.campaignId,
-          campaignName,
-          publicationId: order.publicationId,
-          actionLabel: 'Review Order',
-          actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+        // Check if there are actually pending placements still needing action
+        const statuses = order.placementStatuses || {};
+        const hasPendingPlacements = placements.length === 0 || placements.some(p => {
+          const key = p.itemPath || p.sourcePath || '';
+          const s = statuses[key];
+          return !s || s === 'pending';
         });
-        continue;
+        
+        if (hasPendingPlacements) {
+          // Count only the pending ones for accurate messaging
+          const pendingCount = placements.filter(p => {
+            const key = p.itemPath || p.sourcePath || '';
+            const s = statuses[key];
+            return !s || s === 'pending';
+          }).length;
+          const displayCount = pendingCount || placements.length;
+          items.push({
+            id: `accept-${orderId}`,
+            type: 'needs_acceptance',
+            priority: 'urgent',
+            title: 'New order to review',
+            subtitle: `${displayCount} placement${displayCount !== 1 ? 's' : ''} • Review and accept`,
+            campaignId: order.campaignId,
+            campaignName,
+            publicationId: order.publicationId,
+            actionLabel: 'Review Order',
+            actionUrl: `/dashboard?tab=order-detail&campaignId=${order.campaignId}&publicationId=${order.publicationId}`,
+          });
+          continue;
+        }
+        // All placements actioned but order status not yet updated — fall through to per-placement logic
       }
 
       // Check individual placements for reporting needs

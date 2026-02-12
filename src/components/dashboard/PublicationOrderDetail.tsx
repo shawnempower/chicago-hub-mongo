@@ -733,6 +733,9 @@ export function PublicationOrderDetail() {
         toast({ title: 'Order Confirmed!', description: 'All placements accepted. You can now access scripts and report performance.' });
         // Update order status locally instead of full refresh
         setOrder(prev => prev ? { ...prev, status: 'confirmed' } : prev);
+      } else if (result.orderRejected) {
+        toast({ title: 'Order Rejected', description: 'All placements have been rejected. The hub has been notified.' });
+        setOrder(prev => prev ? { ...prev, status: 'rejected' } : prev);
       } else {
         const messages: Record<string, string> = {
           accepted: 'Placement accepted',

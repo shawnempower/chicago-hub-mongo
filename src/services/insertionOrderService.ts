@@ -2264,47 +2264,74 @@ export class InsertionOrderService {
         }
       );
 
-      // Check if all placements are accepted (or past accepted) for auto-confirm
+      // Check if all placements have been actioned for auto order status transition
       let orderConfirmed = false;
-      if (status === 'accepted' && order.status === 'sent') {
-        // Get campaign to count total placements
-        const campaign = await this.campaignsCollection.findOne({ campaignId });
-        const pub = campaign?.selectedInventory?.publications?.find(
-          (p: any) => p.publicationId === publicationId
-        );
+      let orderRejected = false;
+      if (order.status === 'sent') {
+        // Use the order's own placementStatuses as source of truth
+        const allStatuses = Object.values(updatedStatuses) as string[];
+        const totalPlacements = allStatuses.length;
         
-        if (pub) {
-          const totalPlacements = pub.inventoryItems?.length || 0;
-          // Count placements that are accepted OR have progressed past accepted
-          const acceptedOrBeyond = ['accepted', 'in_production', 'delivered'];
-          const acceptedCount = Object.values(updatedStatuses).filter(s => acceptedOrBeyond.includes(s as string)).length;
+        if (totalPlacements > 0) {
+          const pendingCount = allStatuses.filter(s => s === 'pending').length;
           
-          if (acceptedCount === totalPlacements && totalPlacements > 0) {
-            await this.ordersCollection.updateOne(
-              { _id: order._id },
-              {
-                $set: {
-                  status: 'confirmed',
-                  confirmationDate: new Date()
-                },
-                $push: {
-                  statusHistory: {
-                    status: 'confirmed',
-                    timestamp: new Date(),
-                    changedBy: userId,
-                    notes: 'Auto-confirmed: All placements accepted'
+          // Only transition if no placements are still pending
+          if (pendingCount === 0) {
+            const acceptedOrBeyond = ['accepted', 'in_production', 'delivered'];
+            const acceptedCount = allStatuses.filter(s => acceptedOrBeyond.includes(s)).length;
+            const rejectedCount = allStatuses.filter(s => s === 'rejected').length;
+            
+            if (rejectedCount === totalPlacements) {
+              // All placements rejected → reject the order
+              await this.ordersCollection.updateOne(
+                { _id: order._id },
+                {
+                  $set: {
+                    status: 'rejected',
+                    updatedAt: new Date()
+                  },
+                  $push: {
+                    statusHistory: {
+                      status: 'rejected',
+                      timestamp: new Date(),
+                      changedBy: userId,
+                      notes: 'Auto-rejected: All placements rejected by publication'
+                    }
                   }
                 }
-              }
-            );
-            orderConfirmed = true;
-            // Scripts are already generated when order was sent - no need to regenerate here
-            // Use the "Refresh Scripts" button if new creatives were added after send
+              );
+              orderRejected = true;
+            } else if (acceptedCount > 0) {
+              // Mix of accepted + rejected (or all accepted) with none pending → confirm
+              const note = rejectedCount > 0
+                ? `Auto-confirmed: ${acceptedCount} placement${acceptedCount !== 1 ? 's' : ''} accepted, ${rejectedCount} rejected`
+                : 'Auto-confirmed: All placements accepted';
+              await this.ordersCollection.updateOne(
+                { _id: order._id },
+                {
+                  $set: {
+                    status: 'confirmed',
+                    confirmationDate: new Date()
+                  },
+                  $push: {
+                    statusHistory: {
+                      status: 'confirmed',
+                      timestamp: new Date(),
+                      changedBy: userId,
+                      notes: note
+                    }
+                  }
+                }
+              );
+              orderConfirmed = true;
+              // Scripts are already generated when order was sent - no need to regenerate here
+              // Use the "Refresh Scripts" button if new creatives were added after send
+            }
           }
         }
       }
 
-      return { success: true, orderConfirmed };
+      return { success: true, orderConfirmed, orderRejected };
     } catch (error) {
       console.error('Error updating placement status:', error);
       return {
