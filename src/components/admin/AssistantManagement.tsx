@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Save, RotateCcw, ChevronDown, ChevronRight, Eye, History, Loader2, Database, Bot, Search, Wrench, Settings2 } from 'lucide-react';
+import { Save, RotateCcw, ChevronDown, ChevronRight, Eye, History, Loader2, Database, Bot, Search, Wrench, Settings2, FileText, Network } from 'lucide-react';
 import { adminApi, type AssistantPrompt, type AssistantPromptsResponse } from '@/api/admin';
 
 // ============================================
@@ -406,6 +406,7 @@ export const AssistantManagement = () => {
   const [editStates, setEditStates] = useState<Record<string, EditState>>({});
   const [histories, setHistories] = useState<Record<string, HistoryState>>({});
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<'sales-assistant' | 'publication' | 'hub-description'>('sales-assistant');
   const { toast } = useToast();
 
   // Load all active prompts
@@ -619,26 +620,14 @@ export const AssistantManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Hub Sales Assistant Configuration</h2>
-          <p className="text-muted-foreground text-sm">
-            Manage AI prompts, tool descriptions, search prompts, and model settings
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={handleSeedDefaults}>
-          <Database className="w-4 h-4 mr-2" />
-          Seed Defaults
-        </Button>
-      </div>
-
-      {!hasPrompts ? (
+      {/* Seed Defaults (shown only when nothing is configured yet) */}
+      {!hasPrompts && (
         <Card>
           <CardContent className="py-12 text-center">
             <Database className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-medium mb-2">No Prompt Configurations Found</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Click "Seed Defaults" to initialize the prompt configurations with the current hardcoded values.
+              Click "Seed Defaults" to initialize all AI prompt configurations with the current default values.
               This is a one-time setup.
             </p>
             <Button onClick={handleSeedDefaults}>
@@ -647,74 +636,164 @@ export const AssistantManagement = () => {
             </Button>
           </CardContent>
         </Card>
-      ) : (
-        <Tabs defaultValue="system" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="system" className="flex items-center gap-1.5">
-              <Bot className="w-4 h-4" />
-              System Prompt
-            </TabsTrigger>
-            <TabsTrigger value="tool" className="flex items-center gap-1.5">
-              <Wrench className="w-4 h-4" />
-              Tool Descriptions
-            </TabsTrigger>
-            <TabsTrigger value="search" className="flex items-center gap-1.5">
-              <Search className="w-4 h-4" />
-              Search Prompts
-            </TabsTrigger>
-            <TabsTrigger value="model" className="flex items-center gap-1.5">
-              <Settings2 className="w-4 h-4" />
-              Model Config
-            </TabsTrigger>
-          </TabsList>
+      )}
 
-          {/* System Prompt Tab */}
-          <TabsContent value="system" className="space-y-4">
-            <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-              The main system prompt defines the assistant's persona, capabilities, and behavior guidelines.
-              Use <code className="text-xs bg-muted px-1 py-0.5 rounded">{'{{HUB_NAME}}'}</code> as a placeholder
-              for the hub name, which gets replaced at runtime.
+      {hasPrompts && (
+        <>
+          {/* Top-level section selector */}
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              <Button
+                variant={activeSection === 'sales-assistant' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveSection('sales-assistant')}
+                className="flex items-center gap-2"
+              >
+                <Bot className="w-4 h-4" />
+                Hub Sales Assistant
+              </Button>
+              <Button
+                variant={activeSection === 'hub-description' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveSection('hub-description')}
+                className="flex items-center gap-2"
+              >
+                <Network className="w-4 h-4" />
+                Hub AI Description
+              </Button>
+              <Button
+                variant={activeSection === 'publication' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveSection('publication')}
+                className="flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Publication AI Profile
+              </Button>
             </div>
-            {renderEditor('system_prompt', true)}
-          </TabsContent>
+            <Button variant="outline" size="sm" onClick={handleSeedDefaults}>
+              <Database className="w-4 h-4 mr-2" />
+              Seed Defaults
+            </Button>
+          </div>
 
-          {/* Tool Descriptions Tab */}
-          <TabsContent value="tool" className="space-y-4">
-            <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-              Tool descriptions are sent to the AI model to explain what each tool does.
-              These influence how and when the model decides to use each tool.
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              {renderEditor('tool_web_search')}
-              {renderEditor('tool_get_inventory')}
-              {renderEditor('tool_update_context')}
-              {renderEditor('tool_generate_file')}
-            </div>
-          </TabsContent>
+          {/* ========== Hub AI Description ========== */}
+          {activeSection === 'hub-description' && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold">Hub AI Description</h2>
+                <p className="text-muted-foreground text-sm">
+                  Controls how AI generates the network summary and value proposition for the hub
+                </p>
+              </div>
 
-          {/* Search Prompts Tab */}
-          <TabsContent value="search" className="space-y-4">
-            <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-              Search prompts are system instructions sent to the Perplexity API for each type of web search.
-              They guide how search results are synthesized and presented.
+              <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+                This prompt is sent to Perplexity when generating a hub's network summary.
+                It uses data from all publications in the hub to produce sections: Value Proposition,
+                Audience Highlights, Market Coverage, and Channel Strengths.
+              </div>
+              {renderEditor('hub_network_summary', true)}
             </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              {renderEditor('search_default')}
-              {renderEditor('search_brand_research')}
-              {renderEditor('search_company_news')}
-              {renderEditor('search_competitors')}
-            </div>
-          </TabsContent>
+          )}
 
-          {/* Model Config Tab */}
-          <TabsContent value="model" className="space-y-4">
-            <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-              Model configuration controls which AI models are used and their parameters.
-              Changes take effect on the next conversation message (cached for up to 5 minutes).
+          {/* ========== Publication AI Profile ========== */}
+          {activeSection === 'publication' && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold">Publication AI Profile</h2>
+                <p className="text-muted-foreground text-sm">
+                  Controls how AI researches and describes publications to prospective advertisers
+                </p>
+              </div>
+
+              <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+                This prompt is sent to Perplexity when generating AI profiles for publications.
+                The output is structured into sections: Summary, Full Profile, Audience Insight, and Community Role.
+              </div>
+              {renderEditor('publication_profile', true)}
             </div>
-            {renderEditor('model_config')}
-          </TabsContent>
-        </Tabs>
+          )}
+
+          {/* ========== Hub Sales Assistant ========== */}
+          {activeSection === 'sales-assistant' && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold">Hub Sales Assistant</h2>
+                <p className="text-muted-foreground text-sm">
+                  AI prompts, tool descriptions, search prompts, and model settings for the sales assistant
+                </p>
+              </div>
+
+              <Tabs defaultValue="system" className="space-y-4">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="system" className="flex items-center gap-1.5">
+                    <Bot className="w-4 h-4" />
+                    System Prompt
+                  </TabsTrigger>
+                  <TabsTrigger value="tool" className="flex items-center gap-1.5">
+                    <Wrench className="w-4 h-4" />
+                    Tool Descriptions
+                  </TabsTrigger>
+                  <TabsTrigger value="search" className="flex items-center gap-1.5">
+                    <Search className="w-4 h-4" />
+                    Search Prompts
+                  </TabsTrigger>
+                  <TabsTrigger value="model" className="flex items-center gap-1.5">
+                    <Settings2 className="w-4 h-4" />
+                    Model Config
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* System Prompt Tab */}
+                <TabsContent value="system" className="space-y-4">
+                  <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+                    The main system prompt defines the assistant's persona, capabilities, and behavior guidelines.
+                    Use <code className="text-xs bg-muted px-1 py-0.5 rounded">{'{{HUB_NAME}}'}</code> as a placeholder
+                    for the hub name, which gets replaced at runtime.
+                  </div>
+                  {renderEditor('system_prompt', true)}
+                </TabsContent>
+
+                {/* Tool Descriptions Tab */}
+                <TabsContent value="tool" className="space-y-4">
+                  <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+                    Tool descriptions are sent to the AI model to explain what each tool does.
+                    These influence how and when the model decides to use each tool.
+                  </div>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {renderEditor('tool_web_search')}
+                    {renderEditor('tool_get_inventory')}
+                    {renderEditor('tool_update_context')}
+                    {renderEditor('tool_generate_file')}
+                  </div>
+                </TabsContent>
+
+                {/* Search Prompts Tab */}
+                <TabsContent value="search" className="space-y-4">
+                  <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+                    Search prompts are system instructions sent to the Perplexity API for each type of web search.
+                    They guide how search results are synthesized and presented.
+                  </div>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {renderEditor('search_default')}
+                    {renderEditor('search_brand_research')}
+                    {renderEditor('search_company_news')}
+                    {renderEditor('search_competitors')}
+                  </div>
+                </TabsContent>
+
+                {/* Model Config Tab */}
+                <TabsContent value="model" className="space-y-4">
+                  <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+                    Model configuration controls which AI models are used and their parameters.
+                    Changes take effect on the next conversation message (cached for up to 5 minutes).
+                  </div>
+                  {renderEditor('model_config')}
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

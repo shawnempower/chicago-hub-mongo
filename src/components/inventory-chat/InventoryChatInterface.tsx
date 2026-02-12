@@ -39,6 +39,18 @@ interface TokenUsage {
   messageCount: number;
 }
 
+// Approximate cost rates per token (Claude Opus 4.5 pricing)
+const TOKEN_COST_RATES = {
+  input: 15 / 1_000_000,   // $15 per 1M input tokens
+  output: 75 / 1_000_000,  // $75 per 1M output tokens
+};
+
+function estimateCost(inputTokens: number, outputTokens: number): string {
+  const cost = (inputTokens * TOKEN_COST_RATES.input) + (outputTokens * TOKEN_COST_RATES.output);
+  if (cost < 0.01) return '<$0.01';
+  return `~$${cost.toFixed(2)}`;
+}
+
 // Supported file types
 const SUPPORTED_TYPES = [
   'application/pdf',
@@ -590,11 +602,11 @@ export const InventoryChatInterface: React.FC<InventoryChatInterfaceProps> = ({
                   Press Enter to send • Shift+Enter for new line • Drop files to attach
                 </p>
                 {tokenUsage.messageCount > 0 && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400" title={`Input: ${tokenUsage.inputTokens.toLocaleString()} • Output: ${tokenUsage.outputTokens.toLocaleString()} • ${tokenUsage.messageCount} exchange${tokenUsage.messageCount !== 1 ? 's' : ''}`}>
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400" title={`Input: ${tokenUsage.inputTokens.toLocaleString()} • Output: ${tokenUsage.outputTokens.toLocaleString()} • ${tokenUsage.messageCount} exchange${tokenUsage.messageCount !== 1 ? 's' : ''} • Est. cost: ${estimateCost(tokenUsage.inputTokens, tokenUsage.outputTokens)}`}>
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                     </svg>
-                    <span>{(tokenUsage.inputTokens + tokenUsage.outputTokens).toLocaleString()} tokens</span>
+                    <span>{(tokenUsage.inputTokens + tokenUsage.outputTokens).toLocaleString()} tokens ({estimateCost(tokenUsage.inputTokens, tokenUsage.outputTokens)})</span>
                   </div>
                 )}
               </div>

@@ -823,6 +823,35 @@ export const HubCentralDashboard = ({ activeTab, onTabChange }: HubCentralDashbo
                       </div>
                     )}
                   </div>
+                  {/* Extended sections (from Claude agent) */}
+                  {(selectedHub.networkSummary.competitivePositioning || selectedHub.networkSummary.contentVerticals || selectedHub.networkSummary.recommendedVerticals) && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t">
+                      {selectedHub.networkSummary.competitivePositioning && (
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-600">Competitive Positioning</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {selectedHub.networkSummary.competitivePositioning}
+                          </p>
+                        </div>
+                      )}
+                      {selectedHub.networkSummary.contentVerticals && (
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-600">Content Verticals</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {selectedHub.networkSummary.contentVerticals}
+                          </p>
+                        </div>
+                      )}
+                      {selectedHub.networkSummary.recommendedVerticals && (
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-600">Recommended Verticals</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {selectedHub.networkSummary.recommendedVerticals}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-4">

@@ -247,6 +247,9 @@ class HubsAPI {
       audienceHighlights: string;
       marketCoverage: string;
       channelStrengths: string;
+      competitivePositioning?: string;
+      contentVerticals?: string;
+      recommendedVerticals?: string;
       citations: string[];
       generatedAt: string;
       generatedBy: string;
@@ -254,18 +257,32 @@ class HubsAPI {
       version: number;
     };
   }> {
-    const response = await authenticatedFetch(`${API_BASE_URL}/hubs/${hubId}/generate-network-summary`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for AI agent
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || `Failed to generate network summary: ${response.status}`);
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/hubs/${hubId}/generate-network-summary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to generate network summary: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Network summary generation timed out. The AI agent may need more time for large hubs -- please try again.');
+      }
+      throw error;
     }
-
-    return await response.json();
   }
 }
 

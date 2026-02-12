@@ -226,9 +226,18 @@ export class WebSearchService {
 
 4. COMMUNITY ROLE: What role does this publication play in its local community? How does it contribute to civic life, local culture, or community discourse?`;
 
+    // Load the publication profile prompt from DB (editable via admin panel)
+    let profilePrompt: string;
+    try {
+      profilePrompt = await PromptConfigService.getActivePrompt('publication_profile');
+    } catch {
+      // Fallback if not yet seeded
+      profilePrompt = 'You are a media research analyst helping an advertising network describe its partner publications to prospective advertisers. Your goal is to create compelling, factual publication profiles that help advertisers understand the value of placing ads in each outlet. Write in a professional but accessible tone. Focus on what makes each publication unique and valuable as an advertising medium. Always structure your response with clearly labeled sections: SUMMARY, FULL PROFILE, AUDIENCE INSIGHT, and COMMUNITY ROLE.';
+    }
+
     return this.search(query, {
       model: 'sonar-pro',
-      systemPrompt: `You are a media research analyst helping an advertising network describe its partner publications to prospective advertisers. Your goal is to create compelling, factual publication profiles that help advertisers understand the value of placing ads in each outlet. Write in a professional but accessible tone. Focus on what makes each publication unique and valuable as an advertising medium. Always structure your response with clearly labeled sections: SUMMARY, FULL PROFILE, AUDIENCE INSIGHT, and COMMUNITY ROLE.`,
+      systemPrompt: profilePrompt,
     });
   }
 

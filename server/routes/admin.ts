@@ -2170,7 +2170,7 @@ router.get('/assistant-prompts', authenticateToken, async (req: any, res: Respon
     const prompts = await PromptConfigService.getAllActivePrompts();
     
     // Group by category
-    const grouped: Record<string, any[]> = { system: [], tool: [], search: [], model: [] };
+    const grouped: Record<string, any[]> = { system: [], tool: [], search: [], model: [], publication: [], hub: [] };
     for (const p of prompts) {
       const meta = PROMPT_KEYS.find(pk => pk.key === p.promptKey);
       grouped[p.category]?.push({

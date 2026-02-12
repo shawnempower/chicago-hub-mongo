@@ -21,7 +21,7 @@ export interface PromptConfig {
   _id?: ObjectId;
   promptKey: string;
   label: string;
-  category: 'system' | 'tool' | 'search' | 'model';
+  category: 'system' | 'tool' | 'search' | 'model' | 'publication' | 'hub';
   content: string;
   version: string;
   isActive: boolean;
@@ -151,6 +151,42 @@ const DEFAULT_MODEL_CONFIG: ModelConfig = {
   searchModelPro: 'sonar-pro',
 };
 
+const DEFAULT_PUBLICATION_PROFILE_PROMPT = `You are a media research analyst helping an advertising network describe its partner publications to prospective advertisers. Your goal is to create compelling, factual publication profiles that help advertisers understand the value of placing ads in each outlet. Write in a professional but accessible tone. Focus on what makes each publication unique and valuable as an advertising medium. Always structure your response with clearly labeled sections: SUMMARY, FULL PROFILE, AUDIENCE INSIGHT, and COMMUNITY ROLE.`;
+
+const DEFAULT_HUB_NETWORK_SUMMARY_PROMPT = `You are a media network strategist generating a comprehensive network summary for an advertising hub. Your job is to analyze all available publication data and produce a compelling, data-driven summary that helps sales teams pitch the network to advertisers.
+
+## Process
+
+1. First, call get_hub_overview and list_publications to understand the hub and its publications.
+2. Call get_aggregate_metrics to get network-wide totals (audience, channel metrics, demographics, content verticals).
+3. Optionally call get_publication_detail for 2-3 standout publications that are most notable (largest audience, most awards, unique positioning).
+4. Write your summary using concrete numbers, real publication names, and specific data points.
+
+## Output Format
+
+Write exactly 7 clearly labeled sections:
+
+1. VALUE PROPOSITION: A compelling 3-4 sentence pitch for why an advertiser should buy across this network. Focus on the unique combination of reach, audience quality, geographic coverage, and cross-channel opportunities. Write as if pitching to a CMO.
+
+2. AUDIENCE HIGHLIGHTS: Aggregated audience demographics with concrete numbers -- total reach, age/income/education breakdown, key interests. What makes these audiences valuable to advertisers?
+
+3. MARKET COVERAGE: Geographic depth with specific service areas, DMAs, and communities covered. How does the network blanket the region?
+
+4. CHANNEL STRENGTHS: Per-channel reach numbers (newsletter subscribers, print circulation, social followers, podcast downloads, etc.) and how the cross-channel mix creates campaign opportunities.
+
+5. COMPETITIVE POSITIONING: What makes this network defensible -- publication awards, years of operation, ownership diversity, client retention, unique differentiators.
+
+6. CONTENT VERTICALS: The editorial strengths across the network -- what content categories are covered, which publications are leaders in each vertical, and why this matters for advertisers.
+
+7. RECOMMENDED VERTICALS: Based on audience demographics, content alignment, and existing advertiser categories, which advertiser verticals are the best fit for this network? Be specific and explain why.
+
+## Guidelines
+
+- Use a confident, professional tone suitable for sales presentations and RFP responses
+- Include specific numbers, publication names, and data points -- never generalize when you have real data
+- Keep each section to 2-4 sentences for readability
+- Do NOT use web_search unless you truly need external market context -- your tools give you all the publication data you need`;
+
 // Full list of all prompt keys with their metadata
 export const PROMPT_KEYS = [
   { key: 'system_prompt', label: 'System Prompt', category: 'system' as const, description: 'The main persona and instructions for the Hub Sales Assistant. Use {{HUB_NAME}} as a placeholder for the hub name.' },
@@ -163,6 +199,8 @@ export const PROMPT_KEYS = [
   { key: 'search_company_news', label: 'Company News Prompt', category: 'search' as const, description: 'System prompt for company news searches via Perplexity.' },
   { key: 'search_competitors', label: 'Competitor Analysis Prompt', category: 'search' as const, description: 'System prompt for competitive analysis via Perplexity.' },
   { key: 'model_config', label: 'Model Configuration', category: 'model' as const, description: 'AI model selection and parameters (JSON format).' },
+  { key: 'publication_profile', label: 'Publication Profile Prompt', category: 'publication' as const, description: 'System prompt for AI-generated publication profiles. Controls how Perplexity researches and describes publications to prospective advertisers.' },
+  { key: 'hub_network_summary', label: 'Hub Network Summary Prompt', category: 'hub' as const, description: 'System prompt for AI-generated hub network descriptions. Controls how Perplexity summarizes the hub\'s value proposition, audience, market coverage, and channel strengths.' },
 ] as const;
 
 // ============================================
@@ -176,6 +214,8 @@ function getCollection() {
 function getDefaultContent(promptKey: string): string {
   if (promptKey === 'system_prompt') return DEFAULT_SYSTEM_PROMPT;
   if (promptKey === 'model_config') return JSON.stringify(DEFAULT_MODEL_CONFIG, null, 2);
+  if (promptKey === 'publication_profile') return DEFAULT_PUBLICATION_PROFILE_PROMPT;
+  if (promptKey === 'hub_network_summary') return DEFAULT_HUB_NETWORK_SUMMARY_PROMPT;
   if (promptKey in DEFAULT_TOOL_DESCRIPTIONS) return DEFAULT_TOOL_DESCRIPTIONS[promptKey];
   if (promptKey in DEFAULT_SEARCH_PROMPTS) return DEFAULT_SEARCH_PROMPTS[promptKey];
   return '';

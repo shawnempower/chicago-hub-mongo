@@ -38,7 +38,7 @@ export interface AssistantPrompt {
   _id: string | null;
   promptKey: string;
   label: string;
-  category: 'system' | 'tool' | 'search' | 'model';
+  category: 'system' | 'tool' | 'search' | 'model' | 'publication' | 'hub';
   content: string;
   version: string;
   isActive: boolean;
@@ -51,7 +51,7 @@ export interface AssistantPrompt {
 export interface PromptKeyMeta {
   key: string;
   label: string;
-  category: 'system' | 'tool' | 'search' | 'model';
+  category: 'system' | 'tool' | 'search' | 'model' | 'publication' | 'hub';
   description: string;
 }
 

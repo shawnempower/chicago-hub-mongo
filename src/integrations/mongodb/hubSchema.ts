@@ -129,7 +129,13 @@ export interface Hub {
     marketCoverage: string;
     /** Channel mix and cross-platform strengths */
     channelStrengths: string;
-    /** Source citations from Perplexity */
+    /** What makes this network defensible -- differentiators, awards, longevity */
+    competitivePositioning?: string;
+    /** Editorial strengths and advertiser-relevant content categories */
+    contentVerticals?: string;
+    /** Top advertiser categories that align with the network's audience */
+    recommendedVerticals?: string;
+    /** Source citations */
     citations: string[];
     /** When this summary was generated */
     generatedAt: Date;
