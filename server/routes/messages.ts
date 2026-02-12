@@ -380,8 +380,12 @@ router.post('/conversations', async (req: any, res: Response) => {
     );
 
     // Send email if requested and message provided
+    console.log(`📨 [CREATE CONVERSATION] deliveryChannel=${deliveryChannel}, hasInitialMessage=${!!initialMessage}, userType=${userType}`);
     if (initialMessage && (deliveryChannel === 'email' || deliveryChannel === 'both')) {
+      console.log(`📨 [CREATE CONVERSATION] Entering email send path for conversation ${String(conversation._id)}`);
       await sendEmailForMessage(conversation, initialMessage, senderName, hubId, String(conversation._id));
+    } else {
+      console.log(`📨 [CREATE CONVERSATION] Skipping email: deliveryChannel="${deliveryChannel}" (need "email" or "both"), initialMessage=${!!initialMessage}`);
     }
 
     // Create in-app notifications for recipients
@@ -612,7 +616,9 @@ router.post('/conversations/:id/messages', async (req: any, res: Response) => {
     }
 
     // Send email if requested
+    console.log(`📨 [SEND MESSAGE] deliveryChannel from body="${deliveryChannel}", effectiveChannel="${effectiveChannel}", userType=${userType}`);
     if (effectiveChannel === 'email' || effectiveChannel === 'both') {
+      console.log(`📨 [SEND MESSAGE] Entering email send path for conversation ${conversationId}`);
       const conversation = await messagingService.getConversation(conversationId);
       if (conversation) {
         await sendEmailForMessage(conversation, content.trim(), senderName, conversation.hubId, conversationId);
@@ -623,6 +629,8 @@ router.post('/conversations/:id/messages', async (req: any, res: Response) => {
           });
         }
       }
+    } else {
+      console.log(`📨 [SEND MESSAGE] Skipping email: effectiveChannel="${effectiveChannel}" (need "email" or "both")`);
     }
 
     // Create in-app notifications
@@ -769,7 +777,11 @@ async function sendEmailForMessage(
   hubId: string,
   conversationId: string
 ): Promise<void> {
-  if (!emailService) return;
+  console.log(`📨 [sendEmailForMessage] Called for conversation=${conversationId}, emailService=${emailService ? 'EXISTS' : 'NULL'}`);
+  if (!emailService) {
+    console.log(`📨 [sendEmailForMessage] emailService is NULL — skipping email send entirely`);
+    return;
+  }
 
   try {
     const db = getDatabase();
@@ -777,9 +789,24 @@ async function sendEmailForMessage(
     const hubName = hub?.basicInfo?.name;
 
     // Find recipients (participants who are NOT the sender)
-    const recipients = conversation.participants.filter(
+    let recipients = conversation.participants.filter(
       (p: ConversationParticipant) => p.email && p.userId !== conversation.createdBy
     );
+
+    // Self-message case: admin sent to themselves, so the filter removed all participants.
+    // Fall back to all participants with emails (deduplicated).
+    if (recipients.length === 0) {
+      const seen = new Set<string>();
+      recipients = conversation.participants.filter((p: ConversationParticipant) => {
+        if (p.email && !seen.has(p.email)) {
+          seen.add(p.email);
+          return true;
+        }
+        return false;
+      });
+    }
+
+    console.log(`📨 [sendEmailForMessage] createdBy=${conversation.createdBy}, participants=${JSON.stringify(conversation.participants?.map((p: any) => ({ userId: p.userId, email: p.email })))}, filteredRecipients=${recipients.length}`);
 
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const conversationType = conversation.type;
@@ -789,8 +816,9 @@ async function sendEmailForMessage(
         ? `${baseUrl}/hubcentral?tab=messages&conversationId=${conversationId}`
         : `${baseUrl}/dashboard?tab=messages&conversationId=${conversationId}`;
 
+      console.log(`📨 [sendEmailForMessage] Sending email to ${recipient.email} (type=${conversationType})`);
       if (conversationType === 'broadcast') {
-        await emailService.sendBroadcastEmail?.({
+        const result = await emailService.sendBroadcastEmail?.({
           recipientEmail: recipient.email,
           recipientName: recipient.name,
           senderName,
@@ -799,8 +827,9 @@ async function sendEmailForMessage(
           conversationUrl,
           hubName,
         });
+        console.log(`📨 [sendEmailForMessage] Broadcast email result:`, JSON.stringify(result));
       } else {
-        await emailService.sendConversationEmail?.({
+        const result = await emailService.sendConversationEmail?.({
           recipientEmail: recipient.email,
           recipientName: recipient.name,
           senderName,
@@ -809,6 +838,7 @@ async function sendEmailForMessage(
           conversationUrl,
           hubName,
         });
+        console.log(`📨 [sendEmailForMessage] Conversation email result:`, JSON.stringify(result));
       }
     }
   } catch (error) {
