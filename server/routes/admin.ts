@@ -1030,6 +1030,46 @@ router.get('/users', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
+// Get all invitations (admin only)
+router.get('/invitations', authenticateToken, async (req: any, res: Response) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const db = getDatabase();
+    const invitationsCollection = db.collection(COLLECTIONS.USER_INVITATIONS);
+
+    // Fetch all invitations, sorted by most recent first
+    const invitations = await invitationsCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    // Mark any expired-but-still-pending invitations
+    const now = new Date();
+    const enriched = invitations.map((inv: any) => ({
+      _id: inv._id?.toString(),
+      invitedEmail: inv.invitedEmail,
+      invitedBy: inv.invitedBy,
+      invitedByName: inv.invitedByName,
+      resourceType: inv.resourceType,
+      resourceId: inv.resourceId,
+      resourceName: inv.resourceName,
+      isExistingUser: inv.isExistingUser,
+      status: inv.status === 'pending' && new Date(inv.expiresAt) < now ? 'expired' : inv.status,
+      expiresAt: inv.expiresAt,
+      acceptedAt: inv.acceptedAt,
+      createdAt: inv.createdAt,
+    }));
+
+    res.json({ invitations: enriched });
+  } catch (error) {
+    console.error('Error fetching invitations:', error);
+    res.status(500).json({ error: 'Failed to fetch invitations' });
+  }
+});
+
 // Update user admin status (admin only)
 router.put('/users/:userId/admin', authenticateToken, async (req: any, res: Response) => {
   try {

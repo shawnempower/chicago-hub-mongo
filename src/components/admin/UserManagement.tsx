@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { adminApi } from '@/api/admin';
 import type { UserProfile } from '@/types/common';
-import type { UserPermissionDetail } from '@/api/admin';
+import type { UserPermissionDetail, AdminInvitation } from '@/api/admin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +47,9 @@ import {
   Building2,
   FileText,
   Clock,
+  Send,
+  UserPlus,
+  X,
 } from 'lucide-react';
 
 type RoleFilter = 'all' | 'admin' | 'hub_user' | 'publication_user' | 'standard' | 'no_role';
@@ -271,12 +274,310 @@ function formatRoleLabel(role: string): string {
   }
 }
 
+// Invitation status filter type
+type InvitationStatusFilter = 'all' | 'pending' | 'accepted' | 'expired' | 'cancelled';
+
+/** Pending Invitations panel for admin view */
+function PendingInvitationsPanel() {
+  const [invitations, setInvitations] = useState<AdminInvitation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionInProgress, setActionInProgress] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<InvitationStatusFilter>('pending');
+  const [inviteSearch, setInviteSearch] = useState('');
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadInvitations();
+  }, []);
+
+  const loadInvitations = async () => {
+    try {
+      setLoading(true);
+      const response = await adminApi.getAllInvitations();
+      setInvitations(response.invitations);
+    } catch (error) {
+      console.error('Error loading invitations:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load invitations.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredInvitations = useMemo(() => {
+    let result = invitations;
+
+    if (statusFilter !== 'all') {
+      result = result.filter(inv => inv.status === statusFilter);
+    }
+
+    if (inviteSearch.trim()) {
+      const q = inviteSearch.toLowerCase().trim();
+      result = result.filter(inv =>
+        inv.invitedEmail.toLowerCase().includes(q) ||
+        inv.invitedByName.toLowerCase().includes(q) ||
+        inv.resourceName.toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [invitations, statusFilter, inviteSearch]);
+
+  const stats = useMemo(() => {
+    const pending = invitations.filter(i => i.status === 'pending').length;
+    const accepted = invitations.filter(i => i.status === 'accepted').length;
+    const expired = invitations.filter(i => i.status === 'expired').length;
+    const cancelled = invitations.filter(i => i.status === 'cancelled').length;
+    return { total: invitations.length, pending, accepted, expired, cancelled };
+  }, [invitations]);
+
+  const handleResend = async (invitationId: string) => {
+    setActionInProgress(prev => new Set(prev).add(invitationId));
+    try {
+      const result = await adminApi.resendInvitation(invitationId);
+      if (result.success) {
+        toast({ title: 'Success', description: 'Invitation resent successfully.' });
+        loadInvitations();
+      } else {
+        toast({ title: 'Error', description: result.error || 'Failed to resend.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to resend invitation.', variant: 'destructive' });
+    } finally {
+      setActionInProgress(prev => {
+        const next = new Set(prev);
+        next.delete(invitationId);
+        return next;
+      });
+    }
+  };
+
+  const handleCancel = async (invitationId: string) => {
+    setActionInProgress(prev => new Set(prev).add(invitationId));
+    try {
+      const result = await adminApi.cancelInvitation(invitationId);
+      if (result.success) {
+        toast({ title: 'Success', description: 'Invitation cancelled.' });
+        loadInvitations();
+      } else {
+        toast({ title: 'Error', description: result.error || 'Failed to cancel.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to cancel invitation.', variant: 'destructive' });
+    } finally {
+      setActionInProgress(prev => {
+        const next = new Set(prev);
+        next.delete(invitationId);
+        return next;
+      });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary" className="text-xs gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
+      case 'accepted':
+        return <Badge className="text-xs gap-1 bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle2 className="h-3 w-3" />Accepted</Badge>;
+      case 'expired':
+        return <Badge variant="outline" className="text-xs gap-1 text-yellow-600 border-yellow-300"><AlertTriangle className="h-3 w-3" />Expired</Badge>;
+      case 'cancelled':
+        return <Badge variant="outline" className="text-xs gap-1 text-muted-foreground"><X className="h-3 w-3" />Cancelled</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">{status}</Badge>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-6">
+        <Spinner size="sm" />
+        <span className="ml-2 text-sm text-muted-foreground">Loading invitations...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Stats chips */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { label: 'Pending', value: stats.pending, filter: 'pending' as InvitationStatusFilter },
+          { label: 'Accepted', value: stats.accepted, filter: 'accepted' as InvitationStatusFilter },
+          { label: 'Expired', value: stats.expired, filter: 'expired' as InvitationStatusFilter },
+          { label: 'Cancelled', value: stats.cancelled, filter: 'cancelled' as InvitationStatusFilter },
+        ].map(chip => (
+          <button
+            key={chip.filter}
+            onClick={() => setStatusFilter(prev => prev === chip.filter ? 'all' : chip.filter)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              statusFilter === chip.filter
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            {chip.label}
+            <span className="font-bold">{chip.value}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by email, inviter, or resource..."
+          value={inviteSearch}
+          onChange={(e) => setInviteSearch(e.target.value)}
+          className="pl-9 h-9"
+        />
+      </div>
+
+      {/* Results count */}
+      {(inviteSearch || statusFilter !== 'all') && (
+        <div className="text-xs text-muted-foreground">
+          Showing {filteredInvitations.length} of {invitations.length} invitations
+        </div>
+      )}
+
+      {/* Table */}
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Invited Email</TableHead>
+              <TableHead className="hidden sm:table-cell">Resource</TableHead>
+              <TableHead className="hidden md:table-cell">Invited By</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="hidden lg:table-cell">Sent</TableHead>
+              <TableHead className="hidden xl:table-cell">Expires</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredInvitations.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  {inviteSearch || statusFilter !== 'all'
+                    ? 'No invitations match your criteria.'
+                    : 'No invitations found.'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredInvitations.map(inv => (
+                <TableRow key={inv._id}>
+                  <TableCell>
+                    <div>
+                      <div className="text-sm font-medium">{inv.invitedEmail}</div>
+                      {/* Show resource on small screens */}
+                      <div className="text-xs text-muted-foreground sm:hidden">
+                        {inv.resourceType === 'hub' ? <Building2 className="h-3 w-3 inline mr-0.5" /> : <FileText className="h-3 w-3 inline mr-0.5" />}
+                        {inv.resourceName}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <div className="flex items-center gap-1.5">
+                      {inv.resourceType === 'hub' ? (
+                        <Badge variant="secondary" className="text-xs gap-1">
+                          <Building2 className="h-3 w-3" />{inv.resourceName}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs gap-1">
+                          <FileText className="h-3 w-3" />{inv.resourceName}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <span className="text-sm">{inv.invitedByName}</span>
+                  </TableCell>
+                  <TableCell>
+                    {getStatusBadge(inv.status)}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <span className="text-xs text-muted-foreground">
+                      {formatRelativeDate(inv.createdAt)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell">
+                    <span className={`text-xs ${new Date(inv.expiresAt) < new Date() ? 'text-yellow-600' : 'text-muted-foreground'}`}>
+                      {new Date(inv.expiresAt).toLocaleDateString()}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {inv.status === 'pending' && (
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          onClick={() => handleResend(inv._id)}
+                          disabled={actionInProgress.has(inv._id)}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7 gap-1"
+                          title="Resend invitation email"
+                        >
+                          {actionInProgress.has(inv._id) ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <><Send className="h-3 w-3" />Resend</>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => handleCancel(inv._id)}
+                          disabled={actionInProgress.has(inv._id)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7 text-destructive hover:text-destructive"
+                          title="Cancel invitation"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                    {inv.status === 'expired' && (
+                      <Button
+                        onClick={() => handleResend(inv._id)}
+                        disabled={actionInProgress.has(inv._id)}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7 gap-1"
+                        title="Resend (extends expiration)"
+                      >
+                        {actionInProgress.has(inv._id) ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <><Send className="h-3 w-3" />Resend</>
+                        )}
+                      </Button>
+                    )}
+                    {inv.status === 'accepted' && inv.acceptedAt && (
+                      <span className="text-xs text-muted-foreground">
+                        {formatRelativeDate(inv.acceptedAt)}
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  );
+}
+
+type ViewTab = 'users' | 'invitations';
+
 export function UserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingUsers, setUpdatingUsers] = useState<Set<string>>(new Set());
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [adminConfirmUser, setAdminConfirmUser] = useState<UserProfile | null>(null);
+  const [activeTab, setActiveTab] = useState<ViewTab>('users');
   const { toast } = useToast();
 
   // Search & filter
@@ -427,11 +728,45 @@ export function UserManagement() {
             Look up users, inspect permissions, and diagnose access issues.
           </p>
         </div>
-        <Button onClick={loadUsers} variant="outline" size="sm" className="gap-1.5">
-          <RefreshCw className="h-3.5 w-3.5" />
-          Refresh
-        </Button>
+        {activeTab === 'users' && (
+          <Button onClick={loadUsers} variant="outline" size="sm" className="gap-1.5">
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
+          </Button>
+        )}
       </div>
+
+      {/* Tab navigation */}
+      <div className="flex gap-1 border-b">
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'users'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          Registered Users
+        </button>
+        <button
+          onClick={() => setActiveTab('invitations')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'invitations'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
+          }`}
+        >
+          <UserPlus className="h-4 w-4" />
+          Invitations
+        </button>
+      </div>
+
+      {/* Invitations Tab */}
+      {activeTab === 'invitations' && <PendingInvitationsPanel />}
+
+      {/* Users Tab */}
+      {activeTab === 'users' && (<>
 
       {/* Stats Row */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -639,6 +974,8 @@ export function UserManagement() {
           </TableBody>
         </Table>
       </Card>
+
+      </>)}
 
       {/* Admin toggle confirmation dialog */}
       <AlertDialog open={!!adminConfirmUser} onOpenChange={(open) => !open && setAdminConfirmUser(null)}>

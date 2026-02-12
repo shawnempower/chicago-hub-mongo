@@ -17,6 +17,25 @@ export interface AdminStatusUpdateResponse {
   message: string;
 }
 
+export interface AdminInvitation {
+  _id: string;
+  invitedEmail: string;
+  invitedBy: string;
+  invitedByName: string;
+  resourceType: 'hub' | 'publication';
+  resourceId: string;
+  resourceName: string;
+  isExistingUser: boolean;
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+  expiresAt: string;
+  acceptedAt?: string;
+  createdAt: string;
+}
+
+export interface InvitationsListResponse {
+  invitations: AdminInvitation[];
+}
+
 export interface UserPermissionDetail {
   userId: string;
   role: string | null;
@@ -189,6 +208,68 @@ export const adminApi = {
     } catch (error) {
       console.error('Error updating user role:', error);
       throw error;
+    }
+  },
+
+  // ===== Invitation Management =====
+
+  // Get all invitations (admin only)
+  async getAllInvitations(): Promise<InvitationsListResponse> {
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/invitations`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Access denied. Admin privileges required.');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching invitations:', error);
+      throw error;
+    }
+  },
+
+  // Resend an invitation (admin)
+  async resendInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/permissions/invitation/${invitationId}/resend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        return { success: false, error: result.error || 'Failed to resend invitation' };
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Error resending invitation:', error);
+      return { success: false, error: 'Network error occurred' };
+    }
+  },
+
+  // Cancel an invitation (admin)
+  async cancelInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/permissions/invitation/${invitationId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        return { success: false, error: result.error || 'Failed to cancel invitation' };
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Error cancelling invitation:', error);
+      return { success: false, error: 'Network error occurred' };
     }
   },
 
