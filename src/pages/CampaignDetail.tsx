@@ -66,6 +66,7 @@ import { formatInsertionOrderQuantity, formatInsertionOrderAudienceWithBadge } f
 import { calculateItemCost } from '@/utils/inventoryPricing';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
+import { getRejectionReason } from '@/constants/rejectionReasons';
 import { CampaignPerformanceDashboard } from '@/components/admin/CampaignPerformanceDashboard';
 import { CampaignEditDialog } from '@/components/campaign/CampaignEditDialog';
 import { AddPlacementModal } from '@/components/campaign/AddPlacementModal';
@@ -168,6 +169,7 @@ export default function CampaignDetail() {
           inventoryItems,
           publicationTotal: calculatedTotal,
           placementStatuses: order.placementStatuses || {},
+          placementStatusHistory: order.placementStatusHistory || [],
           orderStatus: order.status
         };
       });
@@ -1450,6 +1452,12 @@ export default function CampaignDetail() {
                                                   <Badge variant="outline" className="text-xs">Pending</Badge>
                                                 )}
                                               </div>
+                                              {placementStatus === 'rejected' && (() => {
+                                                const reason = getRejectionReason(pub.placementStatusHistory, placementId);
+                                                return reason ? (
+                                                  <p className="text-xs text-red-600 mt-1">Reason: {reason}</p>
+                                                ) : null;
+                                              })()}
                                             </TableCell>
                                             <TableCell className="text-center text-sm text-muted-foreground">
                                               {quantityDisplay}

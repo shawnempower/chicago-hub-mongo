@@ -54,6 +54,7 @@ import { getChannelConfig, isDigitalChannel } from '@/config/inventoryChannels';
 import { calculateItemCost } from '@/utils/inventoryPricing';
 import { forceDownloadFile, downloadCreativeAsset } from '@/utils/fileUpload';
 import { cn } from '@/lib/utils';
+import { DEFAULT_REJECTION_REASONS } from '@/constants/rejectionReasons';
 
 interface OrderDetailData extends PublicationInsertionOrderDocument {}
 
@@ -2403,22 +2404,45 @@ export function PublicationOrderDetail() {
       </Tabs>
 
       {/* Reject Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
+      <Dialog open={rejectDialogOpen} onOpenChange={(open) => { setRejectDialogOpen(open); if (!open) setRejectionReason(''); }}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
               Reject Placement
             </DialogTitle>
             <DialogDescription>
-              Please explain why you cannot run this placement.
+              Select a reason or provide a custom explanation.
             </DialogDescription>
           </DialogHeader>
+          <div className="flex flex-wrap gap-2">
+            {DEFAULT_REJECTION_REASONS.map((reason) => (
+              <button
+                key={reason}
+                type="button"
+                onClick={() => {
+                  if (reason === 'Other (specify below)') {
+                    setRejectionReason('');
+                  } else {
+                    setRejectionReason(reason);
+                  }
+                }}
+                className={cn(
+                  'px-3 py-1.5 text-xs rounded-full border transition-colors',
+                  rejectionReason === reason
+                    ? 'bg-red-100 border-red-300 text-red-800 font-medium'
+                    : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                {reason}
+              </button>
+            ))}
+          </div>
           <Textarea
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder="e.g., Scheduling conflict, doesn't align with editorial standards..."
-            rows={4}
+            placeholder="Provide additional details or a custom reason..."
+            rows={3}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => { setRejectDialogOpen(false); setRejectionReason(''); }}>

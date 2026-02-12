@@ -42,6 +42,7 @@ import { format } from 'date-fns';
 import { OrderPerformanceView } from '../dashboard/OrderPerformanceView';
 import { TrackingScriptGenerator } from './TrackingScriptGenerator';
 import { formatDimensionsForDisplay } from '@/utils/dimensionValidation';
+import { getRejectionReason } from '@/constants/rejectionReasons';
 
 interface OrderDetailData {
   _id?: string;
@@ -77,6 +78,13 @@ interface OrderDetailData {
     allAssetsReady: boolean;
   };
   placementStatuses?: Record<string, string>;
+  placementStatusHistory?: Array<{
+    placementId: string;
+    status: string;
+    timestamp: Date | string;
+    changedBy: string;
+    notes?: string;
+  }>;
   statusHistory?: Array<{
     status: string;
     timestamp: Date;
@@ -605,6 +613,15 @@ export function HubOrderDetail() {
                             {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
                           </Badge>
                         </div>
+                        {/* Rejection Reason */}
+                        {status === 'rejected' && (() => {
+                          const reason = getRejectionReason(order.placementStatusHistory, placementId);
+                          return reason ? (
+                            <div className="mt-2 pt-2 border-t border-dashed">
+                              <p className="text-xs text-red-600"><span className="font-medium">Rejection reason:</span> {reason}</p>
+                            </div>
+                          ) : null;
+                        })()}
                         {/* Delivery Instructions */}
                         {deliveryInstructions.length > 0 && (
                           <div className="mt-2 pt-2 border-t border-dashed">
