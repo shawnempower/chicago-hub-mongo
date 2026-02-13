@@ -57,8 +57,15 @@ import {
   Trash2,
   MoreHorizontal,
   Lock,
+  TrendingUp,
+  Layers,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, 
+  Tooltip as RechartsTooltip, ResponsiveContainer,
+  BarChart as RechartsBarChart, Bar,
+} from 'recharts';
 import { API_BASE_URL } from '@/config/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -111,6 +118,15 @@ export function OrderPerformanceView({
   const [entries, setEntries] = useState<PerformanceEntry[]>([]);
   const [proofs, setProofs] = useState<ProofOfPerformance[]>([]);
   const [summary, setSummary] = useState<any>(null);
+  const [dailyData, setDailyData] = useState<Array<{
+    date: string;
+    impressions: number;
+    clicks: number;
+    ctr?: number;
+    reach: number;
+    units: number;
+    entries: number;
+  }>>([]);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [quickEntryPlacement, setQuickEntryPlacement] = useState<typeof placements[0] | null>(null);
   
@@ -126,6 +142,36 @@ export function OrderPerformanceView({
   }, [placements]);
 
   const hasOfflinePlacements = offlinePlacements.length > 0;
+
+  // Normalize itemPath so different formats can match:
+  //   "distributionChannels.website.advertisingOpportunities[0]"
+  //   "distributionChannels.website[0].advertisingOpportunities[0]"
+  //   "distributionChannels.newsletters[0].advertisingOpportunities[0]"
+  //   "distributionChannels.newsletter[0].advertisingOpportunities[0]"
+  // All become a comparable canonical key.
+  const normalizeItemPath = (path: string): string => {
+    let p = path;
+    // Strip the "distributionChannels." prefix
+    p = p.replace(/^distributionChannels\./, '');
+    // Normalize plural channel names to singular (newsletters -> newsletter, etc.)
+    p = p.replace(/^(\w+?)s(\[|\.)/i, '$1$2');
+    // If channel has no array index (e.g., "website.adv..."), insert [0]
+    p = p.replace(/^(\w+)\.(?!\[)/, '$1[0].');
+    return p;
+  };
+
+  // Map normalized itemPath -> friendly itemName from the placements prop
+  const placementNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    placements.forEach(p => {
+      if (p.itemPath && p.itemName) {
+        map[p.itemPath] = p.itemName;
+        // Also store by normalized key for cross-source matching
+        map[normalizeItemPath(p.itemPath)] = p.itemName;
+      }
+    });
+    return map;
+  }, [placements]);
 
   const getPlacementIcon = (channel: string) => {
     switch (channel) {
@@ -159,6 +205,11 @@ export function OrderPerformanceView({
       const summaryRes = await fetch(`${API_BASE_URL}/reporting/order/${orderId}/summary`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
+      // Fetch daily time-series data
+      const dailyRes = await fetch(`${API_BASE_URL}/reporting/order/${orderId}/daily`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
       if (entriesRes.ok) {
         const data = await entriesRes.json();
@@ -173,6 +224,11 @@ export function OrderPerformanceView({
       if (summaryRes.ok) {
         const data = await summaryRes.json();
         setSummary(data);
+      }
+      
+      if (dailyRes.ok) {
+        const data = await dailyRes.json();
+        setDailyData(data.daily || []);
       }
     } catch (error) {
       console.error('Error fetching performance data:', error);
@@ -490,6 +546,286 @@ export function OrderPerformanceView({
         </CardContent>
       </Card>
 
+      {/* Totals by Placement */}
+      {(() => {
+        // Count proofs per placement, keyed by BOTH raw and normalized path
+        const proofCountByNormPath: Record<string, number> = {};
+        proofs.forEach(proof => {
+          const key = proof.itemPath ? normalizeItemPath(proof.itemPath) : '_order_level';
+          proofCountByNormPath[key] = (proofCountByNormPath[key] || 0) + 1;
+        });
+
+        // Build perf lookup by normalized path
+        const perfByNormPath: Record<string, any> = {};
+        (summary?.byPlacement || []).forEach((p: any) => {
+          perfByNormPath[normalizeItemPath(p.itemPath)] = p;
+        });
+
+        // Use the placements prop as the base so every order placement shows up
+        const seenNormPaths = new Set<string>();
+        const mergedRows = placements.map(pl => {
+          const normPath = normalizeItemPath(pl.itemPath);
+          seenNormPaths.add(normPath);
+          const perf = perfByNormPath[normPath];
+          return {
+            itemPath: pl.itemPath,
+            normPath,
+            itemName: pl.itemName,
+            channel: pl.channel,
+            impressions: perf?.impressions || 0,
+            clicks: perf?.clicks || 0,
+            ctr: perf?.ctr ?? null,
+            units: perf?.units || 0,
+            entries: perf?.entries || 0,
+            proofCount: proofCountByNormPath[normPath] || 0,
+          };
+        });
+
+        // Also add any proof-only or entry-only placements not in the order's placements list
+        const allNormPaths = new Set([
+          ...Object.keys(perfByNormPath),
+          ...Object.keys(proofCountByNormPath),
+        ]);
+        allNormPaths.forEach(normPath => {
+          if (normPath === '_order_level') return;
+          if (seenNormPaths.has(normPath)) return;
+          seenNormPaths.add(normPath);
+          const perf = perfByNormPath[normPath];
+          const matchingProof = proofs.find(p => p.itemPath && normalizeItemPath(p.itemPath) === normPath);
+          const name = perf?.itemName || matchingProof?.itemName || 'Unknown Placement';
+          const channel = perf?.channel || matchingProof?.channel || 'unknown';
+          mergedRows.push({
+            itemPath: perf?.itemPath || matchingProof?.itemPath || normPath,
+            normPath,
+            itemName: name,
+            channel,
+            impressions: perf?.impressions || 0,
+            clicks: perf?.clicks || 0,
+            ctr: perf?.ctr ?? null,
+            units: perf?.units || 0,
+            entries: perf?.entries || 0,
+            proofCount: proofCountByNormPath[normPath] || 0,
+          });
+        });
+
+        // Only show the card if there's at least one row with data
+        const hasAnyData = mergedRows.some(r => r.entries > 0 || r.proofCount > 0);
+        if (!hasAnyData) return null;
+
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Layers className="w-5 h-5" />
+                Totals by Placement
+              </CardTitle>
+              <CardDescription>
+                Aggregated metrics and proof counts for each placement
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Placement</TableHead>
+                    <TableHead>Channel</TableHead>
+                    <TableHead className="text-right">Delivered</TableHead>
+                    <TableHead className="text-right">Detail</TableHead>
+                    <TableHead className="text-right">Reports</TableHead>
+                    <TableHead className="text-right">Proofs</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mergedRows.map((row) => {
+                    const friendlyName = placementNameMap[row.itemPath] || placementNameMap[row.normPath] || row.itemName;
+                    const config = getChannelConfig(row.channel);
+                    const digital = isDigitalChannel(row.channel);
+
+                    // Primary "Delivered" metric -- channel-aware
+                    let deliveredText = '-';
+                    if (digital) {
+                      if (row.impressions > 0) {
+                        deliveredText = `${row.impressions.toLocaleString()} Impressions`;
+                      }
+                    } else {
+                      // Offline: use report entries if available, otherwise proofs serve as
+                      // evidence of delivery (each tearsheet/attestation = 1 insertion/spot/episode)
+                      const deliveredCount = row.entries > 0 ? row.entries : row.proofCount;
+                      if (deliveredCount > 0) {
+                        const unitLabel = row.channel === 'print' ? 'Insertion' :
+                          row.channel === 'radio' ? 'Spot' :
+                          row.channel === 'podcast' ? 'Episode' :
+                          row.channel === 'social' || row.channel === 'social_media' ? 'Post' :
+                          'Unit';
+                        deliveredText = `${deliveredCount} ${unitLabel}${deliveredCount !== 1 ? 's' : ''}`;
+                      }
+                    }
+
+                    // Secondary "Detail" metric -- channel-aware
+                    let detailText = '-';
+                    if (digital) {
+                      if (row.clicks > 0) {
+                        detailText = `${row.clicks.toLocaleString()} Clicks`;
+                        if (row.ctr != null) {
+                          detailText += ` (${row.ctr.toFixed(2)}% CTR)`;
+                        }
+                      }
+                    } else if (row.channel === 'print' && row.units > 0) {
+                      detailText = `${row.units.toLocaleString()} Circulation`;
+                    } else if (row.channel === 'radio' && row.units > 0) {
+                      detailText = `~${row.units.toLocaleString()} Reach`;
+                    } else if (row.channel === 'podcast' && row.units > 0) {
+                      detailText = `${row.units.toLocaleString()} Downloads`;
+                    } else if ((row.channel === 'social' || row.channel === 'social_media') && row.units > 0) {
+                      detailText = `${row.units.toLocaleString()} Engagements`;
+                    }
+
+                    return (
+                      <TableRow key={row.itemPath}>
+                        <TableCell>
+                          <div className="max-w-[220px] truncate font-medium" title={friendlyName}>
+                            {friendlyName}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {config.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-sm">
+                          {deliveredText}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-sm text-muted-foreground">
+                          {detailText}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {row.entries || '-'}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {row.proofCount > 0 ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {row.proofCount}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Digital Performance Over Time Chart */}
+      {dailyData.length > 1 && dailyData.some(d => d.impressions > 0 || d.clicks > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <TrendingUp className="w-5 h-5" />
+              Digital Performance Over Time
+            </CardTitle>
+            <CardDescription>
+              Daily impressions and clicks across all digital placements
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Impressions chart */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Impressions</p>
+              <div className="h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(val) => format(new Date(val), 'M/d')}
+                      tick={{ fontSize: 10 }}
+                      interval={Math.max(0, Math.floor(dailyData.length / 8) - 1)}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toString()}
+                      axisLine={false}
+                      tickLine={false}
+                      width={45}
+                    />
+                    <RechartsTooltip 
+                      labelFormatter={(val) => format(new Date(val as string), 'MMM d, yyyy')}
+                      formatter={(value: number) => [value.toLocaleString(), 'Impressions']}
+                      contentStyle={{ 
+                        fontSize: 12,
+                        borderRadius: 8,
+                        border: '1px solid hsl(var(--border))',
+                        backgroundColor: 'hsl(var(--popover))',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="impressions" 
+                      fill="hsl(217, 91%, 60%)" 
+                      fillOpacity={0.12}
+                      stroke="hsl(217, 91%, 60%)" 
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            
+            {/* Clicks chart - only show if there are clicks */}
+            {dailyData.some(d => d.clicks > 0) && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Clicks</p>
+                <div className="h-[160px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsBarChart data={dailyData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                      <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(val) => format(new Date(val), 'M/d')}
+                        tick={{ fontSize: 10 }}
+                        interval={Math.max(0, Math.floor(dailyData.length / 8) - 1)}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={45}
+                      />
+                      <RechartsTooltip 
+                        labelFormatter={(val) => format(new Date(val as string), 'MMM d, yyyy')}
+                        formatter={(value: number) => [value.toLocaleString(), 'Clicks']}
+                        contentStyle={{ 
+                          fontSize: 12,
+                          borderRadius: 8,
+                          border: '1px solid hsl(var(--border))',
+                          backgroundColor: 'hsl(var(--popover))',
+                          color: 'hsl(var(--popover-foreground))',
+                        }}
+                      />
+                      <Bar 
+                        dataKey="clicks" 
+                        fill="hsl(142, 71%, 45%)" 
+                        radius={[3, 3, 0, 0]}
+                      />
+                    </RechartsBarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabs for Entries and Proofs */}
       <Tabs defaultValue="entries">
         <TabsList>
@@ -576,15 +912,20 @@ export function OrderPerformanceView({
                           <TableCell>
                             <div className="text-sm">
                               {format(new Date(entry.dateStart), 'MMM d, yyyy')}
-                              {entry.dateEnd && (
+                              {entry.dateEnd && format(new Date(entry.dateEnd), 'yyyy-MM-dd') !== format(new Date(entry.dateStart), 'yyyy-MM-dd') && (
                                 <> - {format(new Date(entry.dateEnd), 'MMM d')}</>
                               )}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="max-w-[200px] truncate" title={entry.itemName}>
-                              {entry.itemName}
-                            </div>
+                            {(() => {
+                              const friendlyName = placementNameMap[entry.itemPath] || placementNameMap[normalizeItemPath(entry.itemPath)] || entry.itemName;
+                              return (
+                                <div className="max-w-[200px] truncate" title={friendlyName}>
+                                  {friendlyName}
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1.5">

@@ -649,6 +649,85 @@ router.get('/campaign/:campaignId/daily', async (req: any, res: Response) => {
 });
 
 /**
+ * GET /api/reporting/order/:orderId/daily
+ * Get daily performance time-series data for a specific order
+ */
+router.get('/order/:orderId/daily', async (req: any, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const { dateFrom, dateTo } = req.query;
+    
+    const db = getDatabase();
+    const perfCollection = db.collection<PerformanceEntry>(COLLECTIONS.PERFORMANCE_ENTRIES);
+    const ordersCollection = db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS);
+    
+    // Resolve orderId
+    let order = null;
+    try {
+      order = await ordersCollection.findOne({ _id: new ObjectId(orderId) });
+    } catch {
+      order = await ordersCollection.findOne({ orderId });
+    }
+    
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    const resolvedOrderId = order._id?.toString() || orderId;
+    
+    // Build date filter
+    const dateFilter: any = {};
+    if (dateFrom) dateFilter.$gte = new Date(dateFrom as string);
+    if (dateTo) dateFilter.$lte = new Date(dateTo as string);
+    
+    const match: any = { 
+      orderId: resolvedOrderId, 
+      deletedAt: { $exists: false } 
+    };
+    if (Object.keys(dateFilter).length > 0) {
+      match.dateStart = dateFilter;
+    }
+    
+    // Aggregate by day
+    const dailyData = await perfCollection.aggregate([
+      { $match: match },
+      { $group: {
+        _id: { 
+          $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
+        },
+        impressions: { $sum: '$metrics.impressions' },
+        clicks: { $sum: '$metrics.clicks' },
+        reach: { $sum: '$metrics.reach' },
+        units: { $sum: { $add: [
+          { $ifNull: ['$metrics.insertions', 0] },
+          { $ifNull: ['$metrics.spotsAired', 0] },
+          { $ifNull: ['$metrics.downloads', 0] },
+          { $ifNull: ['$metrics.posts', 0] }
+        ]}},
+        entries: { $sum: 1 }
+      }},
+      { $sort: { _id: 1 } }
+    ]).toArray();
+    
+    res.json({ 
+      orderId: resolvedOrderId,
+      daily: dailyData.map(d => ({
+        date: d._id,
+        impressions: d.impressions,
+        clicks: d.clicks,
+        ctr: computeCTR(d.clicks, d.impressions),
+        reach: d.reach,
+        units: d.units,
+        entries: d.entries,
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching order daily data:', error);
+    res.status(500).json({ error: 'Failed to fetch order daily data' });
+  }
+});
+
+/**
  * GET /api/reporting/order/:orderId/summary
  * Get performance summary for a specific order
  */
