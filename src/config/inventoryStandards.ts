@@ -403,6 +403,28 @@ export const WEBSITE_STANDARDS: Record<string, InventoryTypeStandard> = {
     ]
   },
 
+  // Sponsored Article
+  SPONSORED_ARTICLE: {
+    id: 'website_sponsored_article',
+    channel: 'website',
+    name: 'Sponsored Article',
+    description: 'Branded long-form content published on the site, written by or on behalf of the advertiser.',
+    defaultSpecs: {
+      dimensions: 'sponsored-article',
+      fileFormats: ['HTML', 'DOCX', 'Google Doc', 'JPG', 'PNG'],
+      maxFileSize: '10MB',
+      colorSpace: 'RGB',
+      resolution: '72ppi',
+      clickable: true,
+      additionalRequirements: 'Article text (500–1500 words recommended), hero image (1200x628 or larger), author byline, and optional call-to-action link.'
+    },
+    examples: [
+      'Branded editorial / advertorial',
+      'Sponsored how-to or guide',
+      'Partner spotlight feature'
+    ]
+  },
+
   // Custom/Flexible Banner
   CUSTOM_BANNER: {
     id: 'website_banner_custom',

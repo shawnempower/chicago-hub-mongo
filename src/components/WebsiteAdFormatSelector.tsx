@@ -30,6 +30,7 @@ function generateWebsiteDimensionOptions() {
   const iabStandards: Array<{ value: string; label: string; standardId: string; standard: InventoryTypeStandard }> = [];
   const videoStandards: Array<{ value: string; label: string; standardId: string; standard: InventoryTypeStandard }> = [];
   const nativeStandards: Array<{ value: string; label: string; standardId: string; standard: InventoryTypeStandard }> = [];
+  const sponsoredStandards: Array<{ value: string; label: string; standardId: string; standard: InventoryTypeStandard }> = [];
   const customStandards: Array<{ value: string; label: string; standardId: string; standard: InventoryTypeStandard }> = [];
   
   standards.forEach(standard => {
@@ -48,6 +49,8 @@ function generateWebsiteDimensionOptions() {
       videoStandards.push(option);
     } else if (standard.id.includes('native')) {
       nativeStandards.push(option);
+    } else if (standard.id.includes('sponsored')) {
+      sponsoredStandards.push(option);
     } else if (standard.iabStandard) {
       iabStandards.push(option);
     } else {
@@ -68,6 +71,10 @@ function generateWebsiteDimensionOptions() {
       label: 'Native & Responsive',
       options: nativeStandards
     }] : []),
+    ...(sponsoredStandards.length > 0 ? [{
+      label: 'Sponsored Content',
+      options: sponsoredStandards
+    }] : []),
     {
       label: 'Custom',
       options: [{
@@ -87,7 +94,7 @@ function getWebsiteAdCategory(dimensions: string | string[]): WebsiteAdCategory 
   
   const iabStandard = ['300x250', '728x90', '300x600', '160x600', '320x50', '970x250', 
                        '336x280', '120x600', '970x90', '250x250', '200x200', '468x60', '234x60'];
-  const native = ['text-only', 'sponsored-content', 'logo-text', 'content-integration'];
+  const native = ['text-only', 'sponsored-content', 'logo-text', 'content-integration', 'sponsored-article'];
   
   if (iabStandard.includes(dim)) return 'iab-standard';
   if (native.includes(dim)) return 'native';

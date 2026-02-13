@@ -551,7 +551,7 @@ export interface Publication {
       };
       advertisingOpportunities?: Array<{
         name?: string;
-        adFormat?: '300x250 banner' | '728x90 banner' | '320x50 banner' | '300x600 banner' | '970x250 banner' | 'takeover ad' | 'native' | 'video' | 'sponsored content' | 'custom';
+        adFormat?: '300x250 banner' | '728x90 banner' | '320x50 banner' | '300x600 banner' | '970x250 banner' | 'takeover ad' | 'native' | 'video' | 'sponsored content' | 'sponsored article' | 'custom';
         location?: string;
         pricing?: {
           cpm?: number;
