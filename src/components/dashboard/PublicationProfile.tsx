@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import { updatePublication, generateAiProfile } from '@/api/publications';
+import { updatePublication, generateAiProfile, duplicatePublication } from '@/api/publications';
 import { getPublicationBrandColor, prefetchBrandColors } from '@/config/publicationBrandColors';
 import { DEFAULT_BRAND_HEX } from '@/constants/brand';
 import { 
@@ -41,6 +41,8 @@ import {
   Briefcase,
   Sparkles,
   Loader2,
+  Copy,
+  AlertTriangle,
 } from 'lucide-react';
 import { SchemaField, SchemaSection, SchemaFieldLegend } from './SchemaField';
 import { transformers } from '@/config/publicationFieldMapping';
@@ -65,6 +67,7 @@ import {
 } from '@/utils/fieldValidation';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 export const PublicationProfile: React.FC = () => {
   const { selectedPublication, setSelectedPublication } = usePublication();
@@ -78,6 +81,11 @@ export const PublicationProfile: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [generatingAiProfile, setGeneratingAiProfile] = useState(false);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+  const [duplicateNewId, setDuplicateNewId] = useState('');
+  const [duplicateNewName, setDuplicateNewName] = useState('');
+  const [duplicateError, setDuplicateError] = useState('');
 
   useEffect(() => {
     if (selectedPublication && isEditing) {
@@ -116,6 +124,56 @@ export const PublicationProfile: React.FC = () => {
       });
     } finally {
       setGeneratingAiProfile(false);
+    }
+  };
+
+  const handleOpenDuplicateDialog = () => {
+    setDuplicateNewId('');
+    setDuplicateNewName(
+      (selectedPublication?.basicInfo?.publicationName || 'Publication') + ' (Copy)'
+    );
+    setDuplicateError('');
+    setShowDuplicateDialog(true);
+  };
+
+  const handleDuplicate = async () => {
+    const numericId = Number(duplicateNewId);
+    if (!duplicateNewId || isNaN(numericId) || numericId <= 0 || !Number.isInteger(numericId)) {
+      setDuplicateError('Please enter a valid positive integer for the Publication ID.');
+      return;
+    }
+    if (!duplicateNewName.trim()) {
+      setDuplicateError('Publication name cannot be empty.');
+      return;
+    }
+    if (!selectedPublication?.publicationId) return;
+
+    setDuplicating(true);
+    setDuplicateError('');
+    try {
+      const newPub = await duplicatePublication(
+        selectedPublication.publicationId,
+        numericId,
+        duplicateNewName.trim()
+      );
+      toast({
+        title: 'Publication Duplicated',
+        description: `"${newPub.basicInfo?.publicationName}" (ID: ${newPub.publicationId}) has been created.`,
+      });
+      setShowDuplicateDialog(false);
+    } catch (error: any) {
+      const message = error.message || 'Failed to duplicate publication.';
+      if (message.includes('already in use')) {
+        setDuplicateError(message);
+      } else {
+        toast({
+          title: 'Duplication Failed',
+          description: message,
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setDuplicating(false);
     }
   };
 
@@ -1188,6 +1246,17 @@ export const PublicationProfile: React.FC = () => {
                     : 'Generate AI Profile'}
               </Button>
             )}
+            {isAdmin && (
+              <Button 
+                variant="outline"
+                onClick={handleOpenDuplicateDialog}
+                disabled={isEditing}
+                className="gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                Duplicate
+              </Button>
+            )}
             <Button 
               onClick={() => setIsEditing(true)}
               className="ml-2"
@@ -1730,6 +1799,79 @@ export const PublicationProfile: React.FC = () => {
         activityTypes={['profile_update', 'publication_update']}
         publicationId={selectedPublication._id?.toString()}
       />
+
+      {/* Duplicate Publication Dialog */}
+      <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Duplicate Publication</DialogTitle>
+            <DialogDescription>
+              Create a new publication based on "{selectedPublication.basicInfo?.publicationName}". 
+              Distribution channels, demographics, packages, and other configuration will be copied. 
+              Contacts, orders, earnings, and storefront settings will not be carried over.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="duplicate-pub-id" className="font-medium">
+                Publication ID
+              </Label>
+              <Input
+                id="duplicate-pub-id"
+                type="number"
+                placeholder="e.g. 12345"
+                value={duplicateNewId}
+                onChange={(e) => {
+                  setDuplicateNewId(e.target.value);
+                  setDuplicateError('');
+                }}
+              />
+              <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-800">
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <p className="text-xs leading-relaxed">
+                  This ID must match the publication ID from your external system and cannot be changed after creation. 
+                  Double-check this value before proceeding -- using the wrong ID will cause mismatches between systems.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="duplicate-pub-name" className="font-medium">
+                Publication Name
+              </Label>
+              <Input
+                id="duplicate-pub-name"
+                type="text"
+                value={duplicateNewName}
+                onChange={(e) => {
+                  setDuplicateNewName(e.target.value);
+                  setDuplicateError('');
+                }}
+              />
+            </div>
+            {duplicateError && (
+              <p className="text-sm text-destructive font-medium">{duplicateError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDuplicateDialog(false)} disabled={duplicating}>
+              Cancel
+            </Button>
+            <Button onClick={handleDuplicate} disabled={duplicating || !duplicateNewId || !duplicateNewName.trim()}>
+              {duplicating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Duplicating...
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Duplicate Publication
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

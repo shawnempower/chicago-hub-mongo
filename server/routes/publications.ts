@@ -267,6 +267,42 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
+// Duplicate publication (admin only)
+router.post('/:id/duplicate', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const profile = await userProfilesService.getByUserId(req.user.id);
+    if (!profile?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { newPublicationId, newName } = req.body;
+
+    if (!newPublicationId || typeof newPublicationId !== 'number') {
+      return res.status(400).json({ error: 'newPublicationId is required and must be a number' });
+    }
+    if (!newName || typeof newName !== 'string' || !newName.trim()) {
+      return res.status(400).json({ error: 'newName is required and must be a non-empty string' });
+    }
+
+    const sourceId = Number(req.params.id);
+    if (isNaN(sourceId)) {
+      return res.status(400).json({ error: 'Invalid source publication ID' });
+    }
+
+    const newPublication = await publicationsService.duplicate(sourceId, newPublicationId, newName.trim());
+    res.status(201).json(newPublication);
+  } catch (error: any) {
+    console.error('Error duplicating publication:', error);
+    if (error.code === 'DUPLICATE_ID') {
+      return res.status(409).json({ error: error.message });
+    }
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to duplicate publication' });
+  }
+});
+
 // Update publication (requires publication access)
 router.put('/:id', authenticateToken, requirePublicationAccess('id'), async (req: any, res: Response) => {
   try {

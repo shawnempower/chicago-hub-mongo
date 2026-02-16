@@ -85,7 +85,7 @@ import { createLogger } from '../src/utils/logger';
 
 const logger = createLogger('Server');
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 4000;
 
 // Initialize storefront image service (will be set after S3 service is ready)
 let storefrontImageService: StorefrontImageService | null = null;

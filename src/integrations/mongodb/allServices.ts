@@ -1308,6 +1308,122 @@ export class PublicationsService {
     }
   }
 
+  async duplicate(sourcePublicationId: number, newPublicationId: number, newName: string): Promise<Publication> {
+    try {
+      // Fetch the source publication
+      const source = await this.collection.findOne({ publicationId: sourcePublicationId });
+      if (!source) {
+        throw new Error(`Source publication with publicationId ${sourcePublicationId} not found`);
+      }
+
+      // Verify the new publicationId is not already in use
+      const existing = await this.collection.findOne({ publicationId: newPublicationId });
+      if (existing) {
+        const error: any = new Error(`Publication ID ${newPublicationId} is already in use by "${existing.basicInfo?.publicationName}"`);
+        error.code = 'DUPLICATE_ID';
+        throw error;
+      }
+
+      const now = new Date();
+
+      // Deep clone the source and apply resets
+      const { _id, ...sourceWithoutId } = source as any;
+      const cloned = JSON.parse(JSON.stringify(sourceWithoutId));
+
+      // Clear social media handles, URLs, and metrics (publication-specific)
+      if (cloned.distributionChannels?.socialMedia) {
+        cloned.distributionChannels.socialMedia = cloned.distributionChannels.socialMedia.map((sm: any) => {
+          const { handle, url, metrics, ...rest } = sm;
+          return rest;
+        });
+      }
+
+      // Clear website channel URL and metrics
+      if (cloned.distributionChannels?.website) {
+        delete cloned.distributionChannels.website.url;
+        delete cloned.distributionChannels.website.metrics;
+      }
+
+      // Clear newsletter subscriber metrics
+      if (cloned.distributionChannels?.newsletters) {
+        cloned.distributionChannels.newsletters = cloned.distributionChannels.newsletters.map((nl: any) => {
+          const { subscribers, openRate, clickThroughRate, listGrowthRate, ...rest } = nl;
+          return rest;
+        });
+      }
+
+      // Clear print circulation metrics
+      if (cloned.distributionChannels?.print) {
+        cloned.distributionChannels.print = cloned.distributionChannels.print.map((p: any) => {
+          const { circulation, paidCirculation, freeCirculation, ...rest } = p;
+          return rest;
+        });
+      }
+
+      // Clear podcast download/listener metrics
+      if (cloned.distributionChannels?.podcasts) {
+        cloned.distributionChannels.podcasts = cloned.distributionChannels.podcasts.map((p: any) => {
+          const { averageDownloads, averageListeners, episodeCount, ...rest } = p;
+          return rest;
+        });
+      }
+
+      // Clear radio station listener metrics
+      if (cloned.distributionChannels?.radioStations) {
+        cloned.distributionChannels.radioStations = cloned.distributionChannels.radioStations.map((rs: any) => {
+          const { listeners, ...rest } = rs;
+          if (rest.shows) {
+            rest.shows = rest.shows.map((show: any) => {
+              const { averageListeners, ...showRest } = show;
+              return showRest;
+            });
+          }
+          return rest;
+        });
+      }
+
+      // Clear streaming video subscriber/view metrics
+      if (cloned.distributionChannels?.streamingVideo) {
+        cloned.distributionChannels.streamingVideo = cloned.distributionChannels.streamingVideo.map((sv: any) => {
+          const { subscribers, averageViews, ...rest } = sv;
+          return rest;
+        });
+      }
+
+      // Clear tax ID (unique per entity)
+      if (cloned.businessInfo) {
+        delete cloned.businessInfo.taxId;
+      }
+
+      const newPublication: Publication = {
+        ...cloned,
+        publicationId: newPublicationId,
+        basicInfo: {
+          ...cloned.basicInfo,
+          publicationName: newName,
+          websiteUrl: undefined,
+        },
+        hubIds: [],
+        contactInfo: undefined,
+        metadata: {
+          createdAt: now,
+          lastUpdated: now,
+          verificationStatus: 'needs_verification' as const,
+        },
+        internalNotes: undefined,
+        aiProfile: undefined,
+        adDeliverySettings: undefined,
+        awards: undefined,
+      };
+
+      const result = await this.collection.insertOne(newPublication);
+      return { ...newPublication, _id: result.insertedId };
+    } catch (error) {
+      console.error('Error duplicating publication:', error);
+      throw error;
+    }
+  }
+
   async create(publicationData: PublicationInsert): Promise<Publication> {
     try {
       const now = new Date();

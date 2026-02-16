@@ -404,6 +404,31 @@ export const previewPublicationsImport = async (publications: PublicationInsertF
   }
 };
 
+// Duplicate a publication with a new ID and name
+export const duplicatePublication = async (
+  sourcePublicationId: number,
+  newPublicationId: number,
+  newName: string
+): Promise<PublicationFrontend> => {
+  try {
+    const response = await authenticatedFetch(`${API_BASE_URL}/publications/${sourcePublicationId}/duplicate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPublicationId, newName }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to duplicate publication: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error duplicating publication:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to duplicate publication');
+  }
+};
+
 // Generate AI profile for a single publication using Perplexity
 export const generateAiProfile = async (id: string): Promise<{
   success: boolean;
