@@ -40,6 +40,8 @@ interface PlacementTraffickingCardProps {
   onCopyScript?: (text: string, id: string) => void;
   copiedScriptId?: string | null;
   showActions?: boolean;
+  /** When true, suppresses script/tag rendering (e.g. for pending or rejected placements) */
+  hideScripts?: boolean;
 }
 
 export function PlacementTraffickingCard({
@@ -49,6 +51,7 @@ export function PlacementTraffickingCard({
   onCopyScript,
   copiedScriptId,
   showActions = true,
+  hideScripts = false,
 }: PlacementTraffickingCardProps) {
   const isPending = placement.status === 'pending';
   const isRejected = placement.status === 'rejected';
@@ -78,7 +81,7 @@ export function PlacementTraffickingCard({
 
       {/* Channel-specific content */}
       <div className="p-4">
-        {renderChannelContent(placement, onCopyScript, copiedScriptId)}
+        {renderChannelContent(placement, onCopyScript, copiedScriptId, hideScripts)}
       </div>
 
       {/* Actions */}
@@ -124,13 +127,14 @@ function ChannelIcon({ channel }: { channel: string }) {
 function renderChannelContent(
   placement: PlacementTraffickingInfo | GenericTraffickingInfo,
   onCopyScript?: (text: string, id: string) => void,
-  copiedScriptId?: string | null
+  copiedScriptId?: string | null,
+  hideScripts?: boolean
 ) {
   switch (placement.channel) {
     case 'website':
-      return <WebsiteContent placement={placement as WebsiteTraffickingInfo} onCopyScript={onCopyScript} copiedScriptId={copiedScriptId} />;
+      return <WebsiteContent placement={placement as WebsiteTraffickingInfo} onCopyScript={onCopyScript} copiedScriptId={copiedScriptId} hideScripts={hideScripts} />;
     case 'newsletter':
-      return <NewsletterContent placement={placement as NewsletterTraffickingInfo} onCopyScript={onCopyScript} copiedScriptId={copiedScriptId} />;
+      return <NewsletterContent placement={placement as NewsletterTraffickingInfo} onCopyScript={onCopyScript} copiedScriptId={copiedScriptId} hideScripts={hideScripts} />;
     case 'print':
       return <PrintContent placement={placement as PrintTraffickingInfo} />;
     case 'radio':
@@ -138,7 +142,7 @@ function renderChannelContent(
     case 'podcast':
       return <PodcastContent placement={placement as PodcastTraffickingInfo} />;
     case 'streaming':
-      return <StreamingContent placement={placement as StreamingTraffickingInfo} onCopyScript={onCopyScript} copiedScriptId={copiedScriptId} />;
+      return <StreamingContent placement={placement as StreamingTraffickingInfo} onCopyScript={onCopyScript} copiedScriptId={copiedScriptId} hideScripts={hideScripts} />;
     case 'events':
       return <EventsContent placement={placement as EventsTraffickingInfo} />;
     case 'social_media':
@@ -153,11 +157,13 @@ function renderChannelContent(
 function WebsiteContent({ 
   placement, 
   onCopyScript, 
-  copiedScriptId 
+  copiedScriptId,
+  hideScripts 
 }: { 
   placement: WebsiteTraffickingInfo;
   onCopyScript?: (text: string, id: string) => void;
   copiedScriptId?: string | null;
+  hideScripts?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -182,7 +188,7 @@ function WebsiteContent({
       {placement.availableSizes.length > 0 && (
         <div className="mt-4">
           <p className="text-sm font-medium text-gray-700 mb-2">
-            Available Sizes (distribute impressions as needed):
+            Available Sizes{!hideScripts ? ' (distribute impressions as needed)' : ''}:
           </p>
           <div className="space-y-2">
             {placement.availableSizes.map((size, idx) => (
@@ -190,7 +196,7 @@ function WebsiteContent({
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{size.dimensions}</Badge>
                 </div>
-                {size.script && (
+                {!hideScripts && size.script && (
                   <Button
                     size="sm"
                     variant="ghost"
@@ -217,11 +223,13 @@ function WebsiteContent({
 function NewsletterContent({ 
   placement, 
   onCopyScript, 
-  copiedScriptId 
+  copiedScriptId,
+  hideScripts 
 }: { 
   placement: NewsletterTraffickingInfo;
   onCopyScript?: (text: string, id: string) => void;
   copiedScriptId?: string | null;
+  hideScripts?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -258,8 +266,8 @@ function NewsletterContent({
         )}
       </div>
 
-      {/* Scripts */}
-      {placement.scripts && placement.scripts.length > 0 && (
+      {/* Scripts - only shown when not hidden */}
+      {!hideScripts && placement.scripts && placement.scripts.length > 0 && (
         <div className="mt-4">
           <Accordion type="single" collapsible>
             {placement.scripts.map((script, idx) => (
@@ -507,11 +515,13 @@ function PodcastContent({ placement }: { placement: PodcastTraffickingInfo }) {
 function StreamingContent({ 
   placement, 
   onCopyScript, 
-  copiedScriptId 
+  copiedScriptId,
+  hideScripts 
 }: { 
   placement: StreamingTraffickingInfo;
   onCopyScript?: (text: string, id: string) => void;
   copiedScriptId?: string | null;
+  hideScripts?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -545,8 +555,8 @@ function StreamingContent({
         )}
       </div>
 
-      {/* Scripts */}
-      {placement.scripts && placement.scripts.length > 0 && (
+      {/* Scripts - only shown when not hidden */}
+      {!hideScripts && placement.scripts && placement.scripts.length > 0 && (
         <div className="mt-4 space-y-2">
           {placement.scripts.map((script, idx) => (
             <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded border">

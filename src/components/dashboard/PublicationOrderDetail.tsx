@@ -1584,81 +1584,125 @@ export function PublicationOrderDetail() {
 
         {/* PLACEMENTS TAB (organized by channel type) */}
         <TabsContent value="placements" className="mt-0 space-y-4">
-          {/* Info banner when no scripts - explain auto-generation */}
-          {trackingScripts.length === 0 && (
-            <Card className="border bg-white shadow-none">
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Awaiting Creative Assets</p>
-                      <p className="text-sm text-muted-foreground">Tracking scripts will appear automatically when the hub uploads assets for digital placements</p>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={handleRefreshScripts} 
-                    variant="outline"
-                    disabled={refreshingScripts}
-                    size="sm"
-                  >
-                    <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
-                    {refreshingScripts ? 'Checking...' : 'Check for Scripts'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Filter scripts to only count those for accepted/in_production/delivered placements */}
+          {(() => {
+            const acceptedStatuses = ['accepted', 'in_production', 'delivered'];
+            const visibleScripts = trackingScripts.filter(s => {
+              const scriptItemPath = s.itemPath || '';
+              // Find the base itemPath (strip _dim suffix if present)
+              const baseItemPath = scriptItemPath.replace(/_dim\d+$/, '');
+              const status = placementStatuses[scriptItemPath] || placementStatuses[baseItemPath] || 'pending';
+              return acceptedStatuses.includes(status);
+            });
+            const hasAnyScripts = trackingScripts.length > 0;
+            const hasVisibleScripts = visibleScripts.length > 0;
 
-          {/* Quick Actions for Digital - when scripts exist */}
-          {trackingScripts.length > 0 && (
-            <Card className="border bg-white shadow-none">
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Code className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{trackingScripts.length} Tracking Script{trackingScripts.length !== 1 ? 's' : ''} Ready</p>
-                      <p className="text-sm text-muted-foreground">Copy the code below and paste into your ad server</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={handleDownloadAllScripts} variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      Download All Creative
-                    </Button>
-                    <Button 
-                      onClick={handleRefreshScripts} 
-                      variant="outline" 
-                      size="sm"
-                      disabled={refreshingScripts}
-                    >
-                      <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
-                      {refreshingScripts ? 'Refreshing...' : 'Refresh'}
-                    </Button>
-                    {isAdmin && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <MoreVertical className="h-4 w-4" />
+            return (
+              <>
+                {/* Info banner when no scripts at all - explain auto-generation */}
+                {!hasAnyScripts && (
+                  <Card className="border bg-white shadow-none">
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">Awaiting Creative Assets</p>
+                            <p className="text-sm text-muted-foreground">Tracking scripts will appear automatically when the hub uploads assets for digital placements</p>
+                          </div>
+                        </div>
+                        <Button 
+                          onClick={handleRefreshScripts} 
+                          variant="outline"
+                          disabled={refreshingScripts}
+                          size="sm"
+                        >
+                          <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
+                          {refreshingScripts ? 'Checking...' : 'Check for Scripts'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Scripts exist but none are for accepted placements */}
+                {hasAnyScripts && !hasVisibleScripts && (
+                  <Card className="border bg-white shadow-none">
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Lock className="h-5 w-5 text-amber-500" />
+                          <div>
+                            <p className="font-medium">Tracking Scripts Available After Acceptance</p>
+                            <p className="text-sm text-muted-foreground">Accept placements below to access tracking scripts and implementation tags</p>
+                          </div>
+                        </div>
+                        <Button 
+                          onClick={handleRefreshScripts} 
+                          variant="outline"
+                          disabled={refreshingScripts}
+                          size="sm"
+                        >
+                          <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
+                          {refreshingScripts ? 'Checking...' : 'Check for Scripts'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Quick Actions for Digital - when accepted scripts exist */}
+                {hasVisibleScripts && (
+                  <Card className="border bg-white shadow-none">
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Code className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">{visibleScripts.length} Tracking Script{visibleScripts.length !== 1 ? 's' : ''} Ready</p>
+                            <p className="text-sm text-muted-foreground">Copy the code below and paste into your ad server</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={handleDownloadAllScripts} variant="outline" size="sm">
+                            <Download className="h-4 w-4 mr-1" />
+                            Download All Creative
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onClick={() => trackingScripts.length > 0 && handleTestScript(trackingScripts[0])}
-                            disabled={trackingScripts.length === 0}
+                          <Button 
+                            onClick={handleRefreshScripts} 
+                            variant="outline" 
+                            size="sm"
+                            disabled={refreshingScripts}
                           >
-                            <Target className="h-4 w-4 mr-2" />
-                            Test Tags
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                            <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
+                            {refreshingScripts ? 'Refreshing...' : 'Refresh'}
+                          </Button>
+                          {isAdmin && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => visibleScripts.length > 0 && handleTestScript(visibleScripts[0])}
+                                  disabled={visibleScripts.length === 0}
+                                >
+                                  <Target className="h-4 w-4 mr-2" />
+                                  Test Tags
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            );
+          })()}
 
           {/* Organize placements by channel type */}
           {(() => {
@@ -1736,7 +1780,7 @@ export function PublicationOrderDetail() {
                             ) : (
                               <Check className="h-3 w-3 mr-1" />
                             )}
-                            Accept All ({pendingCount})
+                            Accept All {config.label} ({pendingCount})
                           </Button>
                         )}
                         <Badge className={cn("font-medium", colors.badge)}>{items.length} placement{items.length !== 1 ? 's' : ''}</Badge>
@@ -1908,14 +1952,40 @@ export function PublicationOrderDetail() {
                             <div className="p-3 space-y-3">
                             
                             {/* Website: Note about grouped impressions */}
-                            {channel === 'website' && scripts.length > 1 && (
+                            {channel === 'website' && scripts.length > 1 && ['accepted', 'in_production', 'delivered'].includes(placementStatus) && (
                               <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded px-2 py-1">
                                 <strong>Note:</strong> Distribute impressions across sizes as needed. Use the scripts below to traffic each ad size.
                               </p>
                             )}
+
+                            {/* Digital: Show asset preview for pending placements (so publishers can see what they're accepting) */}
+                            {isDigital && placementStatus === 'pending' && placementAssets.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-xs font-medium text-muted-foreground">Creative Preview:</p>
+                                {placementAssets.map((asset: any) => (
+                                  <CreativeAssetCard
+                                    key={asset.assetId}
+                                    asset={{ ...asset, uploadedAt: new Date(asset.uploadedAt) }}
+                                    onPreview={(a) => window.open(a.fileUrl, '_blank')}
+                                    showActions={true}
+                                  />
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Digital: Gated message for pending placements with scripts */}
+                            {isDigital && scripts.length > 0 && placementStatus === 'pending' && (
+                              <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                <Lock className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                                <div>
+                                  <p className="text-sm font-medium text-amber-900">Tracking scripts available after acceptance</p>
+                                  <p className="text-xs text-amber-700 mt-0.5">Accept this placement to access implementation tags and tracking code</p>
+                                </div>
+                              </div>
+                            )}
                             
-                            {/* Digital: Show Scripts */}
-                            {isDigital && scripts.length > 0 && (
+                            {/* Digital: Show Scripts (only for accepted/in_production/delivered) */}
+                            {isDigital && scripts.length > 0 && ['accepted', 'in_production', 'delivered'].includes(placementStatus) && (
                               <Accordion type="single" collapsible className="space-y-1">
                                 {scripts.map((script) => (
                                       <AccordionItem 
@@ -2187,11 +2257,26 @@ export function PublicationOrderDetail() {
                               </Accordion>
                             )}
 
-                            {/* Digital: No scripts yet - show awaiting message regardless of status */}
-                            {isDigital && scripts.length === 0 && (
+                            {/* Digital: No scripts yet - show awaiting message */}
+                            {isDigital && scripts.length === 0 && placementStatus !== 'rejected' && (
                               <div className="text-center py-3 text-muted-foreground text-sm bg-muted/50 rounded">
                                 <Code className="h-5 w-5 mx-auto mb-1 opacity-50" />
                                 Scripts will appear when assets are uploaded
+                              </div>
+                            )}
+
+                            {/* Digital: Show asset preview for rejected placements (for reference) */}
+                            {isDigital && placementStatus === 'rejected' && placementAssets.length > 0 && (
+                              <div className="space-y-2 opacity-60">
+                                <p className="text-xs font-medium text-muted-foreground">Creative Assets:</p>
+                                {placementAssets.map((asset: any) => (
+                                  <CreativeAssetCard
+                                    key={asset.assetId}
+                                    asset={{ ...asset, uploadedAt: new Date(asset.uploadedAt) }}
+                                    onPreview={(a) => window.open(a.fileUrl, '_blank')}
+                                    showActions={true}
+                                  />
+                                ))}
                               </div>
                             )}
 

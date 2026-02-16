@@ -1049,9 +1049,59 @@ router.get('/:campaignId/:publicationId/fresh-assets', async (req: any, res: Res
       return res.status(400).json({ error: result.error });
     }
 
+    // Regenerate signed URLs for S3 assets (stored URLs expire after 1 hour)
+    // Collect asset IDs that need fresh URLs
+    const assetIds = result.assets
+      .filter(item => item.hasAsset && item.asset?.assetId)
+      .map(item => new ObjectId(item.asset!.assetId));
+
+    let storagePathMap: Record<string, string> = {};
+    if (assetIds.length > 0) {
+      const { getDatabase } = await import('../../src/integrations/mongodb/client');
+      const db = getDatabase();
+      const assetDocs = await db.collection('creative_assets').find(
+        { _id: { $in: assetIds }, deletedAt: { $exists: false } },
+        { projection: { 'metadata.storageProvider': 1, 'metadata.storagePath': 1 } }
+      ).toArray();
+
+      // Build a map of assetId -> storagePath for S3 assets
+      for (const doc of assetDocs) {
+        if (doc.metadata?.storageProvider === 's3' && doc.metadata?.storagePath) {
+          storagePathMap[doc._id.toString()] = doc.metadata.storagePath;
+        }
+      }
+    }
+
+    // Generate fresh signed URLs in parallel
+    const { fileStorage } = await import('../storage/fileStorage');
+    const assetsWithFreshUrls = await Promise.all(
+      result.assets.map(async (item) => {
+        if (!item.hasAsset || !item.asset) return item;
+
+        const storagePath = storagePathMap[item.asset.assetId];
+        if (storagePath) {
+          try {
+            const freshUrl = await fileStorage.getSignedUrl(storagePath, 86400); // 24 hours
+            if (freshUrl) {
+              item.asset.fileUrl = freshUrl;
+              // For image assets, use the same fresh URL as thumbnail
+              if (item.asset.thumbnailUrl) {
+                item.asset.thumbnailUrl = freshUrl;
+              }
+            }
+          } catch (error) {
+            console.error('Error generating fresh signed URL for asset:', item.asset.assetId, error);
+            // Keep the old URL as fallback
+          }
+        }
+
+        return item;
+      })
+    );
+
     res.json({
       success: true,
-      assets: result.assets,
+      assets: assetsWithFreshUrls,
       assetStatus: result.assetStatus
     });
   } catch (error) {

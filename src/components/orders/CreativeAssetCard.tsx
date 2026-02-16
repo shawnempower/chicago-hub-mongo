@@ -73,10 +73,10 @@ export function CreativeAssetCard({
             className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
             title="Click to download"
           >
-            {isImage && asset.thumbnailUrl ? (
+            {isImage && (asset.thumbnailUrl || asset.fileUrl) ? (
               <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100">
                 <img
-                  src={asset.thumbnailUrl}
+                  src={asset.thumbnailUrl || asset.fileUrl}
                   alt={asset.fileName}
                   className="w-full h-full object-cover"
                 />
