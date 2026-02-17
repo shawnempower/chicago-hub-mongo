@@ -603,37 +603,57 @@ export function OrderPerformanceView({
         });
 
         // Channel-based fallback: for unclaimed perf entries (e.g. asset-based paths
-        // from automated tracking), merge them into inventory rows of the same channel
-        const unclaimedPerf = Object.entries(perfByNormPath)
-          .filter(([normPath]) => !claimedPerfPaths.has(normPath));
-        
-        unclaimedPerf.forEach(([normPath, perf]) => {
-          // Find an inventory row of the same channel that has no perf data yet
-          const targetRow = mergedRows.find(
-            r => r.channel === perf.channel && r.entries === 0
-          );
+        // from automated tracking), accumulate them into inventory rows of the same channel.
+        // We aggregate all unclaimed entries by channel first, then merge the totals into
+        // the first matching inventory row for each channel.
+        const unclaimedByChannel: Record<string, { impressions: number; clicks: number; units: number; entries: number; normPaths: string[] }> = {};
+        Object.entries(perfByNormPath)
+          .filter(([normPath]) => !claimedPerfPaths.has(normPath))
+          .forEach(([normPath, perf]) => {
+            const ch = perf.channel || 'unknown';
+            if (!unclaimedByChannel[ch]) {
+              unclaimedByChannel[ch] = { impressions: 0, clicks: 0, units: 0, entries: 0, normPaths: [] };
+            }
+            unclaimedByChannel[ch].impressions += perf.impressions || 0;
+            unclaimedByChannel[ch].clicks += perf.clicks || 0;
+            unclaimedByChannel[ch].units += perf.units || 0;
+            unclaimedByChannel[ch].entries += perf.entries || 0;
+            unclaimedByChannel[ch].normPaths.push(normPath);
+          });
+
+        Object.entries(unclaimedByChannel).forEach(([channel, totals]) => {
+          const targetRow = mergedRows.find(r => r.channel === channel);
           if (targetRow) {
-            // Merge perf data into the existing inventory row
-            targetRow.impressions += perf.impressions || 0;
-            targetRow.clicks += perf.clicks || 0;
-            targetRow.ctr = perf.ctr ?? targetRow.ctr;
-            targetRow.units += perf.units || 0;
-            targetRow.entries += perf.entries || 0;
-            claimedPerfPaths.add(normPath);
+            targetRow.impressions += totals.impressions;
+            targetRow.clicks += totals.clicks;
+            targetRow.units += totals.units;
+            targetRow.entries += totals.entries;
+            // Recompute CTR from merged totals
+            targetRow.ctr = targetRow.impressions > 0
+              ? (targetRow.clicks / targetRow.impressions) * 100
+              : null;
+            totals.normPaths.forEach(np => claimedPerfPaths.add(np));
           }
         });
 
-        // Same for unclaimed proofs -- merge into inventory rows by channel
+        // Same for unclaimed proofs -- accumulate by channel then merge
+        const unclaimedProofsByChannel: Record<string, { count: number; normPaths: string[] }> = {};
         Object.entries(proofCountByNormPath).forEach(([normPath, count]) => {
           if (normPath === '_order_level' || claimedProofPaths.has(normPath)) return;
           const matchingProof = proofs.find(p => p.itemPath && normalizeItemPath(p.itemPath) === normPath);
           const channel = matchingProof?.channel || 'unknown';
-          const targetRow = mergedRows.find(
-            r => r.channel === channel && r.proofCount === 0
-          );
+          if (!unclaimedProofsByChannel[channel]) {
+            unclaimedProofsByChannel[channel] = { count: 0, normPaths: [] };
+          }
+          unclaimedProofsByChannel[channel].count += count;
+          unclaimedProofsByChannel[channel].normPaths.push(normPath);
+        });
+
+        Object.entries(unclaimedProofsByChannel).forEach(([channel, data]) => {
+          const targetRow = mergedRows.find(r => r.channel === channel);
           if (targetRow) {
-            targetRow.proofCount += count;
-            claimedProofPaths.add(normPath);
+            targetRow.proofCount += data.count;
+            data.normPaths.forEach(np => claimedProofPaths.add(np));
           }
         });
 
