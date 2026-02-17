@@ -173,6 +173,22 @@ export function OrderPerformanceView({
     return map;
   }, [placements]);
 
+  // Channel-based name lookup: for entries with asset-based paths that don't match
+  // any inventory path, find the friendly name by channel (when only one placement per channel)
+  const placementNameByChannel = useMemo(() => {
+    const byChannel: Record<string, string[]> = {};
+    placements.forEach(p => {
+      if (!byChannel[p.channel]) byChannel[p.channel] = [];
+      byChannel[p.channel].push(p.itemName);
+    });
+    // Only use as fallback when there's exactly one placement for that channel
+    const map: Record<string, string> = {};
+    Object.entries(byChannel).forEach(([channel, names]) => {
+      if (names.length === 1) map[channel] = names[0];
+    });
+    return map;
+  }, [placements]);
+
   const getPlacementIcon = (channel: string) => {
     switch (channel) {
       case 'print': return <Newspaper className="w-4 h-4" />;
@@ -561,12 +577,17 @@ export function OrderPerformanceView({
           perfByNormPath[normalizeItemPath(p.itemPath)] = p;
         });
 
+        // Track which perf entries and proofs have been claimed by path matching
+        const claimedPerfPaths = new Set<string>();
+        const claimedProofPaths = new Set<string>();
+
         // Use the placements prop as the base so every order placement shows up
-        const seenNormPaths = new Set<string>();
         const mergedRows = placements.map(pl => {
           const normPath = normalizeItemPath(pl.itemPath);
-          seenNormPaths.add(normPath);
           const perf = perfByNormPath[normPath];
+          if (perf) claimedPerfPaths.add(normPath);
+          const proofCount = proofCountByNormPath[normPath] || 0;
+          if (proofCount > 0) claimedProofPaths.add(normPath);
           return {
             itemPath: pl.itemPath,
             normPath,
@@ -577,40 +598,77 @@ export function OrderPerformanceView({
             ctr: perf?.ctr ?? null,
             units: perf?.units || 0,
             entries: perf?.entries || 0,
-            proofCount: proofCountByNormPath[normPath] || 0,
+            proofCount,
           };
         });
 
-        // Also add any proof-only or entry-only placements not in the order's placements list
+        // Channel-based fallback: for unclaimed perf entries (e.g. asset-based paths
+        // from automated tracking), merge them into inventory rows of the same channel
+        const unclaimedPerf = Object.entries(perfByNormPath)
+          .filter(([normPath]) => !claimedPerfPaths.has(normPath));
+        
+        unclaimedPerf.forEach(([normPath, perf]) => {
+          // Find an inventory row of the same channel that has no perf data yet
+          const targetRow = mergedRows.find(
+            r => r.channel === perf.channel && r.entries === 0
+          );
+          if (targetRow) {
+            // Merge perf data into the existing inventory row
+            targetRow.impressions += perf.impressions || 0;
+            targetRow.clicks += perf.clicks || 0;
+            targetRow.ctr = perf.ctr ?? targetRow.ctr;
+            targetRow.units += perf.units || 0;
+            targetRow.entries += perf.entries || 0;
+            claimedPerfPaths.add(normPath);
+          }
+        });
+
+        // Same for unclaimed proofs -- merge into inventory rows by channel
+        Object.entries(proofCountByNormPath).forEach(([normPath, count]) => {
+          if (normPath === '_order_level' || claimedProofPaths.has(normPath)) return;
+          const matchingProof = proofs.find(p => p.itemPath && normalizeItemPath(p.itemPath) === normPath);
+          const channel = matchingProof?.channel || 'unknown';
+          const targetRow = mergedRows.find(
+            r => r.channel === channel && r.proofCount === 0
+          );
+          if (targetRow) {
+            targetRow.proofCount += count;
+            claimedProofPaths.add(normPath);
+          }
+        });
+
+        // Any still-unclaimed entries/proofs get their own rows
         const allNormPaths = new Set([
           ...Object.keys(perfByNormPath),
           ...Object.keys(proofCountByNormPath),
         ]);
         allNormPaths.forEach(normPath => {
           if (normPath === '_order_level') return;
-          if (seenNormPaths.has(normPath)) return;
-          seenNormPaths.add(normPath);
+          if (claimedPerfPaths.has(normPath) && claimedProofPaths.has(normPath)) return;
+          if (claimedPerfPaths.has(normPath) && !proofCountByNormPath[normPath]) return;
+          if (claimedProofPaths.has(normPath) && !perfByNormPath[normPath]) return;
+          // This entry/proof couldn't be merged into any inventory row
           const perf = perfByNormPath[normPath];
+          const proofCount = proofCountByNormPath[normPath] || 0;
+          if (!perf && proofCount === 0) return;
           const matchingProof = proofs.find(p => p.itemPath && normalizeItemPath(p.itemPath) === normPath);
-          const name = perf?.itemName || matchingProof?.itemName || 'Unknown Placement';
-          const channel = perf?.channel || matchingProof?.channel || 'unknown';
           mergedRows.push({
             itemPath: perf?.itemPath || matchingProof?.itemPath || normPath,
             normPath,
-            itemName: name,
-            channel,
+            itemName: perf?.itemName || matchingProof?.itemName || 'Unknown Placement',
+            channel: perf?.channel || matchingProof?.channel || 'unknown',
             impressions: perf?.impressions || 0,
             clicks: perf?.clicks || 0,
             ctr: perf?.ctr ?? null,
             units: perf?.units || 0,
             entries: perf?.entries || 0,
-            proofCount: proofCountByNormPath[normPath] || 0,
+            proofCount,
           });
         });
 
-        // Only show the card if there's at least one row with data
-        const hasAnyData = mergedRows.some(r => r.entries > 0 || r.proofCount > 0);
-        if (!hasAnyData) return null;
+        // Filter out rows with no data at all
+        const visibleRows = mergedRows.filter(r => r.entries > 0 || r.proofCount > 0 || r.impressions > 0);
+        if (visibleRows.length === 0) return null;
 
         return (
           <Card>
@@ -636,7 +694,7 @@ export function OrderPerformanceView({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mergedRows.map((row) => {
+                  {visibleRows.map((row) => {
                     const friendlyName = placementNameMap[row.itemPath] || placementNameMap[row.normPath] || row.itemName;
                     const config = getChannelConfig(row.channel);
                     const digital = isDigitalChannel(row.channel);
@@ -919,7 +977,7 @@ export function OrderPerformanceView({
                           </TableCell>
                           <TableCell>
                             {(() => {
-                              const friendlyName = placementNameMap[entry.itemPath] || placementNameMap[normalizeItemPath(entry.itemPath)] || entry.itemName;
+                              const friendlyName = placementNameMap[entry.itemPath] || placementNameMap[normalizeItemPath(entry.itemPath)] || placementNameByChannel[entry.channel] || entry.itemName;
                               return (
                                 <div className="max-w-[200px] truncate" title={friendlyName}>
                                   {friendlyName}
