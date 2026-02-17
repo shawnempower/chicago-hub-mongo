@@ -450,7 +450,7 @@ export function TrackingScriptGenerator({
                             </Button>
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
-                            For Broadstreet. Uses {'{{click}}'} and [timestamp] macros.
+                            For Broadstreet. Uses [timestamp] cache buster. Click tracking is handled by Broadstreet.
                           </p>
                         </TabsContent>
                         

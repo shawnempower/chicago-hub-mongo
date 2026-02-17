@@ -27,9 +27,9 @@ export const AD_SERVER_MACROS: Record<PublicationAdServer, {
   },
   broadstreet: {
     name: 'Broadstreet',
-    clickMacro: '{{click}}',
+    clickMacro: '',
     cacheBuster: '[timestamp]',
-    instructions: 'Paste this tag into a Custom HTML ad in Broadstreet. Click tracking is handled automatically.'
+    instructions: 'Paste this tag into a Custom HTML ad in Broadstreet. Click tracking is handled automatically by Broadstreet.'
   },
   adbutler: {
     name: 'AdButler',

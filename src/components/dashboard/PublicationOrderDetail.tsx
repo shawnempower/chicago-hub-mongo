@@ -2207,7 +2207,7 @@ export function PublicationOrderDetail() {
                                                   </div>
                                                   <p className="text-xs text-muted-foreground mt-1">
                                                     {configuredAdServer === 'broadstreet' && '✓ Your configured platform. '}
-                                                    Uses {'{{click}}'} and [timestamp] macros.
+                                                    Uses [timestamp] cache buster. Click tracking is handled by Broadstreet.
                                                   </p>
                                                 </TabsContent>
 

@@ -330,7 +330,7 @@ export const PublicationSettings: React.FC = () => {
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   {settings.adDelivery.adServer === 'gam' && 'Tags will include GAM click macros (%%CLICK_URL_UNESC%%) and cache busters (%%CACHEBUSTER%%)'}
-                  {settings.adDelivery.adServer === 'broadstreet' && 'Tags will include Broadstreet click macros ({{click}}) and timestamps ([timestamp])'}
+                  {settings.adDelivery.adServer === 'broadstreet' && 'Tags will include Broadstreet timestamps ([timestamp]). Click tracking is handled by Broadstreet.'}
                   {settings.adDelivery.adServer === 'adbutler' && 'Tags will include AdButler click macros ([TRACKING_LINK]) and cache busters ([RANDOM])'}
                   {settings.adDelivery.adServer === 'direct' && 'Tags will use JavaScript for dynamic cache busting - paste directly into your CMS'}
                 </p>
