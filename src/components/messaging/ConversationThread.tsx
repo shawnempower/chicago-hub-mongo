@@ -410,7 +410,7 @@ export function ConversationThread({
           multiple
           className="hidden"
           onChange={handleFileSelect}
-          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.html,.htm"
         />
 
         <div className="flex items-end gap-2">

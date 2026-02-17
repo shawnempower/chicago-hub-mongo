@@ -125,6 +125,7 @@ export const SUPPORTED_UPLOAD_TYPES = {
   documents: [
     'application/pdf',
     'text/plain',
+    'text/html',
     'text/markdown',
     'text/csv',
     'application/vnd.ms-excel',
