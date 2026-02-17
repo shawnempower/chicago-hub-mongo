@@ -136,10 +136,10 @@ export function OrderPerformanceView({
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [quickEntryPlacement, setQuickEntryPlacement] = useState<typeof placements[0] | null>(null);
   
-  // Detect bad pixel entries by validationStatus OR by itemName pattern
-  const isBadPixelEntry = (entry: PerformanceEntry) => {
+  // Detect data quality issues by validationStatus OR by itemName pattern
+  const isBadEntry = (entry: PerformanceEntry) => {
     const vs = (entry as any).validationStatus;
-    if (vs === 'bad_pixel' || vs === 'invalid_orderId') return true;
+    if (vs === 'bad_pixel' || vs === 'invalid_orderId' || vs === 'invalid_traffic') return true;
     // Also catch untagged tracking-pixel / empty-name automated entries
     if (entry.source === 'automated') {
       const name = (entry as any).itemName;
@@ -148,15 +148,41 @@ export function OrderPerformanceView({
     return false;
   };
   
-  // Split entries into valid and bad pixel entries for separate tabs
-  const validEntries = useMemo(() => entries.filter(e => !isBadPixelEntry(e)), [entries]);
-  const badPixelEntries = useMemo(() => entries.filter(e => isBadPixelEntry(e)), [entries]);
+  // Detect specifically invalid traffic entries
+  const isInvalidTrafficEntry = (entry: PerformanceEntry) => {
+    return (entry as any).validationStatus === 'invalid_traffic';
+  };
   
-  const badPixelTotals = useMemo(() => badPixelEntries.reduce((acc, entry) => ({
-    impressions: acc.impressions + (entry.metrics?.impressions || 0),
-    clicks: acc.clicks + (entry.metrics?.clicks || 0),
-    entries: acc.entries + 1,
-  }), { impressions: 0, clicks: 0, entries: 0 }), [badPixelEntries]);
+  // Detect specifically pixel issue entries (bad_pixel, invalid_orderId, or untagged tracking-pixel/empty)
+  const isPixelIssueEntry = (entry: PerformanceEntry) => {
+    return isBadEntry(entry) && !isInvalidTrafficEntry(entry);
+  };
+  
+  // Split entries into valid, pixel issues, and invalid traffic
+  const validEntries = useMemo(() => entries.filter(e => !isBadEntry(e)), [entries]);
+  const allBadEntries = useMemo(() => entries.filter(e => isBadEntry(e)), [entries]);
+  const pixelIssueEntries = useMemo(() => entries.filter(e => isPixelIssueEntry(e)), [entries]);
+  const invalidTrafficEntries = useMemo(() => entries.filter(e => isInvalidTrafficEntry(e)), [entries]);
+  
+  const dataQualityTotals = useMemo(() => {
+    const pixelTotals = pixelIssueEntries.reduce((acc, entry) => ({
+      impressions: acc.impressions + (entry.metrics?.impressions || 0),
+      clicks: acc.clicks + (entry.metrics?.clicks || 0),
+    }), { impressions: 0, clicks: 0 });
+    
+    const ivtTotals = invalidTrafficEntries.reduce((acc, entry) => ({
+      impressions: acc.impressions + (entry.metrics?.impressions || 0),
+      clicks: acc.clicks + (entry.metrics?.clicks || 0),
+    }), { impressions: 0, clicks: 0 });
+    
+    return {
+      totalBadEntries: allBadEntries.length,
+      pixelIssues: { count: pixelIssueEntries.length, ...pixelTotals },
+      invalidTraffic: { count: invalidTrafficEntries.length, ...ivtTotals },
+      totalFalseImpressions: pixelTotals.impressions + ivtTotals.impressions,
+      totalFalseClicks: pixelTotals.clicks + ivtTotals.clicks,
+    };
+  }, [allBadEntries, pixelIssueEntries, invalidTrafficEntries]);
   
   // Edit/Delete state
   const [editingEntry, setEditingEntry] = useState<PerformanceEntry | null>(null);
@@ -952,11 +978,11 @@ export function OrderPerformanceView({
           <TabsTrigger value="entries">
             Performance Entries ({validEntries.length})
           </TabsTrigger>
-          {badPixelEntries.length > 0 && (
-            <TabsTrigger value="pixel-issues" className="gap-1.5">
-              Pixel Issues
+          {allBadEntries.length > 0 && (
+            <TabsTrigger value="data-quality" className="gap-1.5">
+              Data Quality Issues
               <Badge variant="destructive" className="text-[10px] px-1.5 py-0 ml-1">
-                {badPixelEntries.length}
+                {allBadEntries.length}
               </Badge>
             </TabsTrigger>
           )}
@@ -1136,23 +1162,23 @@ export function OrderPerformanceView({
           </Card>
         </TabsContent>
 
-        {/* Pixel Issues Tab */}
-        {badPixelEntries.length > 0 && (
-          <TabsContent value="pixel-issues" className="mt-4 space-y-4">
+        {/* Data Quality Issues Tab */}
+        {allBadEntries.length > 0 && (
+          <TabsContent value="data-quality" className="mt-4 space-y-4">
             {/* Summary stats */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-red-600">{badPixelTotals.entries}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Bad Entries</p>
+                    <p className="text-2xl font-bold text-red-600">{dataQualityTotals.totalBadEntries}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Total Issues</p>
                   </div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-red-600">{badPixelTotals.impressions.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-red-600">{dataQualityTotals.totalFalseImpressions.toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground mt-1">False Impressions</p>
                   </div>
                 </CardContent>
@@ -1160,65 +1186,143 @@ export function OrderPerformanceView({
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-red-600">{badPixelTotals.clicks.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-red-600">{dataQualityTotals.totalFalseClicks.toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground mt-1">False Clicks</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-amber-600">{dataQualityTotals.invalidTraffic.count}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Invalid Traffic</p>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                  Entries Excluded from Performance Totals
-                </CardTitle>
-                <CardDescription>
-                  These entries have data quality issues and are not counted in delivery metrics. They are caused by tracking pixel 
-                  misconfiguration — duplicate or invalid entries from the automated sync process.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Placement</TableHead>
-                      <TableHead>Issue</TableHead>
-                      <TableHead className="text-right">Impressions</TableHead>
-                      <TableHead className="text-right">Clicks</TableHead>
-                      <TableHead className="text-right">CTR</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {badPixelEntries.map((entry) => (
-                      <TableRow key={entry._id?.toString()} className="text-muted-foreground">
-                        <TableCell className="text-xs">
-                          {entry.dateStart ? format(new Date(entry.dateStart), 'MMM d, yyyy') : '—'}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs font-mono">{entry.itemName || entry.itemPath}</span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 font-normal">
-                            {(entry as any).validationStatus === 'bad_pixel' ? 'Bad Pixel' : 'Invalid Order'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right text-xs">
-                          {(entry.metrics?.impressions || 0).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right text-xs">
-                          {(entry.metrics?.clicks || 0).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right text-xs">
-                          {entry.metrics?.ctr ? `${entry.metrics.ctr}%` : '—'}
-                        </TableCell>
+            {/* Pixel Issues Section */}
+            {pixelIssueEntries.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-500" />
+                    Pixel Issues ({pixelIssueEntries.length})
+                  </CardTitle>
+                  <CardDescription>
+                    Tracking pixel misconfiguration — duplicate or invalid entries from the automated sync process.
+                    These are excluded from delivery metrics.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Placement</TableHead>
+                        <TableHead>Issue</TableHead>
+                        <TableHead className="text-right">Impressions</TableHead>
+                        <TableHead className="text-right">Clicks</TableHead>
+                        <TableHead className="text-right">CTR</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {pixelIssueEntries.map((entry) => (
+                        <TableRow key={entry._id?.toString()} className="text-muted-foreground">
+                          <TableCell className="text-xs">
+                            {entry.dateStart ? format(new Date(entry.dateStart), 'MMM d, yyyy') : '—'}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs font-mono">{entry.itemName || entry.itemPath}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 font-normal">
+                              {(entry as any).validationStatus === 'bad_pixel' ? 'Bad Pixel' 
+                                : (entry as any).validationStatus === 'invalid_orderId' ? 'Invalid Order'
+                                : 'Bad Pixel'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right text-xs">
+                            {(entry.metrics?.impressions || 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right text-xs">
+                            {(entry.metrics?.clicks || 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right text-xs">
+                            {entry.metrics?.ctr ? `${entry.metrics.ctr}%` : '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Invalid Traffic Section */}
+            {invalidTrafficEntries.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                    Invalid Traffic ({invalidTrafficEntries.length})
+                  </CardTitle>
+                  <CardDescription>
+                    Automated detection identified suspicious traffic patterns. These impressions and clicks are
+                    excluded from delivery metrics to ensure accurate reporting.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Placement</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead className="text-right">Impressions</TableHead>
+                        <TableHead className="text-right">Clicks</TableHead>
+                        <TableHead className="text-right">CTR</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invalidTrafficEntries.map((entry) => {
+                        const reason = (entry as any).validationReasons;
+                        const reasonLabel = reason === 'bot_ua' ? 'Bot Traffic'
+                          : reason === 'click_frequency' ? 'Click Fraud'
+                          : 'Suspicious';
+                        const reasonVariant = reason === 'bot_ua' ? 'bg-amber-100 text-amber-700 border-amber-200'
+                          : reason === 'click_frequency' ? 'bg-orange-100 text-orange-700 border-orange-200'
+                          : 'bg-gray-100 text-gray-700 border-gray-200';
+                        return (
+                          <TableRow key={entry._id?.toString()} className="text-muted-foreground">
+                            <TableCell className="text-xs">
+                              {entry.dateStart ? format(new Date(entry.dateStart), 'MMM d, yyyy') : '—'}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs font-mono">{entry.itemName || entry.itemPath}</span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={`text-[10px] px-1.5 py-0 font-normal border pointer-events-none ${reasonVariant}`}>
+                                {reasonLabel}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right text-xs">
+                              {(entry.metrics?.impressions || 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right text-xs">
+                              {(entry.metrics?.clicks || 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right text-xs">
+                              {entry.metrics?.ctr ? `${entry.metrics.ctr}%` : '—'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         )}
 

@@ -51,7 +51,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     const validEntryMatch = {
       campaignId: campaign.campaignId || campaignId,
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
       $or: [
         { source: { $ne: 'automated' } },
         { itemName: { $nin: [null, '', 'tracking-pixel'] } },
@@ -615,7 +615,7 @@ router.get('/campaign/:campaignId/daily', async (req: any, res: Response) => {
     const match: any = { 
       campaignId: resolvedCampaignId, 
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
       $or: [
         { source: { $ne: 'automated' } },
         { itemName: { $nin: [null, '', 'tracking-pixel'] } },
@@ -699,7 +699,7 @@ router.get('/order/:orderId/daily', async (req: any, res: Response) => {
     const match: any = { 
       orderId: resolvedOrderId, 
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
       $or: [
         { source: { $ne: 'automated' } },
         { itemName: { $nin: [null, '', 'tracking-pixel'] } },
@@ -776,7 +776,7 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
     const orderEntryMatch = {
       orderId: order._id?.toString() || orderId,
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
       $or: [
         { source: { $ne: 'automated' } },
         { itemName: { $nin: [null, '', 'tracking-pixel'] } },

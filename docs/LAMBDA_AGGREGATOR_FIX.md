@@ -92,7 +92,8 @@ const operations = rows.map(row => {
               : undefined,
             reach: row.unique_ips || 0,
           },
-          validationStatus: 'valid',  // Lambda-validated entry
+          validationStatus: getValidationStatus(row),  // 'valid', 'invalid_orderId', or 'invalid_traffic'
+          validationReasons: getValidationReason(row),  // e.g. 'bot_ua', 'click_frequency', etc.
           enteredBy: 'lambda-tracking-sync',
           enteredAt: new Date(),
           updatedAt: new Date(),
@@ -129,12 +130,46 @@ The Lambda processes ALL rows from Athena, including test pixels with fake order
 // Valid MongoDB ObjectId: 24-character hex string
 const VALID_ORDER_ID = /^[a-f0-9]{24}$/;
 
+// Known bot user-agent patterns
+const BOT_UA_PATTERNS = [
+  /bot/i, /crawl/i, /spider/i, /slurp/i, /mediapartners/i,
+  /headless/i, /phantom/i, /selenium/i, /puppeteer/i,
+];
+
 // Helper to determine validation status for each row
 function getValidationStatus(row) {
   if (!row.order_id || !VALID_ORDER_ID.test(row.order_id)) {
     return 'invalid_orderId';
   }
+  // Check for bot traffic (user-agent based)
+  if (row.user_agent && BOT_UA_PATTERNS.some(p => p.test(row.user_agent))) {
+    return 'invalid_traffic';
+  }
+  // Check for click fraud (abnormally high click frequency from same IP)
+  if (row.clicks && row.unique_ips && row.unique_ips > 0) {
+    const clicksPerIp = row.clicks / row.unique_ips;
+    if (clicksPerIp > 10) {  // More than 10 clicks per unique IP is suspicious
+      return 'invalid_traffic';
+    }
+  }
   return 'valid';
+}
+
+// Helper to determine validation reason
+function getValidationReason(row) {
+  if (!row.order_id || !VALID_ORDER_ID.test(row.order_id)) {
+    return 'invalid_orderId';
+  }
+  if (row.user_agent && BOT_UA_PATTERNS.some(p => p.test(row.user_agent))) {
+    return 'bot_ua';
+  }
+  if (row.clicks && row.unique_ips && row.unique_ips > 0) {
+    const clicksPerIp = row.clicks / row.unique_ips;
+    if (clicksPerIp > 10) {
+      return 'click_frequency';
+    }
+  }
+  return undefined;  // No reason needed for valid entries
 }
 
 // Filter out completely empty rows, but keep invalid ones tagged
@@ -155,6 +190,30 @@ console.log(JSON.stringify({
 // In the updateOne $set block, use:
 //   validationStatus: getValidationStatus(row),
 ```
+
+---
+
+## Validation Status Reference
+
+The `validationStatus` field on each performance entry controls whether it is counted in delivery metrics:
+
+| Status | Meaning | Counted in Totals? |
+|--------|---------|-------------------|
+| `valid` | Entry passed all checks | Yes |
+| `bad_pixel` | Bare tracking pixel hit (no creative) | No |
+| `invalid_orderId` | Non-existent or test orderId | No |
+| `invalid_traffic` | Bot traffic or suspicious click patterns | No |
+
+The `validationReasons` field provides the specific reason:
+
+| Reason | Used With | Description |
+|--------|-----------|-------------|
+| `missing_creative` | `bad_pixel` | No creative/asset ID in the tracking data |
+| `missing_publication` | `bad_pixel` | Could not resolve publication |
+| `missing_channel` | `bad_pixel` | No channel information |
+| `invalid_orderId` | `invalid_orderId` | OrderId doesn't match a valid MongoDB ObjectId |
+| `bot_ua` | `invalid_traffic` | User-agent matched a known bot pattern |
+| `click_frequency` | `invalid_traffic` | Abnormally high click rate per unique IP (>10 clicks/IP) |
 
 ---
 

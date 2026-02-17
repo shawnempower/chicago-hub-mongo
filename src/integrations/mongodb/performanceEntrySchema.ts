@@ -27,7 +27,16 @@ export type PerformanceChannel =
 export type PerformanceSource = 'manual' | 'import' | 'automated';
 
 // Validation status set by Lambda during sync
-export type ValidationStatus = 'valid' | 'bad_pixel' | 'invalid_orderId';
+export type ValidationStatus = 'valid' | 'bad_pixel' | 'invalid_orderId' | 'invalid_traffic';
+
+// Reason for validation status (single reason per entry)
+export type ValidationReason =
+  | 'missing_creative'
+  | 'missing_publication'
+  | 'missing_channel'
+  | 'invalid_orderId'
+  | 'bot_ua'
+  | 'click_frequency';
 
 /**
  * Channel-specific metrics
@@ -104,6 +113,7 @@ export interface PerformanceEntry {
   
   // Validation (set by Lambda for automated entries)
   validationStatus?: ValidationStatus;
+  validationReasons?: ValidationReason;
   
   // Audit trail
   updatedBy?: string;

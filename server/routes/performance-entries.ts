@@ -82,7 +82,7 @@ router.get('/order/:orderId', async (req: any, res: Response) => {
     // Calculate summary — only count valid entries in totals
     const isValidEntry = (entry: PerformanceEntry) => {
       const vs = (entry as any).validationStatus;
-      if (vs === 'bad_pixel' || vs === 'invalid_orderId') return false;
+      if (vs === 'bad_pixel' || vs === 'invalid_orderId' || vs === 'invalid_traffic') return false;
       // Also exclude automated entries with tracking-pixel or empty itemName
       if (entry.source === 'automated') {
         const name = (entry as any).itemName;
@@ -587,7 +587,7 @@ async function updateOrderDeliverySummary(orderId: string): Promise<void> {
       orderId,
       deletedAt: { $exists: false },
       // Exclude explicitly bad entries
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
       // Exclude bare tracking-pixel / empty-name automated entries
       $or: [
         { source: { $ne: 'automated' } },                          // manual/import always counted
@@ -621,7 +621,7 @@ async function updateOrderDeliverySummary(orderId: string): Promise<void> {
         badCount: { $sum: {
           $cond: [
             { $or: [
-              { $in: ['$validationStatus', ['bad_pixel', 'invalid_orderId']] },
+              { $in: ['$validationStatus', ['bad_pixel', 'invalid_orderId', 'invalid_traffic']] },
               { $eq: ['$itemName', 'tracking-pixel'] },
               { $eq: ['$itemName', ''] },
               { $eq: [{ $ifNull: ['$itemName', null] }, null] },
