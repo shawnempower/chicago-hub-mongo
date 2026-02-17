@@ -571,10 +571,24 @@ export function OrderPerformanceView({
           proofCountByNormPath[key] = (proofCountByNormPath[key] || 0) + 1;
         });
 
-        // Build perf lookup by normalized path
+        // Build perf lookup by normalized path, ACCUMULATING when multiple
+        // byPlacement groups share the same normalized path (e.g. automated entries
+        // with the same itemPath but different itemName/asset IDs).
         const perfByNormPath: Record<string, any> = {};
         (summary?.byPlacement || []).forEach((p: any) => {
-          perfByNormPath[normalizeItemPath(p.itemPath)] = p;
+          const key = normalizeItemPath(p.itemPath);
+          if (perfByNormPath[key]) {
+            perfByNormPath[key].impressions += p.impressions || 0;
+            perfByNormPath[key].clicks += p.clicks || 0;
+            perfByNormPath[key].units += p.units || 0;
+            perfByNormPath[key].entries += p.entries || 0;
+            perfByNormPath[key].reach = (perfByNormPath[key].reach || 0) + (p.reach || 0);
+            perfByNormPath[key].ctr = perfByNormPath[key].impressions > 0
+              ? (perfByNormPath[key].clicks / perfByNormPath[key].impressions) * 100
+              : null;
+          } else {
+            perfByNormPath[key] = { ...p };
+          }
         });
 
         // Track which perf entries and proofs have been claimed by path matching
@@ -998,9 +1012,16 @@ export function OrderPerformanceView({
                           <TableCell>
                             {(() => {
                               const friendlyName = placementNameMap[entry.itemPath] || placementNameMap[normalizeItemPath(entry.itemPath)] || placementNameByChannel[entry.channel] || entry.itemName;
+                              // For automated entries, show the asset/creative ID beneath the placement name
+                              const isAssetBased = entry.source === 'automated' && entry.itemName && entry.itemName !== friendlyName;
                               return (
-                                <div className="max-w-[200px] truncate" title={friendlyName}>
-                                  {friendlyName}
+                                <div className="max-w-[220px]" title={`${friendlyName}${isAssetBased ? `\n${entry.itemName}` : ''}`}>
+                                  <div className="truncate">{friendlyName}</div>
+                                  {isAssetBased && (
+                                    <div className="truncate text-xs text-muted-foreground font-mono">
+                                      {entry.itemName}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })()}
