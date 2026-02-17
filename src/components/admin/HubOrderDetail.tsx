@@ -40,6 +40,7 @@ import { toast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/config/api';
 import { format } from 'date-fns';
 import { OrderPerformanceView } from '../dashboard/OrderPerformanceView';
+import { PixelHealthAlert } from '../orders/PixelHealthBadge';
 import { TrackingScriptGenerator } from './TrackingScriptGenerator';
 import { formatDimensionsForDisplay } from '@/utils/dimensionValidation';
 import { getRejectionReason } from '@/constants/rejectionReasons';
@@ -363,6 +364,10 @@ export function HubOrderDetail() {
         instructions.push(`Audience: ${formatNumber(metrics.monthlyVisitors)} visitors/mo`);
       }
     } else if (ch.includes('newsletter')) {
+      // Newsletter friendly name
+      if (item.sourceName) {
+        instructions.push(`Newsletter: ${item.sourceName}`);
+      }
       // Newsletter: Sends are the unit
       instructions.push(`Sends: ${frequency} newsletter${frequency > 1 ? 's' : ''}`);
       if (metrics.subscribers) {
@@ -702,19 +707,22 @@ export function HubOrderDetail() {
 
         <TabsContent value="performance" className="mt-0">
           {order._id && ['confirmed', 'in_production', 'delivered'].includes(order.status) ? (
-            <OrderPerformanceView
-              orderId={order._id}
-              campaignId={order.campaignId}
-              publicationId={order.publicationId}
-              publicationName={order.publicationName}
-              placements={publication?.inventoryItems?.map((item: any, idx: number) => ({
-                itemPath: item.itemPath || item.sourcePath || `placement-${idx}`,
-                itemName: item.itemName,
-                channel: item.channel,
-                dimensions: item.format?.dimensions,
-              })) || []}
-              isHubView={true}
-            />
+            <div className="space-y-4">
+              <PixelHealthAlert pixelHealth={order.deliverySummary?.pixelHealth} />
+              <OrderPerformanceView
+                orderId={order._id}
+                campaignId={order.campaignId}
+                publicationId={order.publicationId}
+                publicationName={order.publicationName}
+                placements={publication?.inventoryItems?.map((item: any, idx: number) => ({
+                  itemPath: item.itemPath || item.sourcePath || `placement-${idx}`,
+                  itemName: item.itemName,
+                  channel: item.channel,
+                  dimensions: item.format?.dimensions,
+                })) || []}
+                isHubView={true}
+              />
+            </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />

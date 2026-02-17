@@ -11,6 +11,7 @@ import { CreativeAssetCard } from '../orders/CreativeAssetCard';
 import { OrderMessaging } from '../orders/OrderMessaging';
 import { PlacementTraffickingCard, extractTraffickingInfo } from '../orders';
 import { PlacementStatusBadge } from '../orders/PlacementStatusBadge';
+import { PixelHealthAlert } from '../orders/PixelHealthBadge';
 import { OrderPerformanceView } from './OrderPerformanceView';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { 
@@ -458,6 +459,10 @@ export function PublicationOrderDetail() {
           instructions.push(`<strong>Audience:</strong> ${formatNumber(metrics.monthlyVisitors)} visitors/mo`);
         }
       } else if (ch.includes('newsletter')) {
+        // Newsletter friendly name
+        if (item.sourceName) {
+          instructions.push(`<strong>Newsletter:</strong> ${item.sourceName}`);
+        }
         // Newsletter: Sends are the unit
         instructions.push(`<strong>Sends:</strong> ${frequency} newsletter${frequency > 1 ? 's' : ''}`);
         if (metrics.subscribers) {
@@ -1033,6 +1038,14 @@ export function PublicationOrderDetail() {
         });
       }
     } else if (channel === 'newsletter') {
+      // Newsletter friendly name
+      if (item.sourceName) {
+        expectations.push({
+          label: 'Newsletter',
+          value: item.sourceName,
+          icon: <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+        });
+      }
       // Newsletter: Sends are the unit
       expectations.push({
         label: 'Sends',
@@ -2457,15 +2470,18 @@ export function PublicationOrderDetail() {
         {/* PERFORMANCE TAB */}
         <TabsContent value="performance" className="mt-0">
           {canShowPerformance ? (
-            <OrderPerformanceView
+            <div className="space-y-4">
+              <PixelHealthAlert pixelHealth={order.deliverySummary?.pixelHealth} />
+              <OrderPerformanceView
               orderId={order._id?.toString() || ''}
               campaignId={order.campaignId}
               publicationId={order.publicationId}
               publicationName={order.publicationName}
               placements={placementsForPerformance}
               deliveryGoals={order.deliveryGoals}
-              deliverySummary={order.deliverySummary}
+              deliverySummary={order.deliverySummary as any}
             />
+            </div>
           ) : (
             <Card className="shadow-none">
               <CardContent className="py-12 text-center">

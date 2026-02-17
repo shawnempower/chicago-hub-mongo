@@ -47,9 +47,20 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
+    // Only count valid entries in aggregations
+    const validEntryMatch = {
+      campaignId: campaign.campaignId || campaignId,
+      deletedAt: { $exists: false },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId'] },
+      $or: [
+        { source: { $ne: 'automated' } },
+        { itemName: { $nin: [null, '', 'tracking-pixel'] } },
+      ]
+    };
+    
     // Aggregate performance data
     const aggregation = await perfCollection.aggregate([
-      { $match: { campaignId: campaign.campaignId || campaignId, deletedAt: { $exists: false } } },
+      { $match: validEntryMatch },
       { $group: {
         _id: null,
         totalEntries: { $sum: 1 },
@@ -68,7 +79,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     
     // Get by-channel breakdown
     const channelBreakdown = await perfCollection.aggregate([
-      { $match: { campaignId: campaign.campaignId || campaignId, deletedAt: { $exists: false } } },
+      { $match: validEntryMatch },
       { $group: {
         _id: '$channel',
         entries: { $sum: 1 },
@@ -86,7 +97,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     
     // Get by-publication breakdown
     const publicationBreakdown = await perfCollection.aggregate([
-      { $match: { campaignId: campaign.campaignId || campaignId, deletedAt: { $exists: false } } },
+      { $match: validEntryMatch },
       { $group: {
         _id: { publicationId: '$publicationId', publicationName: '$publicationName' },
         entries: { $sum: 1 },
@@ -603,7 +614,12 @@ router.get('/campaign/:campaignId/daily', async (req: any, res: Response) => {
     
     const match: any = { 
       campaignId: resolvedCampaignId, 
-      deletedAt: { $exists: false } 
+      deletedAt: { $exists: false },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId'] },
+      $or: [
+        { source: { $ne: 'automated' } },
+        { itemName: { $nin: [null, '', 'tracking-pixel'] } },
+      ]
     };
     if (Object.keys(dateFilter).length > 0) {
       match.dateStart = dateFilter;
@@ -682,7 +698,12 @@ router.get('/order/:orderId/daily', async (req: any, res: Response) => {
     
     const match: any = { 
       orderId: resolvedOrderId, 
-      deletedAt: { $exists: false } 
+      deletedAt: { $exists: false },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId'] },
+      $or: [
+        { source: { $ne: 'automated' } },
+        { itemName: { $nin: [null, '', 'tracking-pixel'] } },
+      ]
     };
     if (Object.keys(dateFilter).length > 0) {
       match.dateStart = dateFilter;
@@ -751,9 +772,19 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Order not found' });
     }
     
-    // Aggregate performance data
+    // Aggregate performance data (only valid entries)
+    const orderEntryMatch = {
+      orderId: order._id?.toString() || orderId,
+      deletedAt: { $exists: false },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId'] },
+      $or: [
+        { source: { $ne: 'automated' } },
+        { itemName: { $nin: [null, '', 'tracking-pixel'] } },
+      ]
+    };
+    
     const aggregation = await perfCollection.aggregate([
-      { $match: { orderId: order._id?.toString() || orderId, deletedAt: { $exists: false } } },
+      { $match: orderEntryMatch },
       { $group: {
         _id: null,
         totalEntries: { $sum: 1 },
@@ -767,7 +798,7 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
     
     // Get by-placement breakdown
     const placementBreakdown = await perfCollection.aggregate([
-      { $match: { orderId: order._id?.toString() || orderId, deletedAt: { $exists: false } } },
+      { $match: orderEntryMatch },
       { $group: {
         _id: { itemPath: '$itemPath', itemName: '$itemName', channel: '$channel' },
         entries: { $sum: 1 },

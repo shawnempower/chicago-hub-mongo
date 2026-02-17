@@ -27,6 +27,9 @@ export type {
   BasePlacementInfo,
 } from './placementTrafficking.types';
 
+// Pixel health
+export { PixelHealthBadge, PixelHealthAlert } from './PixelHealthBadge';
+
 // Other order components
 export { AdSpecsForm } from './AdSpecsForm';
 export { CreativeAssetCard } from './CreativeAssetCard';

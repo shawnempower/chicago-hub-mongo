@@ -73,12 +73,24 @@ router.get('/order/:orderId', async (req: any, res: Response) => {
     const db = getDatabase();
     const collection = db.collection<PerformanceEntry>(COLLECTIONS.PERFORMANCE_ENTRIES);
     
+    // Return ALL entries (including invalid) so the frontend can show warnings
     const entries = await collection
       .find({ orderId, deletedAt: { $exists: false } })
       .sort({ dateStart: -1, itemPath: 1 })
       .toArray();
     
-    // Calculate summary
+    // Calculate summary — only count valid entries in totals
+    const isValidEntry = (entry: PerformanceEntry) => {
+      const vs = (entry as any).validationStatus;
+      if (vs === 'bad_pixel' || vs === 'invalid_orderId') return false;
+      // Also exclude automated entries with tracking-pixel or empty itemName
+      if (entry.source === 'automated') {
+        const name = (entry as any).itemName;
+        if (!name || name === 'tracking-pixel') return false;
+      }
+      return true;
+    };
+    
     const summary = {
       totalEntries: entries.length,
       byChannel: {} as Record<string, { count: number; impressions: number; clicks: number; units: number }>,
@@ -94,6 +106,8 @@ router.get('/order/:orderId', async (req: any, res: Response) => {
     };
     
     entries.forEach(entry => {
+      if (!isValidEntry(entry)) return; // Skip invalid entries from totals
+      
       const ch = entry.channel;
       if (!summary.byChannel[ch]) {
         summary.byChannel[ch] = { count: 0, impressions: 0, clicks: 0, units: 0 };
@@ -567,9 +581,22 @@ async function updateOrderDeliverySummary(orderId: string): Promise<void> {
       });
     }
     
-    // Get all performance entries for this order (grouped by channel)
+    // Get all VALID performance entries for this order (grouped by channel)
+    // Exclude entries with bad validationStatus OR tracking-pixel/empty itemName from delivery totals
+    const validEntryFilter = {
+      orderId,
+      deletedAt: { $exists: false },
+      // Exclude explicitly bad entries
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId'] },
+      // Exclude bare tracking-pixel / empty-name automated entries
+      $or: [
+        { source: { $ne: 'automated' } },                          // manual/import always counted
+        { itemName: { $nin: [null, '', 'tracking-pixel'] } },      // automated with real asset name
+      ]
+    };
+    
     const entriesByChannel = await perfCollection.aggregate([
-      { $match: { orderId, deletedAt: { $exists: false } } },
+      { $match: validEntryFilter },
       { $group: {
         _id: '$channel',
         reportCount: { $sum: 1 },  // Number of reports submitted
@@ -584,6 +611,78 @@ async function updateOrderDeliverySummary(orderId: string): Promise<void> {
         circulation: { $sum: { $ifNull: ['$metrics.circulation', 0] } }
       }}
     ]).toArray();
+    
+    // Compute pixel health from ALL automated entries (including invalid ones)
+    const pixelHealthAgg = await perfCollection.aggregate([
+      { $match: { orderId, deletedAt: { $exists: false }, source: 'automated' } },
+      { $group: {
+        _id: null,
+        total: { $sum: 1 },
+        badCount: { $sum: {
+          $cond: [
+            { $or: [
+              { $in: ['$validationStatus', ['bad_pixel', 'invalid_orderId']] },
+              { $eq: ['$itemName', 'tracking-pixel'] },
+              { $eq: ['$itemName', ''] },
+              { $eq: [{ $ifNull: ['$itemName', null] }, null] },
+            ]},
+            1, 0
+          ]
+        }},
+        totalImpressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } },
+        hasAssetEntries: { $sum: {
+          $cond: [
+            { $and: [
+              { $ne: [{ $ifNull: ['$itemName', ''] }, ''] },
+              { $ne: ['$itemName', 'tracking-pixel'] },
+              { $gt: [{ $ifNull: ['$metrics.impressions', 0] }, 0] }
+            ]},
+            1, 0
+          ]
+        }},
+      }}
+    ]).toArray();
+    
+    const hasDigitalPlacements = Object.keys(expectedByChannel).some(ch => digitalChannels.includes(ch));
+    const pxAgg = pixelHealthAgg[0] || { total: 0, badCount: 0, totalImpressions: 0, hasAssetEntries: 0 };
+    
+    let pixelHealth: { status: string; message: string; badEntryCount: number; totalAutomatedEntries: number; lastChecked: Date } | undefined;
+    
+    if (hasDigitalPlacements) {
+      if (pxAgg.badCount > 0) {
+        pixelHealth = {
+          status: 'error',
+          message: `${pxAgg.badCount} tracking ${pxAgg.badCount === 1 ? 'entry has' : 'entries have'} data quality issues and ${pxAgg.badCount === 1 ? 'is' : 'are'} excluded from totals.`,
+          badEntryCount: pxAgg.badCount,
+          totalAutomatedEntries: pxAgg.total,
+          lastChecked: new Date(),
+        };
+      } else if (pxAgg.total === 0) {
+        pixelHealth = {
+          status: 'no_data',
+          message: 'No tracking data received yet. Verify the tracking pixel is installed on your site.',
+          badEntryCount: 0,
+          totalAutomatedEntries: 0,
+          lastChecked: new Date(),
+        };
+      } else if (pxAgg.hasAssetEntries === 0 && pxAgg.totalImpressions <= 10) {
+        pixelHealth = {
+          status: 'warning',
+          message: 'Tracking pixel is active but ad impressions are very low. Verify your ad placements are rendering correctly.',
+          badEntryCount: 0,
+          totalAutomatedEntries: pxAgg.total,
+          lastChecked: new Date(),
+        };
+      } else {
+        pixelHealth = {
+          status: 'healthy',
+          message: 'Tracking is working correctly.',
+          badEntryCount: 0,
+          totalAutomatedEntries: pxAgg.total,
+          lastChecked: new Date(),
+        };
+      }
+    }
     
     // Build channel summaries - goal vs delivered for all channels
     const byChannel: Record<string, {
@@ -699,6 +798,8 @@ async function updateOrderDeliverySummary(orderId: string): Promise<void> {
             percentComplete: deliveryPercent, // Now based on actual delivery vs goal
             // Per-channel breakdown
             byChannel,
+            // Pixel tracking health
+            ...(pixelHealth ? { pixelHealth } : {}),
             lastUpdated: new Date()
           },
           updatedAt: new Date()

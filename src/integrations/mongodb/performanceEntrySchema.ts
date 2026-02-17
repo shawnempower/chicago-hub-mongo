@@ -26,6 +26,9 @@ export type PerformanceChannel =
 // Source of the performance data
 export type PerformanceSource = 'manual' | 'import' | 'automated';
 
+// Validation status set by Lambda during sync
+export type ValidationStatus = 'valid' | 'bad_pixel' | 'invalid_orderId';
+
 /**
  * Channel-specific metrics
  * All fields are optional - only relevant metrics for the channel should be populated
@@ -98,6 +101,9 @@ export interface PerformanceEntry {
   enteredBy: string;         // User ID who entered the data
   enteredAt: Date;
   notes?: string;            // Additional context (e.g., "Ran in Sunday edition")
+  
+  // Validation (set by Lambda for automated entries)
+  validationStatus?: ValidationStatus;
   
   // Audit trail
   updatedBy?: string;

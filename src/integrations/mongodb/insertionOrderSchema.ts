@@ -93,6 +93,20 @@ export interface OrderMessage {
 }
 
 /**
+ * Pixel health status computed from automated performance entries.
+ * Stored on deliverySummary so all views can read it without extra queries.
+ */
+export type PixelHealthStatus = 'healthy' | 'warning' | 'no_data' | 'error';
+
+export interface PixelHealth {
+  status: PixelHealthStatus;
+  message: string;
+  badEntryCount: number;          // entries with bad_pixel or invalid_orderId
+  totalAutomatedEntries: number;  // total entries with source=automated
+  lastChecked: Date;
+}
+
+/**
  * PublicationInsertionOrderDocument
  * 
  * The main document stored in the publication_insertion_orders collection.
@@ -177,11 +191,21 @@ export interface PublicationInsertionOrderDocument {
     totalGoalValue: number;     // Sum of all placement goals
     totalDelivered: number;     // Sum of all delivered
     percentComplete: number;    // 0-100
+    // Enhanced fields from updateOrderDeliverySummary
+    totalExpectedReports?: number;
+    totalReportsSubmitted?: number;
+    reportsPercent?: number;
+    totalExpectedGoal?: number;
+    deliveryPercent?: number;
     byChannel?: Record<string, {
       goal: number;
       delivered: number;
-      percent: number;
+      deliveryPercent?: number;
+      percent?: number;
+      goalType?: 'impressions' | 'frequency';
+      volumeLabel?: string;
     }>;
+    pixelHealth?: PixelHealth;
     lastUpdated: Date;
   };
   

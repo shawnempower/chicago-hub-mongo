@@ -15,6 +15,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/config/api';
 import { SectionActivityMenu } from '@/components/activity/SectionActivityMenu';
 import { ActivityLogDialog } from '@/components/activity/ActivityLogDialog';
+import { PixelHealthBadge } from '@/components/orders/PixelHealthBadge';
+import type { PixelHealth } from '@/integrations/mongodb/insertionOrderSchema';
 
 interface InsertionOrder {
   _id?: string;
@@ -26,6 +28,10 @@ interface InsertionOrder {
   status: OrderStatus;
   sentAt?: Date;
   confirmationDate?: Date;
+  deliverySummary?: {
+    pixelHealth?: PixelHealth;
+    [key: string]: any;
+  };
 }
 
 type SortKey = 'campaignName' | 'generatedAt' | 'status';
@@ -419,7 +425,10 @@ export function PublicationOrders() {
                       {formatDistanceToNow(new Date(order.generatedAt), { addSuffix: true })}
                     </TableCell>
                     <TableCell>
-                      <OrderStatusBadge status={order.status} />
+                      <div className="flex items-center gap-1.5">
+                        <OrderStatusBadge status={order.status} />
+                        <PixelHealthBadge pixelHealth={order.deliverySummary?.pixelHealth} compact />
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
