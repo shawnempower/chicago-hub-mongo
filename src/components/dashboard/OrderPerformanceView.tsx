@@ -500,7 +500,8 @@ export function OrderPerformanceView({
                   
                   // Format goal label based on type
                   const goalLabel = goalType === 'impressions' ? volumeLabel : 
-                    (channel === 'podcast' ? 'Episodes' : 
+                    (channel === 'newsletter' ? 'Sends' :
+                     channel === 'podcast' ? 'Episodes' : 
                      channel === 'radio' ? 'Spots' : 
                      channel === 'print' ? 'Insertions' : 'Units');
                   

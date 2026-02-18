@@ -286,7 +286,8 @@ export function PublicationDeliveryProgress({
                 
                 // Format goal label based on channel
                 const goalLabel = data.goalType === 'impressions' ? data.volumeLabel : 
-                  (channel === 'podcast' ? 'Episodes' : 
+                  (channel === 'newsletter' ? 'Sends' :
+                   channel === 'podcast' ? 'Episodes' : 
                    channel === 'radio' ? 'Spots' : 
                    channel === 'print' ? 'Insertions' : 'Units');
                 

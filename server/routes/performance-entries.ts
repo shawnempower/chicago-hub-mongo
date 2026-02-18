@@ -546,7 +546,7 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
     let totalExpectedReports = 0;
     let totalExpectedGoal = 0;
     
-    const digitalChannels = ['website', 'newsletter', 'streaming'];
+    const digitalChannels = ['website', 'streaming'];
     
     if (publication?.inventoryItems) {
       publication.inventoryItems.forEach((item: any) => {
@@ -571,15 +571,16 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
           if (placementGoal?.goalType === 'impressions' && placementGoal.goalValue > 0) {
             impressions = placementGoal.goalValue;
           } else if (item.monthlyImpressions > 0) {
-            // monthlyImpressions = ad slot capacity. For CPM items, currentFrequency
-            // is the percentage purchased (25/50/75/100), so scale accordingly.
             const pct = (item.currentFrequency || item.quantity || 100) / 100;
             impressions = Math.round(item.monthlyImpressions * pct);
           }
           expectedByChannel[channel].goal += impressions;
           totalExpectedGoal += impressions;
+        } else if (channel === 'newsletter') {
+          const sends = item.currentFrequency || item.quantity || 1;
+          expectedByChannel[channel].goal += sends;
+          totalExpectedGoal += sends;
         } else {
-          // Offline: use frequency (number of airings/episodes/insertions)
           const frequency = item.currentFrequency || item.quantity || 1;
           expectedByChannel[channel].goal += frequency;
           totalExpectedGoal += frequency;
@@ -601,7 +602,6 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
       { $match: deliveryFilter },
       { $group: {
         _id: '$channel',
-        // Strict report count: only manual/import entries OR automated with real asset name
         reportCount: { $sum: {
           $cond: [
             { $or: [
@@ -624,6 +624,22 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
         circulation: { $sum: { $ifNull: ['$metrics.circulation', 0] } }
       }}
     ]).toArray();
+
+    // Newsletter sends: count distinct dates per itemPath, then sum
+    const nlSendsAgg = await perfCollection.aggregate([
+      { $match: { ...deliveryFilter, channel: { $regex: /^newsletter$/i } } },
+      { $group: {
+        _id: '$itemPath',
+        distinctDates: { $addToSet: {
+          $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
+        }}
+      }},
+      { $group: {
+        _id: null,
+        totalSends: { $sum: { $size: '$distinctDates' } }
+      }}
+    ]).toArray();
+    const newsletterSendCount = nlSendsAgg[0]?.totalSends || 0;
     
     // Compute pixel health from ALL automated entries (including invalid ones)
     const pixelHealthAgg = await perfCollection.aggregate([
@@ -656,7 +672,7 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
       }}
     ]).toArray();
     
-    const hasDigitalPlacements = Object.keys(expectedByChannel).some(ch => digitalChannels.includes(ch));
+    const hasDigitalPlacements = Object.keys(expectedByChannel).some(ch => digitalChannels.includes(ch) || ch === 'newsletter');
     const pxAgg = pixelHealthAgg[0] || { total: 0, badCount: 0, totalImpressions: 0, hasAssetEntries: 0 };
     
     let pixelHealth: { status: string; message: string; badEntryCount: number; totalAutomatedEntries: number; lastChecked: Date } | undefined;
@@ -712,8 +728,9 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
     // Initialize all expected channels with their goals
     Object.entries(expectedByChannel).forEach(([channel, expected]) => {
       const isDigital = digitalChannels.includes(channel);
-      const volumeLabel = isDigital ? 'Impressions' : 
-        (channel === 'podcast' ? 'Episodes' : 
+      const volumeLabel = isDigital ? 'Impressions' :
+        (channel === 'newsletter' ? 'Sends' :
+         channel === 'podcast' ? 'Episodes' : 
          channel === 'radio' ? 'Spots' : 
          channel === 'print' ? 'Insertions' : 'Units');
       
@@ -738,19 +755,18 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
       let volumeLabel = 'Delivered';
       
       if (isDigital) {
-        // Digital channels: goal and delivered are impressions
         delivered = agg.impressions || 0;
         volumeLabel = 'Impressions';
+      } else if (channel === 'newsletter') {
+        delivered = newsletterSendCount;
+        volumeLabel = 'Sends';
       } else if (channel === 'podcast') {
-        // Podcast: delivered = number of episodes reported
         delivered = agg.reportCount || 0;
         volumeLabel = 'Episodes';
       } else if (channel === 'radio') {
-        // Radio: delivered = number of spots reported  
         delivered = agg.reportCount || 0;
         volumeLabel = 'Spots';
       } else if (channel === 'print') {
-        // Print: delivered = number of insertions reported
         delivered = agg.reportCount || 0;
         volumeLabel = 'Insertions';
       } else if (channel === 'social_media' || channel === 'social') {

@@ -534,20 +534,20 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
     const campaignMap = new Map(campaigns.map((c: any) => [c.campaignId, c]));
 
     const orderIds = orders.map(o => o._id?.toString()).filter(Boolean);
-    const digitalChannels = ['website', 'newsletter', 'streaming'];
+    const digitalChannels = ['website', 'streaming'];
+
+    const baseEntryFilter = {
+      orderId: { $in: orderIds },
+      deletedAt: { $exists: false },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] }
+    };
 
     // Aggregate performance entries by (orderId, channel) in one query.
     // Uses a relaxed filter (no itemName check) so digital impressions include
     // all legitimate automated entries.  reportCount is computed conditionally
     // to only count entries with proper item names (for "X of Y placements reported").
     const entriesByOrderChannel = await perfCollection.aggregate([
-      {
-        $match: {
-          orderId: { $in: orderIds },
-          deletedAt: { $exists: false },
-          validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] }
-        }
-      },
+      { $match: baseEntryFilter },
       {
         $group: {
           _id: {
@@ -571,6 +571,25 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
         }
       }
     ]).toArray();
+
+    // Newsletter sends: count distinct dates per itemPath per order, then sum.
+    // Each unique date for a given newsletter placement = one send.
+    const newsletterSendsAgg = await perfCollection.aggregate([
+      { $match: { ...baseEntryFilter, channel: { $regex: /^newsletter$/i } } },
+      { $group: {
+        _id: { orderId: '$orderId', itemPath: '$itemPath' },
+        distinctDates: { $addToSet: {
+          $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
+        }}
+      }},
+      { $group: {
+        _id: '$_id.orderId',
+        totalSends: { $sum: { $size: '$distinctDates' } }
+      }}
+    ]).toArray();
+    const newsletterSendsByOrder = new Map(
+      newsletterSendsAgg.map((r: any) => [r._id, r.totalSends])
+    );
 
     // Build lookup: orderId -> Map<channel, entryData>
     const entryLookup = new Map<string, Map<string, any>>();
@@ -620,6 +639,7 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
 
     const getVolumeLabel = (channel: string, isDigital: boolean) =>
       isDigital ? 'Impressions' :
+      channel === 'newsletter' ? 'Sends' :
       channel === 'podcast' ? 'Episodes' :
       channel === 'radio' ? 'Spots' :
       channel === 'print' ? 'Insertions' : 'Units';
@@ -659,12 +679,13 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
             if (placementGoal?.goalType === 'impressions' && placementGoal.goalValue > 0) {
               impressions = placementGoal.goalValue;
             } else if (item.monthlyImpressions > 0) {
-              // monthlyImpressions = ad slot capacity. For CPM items, currentFrequency
-              // is the percentage purchased (25/50/75/100), so scale accordingly.
               const pct = (item.currentFrequency || item.quantity || 100) / 100;
               impressions = Math.round(item.monthlyImpressions * pct);
             }
             orderChannels[channel].goal += impressions;
+          } else if (channel === 'newsletter') {
+            const sends = item.currentFrequency || item.quantity || 1;
+            orderChannels[channel].goal += sends;
           } else {
             const frequency = item.currentFrequency || item.quantity || 1;
             orderChannels[channel].goal += frequency;
@@ -673,11 +694,20 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
       }
 
       // Fill in delivered amounts from real entry data
-      const orderEntries = entryLookup.get(order._id.toString());
+      const oid = order._id.toString();
+      const orderEntries = entryLookup.get(oid);
       if (orderEntries) {
         for (const [channel, entryData] of orderEntries) {
           const isDigital = digitalChannels.includes(channel);
-          const delivered = isDigital ? (entryData.impressions || 0) : (entryData.reportCount || 0);
+          const isNewsletter = channel === 'newsletter';
+          let delivered: number;
+          if (isDigital) {
+            delivered = entryData.impressions || 0;
+          } else if (isNewsletter) {
+            delivered = newsletterSendsByOrder.get(oid) || 0;
+          } else {
+            delivered = entryData.reportCount || 0;
+          }
 
           if (!orderChannels[channel]) {
             orderChannels[channel] = {

@@ -281,6 +281,65 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       const campaignObjectId = campaign._id?.toString() || '';
       const campaignIdString = campaign.campaignId || '';
       
+      // Realtime per-publication-per-channel delivery aggregation
+      const digitalChannelsForPub = ['website', 'streaming'];
+      const pubDeliveryFilter = {
+        campaignId: campaign.campaignId || campaignId,
+        publicationId: { $in: allPublicationIds },
+        deletedAt: { $exists: false },
+        validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
+      };
+      
+      const pubChannelDelivery = await perfCollection.aggregate([
+        { $match: pubDeliveryFilter },
+        { $group: {
+          _id: { publicationId: '$publicationId', channel: { $toLower: { $ifNull: ['$channel', 'other'] } } },
+          impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } },
+          reportCount: { $sum: {
+            $cond: [
+              { $or: [
+                { $ne: ['$source', 'automated'] },
+                { $and: [
+                  { $ne: [{ $ifNull: ['$itemName', ''] }, ''] },
+                  { $ne: ['$itemName', 'tracking-pixel'] }
+                ]}
+              ]},
+              1, 0
+            ]
+          }},
+        }}
+      ]).toArray();
+      
+      // Newsletter sends per publication: distinct dates per itemPath
+      const pubNewsletterSends = await perfCollection.aggregate([
+        { $match: { ...pubDeliveryFilter, channel: { $regex: /^newsletter$/i } } },
+        { $group: {
+          _id: { publicationId: '$publicationId', itemPath: '$itemPath' },
+          distinctDates: { $addToSet: {
+            $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
+          }}
+        }},
+        { $group: {
+          _id: '$_id.publicationId',
+          totalSends: { $sum: { $size: '$distinctDates' } }
+        }}
+      ]).toArray();
+      const pubNewsletterSendMap = new Map(
+        pubNewsletterSends.map((r: any) => [r._id, r.totalSends])
+      );
+      
+      // Build lookup: pubId -> channel -> { impressions, reportCount }
+      const pubDeliveryMap: Record<number, Record<string, { impressions: number; reportCount: number }>> = {};
+      for (const entry of pubChannelDelivery) {
+        const pubId = entry._id.publicationId;
+        const channel = entry._id.channel;
+        if (!pubDeliveryMap[pubId]) pubDeliveryMap[pubId] = {};
+        pubDeliveryMap[pubId][channel] = {
+          impressions: entry.impressions || 0,
+          reportCount: entry.reportCount || 0,
+        };
+      }
+      
       const orders = await ioCollection.find({
         $or: [
           { campaignObjectId: campaignObjectId },
@@ -292,7 +351,6 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
         publicationId: 1,
         status: 1,
         deliveryGoals: 1,
-        deliverySummary: 1,
         assetStatus: 1,
         placementStatuses: 1,
         proofOfPerformanceComplete: 1,
@@ -313,10 +371,91 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
           placementStatus: order.placementStatuses?.[item.itemPath],
         }));
         
+        // Compute deliverySummary in realtime from inventory goals + performance entries
+        const deliveryByChannel = pubDeliveryMap[pubId] || {};
+        let totalGoalValue = 0;
+        let totalDelivered = 0;
+        const byChannel: Record<string, { goal: number; delivered: number; percent: number }> = {};
+        
+        for (const item of inventoryItems) {
+          if (item.isExcluded) continue;
+          const channel = (item.channel || 'other').toLowerCase();
+          const isDigital = digitalChannelsForPub.includes(channel);
+          
+          if (!byChannel[channel]) {
+            byChannel[channel] = { goal: 0, delivered: 0, percent: 0 };
+          }
+          
+          if (isDigital) {
+            let impressionGoal = 0;
+            const placementGoal = order.deliveryGoals?.[item.itemPath];
+            if (placementGoal?.goalType === 'impressions' && placementGoal.goalValue > 0) {
+              impressionGoal = placementGoal.goalValue;
+            } else if (item.monthlyImpressions > 0) {
+              const pct = (item.currentFrequency || item.quantity || 100) / 100;
+              impressionGoal = Math.round(item.monthlyImpressions * pct);
+            }
+            byChannel[channel].goal += impressionGoal;
+            totalGoalValue += impressionGoal;
+          } else if (channel === 'newsletter') {
+            const sends = item.currentFrequency || item.quantity || 1;
+            byChannel[channel].goal += sends;
+            totalGoalValue += sends;
+          } else {
+            const frequency = item.currentFrequency || item.quantity || 1;
+            byChannel[channel].goal += frequency;
+            totalGoalValue += frequency;
+          }
+        }
+        
+        // Fill in delivered amounts from realtime aggregation
+        for (const [channel, data] of Object.entries(byChannel)) {
+          const entry = deliveryByChannel[channel];
+          if (entry) {
+            const isDigital = digitalChannelsForPub.includes(channel);
+            if (isDigital) {
+              data.delivered = entry.impressions;
+            } else if (channel === 'newsletter') {
+              data.delivered = pubNewsletterSendMap.get(pubId) || 0;
+            } else {
+              data.delivered = entry.reportCount;
+            }
+            totalDelivered += data.delivered;
+          }
+          data.percent = data.goal > 0 ? Math.round((data.delivered / data.goal) * 100) : 0;
+        }
+        
+        // Include channels present in performance data but not in inventory
+        for (const [channel, entry] of Object.entries(deliveryByChannel)) {
+          if (!byChannel[channel]) {
+            const isDigital = digitalChannelsForPub.includes(channel);
+            let delivered: number;
+            if (isDigital) {
+              delivered = entry.impressions;
+            } else if (channel === 'newsletter') {
+              delivered = pubNewsletterSendMap.get(pubId) || 0;
+            } else {
+              delivered = entry.reportCount;
+            }
+            byChannel[channel] = { goal: 0, delivered, percent: 0 };
+            totalDelivered += delivered;
+          }
+        }
+        
+        const channelPercents = Object.values(byChannel).map(ch => ch.percent);
+        const percentComplete = channelPercents.length > 0
+          ? Math.round(channelPercents.reduce((s, p) => s + p, 0) / channelPercents.length)
+          : 0;
+        
         publicationOrderMap[pubId] = {
           orderStatus: order.status,
           deliveryGoals: order.deliveryGoals,
-          deliverySummary: order.deliverySummary,
+          deliverySummary: {
+            totalGoalValue,
+            totalDelivered,
+            percentComplete,
+            byChannel,
+          },
           assetStatus: order.assetStatus ? {
             totalPlacements: order.assetStatus.totalPlacements,
             placementsWithAssets: order.assetStatus.placementsWithAssets,
@@ -407,7 +546,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     }
     
     // Calculate delivery progress by channel from selectedInventory
-    const digitalChannels = ['website', 'newsletter', 'streaming'];
+    const digitalChannels = ['website', 'streaming'];
     const deliveryProgress: Record<string, {
       goal: number;
       delivered: number;
@@ -419,6 +558,13 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     let totalExpectedGoal = 0;
     let totalExpectedReports = 0;
     
+    const getVolumeLabelCampaign = (channel: string, isDigital: boolean) =>
+      isDigital ? 'Impressions' :
+      channel === 'newsletter' ? 'Sends' :
+      channel === 'podcast' ? 'Episodes' :
+      channel === 'radio' ? 'Spots' :
+      channel === 'print' ? 'Insertions' : 'Units';
+    
     // Build expected goals from selectedInventory
     if (campaign.selectedInventory?.publications) {
       for (const pub of campaign.selectedInventory.publications) {
@@ -429,17 +575,12 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
           const isDigital = digitalChannels.includes(channel);
           
           if (!deliveryProgress[channel]) {
-            const volumeLabel = isDigital ? 'Impressions' : 
-              (channel === 'podcast' ? 'Episodes' : 
-               channel === 'radio' ? 'Spots' : 
-               channel === 'print' ? 'Insertions' : 'Units');
-            
             deliveryProgress[channel] = {
               goal: 0,
               delivered: 0,
               deliveryPercent: 0,
               goalType: isDigital ? 'impressions' : 'frequency',
-              volumeLabel
+              volumeLabel: getVolumeLabelCampaign(channel, isDigital)
             };
           }
           
@@ -453,6 +594,10 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
             }
             deliveryProgress[channel].goal += impressions;
             totalExpectedGoal += impressions;
+          } else if (channel === 'newsletter') {
+            const sends = item.currentFrequency || item.quantity || 1;
+            deliveryProgress[channel].goal += sends;
+            totalExpectedGoal += sends;
           } else {
             const frequency = item.currentFrequency || item.quantity || 1;
             deliveryProgress[channel].goal += frequency;
@@ -462,14 +607,64 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       }
     }
     
-    // Fill in delivered amounts from channel breakdown
-    for (const ch of channelBreakdown) {
-      const channel = ch._id?.toLowerCase() || 'other';
+    // Relaxed delivery aggregation by channel (includes all valid automated entries
+    // for accurate digital impression counts, with conditional report count for offline)
+    const campaignDeliveryFilter = {
+      campaignId: campaign.campaignId || campaignId,
+      deletedAt: { $exists: false },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
+    };
+    
+    const campaignChannelDelivery = await perfCollection.aggregate([
+      { $match: campaignDeliveryFilter },
+      { $group: {
+        _id: { $toLower: { $ifNull: ['$channel', 'other'] } },
+        impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } },
+        reportCount: { $sum: {
+          $cond: [
+            { $or: [
+              { $ne: ['$source', 'automated'] },
+              { $and: [
+                { $ne: [{ $ifNull: ['$itemName', ''] }, ''] },
+                { $ne: ['$itemName', 'tracking-pixel'] }
+              ]}
+            ]},
+            1, 0
+          ]
+        }},
+      }}
+    ]).toArray();
+    
+    // Newsletter sends: count distinct dates per itemPath, then sum
+    const campaignNewsletterSends = await perfCollection.aggregate([
+      { $match: { ...campaignDeliveryFilter, channel: { $regex: /^newsletter$/i } } },
+      { $group: {
+        _id: '$itemPath',
+        distinctDates: { $addToSet: {
+          $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
+        }}
+      }},
+      { $group: {
+        _id: null,
+        totalSends: { $sum: { $size: '$distinctDates' } }
+      }}
+    ]).toArray();
+    const campaignNewsletterSendCount = campaignNewsletterSends[0]?.totalSends || 0;
+    
+    // Fill in delivered amounts from relaxed delivery aggregation
+    for (const ch of campaignChannelDelivery) {
+      const channel = ch._id || 'other';
       const isDigital = digitalChannels.includes(channel);
+      const isNewsletter = channel === 'newsletter';
       
       if (deliveryProgress[channel]) {
-        // Digital: delivered = impressions, Offline: delivered = report count
-        deliveryProgress[channel].delivered = isDigital ? (ch.impressions || 0) : (ch.entries || 0);
+        if (isDigital) {
+          deliveryProgress[channel].delivered = ch.impressions || 0;
+        } else if (isNewsletter) {
+          deliveryProgress[channel].delivered = campaignNewsletterSendCount;
+        } else {
+          deliveryProgress[channel].delivered = ch.reportCount || 0;
+        }
         
         const goal = deliveryProgress[channel].goal;
         const delivered = deliveryProgress[channel].delivered;
@@ -777,7 +972,7 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
     }
     
     const resolvedOrderId = order._id?.toString() || orderId;
-    const digitalChannels = ['website', 'newsletter', 'streaming'];
+    const digitalChannels = ['website', 'streaming'];
 
     // Relaxed filter for delivery metrics (includes bare automated entries for impressions)
     const deliveryMatch = {
@@ -878,9 +1073,26 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
 
     const getVolumeLabel = (channel: string, isDigital: boolean) =>
       isDigital ? 'Impressions' :
+      channel === 'newsletter' ? 'Sends' :
       channel === 'podcast' ? 'Episodes' :
       channel === 'radio' ? 'Spots' :
       channel === 'print' ? 'Insertions' : 'Units';
+
+    // Newsletter sends: count distinct dates per itemPath for this order
+    const orderNewsletterSends = await perfCollection.aggregate([
+      { $match: { ...deliveryMatch, channel: { $regex: /^newsletter$/i } } },
+      { $group: {
+        _id: '$itemPath',
+        distinctDates: { $addToSet: {
+          $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
+        }}
+      }},
+      { $group: {
+        _id: null,
+        totalSends: { $sum: { $size: '$distinctDates' } }
+      }}
+    ]).toArray();
+    const orderNewsletterSendCount = orderNewsletterSends[0]?.totalSends || 0;
 
     // Build goals from inventory items
     if (publication?.inventoryItems) {
@@ -910,6 +1122,10 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
           }
           byChannel[channel].goal += impressions;
           totalExpectedGoal += impressions;
+        } else if (channel === 'newsletter') {
+          const sends = item.currentFrequency || item.quantity || 1;
+          byChannel[channel].goal += sends;
+          totalExpectedGoal += sends;
         } else {
           const frequency = item.currentFrequency || item.quantity || 1;
           byChannel[channel].goal += frequency;
@@ -923,7 +1139,13 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
       const entry = channelDeliveryMap.get(channel);
       if (entry) {
         const isDigital = digitalChannels.includes(channel);
-        data.delivered = isDigital ? (entry.impressions || 0) : (entry.reportCount || 0);
+        if (isDigital) {
+          data.delivered = entry.impressions || 0;
+        } else if (channel === 'newsletter') {
+          data.delivered = orderNewsletterSendCount;
+        } else {
+          data.delivered = entry.reportCount || 0;
+        }
         totalDelivered += data.delivered;
         totalReportsSubmitted += entry.reportCount || 0;
         data.deliveryPercent = data.goal > 0 ? Math.round((data.delivered / data.goal) * 100) : 0;
@@ -935,7 +1157,14 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
       const channel = entry._id;
       if (!byChannel[channel]) {
         const isDigital = digitalChannels.includes(channel);
-        const delivered = isDigital ? (entry.impressions || 0) : (entry.reportCount || 0);
+        let delivered: number;
+        if (isDigital) {
+          delivered = entry.impressions || 0;
+        } else if (channel === 'newsletter') {
+          delivered = orderNewsletterSendCount;
+        } else {
+          delivered = entry.reportCount || 0;
+        }
         byChannel[channel] = {
           goal: 0, delivered, deliveryPercent: 0,
           goalType: isDigital ? 'impressions' : 'frequency',
