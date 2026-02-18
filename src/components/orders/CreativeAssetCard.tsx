@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Eye, Trash2, FileText, Image, Video, File } from 'lucide-react';
+import { Download, Eye, Trash2, FileText, Image, Video, File, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ interface CreativeAsset {
   fileUrl: string;
   thumbnailUrl?: string;
   assetType?: string; // Made optional - may not always be provided
+  dimensions?: string;
   uploadedAt: Date;
   uploadedBy?: string;
   uploaderName?: string;
@@ -103,6 +104,12 @@ export function CreativeAssetCard({
                 <p className="text-xs text-gray-500 mt-0.5">
                   {formatFileSize(asset.fileSize)}{asset.fileType && ` • ${asset.fileType}`}
                 </p>
+                {asset.dimensions && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <Ruler className="h-3 w-3 text-gray-400" />
+                    <span className="text-xs font-medium text-gray-700">{asset.dimensions}</span>
+                  </div>
+                )}
               </div>
               
               {asset.status && (

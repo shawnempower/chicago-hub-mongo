@@ -1850,7 +1850,7 @@ export function PublicationOrderDetail() {
                       // Assets may have placementId with _dim suffix variants
                       const placementAssets = freshAssets
                         .filter(fa => (fa.placementId === itemPath || (fa.placementId && fa.placementId.startsWith(itemPath + '_dim'))) && fa.hasAsset && fa.asset)
-                        .map(fa => fa.asset!);
+                        .map(fa => ({ ...fa.asset!, dimensions: fa.dimensions }));
 
                       // Get delivery expectations for this placement
                       const deliveryExpectations = getDeliveryExpectations(item);
@@ -2479,7 +2479,6 @@ export function PublicationOrderDetail() {
               publicationName={order.publicationName}
               placements={placementsForPerformance}
               deliveryGoals={order.deliveryGoals}
-              deliverySummary={order.deliverySummary as any}
             />
             </div>
           ) : (
