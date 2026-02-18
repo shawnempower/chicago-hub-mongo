@@ -17,6 +17,7 @@ import {
   calculatePacingStatus,
   computeCTR
 } from '../../src/integrations/mongodb/dailyAggregateSchema';
+import { countNewsletterSends } from '../newsletterSendDetection';
 
 const router = Router();
 
@@ -310,23 +311,28 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
         }}
       ]).toArray();
       
-      // Newsletter sends per publication: distinct dates per itemPath
-      const pubNewsletterSends = await perfCollection.aggregate([
+      // Newsletter sends per publication: get distinct dates per (pubId, itemPath),
+      // then cluster into send bursts (gap > 2 days = new send)
+      const pubNlDatesAgg = await perfCollection.aggregate([
         { $match: { ...pubDeliveryFilter, channel: { $regex: /^newsletter$/i } } },
         { $group: {
           _id: { publicationId: '$publicationId', itemPath: '$itemPath' },
           distinctDates: { $addToSet: {
             $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
           }}
-        }},
-        { $group: {
-          _id: '$_id.publicationId',
-          totalSends: { $sum: { $size: '$distinctDates' } }
         }}
       ]).toArray();
-      const pubNewsletterSendMap = new Map(
-        pubNewsletterSends.map((r: any) => [r._id, r.totalSends])
-      );
+
+      const pubNewsletterSendMap = new Map<number, number>();
+      const byPub = new Map<number, Array<{ _id: string; distinctDates: string[] }>>();
+      for (const row of pubNlDatesAgg) {
+        const pid = row._id.publicationId;
+        if (!byPub.has(pid)) byPub.set(pid, []);
+        byPub.get(pid)!.push({ _id: row._id.itemPath, distinctDates: row.distinctDates });
+      }
+      for (const [pid, items] of byPub) {
+        pubNewsletterSendMap.set(pid, countNewsletterSends(items));
+      }
       
       // Build lookup: pubId -> channel -> { impressions, reportCount }
       const pubDeliveryMap: Record<number, Record<string, { impressions: number; reportCount: number }>> = {};
@@ -635,21 +641,18 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       }}
     ]).toArray();
     
-    // Newsletter sends: count distinct dates per itemPath, then sum
-    const campaignNewsletterSends = await perfCollection.aggregate([
+    // Newsletter sends: get distinct dates per itemPath, then cluster into
+    // send bursts (gap > 2 days = new send)
+    const campaignNlDatesAgg = await perfCollection.aggregate([
       { $match: { ...campaignDeliveryFilter, channel: { $regex: /^newsletter$/i } } },
       { $group: {
         _id: '$itemPath',
         distinctDates: { $addToSet: {
           $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
         }}
-      }},
-      { $group: {
-        _id: null,
-        totalSends: { $sum: { $size: '$distinctDates' } }
       }}
     ]).toArray();
-    const campaignNewsletterSendCount = campaignNewsletterSends[0]?.totalSends || 0;
+    const campaignNewsletterSendCount = countNewsletterSends(campaignNlDatesAgg);
     
     // Fill in delivered amounts from relaxed delivery aggregation
     for (const ch of campaignChannelDelivery) {
@@ -1078,21 +1081,18 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
       channel === 'radio' ? 'Spots' :
       channel === 'print' ? 'Insertions' : 'Units';
 
-    // Newsletter sends: count distinct dates per itemPath for this order
-    const orderNewsletterSends = await perfCollection.aggregate([
+    // Newsletter sends: get distinct dates per itemPath, then cluster into
+    // send bursts (gap > 2 days = new send)
+    const orderNlDatesAgg = await perfCollection.aggregate([
       { $match: { ...deliveryMatch, channel: { $regex: /^newsletter$/i } } },
       { $group: {
         _id: '$itemPath',
         distinctDates: { $addToSet: {
           $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
         }}
-      }},
-      { $group: {
-        _id: null,
-        totalSends: { $sum: { $size: '$distinctDates' } }
       }}
     ]).toArray();
-    const orderNewsletterSendCount = orderNewsletterSends[0]?.totalSends || 0;
+    const orderNewsletterSendCount = countNewsletterSends(orderNlDatesAgg);
 
     // Build goals from inventory items
     if (publication?.inventoryItems) {

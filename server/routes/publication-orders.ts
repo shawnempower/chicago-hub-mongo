@@ -11,6 +11,7 @@ import { authenticateToken } from '../middleware/authenticate';
 import { permissionsService } from '../../src/integrations/mongodb/permissionsService';
 import { placementCompletionService } from '../../src/services/placementCompletionService';
 import { earningsService } from '../../src/services/earningsService';
+import { countNewsletterSends } from '../newsletterSendDetection';
 
 const router = Router();
 
@@ -572,24 +573,29 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
       }
     ]).toArray();
 
-    // Newsletter sends: count distinct dates per itemPath per order, then sum.
-    // Each unique date for a given newsletter placement = one send.
-    const newsletterSendsAgg = await perfCollection.aggregate([
+    // Newsletter sends: get distinct dates per (orderId, itemPath), then detect
+    // send bursts by clustering nearby dates (gap > 2 days = new send).
+    const newsletterDatesAgg = await perfCollection.aggregate([
       { $match: { ...baseEntryFilter, channel: { $regex: /^newsletter$/i } } },
       { $group: {
         _id: { orderId: '$orderId', itemPath: '$itemPath' },
         distinctDates: { $addToSet: {
           $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
         }}
-      }},
-      { $group: {
-        _id: '$_id.orderId',
-        totalSends: { $sum: { $size: '$distinctDates' } }
       }}
     ]).toArray();
-    const newsletterSendsByOrder = new Map(
-      newsletterSendsAgg.map((r: any) => [r._id, r.totalSends])
-    );
+
+    // Group by orderId and count send bursts per itemPath
+    const newsletterSendsByOrder = new Map<string, number>();
+    const byOrder = new Map<string, Array<{ _id: string; distinctDates: string[] }>>();
+    for (const row of newsletterDatesAgg) {
+      const oid = row._id.orderId;
+      if (!byOrder.has(oid)) byOrder.set(oid, []);
+      byOrder.get(oid)!.push({ _id: row._id.itemPath, distinctDates: row.distinctDates });
+    }
+    for (const [oid, items] of byOrder) {
+      newsletterSendsByOrder.set(oid, countNewsletterSends(items));
+    }
 
     // Build lookup: orderId -> Map<channel, entryData>
     const entryLookup = new Map<string, Map<string, any>>();

@@ -19,6 +19,7 @@ import {
 } from '../../src/integrations/mongodb/performanceEntrySchema';
 import { placementCompletionService } from '../../src/services/placementCompletionService';
 import { earningsService } from '../../src/services/earningsService';
+import { countNewsletterSends } from '../newsletterSendDetection';
 
 const router = Router();
 
@@ -625,21 +626,18 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
       }}
     ]).toArray();
 
-    // Newsletter sends: count distinct dates per itemPath, then sum
-    const nlSendsAgg = await perfCollection.aggregate([
+    // Newsletter sends: get distinct dates per itemPath, then cluster into
+    // send bursts (gap > 2 days = new send)
+    const nlDatesAgg = await perfCollection.aggregate([
       { $match: { ...deliveryFilter, channel: { $regex: /^newsletter$/i } } },
       { $group: {
         _id: '$itemPath',
         distinctDates: { $addToSet: {
           $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
         }}
-      }},
-      { $group: {
-        _id: null,
-        totalSends: { $sum: { $size: '$distinctDates' } }
       }}
     ]).toArray();
-    const newsletterSendCount = nlSendsAgg[0]?.totalSends || 0;
+    const newsletterSendCount = countNewsletterSends(nlDatesAgg);
     
     // Compute pixel health from ALL automated entries (including invalid ones)
     const pixelHealthAgg = await perfCollection.aggregate([
