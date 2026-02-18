@@ -227,6 +227,18 @@ export function OrderPerformanceView({
     return map;
   }, [placements]);
 
+  // Map normalized itemPath -> dimensions string from the placements prop
+  const placementDimensionsMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    placements.forEach(p => {
+      if (p.itemPath && p.dimensions) {
+        map[p.itemPath] = p.dimensions;
+        map[normalizeItemPath(p.itemPath)] = p.dimensions;
+      }
+    });
+    return map;
+  }, [placements]);
+
   // Channel-based name lookup: for entries with asset-based paths that don't match
   // any inventory path, find the friendly name by channel (when only one placement per channel)
   const placementNameByChannel = useMemo(() => {
@@ -389,7 +401,9 @@ export function OrderPerformanceView({
     );
   }
 
-  const overallPercent = deliverySummary?.percentComplete || 0;
+  // Always use freshly computed delivery data from the API (never the stale prop)
+  const liveDelivery = summary?.deliverySummary;
+  const overallPercent = liveDelivery?.percentComplete || 0;
   const overallStatus = getPacingStatus(overallPercent);
 
   return (
@@ -455,28 +469,28 @@ export function OrderPerformanceView({
               <span className="text-sm font-medium">Overall Delivery</span>
               <div className="flex items-center gap-2">
                 <span className={cn("font-bold", getPacingColor(overallStatus))}>
-                  {deliverySummary?.deliveryPercent ?? deliverySummary?.percentComplete ?? overallPercent}%
+                  {liveDelivery?.deliveryPercent ?? liveDelivery?.percentComplete ?? overallPercent}%
                 </span>
                 <Badge className={cn(getPacingBg(overallStatus), getPacingColor(overallStatus), "border-0")}>
                   {PACING_STATUS_LABELS[overallStatus]}
                 </Badge>
               </div>
             </div>
-            <Progress value={Math.min(deliverySummary?.deliveryPercent ?? deliverySummary?.percentComplete ?? overallPercent, 100)} className="h-3" />
+            <Progress value={Math.min(liveDelivery?.deliveryPercent ?? liveDelivery?.percentComplete ?? overallPercent, 100)} className="h-3" />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>
-                {deliverySummary?.totalReportsSubmitted ?? 0} of {deliverySummary?.totalExpectedReports ?? 0} placements reported
+                {liveDelivery?.totalReportsSubmitted ?? 0} of {liveDelivery?.totalExpectedReports ?? 0} placements reported
               </span>
             </div>
           </div>
 
           {/* By Channel */}
-          {deliverySummary?.byChannel && Object.keys(deliverySummary.byChannel).length > 0 && (
+          {liveDelivery?.byChannel && Object.keys(liveDelivery.byChannel).length > 0 && (
             <div className="space-y-3">
               <Separator />
               <h4 className="text-sm font-medium">By Channel</h4>
               <div className="grid gap-3">
-                {Object.entries(deliverySummary.byChannel).map(([channel, data]: [string, any]) => {
+                {Object.entries(liveDelivery.byChannel).map(([channel, data]: [string, any]) => {
                   // All channels: show goal vs delivered
                   const goal = data.goal ?? 0;
                   const delivered = data.delivered ?? data.volume ?? 0;
@@ -661,6 +675,7 @@ export function OrderPerformanceView({
             normPath,
             itemName: pl.itemName,
             channel: pl.channel,
+            dimensions: pl.dimensions,
             impressions: perf?.impressions || 0,
             clicks: perf?.clicks || 0,
             ctr: perf?.ctr ?? null,
@@ -745,6 +760,7 @@ export function OrderPerformanceView({
             normPath,
             itemName: perf?.itemName || matchingProof?.itemName || 'Unknown Placement',
             channel: perf?.channel || matchingProof?.channel || 'unknown',
+            dimensions: perf?.dimensions || placementDimensionsMap[normPath],
             impressions: perf?.impressions || 0,
             clicks: perf?.clicks || 0,
             ctr: perf?.ctr ?? null,
@@ -829,8 +845,11 @@ export function OrderPerformanceView({
                     return (
                       <TableRow key={row.itemPath}>
                         <TableCell>
-                          <div className="max-w-[220px] truncate font-medium" title={friendlyName}>
-                            {friendlyName}
+                          <div className="max-w-[260px]" title={`${friendlyName}${row.dimensions ? ` (${row.dimensions})` : ''}`}>
+                            <div className="truncate font-medium">{friendlyName}</div>
+                            {row.dimensions && (
+                              <div className="text-xs text-muted-foreground">{row.dimensions}</div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -1074,11 +1093,14 @@ export function OrderPerformanceView({
                           <TableCell>
                             {(() => {
                               const friendlyName = placementNameMap[entry.itemPath] || placementNameMap[normalizeItemPath(entry.itemPath)] || placementNameByChannel[entry.channel] || entry.itemName;
-                              // For automated entries, show the asset/creative ID beneath the placement name
                               const isAssetBased = entry.source === 'automated' && entry.itemName && entry.itemName !== friendlyName;
+                              const dims = entry.dimensions || placementDimensionsMap[entry.itemPath] || placementDimensionsMap[normalizeItemPath(entry.itemPath)];
                               return (
-                                <div className="max-w-[220px]" title={`${friendlyName}${isAssetBased ? `\n${entry.itemName}` : ''}`}>
+                                <div className="max-w-[260px]" title={`${friendlyName}${dims ? ` (${dims})` : ''}${isAssetBased ? `\n${entry.itemName}` : ''}`}>
                                   <div className="truncate">{friendlyName}</div>
+                                  {dims && (
+                                    <div className="text-xs text-muted-foreground">{dims}</div>
+                                  )}
                                   {isAssetBased && (
                                     <div className="truncate text-xs text-muted-foreground font-mono">
                                       {entry.itemName}
