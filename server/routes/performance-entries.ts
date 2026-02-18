@@ -518,7 +518,7 @@ router.post('/bulk', async (req: any, res: Response) => {
  * 1. Reports completion - how many placements have been reported (e.g., 4/4 episodes)
  * 2. Volume delivered - total impressions, downloads, spots aired, etc.
  */
-async function updateOrderDeliverySummary(orderId: string): Promise<void> {
+export async function updateOrderDeliverySummary(orderId: string): Promise<void> {
   try {
     const db = getDatabase();
     const perfCollection = db.collection<PerformanceEntry>(COLLECTIONS.PERFORMANCE_ENTRIES);
@@ -566,10 +566,16 @@ async function updateOrderDeliverySummary(orderId: string): Promise<void> {
         totalExpectedReports++;
         
         if (isDigital) {
-          // Digital: use expected impressions
-          const impressions = item.performanceMetrics?.impressionsPerMonth || 
-                             item.audienceMetrics?.monthlyPageViews || 
-                             item.audienceMetrics?.monthlyVisitors || 0;
+          let impressions = 0;
+          const placementGoal = order.deliveryGoals?.[item.itemPath];
+          if (placementGoal?.goalType === 'impressions' && placementGoal.goalValue > 0) {
+            impressions = placementGoal.goalValue;
+          } else if (item.monthlyImpressions > 0) {
+            // monthlyImpressions = ad slot capacity. For CPM items, currentFrequency
+            // is the percentage purchased (25/50/75/100), so scale accordingly.
+            const pct = (item.currentFrequency || item.quantity || 100) / 100;
+            impressions = Math.round(item.monthlyImpressions * pct);
+          }
           expectedByChannel[channel].goal += impressions;
           totalExpectedGoal += impressions;
         } else {
@@ -581,29 +587,36 @@ async function updateOrderDeliverySummary(orderId: string): Promise<void> {
       });
     }
     
-    // Get all VALID performance entries for this order (grouped by channel)
-    // Exclude entries with bad validationStatus OR tracking-pixel/empty itemName from delivery totals
-    const validEntryFilter = {
+    // Get all performance entries for this order, excluding only data-quality failures.
+    // The aggregation uses a relaxed filter so digital delivery (impressions) includes
+    // automated entries even when they lack a specific asset/item name.
+    // reportCount is computed conditionally to only count entries with proper item names.
+    const deliveryFilter = {
       orderId,
       deletedAt: { $exists: false },
-      // Exclude explicitly bad entries
       validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
-      // Exclude bare tracking-pixel / empty-name automated entries
-      $or: [
-        { source: { $ne: 'automated' } },                          // manual/import always counted
-        { itemName: { $nin: [null, '', 'tracking-pixel'] } },      // automated with real asset name
-      ]
     };
     
     const entriesByChannel = await perfCollection.aggregate([
-      { $match: validEntryFilter },
+      { $match: deliveryFilter },
       { $group: {
         _id: '$channel',
-        reportCount: { $sum: 1 },  // Number of reports submitted
+        // Strict report count: only manual/import entries OR automated with real asset name
+        reportCount: { $sum: {
+          $cond: [
+            { $or: [
+              { $ne: ['$source', 'automated'] },
+              { $and: [
+                { $ne: [{ $ifNull: ['$itemName', ''] }, ''] },
+                { $ne: ['$itemName', 'tracking-pixel'] }
+              ]}
+            ]},
+            1, 0
+          ]
+        }},
         impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } },
         clicks: { $sum: { $ifNull: ['$metrics.clicks', 0] } },
         reach: { $sum: { $ifNull: ['$metrics.reach', 0] } },
-        // Units (insertions, spots, downloads, posts)
         insertions: { $sum: { $ifNull: ['$metrics.insertions', 0] } },
         spotsAired: { $sum: { $ifNull: ['$metrics.spotsAired', 0] } },
         downloads: { $sum: { $ifNull: ['$metrics.downloads', 0] } },

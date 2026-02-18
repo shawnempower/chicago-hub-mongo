@@ -522,79 +522,72 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
       });
     }
 
-    // Aggregate data from all orders' deliverySummary
-    let totalExpectedReports = 0;
-    let totalReportsSubmitted = 0;
-    const byChannel: Record<string, { 
-      goal: number; 
-      delivered: number; 
-      deliveryPercent: number;
-      goalType: string;
-      volumeLabel: string;
-    }> = {};
-    
-    const statusBreakdown = {
-      on_track: 0,
-      ahead: 0,
-      behind: 0,
-      at_risk: 0
-    };
+    // --- Real-time delivery computation ---
+    // Fetch campaigns so we can derive goals from inventory items directly,
+    // rather than relying on a pre-computed deliverySummary cache on the order.
+    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
+    const campaignIds = [...new Set(orders.map(o => o.campaignId).filter(Boolean))];
+    const campaigns = await campaignsCollection.find(
+      { campaignId: { $in: campaignIds } },
+      { projection: { campaignId: 1, selectedInventory: 1 } }
+    ).toArray();
+    const campaignMap = new Map(campaigns.map((c: any) => [c.campaignId, c]));
 
-    orders.forEach(order => {
-      const summary = order.deliverySummary;
-      if (summary) {
-        totalExpectedReports += summary.totalExpectedReports || 0;
-        totalReportsSubmitted += summary.totalReportsSubmitted || 0;
-        
-        // Aggregate by channel
-        if (summary.byChannel) {
-          Object.entries(summary.byChannel).forEach(([channel, data]: [string, any]) => {
-            if (!byChannel[channel]) {
-              byChannel[channel] = {
-                goal: 0,
-                delivered: 0,
-                deliveryPercent: 0,
-                goalType: data.goalType || 'frequency',
-                volumeLabel: data.volumeLabel || 'Delivered'
-              };
-            }
-            byChannel[channel].goal += data.goal || 0;
-            byChannel[channel].delivered += data.delivered || 0;
-          });
-        }
-        
-        // Track status breakdown
-        const percent = summary.deliveryPercent || 0;
-        if (percent >= 110) statusBreakdown.ahead++;
-        else if (percent >= 90) statusBreakdown.on_track++;
-        else if (percent >= 70) statusBreakdown.behind++;
-        else statusBreakdown.at_risk++;
-      } else {
-        // Order without deliverySummary counts as at_risk
-        statusBreakdown.at_risk++;
-      }
-    });
-
-    // Calculate per-channel delivery percentages
-    Object.keys(byChannel).forEach(channel => {
-      const ch = byChannel[channel];
-      ch.deliveryPercent = ch.goal > 0 ? Math.round((ch.delivered / ch.goal) * 100) : 0;
-    });
-
-    // Calculate overall delivery percentage (average of channel percentages)
-    const channelPercents = Object.values(byChannel).map(ch => ch.deliveryPercent);
-    const overallDeliveryPercent = channelPercents.length > 0
-      ? Math.round(channelPercents.reduce((sum, p) => sum + p, 0) / channelPercents.length)
-      : 0;
-
-    // Get aggregated performance metrics
     const orderIds = orders.map(o => o._id?.toString()).filter(Boolean);
-    
-    const perfAggregation = await perfCollection.aggregate([
-      { 
-        $match: { 
+    const digitalChannels = ['website', 'newsletter', 'streaming'];
+
+    // Aggregate performance entries by (orderId, channel) in one query.
+    // Uses a relaxed filter (no itemName check) so digital impressions include
+    // all legitimate automated entries.  reportCount is computed conditionally
+    // to only count entries with proper item names (for "X of Y placements reported").
+    const entriesByOrderChannel = await perfCollection.aggregate([
+      {
+        $match: {
           orderId: { $in: orderIds },
-          deletedAt: { $exists: false }
+          deletedAt: { $exists: false },
+          validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            orderId: '$orderId',
+            channel: { $toLower: { $ifNull: ['$channel', 'other'] } }
+          },
+          reportCount: { $sum: {
+            $cond: [
+              { $or: [
+                { $ne: ['$source', 'automated'] },
+                { $and: [
+                  { $ne: [{ $ifNull: ['$itemName', ''] }, ''] },
+                  { $ne: ['$itemName', 'tracking-pixel'] }
+                ]}
+              ]},
+              1, 0
+            ]
+          }},
+          impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } },
+          clicks: { $sum: { $ifNull: ['$metrics.clicks', 0] } }
+        }
+      }
+    ]).toArray();
+
+    // Build lookup: orderId -> Map<channel, entryData>
+    const entryLookup = new Map<string, Map<string, any>>();
+    for (const entry of entriesByOrderChannel) {
+      const oid = entry._id.orderId;
+      const ch = entry._id.channel;
+      if (!entryLookup.has(oid)) entryLookup.set(oid, new Map());
+      entryLookup.get(oid)!.set(ch, entry);
+    }
+
+    // Aggregate totals (display stats) in a single pass
+    const perfAggregation = await perfCollection.aggregate([
+      {
+        $match: {
+          orderId: { $in: orderIds },
+          deletedAt: { $exists: false },
+          validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] }
         }
       },
       {
@@ -612,14 +605,130 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
     ]).toArray();
 
     const perfTotals = perfAggregation[0] || {
-      totalEntries: 0,
-      totalImpressions: 0,
-      totalClicks: 0,
-      totalInsertions: 0,
-      totalCirculation: 0,
-      totalSpotsAired: 0,
-      totalDownloads: 0
+      totalEntries: 0, totalImpressions: 0, totalClicks: 0,
+      totalInsertions: 0, totalCirculation: 0, totalSpotsAired: 0, totalDownloads: 0
     };
+
+    // --- Build goals from campaign inventory & match against real entries ---
+    let totalExpectedReports = 0;
+    let totalReportsSubmitted = 0;
+    const byChannel: Record<string, {
+      goal: number; delivered: number; deliveryPercent: number;
+      goalType: string; volumeLabel: string;
+    }> = {};
+    const statusBreakdown = { on_track: 0, ahead: 0, behind: 0, at_risk: 0 };
+
+    const getVolumeLabel = (channel: string, isDigital: boolean) =>
+      isDigital ? 'Impressions' :
+      channel === 'podcast' ? 'Episodes' :
+      channel === 'radio' ? 'Spots' :
+      channel === 'print' ? 'Insertions' : 'Units';
+
+    for (const order of orders) {
+      const campaign = campaignMap.get(order.campaignId);
+      const publication = campaign?.selectedInventory?.publications?.find(
+        (p: any) => p.publicationId === order.publicationId
+      );
+
+      // Per-order channel tracking
+      const orderChannels: Record<string, {
+        goal: number; delivered: number; deliveryPercent: number;
+        goalType: string; volumeLabel: string;
+      }> = {};
+
+      // Build goals from inventory items
+      if (publication?.inventoryItems) {
+        for (const item of publication.inventoryItems) {
+          if (item.isExcluded) continue;
+          const channel = (item.channel || 'other').toLowerCase();
+          const isDigital = digitalChannels.includes(channel);
+
+          if (!orderChannels[channel]) {
+            orderChannels[channel] = {
+              goal: 0, delivered: 0, deliveryPercent: 0,
+              goalType: isDigital ? 'impressions' : 'frequency',
+              volumeLabel: getVolumeLabel(channel, isDigital)
+            };
+          }
+
+          totalExpectedReports++;
+
+          if (isDigital) {
+            let impressions = 0;
+            const placementGoal = order.deliveryGoals?.[item.itemPath];
+            if (placementGoal?.goalType === 'impressions' && placementGoal.goalValue > 0) {
+              impressions = placementGoal.goalValue;
+            } else if (item.monthlyImpressions > 0) {
+              // monthlyImpressions = ad slot capacity. For CPM items, currentFrequency
+              // is the percentage purchased (25/50/75/100), so scale accordingly.
+              const pct = (item.currentFrequency || item.quantity || 100) / 100;
+              impressions = Math.round(item.monthlyImpressions * pct);
+            }
+            orderChannels[channel].goal += impressions;
+          } else {
+            const frequency = item.currentFrequency || item.quantity || 1;
+            orderChannels[channel].goal += frequency;
+          }
+        }
+      }
+
+      // Fill in delivered amounts from real entry data
+      const orderEntries = entryLookup.get(order._id.toString());
+      if (orderEntries) {
+        for (const [channel, entryData] of orderEntries) {
+          const isDigital = digitalChannels.includes(channel);
+          const delivered = isDigital ? (entryData.impressions || 0) : (entryData.reportCount || 0);
+
+          if (!orderChannels[channel]) {
+            orderChannels[channel] = {
+              goal: 0, delivered: 0, deliveryPercent: 0,
+              goalType: isDigital ? 'impressions' : 'frequency',
+              volumeLabel: getVolumeLabel(channel, isDigital)
+            };
+          }
+          orderChannels[channel].delivered += delivered;
+          totalReportsSubmitted += entryData.reportCount || 0;
+        }
+      }
+
+      // Compute per-channel delivery percent for this order
+      for (const ch of Object.values(orderChannels)) {
+        ch.deliveryPercent = ch.goal > 0 ? Math.round((ch.delivered / ch.goal) * 100) : 0;
+      }
+
+      // Order-level pacing (average of its channel percentages)
+      const orderPercents = Object.values(orderChannels).map(ch => ch.deliveryPercent);
+      const orderPercent = orderPercents.length > 0
+        ? Math.round(orderPercents.reduce((s, p) => s + p, 0) / orderPercents.length)
+        : 0;
+
+      if (orderPercent >= 110) statusBreakdown.ahead++;
+      else if (orderPercent >= 90) statusBreakdown.on_track++;
+      else if (orderPercent >= 70) statusBreakdown.behind++;
+      else statusBreakdown.at_risk++;
+
+      // Merge into publication-level byChannel
+      for (const [channel, data] of Object.entries(orderChannels)) {
+        if (!byChannel[channel]) {
+          byChannel[channel] = {
+            goal: 0, delivered: 0, deliveryPercent: 0,
+            goalType: data.goalType, volumeLabel: data.volumeLabel
+          };
+        }
+        byChannel[channel].goal += data.goal;
+        byChannel[channel].delivered += data.delivered;
+      }
+    }
+
+    // Final publication-level percentages
+    for (const ch of Object.values(byChannel)) {
+      ch.deliveryPercent = ch.goal > 0 ? Math.round((ch.delivered / ch.goal) * 100) : 0;
+    }
+
+    const channelPercents = Object.values(byChannel).map(ch => ch.deliveryPercent);
+    const overallDeliveryPercent = channelPercents.length > 0
+      ? Math.round(channelPercents.reduce((s, p) => s + p, 0) / channelPercents.length)
+      : 0;
 
     // Count proofs
     const proofsCount = await proofsCollection.countDocuments({

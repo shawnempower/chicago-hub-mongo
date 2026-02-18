@@ -446,7 +446,11 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
           totalExpectedReports++;
           
           if (isDigital) {
-            const impressions = item.performanceMetrics?.impressionsPerMonth || 0;
+            let impressions = 0;
+            if (item.monthlyImpressions > 0) {
+              const pct = (item.currentFrequency || item.quantity || 100) / 100;
+              impressions = Math.round(item.monthlyImpressions * pct);
+            }
             deliveryProgress[channel].goal += impressions;
             totalExpectedGoal += impressions;
           } else {
@@ -772,19 +776,28 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Order not found' });
     }
     
-    // Aggregate performance data (only valid entries)
-    const orderEntryMatch = {
-      orderId: order._id?.toString() || orderId,
+    const resolvedOrderId = order._id?.toString() || orderId;
+    const digitalChannels = ['website', 'newsletter', 'streaming'];
+
+    // Relaxed filter for delivery metrics (includes bare automated entries for impressions)
+    const deliveryMatch = {
+      orderId: resolvedOrderId,
       deletedAt: { $exists: false },
       validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
+    };
+
+    // Strict filter for report/placement counting (excludes bare automated entries)
+    const reportMatch = {
+      ...deliveryMatch,
       $or: [
         { source: { $ne: 'automated' } },
         { itemName: { $nin: [null, '', 'tracking-pixel'] } },
       ]
     };
-    
+
+    // Totals from strict filter (for display stats)
     const aggregation = await perfCollection.aggregate([
-      { $match: orderEntryMatch },
+      { $match: reportMatch },
       { $group: {
         _id: null,
         totalEntries: { $sum: 1 },
@@ -795,10 +808,10 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
         latestDate: { $max: '$dateStart' },
       }}
     ]).toArray();
-    
-    // Get by-placement breakdown
+
+    // By-placement breakdown (strict filter)
     const placementBreakdown = await perfCollection.aggregate([
-      { $match: orderEntryMatch },
+      { $match: reportMatch },
       { $group: {
         _id: { itemPath: '$itemPath', itemName: '$itemName', channel: '$channel' },
         entries: { $sum: 1 },
@@ -814,29 +827,159 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
       }},
       { $sort: { '_id.channel': 1, '_id.itemName': 1 } }
     ]).toArray();
-    
+
+    // By-channel delivery (relaxed filter, includes all valid automated entries)
+    const channelDelivery = await perfCollection.aggregate([
+      { $match: deliveryMatch },
+      { $group: {
+        _id: { $toLower: { $ifNull: ['$channel', 'other'] } },
+        reportCount: { $sum: {
+          $cond: [
+            { $or: [
+              { $ne: ['$source', 'automated'] },
+              { $and: [
+                { $ne: [{ $ifNull: ['$itemName', ''] }, ''] },
+                { $ne: ['$itemName', 'tracking-pixel'] }
+              ]}
+            ]},
+            1, 0
+          ]
+        }},
+        impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } },
+        clicks: { $sum: { $ifNull: ['$metrics.clicks', 0] } },
+      }}
+    ]).toArray();
+
+    const channelDeliveryMap = new Map(channelDelivery.map((c: any) => [c._id, c]));
+
     const totals = aggregation[0] || {
-      totalEntries: 0,
-      totalImpressions: 0,
-      totalClicks: 0,
-      totalReach: 0,
-      earliestDate: null,
-      latestDate: null,
+      totalEntries: 0, totalImpressions: 0, totalClicks: 0,
+      totalReach: 0, earliestDate: null, latestDate: null,
     };
-    
-    // Calculate delivery progress against goals
+
+    // --- Compute fresh deliverySummary from campaign inventory + entries ---
+    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
+    const campaign = await campaignsCollection.findOne(
+      { campaignId: order.campaignId },
+      { projection: { campaignId: 1, selectedInventory: 1 } }
+    );
+    const publication = campaign?.selectedInventory?.publications?.find(
+      (p: any) => p.publicationId === order.publicationId
+    );
+
+    let totalExpectedReports = 0;
+    let totalReportsSubmitted = 0;
+    let totalExpectedGoal = 0;
+    let totalDelivered = 0;
+    const byChannel: Record<string, {
+      goal: number; delivered: number; deliveryPercent: number;
+      goalType: string; volumeLabel: string;
+    }> = {};
+
+    const getVolumeLabel = (channel: string, isDigital: boolean) =>
+      isDigital ? 'Impressions' :
+      channel === 'podcast' ? 'Episodes' :
+      channel === 'radio' ? 'Spots' :
+      channel === 'print' ? 'Insertions' : 'Units';
+
+    // Build goals from inventory items
+    if (publication?.inventoryItems) {
+      for (const item of publication.inventoryItems) {
+        if (item.isExcluded) continue;
+        const channel = (item.channel || 'other').toLowerCase();
+        const isDigital = digitalChannels.includes(channel);
+
+        if (!byChannel[channel]) {
+          byChannel[channel] = {
+            goal: 0, delivered: 0, deliveryPercent: 0,
+            goalType: isDigital ? 'impressions' : 'frequency',
+            volumeLabel: getVolumeLabel(channel, isDigital)
+          };
+        }
+
+        totalExpectedReports++;
+
+        if (isDigital) {
+          let impressions = 0;
+          const placementGoal = order.deliveryGoals?.[item.itemPath];
+          if (placementGoal?.goalType === 'impressions' && placementGoal.goalValue > 0) {
+            impressions = placementGoal.goalValue;
+          } else if (item.monthlyImpressions > 0) {
+            const pct = (item.currentFrequency || item.quantity || 100) / 100;
+            impressions = Math.round(item.monthlyImpressions * pct);
+          }
+          byChannel[channel].goal += impressions;
+          totalExpectedGoal += impressions;
+        } else {
+          const frequency = item.currentFrequency || item.quantity || 1;
+          byChannel[channel].goal += frequency;
+          totalExpectedGoal += frequency;
+        }
+      }
+    }
+
+    // Fill in delivered amounts from channel delivery aggregation
+    for (const [channel, data] of Object.entries(byChannel)) {
+      const entry = channelDeliveryMap.get(channel);
+      if (entry) {
+        const isDigital = digitalChannels.includes(channel);
+        data.delivered = isDigital ? (entry.impressions || 0) : (entry.reportCount || 0);
+        totalDelivered += data.delivered;
+        totalReportsSubmitted += entry.reportCount || 0;
+        data.deliveryPercent = data.goal > 0 ? Math.round((data.delivered / data.goal) * 100) : 0;
+      }
+    }
+
+    // Also pick up entries in channels not in inventory
+    for (const entry of channelDelivery) {
+      const channel = entry._id;
+      if (!byChannel[channel]) {
+        const isDigital = digitalChannels.includes(channel);
+        const delivered = isDigital ? (entry.impressions || 0) : (entry.reportCount || 0);
+        byChannel[channel] = {
+          goal: 0, delivered, deliveryPercent: 0,
+          goalType: isDigital ? 'impressions' : 'frequency',
+          volumeLabel: getVolumeLabel(channel, isDigital)
+        };
+        totalDelivered += delivered;
+        totalReportsSubmitted += entry.reportCount || 0;
+      }
+    }
+
+    const channelPercents = Object.values(byChannel).map(ch => ch.deliveryPercent);
+    const deliveryPercent = channelPercents.length > 0
+      ? Math.round(channelPercents.reduce((s, p) => s + p, 0) / channelPercents.length)
+      : 0;
+
+    const computedDeliverySummary = {
+      totalExpectedReports,
+      totalReportsSubmitted,
+      reportsPercent: totalExpectedReports > 0
+        ? Math.min(100, Math.round((totalReportsSubmitted / totalExpectedReports) * 100))
+        : 0,
+      totalExpectedGoal,
+      totalDelivered,
+      deliveryPercent,
+      totalGoalValue: totalExpectedGoal,
+      percentComplete: deliveryPercent,
+      byChannel,
+      ...(order.deliverySummary?.pixelHealth ? { pixelHealth: order.deliverySummary.pixelHealth } : {}),
+      lastUpdated: new Date(),
+    };
+
+    // Calculate delivery progress against goals (per-placement)
     let deliveryProgress = null;
     if (order.deliveryGoals) {
-      deliveryProgress = {};
+      deliveryProgress = {} as Record<string, any>;
       const goals = order.deliveryGoals as Record<string, any>;
-      
+
       Object.entries(goals).forEach(([itemPath, goal]) => {
-        const placement = placementBreakdown.find(p => p._id.itemPath === itemPath);
-        const delivered = placement 
+        const placement = placementBreakdown.find((p: any) => p._id.itemPath === itemPath);
+        const delivered = placement
           ? (goal.goalType === 'impressions' ? placement.impressions : placement.units)
           : 0;
-        
-        deliveryProgress[itemPath] = {
+
+        deliveryProgress![itemPath] = {
           goal: goal.goalValue,
           goalType: goal.goalType,
           delivered,
@@ -844,9 +987,9 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
         };
       });
     }
-    
+
     res.json({
-      orderId: order._id?.toString() || orderId,
+      orderId: resolvedOrderId,
       publicationId: order.publicationId,
       publicationName: order.publicationName,
       campaignId: order.campaignId,
@@ -862,7 +1005,7 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
         ctr: computeCTR(totals.totalClicks, totals.totalImpressions),
         reach: totals.totalReach,
       },
-      byPlacement: placementBreakdown.map(p => ({
+      byPlacement: placementBreakdown.map((p: any) => ({
         itemPath: p._id.itemPath,
         itemName: p._id.itemName,
         channel: p._id.channel,
@@ -874,7 +1017,7 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
         units: p.units,
         deliveryProgress: deliveryProgress?.[p._id.itemPath],
       })),
-      deliverySummary: order.deliverySummary,
+      deliverySummary: computedDeliverySummary,
     });
   } catch (error) {
     console.error('Error fetching order summary:', error);
