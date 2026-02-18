@@ -44,10 +44,9 @@ import {
 } from 'lucide-react';
 import { format, subDays, differenceInDays, startOfMonth } from 'date-fns';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, 
-  Tooltip as RechartsTooltip, ResponsiveContainer, Legend, Bar,
-  BarChart as RechartsBarChart,
-  // ComposedChart removed -- using separate AreaChart + BarChart for clarity
+  Area, Line, XAxis, YAxis, CartesianGrid, 
+  Tooltip as RechartsTooltip, ResponsiveContainer, Legend,
+  ComposedChart,
 } from 'recharts';
 import { API_BASE_URL } from '@/config/api';
 import { toast } from '@/hooks/use-toast';
@@ -1015,94 +1014,105 @@ export function CampaignPerformanceDashboard({
               {dailyData.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No daily data available</p>
               ) : dailyViewMode === 'chart' ? (
-                <div className="space-y-6">
-                  {/* Impressions chart */}
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Impressions</p>
-                    <div className="h-[200px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={dailyData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                          <XAxis 
-                            dataKey="date" 
-                            tickFormatter={(val) => format(new Date(val), 'M/d')}
-                            tick={{ fontSize: 10 }}
-                            interval={Math.max(0, Math.floor(dailyData.length / 8) - 1)}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <YAxis 
-                            tick={{ fontSize: 10 }}
-                            tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toString()}
-                            axisLine={false}
-                            tickLine={false}
-                            width={45}
-                          />
-                          <RechartsTooltip 
-                            labelFormatter={(val) => format(new Date(val), 'MMM d, yyyy')}
-                            formatter={(value: any) => [typeof value === 'number' ? value.toLocaleString() : value, 'Impressions']}
-                            contentStyle={{ 
-                              backgroundColor: 'hsl(var(--background))', 
-                              border: '1px solid hsl(var(--border))',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                            }}
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="impressions" 
-                            fill="hsl(217, 91%, 60%)" 
-                            fillOpacity={0.12}
-                            stroke="hsl(217, 91%, 60%)" 
-                            strokeWidth={2}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                  
-                  {/* Clicks chart */}
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Clicks</p>
-                    <div className="h-[160px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsBarChart data={dailyData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                          <XAxis 
-                            dataKey="date" 
-                            tickFormatter={(val) => format(new Date(val), 'M/d')}
-                            tick={{ fontSize: 10 }}
-                            interval={Math.max(0, Math.floor(dailyData.length / 8) - 1)}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <YAxis 
-                            tick={{ fontSize: 10 }}
-                            tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toString()}
-                            axisLine={false}
-                            tickLine={false}
-                            width={45}
-                          />
-                          <RechartsTooltip 
-                            labelFormatter={(val) => format(new Date(val), 'MMM d, yyyy')}
-                            formatter={(value: any) => [typeof value === 'number' ? value.toLocaleString() : value, 'Clicks']}
-                            contentStyle={{ 
-                              backgroundColor: 'hsl(var(--background))', 
-                              border: '1px solid hsl(var(--border))',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                            }}
-                          />
-                          <Bar 
-                            dataKey="clicks" 
-                            fill="hsl(142, 76%, 36%)" 
-                            fillOpacity={0.8}
-                            radius={[2, 2, 0, 0]}
-                          />
-                        </RechartsBarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+                <div className="h-[320px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={dailyData} margin={{ top: 10, right: 16, left: 0, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="impressionsFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.01} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                      <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(val) => format(new Date(val), 'M/d')}
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                        interval={Math.max(0, Math.floor(dailyData.length / 8) - 1)}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={4}
+                      />
+                      <YAxis 
+                        yAxisId="impressions"
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                        tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toString()}
+                        axisLine={false}
+                        tickLine={false}
+                        width={48}
+                        label={{ value: 'Impressions', angle: -90, position: 'insideLeft', offset: 8, style: { fontSize: 10, fill: 'hsl(217, 91%, 60%)' } }}
+                      />
+                      <YAxis 
+                        yAxisId="clicks"
+                        orientation="right"
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                        tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toString()}
+                        axisLine={false}
+                        tickLine={false}
+                        width={48}
+                        label={{ value: 'Clicks', angle: 90, position: 'insideRight', offset: 8, style: { fontSize: 10, fill: 'hsl(142, 76%, 36%)' } }}
+                      />
+                      <RechartsTooltip 
+                        labelFormatter={(val) => format(new Date(val), 'MMM d, yyyy')}
+                        content={({ active, payload, label }) => {
+                          if (!active || !payload?.length) return null;
+                          const impressions = payload.find(p => p.dataKey === 'impressions')?.value as number ?? 0;
+                          const clicks = payload.find(p => p.dataKey === 'clicks')?.value as number ?? 0;
+                          const ctr = impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : '0.00';
+                          return (
+                            <div className="rounded-lg border bg-background px-3 py-2 shadow-md">
+                              <p className="text-xs font-medium text-muted-foreground mb-1.5">
+                                {format(new Date(label), 'MMM d, yyyy')}
+                              </p>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex items-center justify-between gap-6">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'hsl(217, 91%, 60%)' }} />
+                                    Impressions
+                                  </span>
+                                  <span className="font-mono font-medium">{impressions.toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-6">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'hsl(142, 76%, 36%)' }} />
+                                    Clicks
+                                  </span>
+                                  <span className="font-mono font-medium">{clicks.toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-6 pt-1 border-t">
+                                  <span className="text-muted-foreground">CTR</span>
+                                  <span className="font-mono font-medium">{ctr}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Legend 
+                        formatter={(value) => value === 'impressions' ? 'Impressions' : 'Clicks'}
+                        wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+                        iconType="circle"
+                        iconSize={8}
+                      />
+                      <Area 
+                        yAxisId="impressions"
+                        type="monotone" 
+                        dataKey="impressions" 
+                        fill="url(#impressionsFill)"
+                        stroke="hsl(217, 91%, 60%)" 
+                        strokeWidth={2}
+                      />
+                      <Line
+                        yAxisId="clicks"
+                        type="monotone"
+                        dataKey="clicks"
+                        stroke="hsl(142, 76%, 36%)"
+                        strokeWidth={2}
+                        dot={dailyData.length <= 31 ? { r: 2.5, fill: 'hsl(142, 76%, 36%)', strokeWidth: 0 } : false}
+                        activeDot={{ r: 4, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
                 </div>
               ) : (
                 <Table>
