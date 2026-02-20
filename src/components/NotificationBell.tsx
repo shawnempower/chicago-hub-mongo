@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Check, CheckCheck, Trash2, ExternalLink, MessageSquare, Package, FileText, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +46,7 @@ const NOTIFICATION_ICONS: Record<string, React.ReactNode> = {
 };
 
 export function NotificationBell() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -163,17 +165,15 @@ export function NotificationBell() {
   };
 
   const handleNotificationClick = (notification: Notification) => {
-    // Mark as read
     if (!notification.read) {
       handleMarkRead(notification._id, { stopPropagation: () => {} } as any);
     }
     
-    // Navigate if link exists
-    if (notification.link) {
-      window.location.href = notification.link;
-    }
-    
     setOpen(false);
+    
+    if (notification.link) {
+      navigate(notification.link);
+    }
   };
 
   return (
