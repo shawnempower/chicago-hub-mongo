@@ -411,17 +411,16 @@ router.post('/analyze', authenticateToken, async (req: any, res: Response) => {
                 performanceMetrics: opp.performanceMetrics || undefined  // Add item-level metrics
               };
               
-              // For CPM/CPV/CPC pricing, extract impression data
-              const itemPricingModel = item.itemPricing.pricingModel;
-              if (itemPricingModel === 'cpm' || itemPricingModel === 'cpv' || itemPricingModel === 'cpc') {
-                const impressions = opp.monthlyImpressions || 
-                                  opp.performanceMetrics?.impressionsPerMonth ||
-                                  opp.metrics?.monthlyImpressions || 
-                                  0;
-                
-                if (impressions > 0) {
-                  item.monthlyImpressions = impressions;
-                }
+              // Extract impression data from the ad opportunity for delivery goal tracking.
+              // This is needed for all pricing models (not just CPM) so that flat-rate
+              // website placements can still show delivery progress against impression goals.
+              const impressions = opp.monthlyImpressions || 
+                                opp.performanceMetrics?.impressionsPerMonth ||
+                                opp.metrics?.monthlyImpressions || 
+                                0;
+              
+              if (impressions > 0) {
+                item.monthlyImpressions = impressions;
               }
               
               // Add sourceName if provided
@@ -1392,16 +1391,14 @@ router.post('/refresh', authenticateToken, async (req: any, res: Response) => {
               sourceName: sourceInfo?.sourceName
             };
             
-            // For CPM/CPV/CPC pricing, extract impression data (same logic as analyze endpoint)
-            if (pricingModel === 'cpm' || pricingModel === 'cpv' || pricingModel === 'cpc') {
-              const impressions = opp.monthlyImpressions || 
-                                opp.performanceMetrics?.impressionsPerMonth ||
-                                opp.metrics?.monthlyImpressions || 
-                                0;
-              
-              if (impressions > 0) {
-                freshItem.monthlyImpressions = impressions;
-              }
+            // Extract impression data for delivery goal tracking (all pricing models)
+            const impressions = opp.monthlyImpressions || 
+                              opp.performanceMetrics?.impressionsPerMonth ||
+                              opp.metrics?.monthlyImpressions || 
+                              0;
+            
+            if (impressions > 0) {
+              freshItem.monthlyImpressions = impressions;
             }
             
             // Store original frequency string for reference (for "Show: weekly" badge)

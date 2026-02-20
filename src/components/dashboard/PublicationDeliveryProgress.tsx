@@ -218,7 +218,7 @@ export function PublicationDeliveryProgress({
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>
-              {summary.totalReportsSubmitted} of {summary.totalExpectedReports} placements reported
+              {summary.totalReportsSubmitted} {summary.totalReportsSubmitted === 1 ? 'report' : 'reports'} across {summary.totalExpectedReports} {summary.totalExpectedReports === 1 ? 'placement' : 'placements'}
             </span>
             <span>{summary.activeOrders} active order{summary.activeOrders !== 1 ? 's' : ''}</span>
           </div>

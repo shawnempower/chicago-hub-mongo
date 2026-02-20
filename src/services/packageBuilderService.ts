@@ -169,7 +169,8 @@ export class PackageBuilderService {
       itemFrequencyString?: string,  // Frequency from the item itself (e.g., "weekly", "daily")
       format?: any,  // Standardized format object
       audienceMetrics?: any,  // Audience metrics from parent channel
-      performanceMetrics?: any  // Item-specific performance metrics
+      performanceMetrics?: any,  // Item-specific performance metrics
+      adMonthlyImpressions?: number  // Monthly impressions from the individual ad opportunity
     ): InventoryItemWithConstraints | null => {
       if (!channelFilters.includes(channel)) return null;
       if (hubPrice <= 0) return null;
@@ -248,8 +249,7 @@ export class PackageBuilderService {
         format, // Standardized format object
         audienceMetrics,  // Include channel-level audience metrics
         performanceMetrics,  // Include item-level performance metrics
-        // Add top-level monthlyImpressions for LineItemEditor compatibility (CPM frequency selector)
-        monthlyImpressions: audienceMetrics?.monthlyImpressions || performanceMetrics?.impressionsPerMonth,
+        monthlyImpressions: adMonthlyImpressions || audienceMetrics?.monthlyImpressions || performanceMetrics?.impressionsPerMonth,
         publicationId: publication.publicationId,
         publicationName: publication.basicInfo.publicationName
       };
@@ -310,7 +310,8 @@ export class PackageBuilderService {
             undefined,  // Website ads are typically monthly (handled by pricing model)
             ad.format,  // Use standardized format object
             websiteMetrics,
-            ad.performanceMetrics  // Pass item-level performance metrics
+            ad.performanceMetrics,  // Pass item-level performance metrics
+            ad.monthlyImpressions  // Pass individual ad's monthly impressions for delivery tracking
           );
           if (item) items.push(item);
         }

@@ -139,7 +139,7 @@ export function OrderPerformanceView({
   // Detect data quality issues by validationStatus OR by itemName pattern
   const isBadEntry = (entry: PerformanceEntry) => {
     const vs = (entry as any).validationStatus;
-    if (vs === 'bad_pixel' || vs === 'invalid_orderId' || vs === 'invalid_traffic') return true;
+    if (vs === 'bad_pixel' || vs === 'invalid_orderId' || vs === 'invalid_traffic' || vs === '') return true;
     // Also catch untagged tracking-pixel / empty-name automated entries
     if (entry.source === 'automated') {
       const name = (entry as any).itemName;
@@ -479,7 +479,7 @@ export function OrderPerformanceView({
             <Progress value={Math.min(liveDelivery?.deliveryPercent ?? liveDelivery?.percentComplete ?? overallPercent, 100)} className="h-3" />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>
-                {liveDelivery?.totalReportsSubmitted ?? 0} of {liveDelivery?.totalExpectedReports ?? 0} placements reported
+                {liveDelivery?.totalReportsSubmitted ?? 0} {liveDelivery?.totalReportsSubmitted === 1 ? 'report' : 'reports'} across {liveDelivery?.totalExpectedReports ?? 0} {liveDelivery?.totalExpectedReports === 1 ? 'placement' : 'placements'}
               </span>
             </div>
           </div>

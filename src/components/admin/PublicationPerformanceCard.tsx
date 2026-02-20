@@ -64,6 +64,7 @@ export function PublicationPerformanceCard({ publication }: PublicationPerforman
   const [expanded, setExpanded] = useState(false);
   const { context, activity } = publication;
 
+  const isInProduction = ['in_production', 'delivered'].includes(activity?.orderStatus || '');
   const deliveryPercent = activity?.deliverySummary?.percentComplete ?? 0;
   const deliveryColor = deliveryPercent >= 100 ? 'text-blue-600' :
     deliveryPercent >= 90 ? 'text-green-600' :
@@ -107,8 +108,8 @@ export function PublicationPerformanceCard({ publication }: PublicationPerforman
               </p>
             )}
 
-            {/* Delivery progress bar */}
-            {activity?.deliverySummary && (
+            {/* Delivery progress bar - only shown when order is in production or delivered */}
+            {isInProduction && activity?.deliverySummary && (
               <div className="mt-2.5 space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Delivery</span>
@@ -261,8 +262,8 @@ export function PublicationPerformanceCard({ publication }: PublicationPerforman
                   </div>
                 )}
 
-                {/* Per-channel delivery */}
-                {activity.deliverySummary?.byChannel && Object.keys(activity.deliverySummary.byChannel).length > 0 && (
+                {/* Per-channel delivery - only shown when order is in production or delivered */}
+                {isInProduction && activity.deliverySummary?.byChannel && Object.keys(activity.deliverySummary.byChannel).length > 0 && (
                   <div>
                     <p className="text-xs font-medium mb-1.5">Delivery by Channel</p>
                     <div className="space-y-2">

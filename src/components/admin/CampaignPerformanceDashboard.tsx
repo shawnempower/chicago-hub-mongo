@@ -665,7 +665,7 @@ export function CampaignPerformanceDashboard({
               </Badge>
             </CardTitle>
             <CardDescription>
-              {summary.deliveryProgress.totalReportsSubmitted} of {summary.deliveryProgress.totalExpectedReports} placements reported
+              {summary.deliveryProgress.totalReportsSubmitted} {summary.deliveryProgress.totalReportsSubmitted === 1 ? 'report' : 'reports'} across {summary.deliveryProgress.totalExpectedReports} {summary.deliveryProgress.totalExpectedReports === 1 ? 'placement' : 'placements'}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-2">
