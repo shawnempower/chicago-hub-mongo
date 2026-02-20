@@ -52,7 +52,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     const validEntryMatch = {
       campaignId: campaign.campaignId || campaignId,
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic', ''] },
       $or: [
         { source: { $ne: 'automated' } },
         { itemName: { $nin: [null, '', 'tracking-pixel'] } },
@@ -288,7 +288,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
         campaignId: campaign.campaignId || campaignId,
         publicationId: { $in: allPublicationIds },
         deletedAt: { $exists: false },
-        validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
+        validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic', ''] },
       };
       
       const pubChannelDelivery = await perfCollection.aggregate([
@@ -382,9 +382,13 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
         let totalGoalValue = 0;
         let totalDelivered = 0;
         const byChannel: Record<string, { goal: number; delivered: number; percent: number }> = {};
+        const pubPlacementStatuses = order.placementStatuses || {};
+        const validPubPlacementStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
         
         for (const item of inventoryItems) {
           if (item.isExcluded) continue;
+          const itemStatus = pubPlacementStatuses[item.itemPath] || pubPlacementStatuses[item.sourcePath];
+          if (itemStatus && !validPubPlacementStatuses.includes(itemStatus)) continue;
           const channel = (item.channel || 'other').toLowerCase();
           const isDigital = digitalChannelsForPub.includes(channel);
           
@@ -392,26 +396,10 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
             byChannel[channel] = { goal: 0, delivered: 0, percent: 0 };
           }
           
-          if (isDigital) {
-            let impressionGoal = 0;
-            const placementGoal = order.deliveryGoals?.[item.itemPath];
-            if (placementGoal?.goalType === 'impressions' && placementGoal.goalValue > 0) {
-              impressionGoal = placementGoal.goalValue;
-            } else if (item.monthlyImpressions > 0) {
-              const pct = (item.currentFrequency || item.quantity || 100) / 100;
-              impressionGoal = Math.round(item.monthlyImpressions * pct);
-            }
-            byChannel[channel].goal += impressionGoal;
-            totalGoalValue += impressionGoal;
-          } else if (channel === 'newsletter') {
-            const sends = item.currentFrequency || item.quantity || 1;
-            byChannel[channel].goal += sends;
-            totalGoalValue += sends;
-          } else {
-            const frequency = item.currentFrequency || item.quantity || 1;
-            byChannel[channel].goal += frequency;
-            totalGoalValue += frequency;
-          }
+          const placementGoal = order.deliveryGoals?.[item.itemPath] || order.deliveryGoals?.[item.sourcePath];
+          const goalValue = placementGoal?.goalValue || 0;
+          byChannel[channel].goal += goalValue;
+          totalGoalValue += goalValue;
         }
         
         // Fill in delivered amounts from realtime aggregation
@@ -493,6 +481,8 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     
     // Filter selectedInventory by active orders to get accurate goals
     // This ensures rescinded/rejected placements don't count toward delivery goals
+    // Combined delivery goals map from all orders, used later for goal lookups
+    const campaignDeliveryGoals: Record<string, any> = {};
     try {
       const campaignObjectId = campaign._id?.toString() || '';
       const campaignIdString = campaign.campaignId || '';
@@ -515,6 +505,11 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
         for (const order of activeOrders) {
           const pubId = order.publicationId;
           const placementStatuses = order.placementStatuses || {};
+          
+          // Merge this order's delivery goals into the campaign-wide map
+          if (order.deliveryGoals) {
+            Object.assign(campaignDeliveryGoals, order.deliveryGoals);
+          }
           
           const validPlacements = new Set<string>();
           for (const [placementPath, status] of Object.entries(placementStatuses)) {
@@ -592,23 +587,10 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
           
           totalExpectedReports++;
           
-          if (isDigital) {
-            let impressions = 0;
-            if (item.monthlyImpressions > 0) {
-              const pct = (item.currentFrequency || item.quantity || 100) / 100;
-              impressions = Math.round(item.monthlyImpressions * pct);
-            }
-            deliveryProgress[channel].goal += impressions;
-            totalExpectedGoal += impressions;
-          } else if (channel === 'newsletter') {
-            const sends = item.currentFrequency || item.quantity || 1;
-            deliveryProgress[channel].goal += sends;
-            totalExpectedGoal += sends;
-          } else {
-            const frequency = item.currentFrequency || item.quantity || 1;
-            deliveryProgress[channel].goal += frequency;
-            totalExpectedGoal += frequency;
-          }
+          const placementGoal = campaignDeliveryGoals[item.itemPath] || campaignDeliveryGoals[item.sourcePath];
+          const goalValue = placementGoal?.goalValue || 0;
+          deliveryProgress[channel].goal += goalValue;
+          totalExpectedGoal += goalValue;
         }
       }
     }
@@ -618,7 +600,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     const campaignDeliveryFilter = {
       campaignId: campaign.campaignId || campaignId,
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic', ''] },
     };
     
     const campaignChannelDelivery = await perfCollection.aggregate([
@@ -817,7 +799,7 @@ router.get('/campaign/:campaignId/daily', async (req: any, res: Response) => {
     const match: any = { 
       campaignId: resolvedCampaignId, 
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic', ''] },
       $or: [
         { source: { $ne: 'automated' } },
         { itemName: { $nin: [null, '', 'tracking-pixel'] } },
@@ -901,7 +883,7 @@ router.get('/order/:orderId/daily', async (req: any, res: Response) => {
     const match: any = { 
       orderId: resolvedOrderId, 
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic', ''] },
       $or: [
         { source: { $ne: 'automated' } },
         { itemName: { $nin: [null, '', 'tracking-pixel'] } },
@@ -981,7 +963,7 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
     const deliveryMatch = {
       orderId: resolvedOrderId,
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic', ''] },
     };
 
     // Strict filter for report/placement counting (excludes bare automated entries)
@@ -1094,10 +1076,15 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
     ]).toArray();
     const orderNewsletterSendCount = countNewsletterSends(orderNlDatesAgg);
 
-    // Build goals from inventory items
+    // Build goals from inventory items, skipping rejected/rescinded placements
+    const placementStatuses = order.placementStatuses || {};
+    const validPlacementStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
+
     if (publication?.inventoryItems) {
       for (const item of publication.inventoryItems) {
         if (item.isExcluded) continue;
+        const itemStatus = placementStatuses[item.itemPath] || placementStatuses[item.sourcePath];
+        if (itemStatus && !validPlacementStatuses.includes(itemStatus)) continue;
         const channel = (item.channel || 'other').toLowerCase();
         const isDigital = digitalChannels.includes(channel);
 
@@ -1111,26 +1098,10 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
 
         totalExpectedReports++;
 
-        if (isDigital) {
-          let impressions = 0;
-          const placementGoal = order.deliveryGoals?.[item.itemPath];
-          if (placementGoal?.goalType === 'impressions' && placementGoal.goalValue > 0) {
-            impressions = placementGoal.goalValue;
-          } else if (item.monthlyImpressions > 0) {
-            const pct = (item.currentFrequency || item.quantity || 100) / 100;
-            impressions = Math.round(item.monthlyImpressions * pct);
-          }
-          byChannel[channel].goal += impressions;
-          totalExpectedGoal += impressions;
-        } else if (channel === 'newsletter') {
-          const sends = item.currentFrequency || item.quantity || 1;
-          byChannel[channel].goal += sends;
-          totalExpectedGoal += sends;
-        } else {
-          const frequency = item.currentFrequency || item.quantity || 1;
-          byChannel[channel].goal += frequency;
-          totalExpectedGoal += frequency;
-        }
+        const placementGoal = order.deliveryGoals?.[item.itemPath] || order.deliveryGoals?.[item.sourcePath];
+        const goalValue = placementGoal?.goalValue || 0;
+        byChannel[channel].goal += goalValue;
+        totalExpectedGoal += goalValue;
       }
     }
 

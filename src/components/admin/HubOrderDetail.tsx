@@ -346,19 +346,10 @@ export function HubOrderDetail() {
     const durationMonths = getDurationMonths();
     
     if (ch === 'website' || ch === 'display') {
-      // Website: Impressions are the unit
-      if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
-        const monthlyImpressions = item.monthlyImpressions || perfMetrics.impressionsPerMonth;
-        const pricingModel = item.itemPricing?.pricingModel || 'flat';
-        
-        // For CPM/CPV/CPC, frequency is percentage share (25, 50, 75, 100)
-        let actualMonthlyImpressions = monthlyImpressions;
-        if (['cpm', 'cpv', 'cpc'].includes(pricingModel)) {
-          actualMonthlyImpressions = Math.round(monthlyImpressions * (frequency / 100));
-        }
-        
-        const totalImpressions = actualMonthlyImpressions * durationMonths;
-        instructions.push(`Deliver: ${formatNumber(totalImpressions)} impressions`);
+      const itemPath = item.itemPath || item.sourcePath;
+      const storedGoal = order?.deliveryGoals?.[itemPath];
+      if (storedGoal && storedGoal.goalValue > 0) {
+        instructions.push(`Deliver: ${formatNumber(storedGoal.goalValue)} impressions`);
       }
       if (metrics.monthlyVisitors) {
         instructions.push(`Audience: ${formatNumber(metrics.monthlyVisitors)} visitors/mo`);
@@ -392,9 +383,10 @@ export function HubOrderDetail() {
         instructions.push(`Downloads: ${formatNumber(metrics.listeners || perfMetrics.audienceSize)}/ep`);
       }
     } else if (ch === 'streaming') {
-      // Streaming: Views are the unit
-      if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
-        instructions.push(`Deliver: ${formatNumber(item.monthlyImpressions || perfMetrics.impressionsPerMonth)} views`);
+      const itemPath = item.itemPath || item.sourcePath;
+      const streamGoal = order?.deliveryGoals?.[itemPath];
+      if (streamGoal && streamGoal.goalValue > 0) {
+        instructions.push(`Deliver: ${formatNumber(streamGoal.goalValue)} views`);
       }
     } else if (ch === 'events') {
       // Events: Sponsorships

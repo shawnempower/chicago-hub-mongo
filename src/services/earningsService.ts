@@ -172,6 +172,7 @@ export class EarningsService {
 
     // Get inventory items from the order
     const inventoryItems = order.inventoryItems || [];
+    const orderDeliveryGoals = order.deliveryGoals || {};
     
     for (const item of inventoryItems) {
       const channel = item.channel || 'unknown';
@@ -179,15 +180,12 @@ export class EarningsService {
       const rate = item.itemPricing?.hubPrice || 0;
       const deliveryType = getDeliveryType(pricingModel);
       
-      // Calculate planned delivery based on pricing model
-      let plannedDelivery = 0;
-      if (deliveryType === 'impressions') {
-        // For impression-based, use monthly impressions × months
-        plannedDelivery = item.monthlyImpressions || 0;
-      } else {
-        // For occurrence-based, use frequency/quantity
-        plannedDelivery = item.currentFrequency || item.quantity || 1;
-      }
+      // Read planned delivery from stored delivery goals
+      const itemPath = item.itemPath || item.sourcePath;
+      const storedGoal = orderDeliveryGoals[itemPath];
+      const plannedDelivery = storedGoal?.goalValue || (
+        deliveryType === 'impressions' ? 0 : (item.currentFrequency || item.quantity || 1)
+      );
       
       // Calculate estimated earnings
       const estimatedEarnings = calculateItemEarnings(

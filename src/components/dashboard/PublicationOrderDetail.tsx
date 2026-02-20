@@ -440,20 +440,11 @@ export function PublicationOrderDetail() {
       }
       
       if (ch === 'website' || ch === 'display') {
-        // Website: Impressions are the unit
-        if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
-          const monthlyImpressions = item.monthlyImpressions || perfMetrics.impressionsPerMonth;
-          const pricingModel = item.itemPricing?.pricingModel || 'flat';
-          
-          // For CPM/CPV/CPC, frequency is percentage share (25, 50, 75, 100)
-          let actualMonthlyImpressions = monthlyImpressions;
-          if (['cpm', 'cpv', 'cpc'].includes(pricingModel)) {
-            const percentageShare = frequency;
-            actualMonthlyImpressions = Math.round(monthlyImpressions * (percentageShare / 100));
-          }
-          
-          const totalImpressions = actualMonthlyImpressions * durationMonths;
-          instructions.push(`<strong>Deliver:</strong> ${formatNumber(totalImpressions)} impressions (${formatNumber(actualMonthlyImpressions)}/mo × ${durationMonths} mo)`);
+        // Website: Read delivery goal from stored deliveryGoals
+        const itemPath = item.itemPath || item.sourcePath;
+        const storedGoal = order?.deliveryGoals?.[itemPath];
+        if (storedGoal && storedGoal.goalValue > 0) {
+          instructions.push(`<strong>Deliver:</strong> ${formatNumber(storedGoal.goalValue)} impressions`);
         }
         if (metrics.monthlyVisitors) {
           instructions.push(`<strong>Audience:</strong> ${formatNumber(metrics.monthlyVisitors)} visitors/mo`);
@@ -492,9 +483,10 @@ export function PublicationOrderDetail() {
           instructions.push(`<strong>Downloads:</strong> ${formatNumber(metrics.listeners || perfMetrics.audienceSize)}/ep`);
         }
       } else if (ch === 'streaming') {
-        // Streaming: Views are the unit
-        if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
-          instructions.push(`<strong>Deliver:</strong> ${formatNumber(item.monthlyImpressions || perfMetrics.impressionsPerMonth)} views`);
+        const itemPath = item.itemPath || item.sourcePath;
+        const streamGoal = order?.deliveryGoals?.[itemPath];
+        if (streamGoal && streamGoal.goalValue > 0) {
+          instructions.push(`<strong>Deliver:</strong> ${formatNumber(streamGoal.goalValue)} views`);
         }
         if (metrics.subscribers) {
           instructions.push(`<strong>Subscribers:</strong> ${formatNumber(metrics.subscribers)}`);
@@ -1008,23 +1000,12 @@ export function PublicationOrderDetail() {
     
     // Channel-specific UNIT OF DELIVERY (primary trafficking info)
     if (channel === 'website') {
-      // Website: Impressions are the unit
-      if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
-        const monthlyImpressions = item.monthlyImpressions || perfMetrics.impressionsPerMonth;
-        const pricingModel = item.itemPricing?.pricingModel || 'flat';
-        
-        // For CPM/CPV/CPC, frequency is percentage share (25, 50, 75, 100)
-        let actualMonthlyImpressions = monthlyImpressions;
-        if (['cpm', 'cpv', 'cpc'].includes(pricingModel)) {
-          const percentageShare = frequency; // frequency IS the percentage for CPM
-          actualMonthlyImpressions = Math.round(monthlyImpressions * (percentageShare / 100));
-        }
-        
-        const totalImpressions = actualMonthlyImpressions * durationMonths;
-        
+      const itemPath = item.itemPath || item.sourcePath;
+      const storedGoal = order?.deliveryGoals?.[itemPath];
+      if (storedGoal && storedGoal.goalValue > 0) {
         expectations.push({
           label: 'Deliver',
-          value: `${formatNumber(totalImpressions)} impressions (${formatNumber(actualMonthlyImpressions)}/mo × ${durationMonths} mo)`,
+          value: `${formatNumber(storedGoal.goalValue)} impressions`,
           icon: <Eye className="h-3.5 w-3.5 text-blue-600" />,
           highlight: true
         });
@@ -1124,11 +1105,12 @@ export function PublicationOrderDetail() {
         });
       }
     } else if (channel === 'streaming') {
-      // Streaming: Views are the unit
-      if (item.monthlyImpressions || perfMetrics.impressionsPerMonth) {
+      const itemPath = item.itemPath || item.sourcePath;
+      const streamGoal = order?.deliveryGoals?.[itemPath];
+      if (streamGoal && streamGoal.goalValue > 0) {
         expectations.push({
           label: 'Deliver',
-          value: `${formatNumber(item.monthlyImpressions || perfMetrics.impressionsPerMonth)} views`,
+          value: `${formatNumber(streamGoal.goalValue)} views`,
           icon: <Eye className="h-3.5 w-3.5 text-blue-600" />,
           highlight: true
         });

@@ -536,9 +536,7 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
       (p: any) => p.publicationId === order.publicationId
     );
     
-    // Calculate expected delivery by channel
-    // - Digital channels: use expected impressions (performanceMetrics.impressionsPerMonth)
-    // - Offline channels: use frequency (number of airings/episodes/insertions)
+    // Calculate expected delivery by channel from stored deliveryGoals
     const expectedByChannel: Record<string, { 
       count: number;        // Number of placements
       goal: number;         // Expected delivery (impressions for digital, frequency for offline)
@@ -566,26 +564,10 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
         expectedByChannel[channel].count++;
         totalExpectedReports++;
         
-        if (isDigital) {
-          let impressions = 0;
-          const placementGoal = order.deliveryGoals?.[item.itemPath];
-          if (placementGoal?.goalType === 'impressions' && placementGoal.goalValue > 0) {
-            impressions = placementGoal.goalValue;
-          } else if (item.monthlyImpressions > 0) {
-            const pct = (item.currentFrequency || item.quantity || 100) / 100;
-            impressions = Math.round(item.monthlyImpressions * pct);
-          }
-          expectedByChannel[channel].goal += impressions;
-          totalExpectedGoal += impressions;
-        } else if (channel === 'newsletter') {
-          const sends = item.currentFrequency || item.quantity || 1;
-          expectedByChannel[channel].goal += sends;
-          totalExpectedGoal += sends;
-        } else {
-          const frequency = item.currentFrequency || item.quantity || 1;
-          expectedByChannel[channel].goal += frequency;
-          totalExpectedGoal += frequency;
-        }
+        const placementGoal = order.deliveryGoals?.[item.itemPath] || order.deliveryGoals?.[item.sourcePath];
+        const goalValue = placementGoal?.goalValue || 0;
+        expectedByChannel[channel].goal += goalValue;
+        totalExpectedGoal += goalValue;
       });
     }
     
@@ -596,7 +578,7 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
     const deliveryFilter = {
       orderId,
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] },
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic', ''] },
     };
     
     const entriesByChannel = await perfCollection.aggregate([

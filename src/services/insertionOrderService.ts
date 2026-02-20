@@ -22,6 +22,7 @@ import {
   VALID_STATUS_TRANSITIONS
 } from '../integrations/mongodb/insertionOrderSchema';
 import { ObjectId } from 'mongodb';
+import { computeDeliveryGoals, computeItemDeliveryGoal, getDurationMonths } from '../utils/deliveryGoals';
 
 // Re-define the type here to avoid ESM export issues
 export type InsertionOrderStatus = 'draft' | 'sent' | 'confirmed' | 'rejected' | 'in_production' | 'delivered';
@@ -970,6 +971,11 @@ export class InsertionOrderService {
           adSpecificationsProvided: false,
           placementStatuses,
           placementStatusHistory: [],
+          deliveryGoals: computeDeliveryGoals(
+            pub.inventoryItems || [],
+            campaign.timeline?.startDate,
+            campaign.timeline?.endDate
+          ),
           statusHistory: [{
             status: 'sent',
             timestamp: new Date(),
@@ -1631,6 +1637,25 @@ export class InsertionOrderService {
         lastAssetUpdateAt: new Date()
       };
 
+      // Compute delivery goal for the new placement and merge with existing goals
+      let campaign: Campaign | null = null;
+      try {
+        campaign = await this.campaignsCollection.findOne({ _id: new ObjectId(campaignId) });
+      } catch { /* not an ObjectId */ }
+      if (!campaign) {
+        campaign = await this.campaignsCollection.findOne({ campaignId });
+      }
+      const durationMonths = getDurationMonths(
+        campaign?.timeline?.startDate,
+        campaign?.timeline?.endDate
+      );
+      const existingGoals = order.deliveryGoals || {};
+      const newGoal = computeItemDeliveryGoal(placement, durationMonths);
+      const updatedDeliveryGoals = {
+        ...existingGoals,
+        [placement.itemPath]: newGoal
+      };
+
       // Update the order
       const result = await this.ordersCollection.findOneAndUpdate(
         { _id: order._id },
@@ -1641,6 +1666,7 @@ export class InsertionOrderService {
             assetReferences,
             assetStatus,
             orderTotal: newTotal,
+            deliveryGoals: updatedDeliveryGoals,
             updatedAt: new Date()
           },
           $push: {
@@ -1848,6 +1874,11 @@ export class InsertionOrderService {
         },
         placementStatuses,
         placementStatusHistory: [],
+        deliveryGoals: computeDeliveryGoals(
+          inventoryItems,
+          campaign.timeline?.startDate,
+          campaign.timeline?.endDate
+        ),
         statusHistory: [{
           status: orderStatus,
           timestamp: now,

@@ -540,7 +540,7 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
     const baseEntryFilter = {
       orderId: { $in: orderIds },
       deletedAt: { $exists: false },
-      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] }
+      validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic', ''] }
     };
 
     // Aggregate performance entries by (orderId, channel) in one query.
@@ -612,7 +612,7 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
         $match: {
           orderId: { $in: orderIds },
           deletedAt: { $exists: false },
-          validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic'] }
+          validationStatus: { $nin: ['bad_pixel', 'invalid_orderId', 'invalid_traffic', ''] }
         }
       },
       {
@@ -662,10 +662,15 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
         goalType: string; volumeLabel: string;
       }> = {};
 
-      // Build goals from inventory items
+      // Build goals from inventory items, skipping rejected/rescinded placements
+      const orderPlacementStatuses = order.placementStatuses || {};
+      const validOrderStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
+
       if (publication?.inventoryItems) {
         for (const item of publication.inventoryItems) {
           if (item.isExcluded) continue;
+          const itemStatus = orderPlacementStatuses[item.itemPath] || orderPlacementStatuses[item.sourcePath];
+          if (itemStatus && !validOrderStatuses.includes(itemStatus)) continue;
           const channel = (item.channel || 'other').toLowerCase();
           const isDigital = digitalChannels.includes(channel);
 
@@ -679,23 +684,9 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
 
           totalExpectedReports++;
 
-          if (isDigital) {
-            let impressions = 0;
-            const placementGoal = order.deliveryGoals?.[item.itemPath];
-            if (placementGoal?.goalType === 'impressions' && placementGoal.goalValue > 0) {
-              impressions = placementGoal.goalValue;
-            } else if (item.monthlyImpressions > 0) {
-              const pct = (item.currentFrequency || item.quantity || 100) / 100;
-              impressions = Math.round(item.monthlyImpressions * pct);
-            }
-            orderChannels[channel].goal += impressions;
-          } else if (channel === 'newsletter') {
-            const sends = item.currentFrequency || item.quantity || 1;
-            orderChannels[channel].goal += sends;
-          } else {
-            const frequency = item.currentFrequency || item.quantity || 1;
-            orderChannels[channel].goal += frequency;
-          }
+          const placementGoal = order.deliveryGoals?.[item.itemPath] || order.deliveryGoals?.[item.sourcePath];
+          const goalValue = placementGoal?.goalValue || 0;
+          orderChannels[channel].goal += goalValue;
         }
       }
 

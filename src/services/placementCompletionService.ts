@@ -220,10 +220,9 @@ export class PlacementCompletionService {
     channel: string,
     placement: any
   ): Promise<CompletionCheckResult> {
-    // Get impressions goal from placement
-    const impressionsGoal = placement.performanceMetrics?.impressionsPerMonth || 
-                           placement.audienceMetrics?.monthlyPageViews || 
-                           placement.audienceMetrics?.monthlyVisitors || 0;
+    // Read impressions goal from stored delivery goals
+    const storedGoal = order.deliveryGoals?.[placementId];
+    const impressionsGoal = storedGoal?.goalValue || 0;
 
     // Get delivered impressions from performance entries
     const impressionsDelivered = await this.getDeliveredImpressions(order._id.toString(), placementId);
