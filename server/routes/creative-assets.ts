@@ -663,6 +663,9 @@ router.put('/:id', async (req: any, res: Response) => {
     const newClickUrl = updates.digitalAdProperties?.clickUrl || '';
     const clickUrlChanged = updates.digitalAdProperties !== undefined && newClickUrl !== oldClickUrl;
 
+    // Detect if placement assignments are being updated (dot-notation from frontend)
+    const placementsChanged = updates['associations.placements'] !== undefined;
+
     // Update asset
     const updatedAsset = await creativesService.update(id, updates);
 
@@ -728,6 +731,20 @@ router.put('/:id', async (req: any, res: Response) => {
       } catch (regenError) {
         console.error('Error regenerating tracking scripts:', regenError);
         // Don't fail the request if script regeneration fails
+      }
+    }
+
+    // If placement assignments changed, generate scripts for the newly assigned placements
+    // (existing scripts are skipped via duplicate check in generateScriptsForAsset)
+    if (placementsChanged && updatedAsset) {
+      try {
+        const { generateScriptsForAsset } = await import('../../src/services/trackingScriptService');
+        const result = await generateScriptsForAsset(updatedAsset);
+        if (result.scriptsGenerated > 0) {
+          console.log(`Generated ${result.scriptsGenerated} tracking scripts after placement assignment update`);
+        }
+      } catch (scriptError) {
+        console.error('Error generating scripts after placement update:', scriptError);
       }
     }
 

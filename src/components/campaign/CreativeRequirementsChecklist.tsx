@@ -98,22 +98,39 @@ export function CreativeRequirementsChecklist({
   
   const totalRequirements = groupedSpecs.length; // Total unique spec groups
   
-  // Count placements covered by uploaded assets (not just asset groups)
-  const placementsCovered = uploadedAssets 
-    ? groupedSpecs
-        .filter(specGroup => {
-          const asset = uploadedAssets.get(specGroup.specGroupId);
-          return asset && (asset.uploadStatus === 'uploaded' || asset.fileUrl || asset.file);
-        })
-        .reduce((sum, specGroup) => sum + specGroup.placementCount, 0)
-    : 0;
-  
-  const completedRequirements = uploadedAssets 
-    ? groupedSpecs.filter(specGroup => {
-        const asset = uploadedAssets.get(specGroup.specGroupId);
-        return asset && (asset.uploadStatus === 'uploaded' || asset.fileUrl || asset.file);
-      }).length
-    : 0;
+  // Count placements covered by uploaded assets with per-placement checking
+  let placementsCovered = 0;
+  let completedRequirements = 0;
+  if (uploadedAssets) {
+    for (const specGroup of groupedSpecs) {
+      const asset = uploadedAssets.get(specGroup.specGroupId);
+      if (!asset || !(asset.uploadStatus === 'uploaded' || asset.fileUrl || asset.file)) continue;
+      
+      const appliesTo = asset.appliesTo || [];
+      if (appliesTo.length === 0) {
+        // Legacy asset: count all placements as covered
+        placementsCovered += specGroup.placementCount;
+        completedRequirements++;
+      } else {
+        const coveredKeys = new Set(
+          appliesTo.map((p: any) => `${p.publicationId}:${p.placementId}`)
+        );
+        let coveredCount = 0;
+        for (const p of specGroup.placements) {
+          const key = `${p.publicationId}:${p.placementId}`;
+          let isCovered = coveredKeys.has(key);
+          if (!isCovered) {
+            for (const ck of coveredKeys) {
+              if (ck.startsWith(`${p.publicationId}:${p.placementId}_dim`)) { isCovered = true; break; }
+            }
+          }
+          if (isCovered) coveredCount++;
+        }
+        placementsCovered += coveredCount;
+        if (coveredCount === specGroup.placementCount) completedRequirements++;
+      }
+    }
+  }
   
   const progressPercentage = totalPlacements > 0 ? (placementsCovered / totalPlacements) * 100 : 0;
 

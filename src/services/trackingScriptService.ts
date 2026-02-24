@@ -267,6 +267,21 @@ export async function generateScriptsForOrder(
         const itemPath = placement.placementId || null;
         const placementNameFromAsset = placement.placementName || null;
         
+        // Skip if a script already exists for this creative+placement combo
+        const existingQuery: any = {
+          campaignId,
+          publicationId,
+          creativeId,
+          deletedAt: { $exists: false }
+        };
+        if (itemPath) {
+          existingQuery.itemPath = itemPath;
+        }
+        const existingScript = await scriptsCollection.findOne(existingQuery);
+        if (existingScript) {
+          continue;
+        }
+        
         // Determine channel: First from placement, then asset associations, then match by dimensions
         let channel = (placement.channel || creative.associations?.channel || creative.specifications?.channel || '').toLowerCase();
         

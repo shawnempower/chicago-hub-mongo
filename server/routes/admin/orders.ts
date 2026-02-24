@@ -599,6 +599,17 @@ router.post('/:campaignId/:publicationId/placement', async (req: any, res: Respo
       // Don't fail the request if notification fails
     }
 
+    // Generate tracking scripts for the order (skips existing scripts via duplicate check)
+    try {
+      const { generateScriptsForOrder } = await import('../../../src/services/trackingScriptService');
+      const scriptResult = await generateScriptsForOrder(campaignId, parseInt(publicationId));
+      if (scriptResult.scriptsGenerated > 0) {
+        console.log(`[AddPlacement] Generated ${scriptResult.scriptsGenerated} tracking scripts for new placement`);
+      }
+    } catch (scriptError) {
+      console.error('Error generating scripts after adding placement:', scriptError);
+    }
+
     res.json({
       success: true,
       message: `Placement "${placement.itemName}" added successfully`,
@@ -683,6 +694,17 @@ router.post('/:campaignId/publication', async (req: any, res: Response) => {
     } catch (notifyError) {
       console.error('Error sending new order notifications:', notifyError);
       // Don't fail the request if notification fails
+    }
+
+    // Generate tracking scripts for the new order (skips existing scripts via duplicate check)
+    try {
+      const { generateScriptsForOrder } = await import('../../../src/services/trackingScriptService');
+      const scriptResult = await generateScriptsForOrder(campaignId, parseInt(publicationId));
+      if (scriptResult.scriptsGenerated > 0) {
+        console.log(`[AddPublication] Generated ${scriptResult.scriptsGenerated} tracking scripts for new publication order`);
+      }
+    } catch (scriptError) {
+      console.error('Error generating scripts after adding publication:', scriptError);
     }
 
     res.json({

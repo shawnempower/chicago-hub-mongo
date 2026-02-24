@@ -146,9 +146,10 @@ interface PendingFile {
 }
 
 interface EnrichedSpec extends GroupedCreativeRequirement {
-  status: 'uploaded' | 'pending' | 'missing';
+  status: 'uploaded' | 'pending' | 'missing' | 'partial';
   fileName: string | null;
   assetId?: string;
+  missingPlacements?: Array<{ placementId: string; placementName: string; publicationId: number; publicationName: string }>;
 }
 
 type SortKey = 'requirement' | 'channel' | 'coverage' | 'status';
@@ -616,7 +617,7 @@ function downloadSpecSheet(requirements: CreativeRequirement[], campaignId?: str
 /**
  * Status badge component
  */
-function StatusBadge({ status }: { status: 'uploaded' | 'pending' | 'missing' }) {
+function StatusBadge({ status }: { status: 'uploaded' | 'pending' | 'missing' | 'partial' }) {
   const config = {
     uploaded: { 
       icon: CheckCircle2, 
@@ -627,6 +628,11 @@ function StatusBadge({ status }: { status: 'uploaded' | 'pending' | 'missing' })
       icon: Circle, 
       label: 'Pending', 
       className: 'bg-blue-50 text-blue-700 border-blue-200' 
+    },
+    partial: {
+      icon: AlertCircle,
+      label: 'Partial',
+      className: 'bg-amber-50 text-amber-700 border-amber-200'
     },
     missing: { 
       icon: AlertCircle, 
@@ -702,6 +708,7 @@ export function CreativeAssetsManager({
   // Click URL editing state for uploaded assets
   const [editingClickUrl, setEditingClickUrl] = useState<Map<string, string>>(new Map());
   const [savingClickUrl, setSavingClickUrl] = useState<Set<string>>(new Set());
+  const [assigningPlacements, setAssigningPlacements] = useState<Set<string>>(new Set());
   const [clickUrlConfirmDialog, setClickUrlConfirmDialog] = useState<{
     specGroupId: string;
     oldUrl: string;
@@ -998,21 +1005,46 @@ export function CreativeAssetsManager({
     loadExistingAssets();
   }, [campaignId]);
 
-  // Calculate metrics
+  // Calculate metrics with per-placement coverage
   const metrics = useMemo(() => {
     const totalRequired = groupedSpecs.length;
-    const uploaded = groupedSpecs.filter(spec => {
+    let uploaded = 0;
+    let pending = 0;
+    let placementsCovered = 0;
+
+    for (const spec of groupedSpecs) {
       const asset = uploadedAssets.get(spec.specGroupId);
-      return asset?.uploadStatus === 'uploaded';
-    }).length;
-    const pending = groupedSpecs.filter(spec => {
-      const asset = uploadedAssets.get(spec.specGroupId);
-      return asset && asset.uploadStatus !== 'uploaded';
-    }).length;
+      if (!asset) continue;
+      if (asset.uploadStatus !== 'uploaded') {
+        pending++;
+        continue;
+      }
+      const appliesTo = asset.appliesTo || [];
+      if (appliesTo.length === 0) {
+        // Legacy asset: count all placements as covered
+        uploaded++;
+        placementsCovered += spec.placementCount;
+      } else {
+        const coveredKeys = new Set(
+          appliesTo.map((p: any) => `${p.publicationId}:${p.placementId}`)
+        );
+        let coveredCount = 0;
+        for (const p of spec.placements) {
+          const key = `${p.publicationId}:${p.placementId}`;
+          let isCovered = coveredKeys.has(key);
+          if (!isCovered) {
+            for (const ck of coveredKeys) {
+              if (ck.startsWith(`${p.publicationId}:${p.placementId}_dim`)) { isCovered = true; break; }
+            }
+          }
+          if (isCovered) coveredCount++;
+        }
+        placementsCovered += coveredCount;
+        if (coveredCount === spec.placementCount) uploaded++;
+      }
+    }
+
     const missing = totalRequired - uploaded - pending;
-    const placementsCovered = groupedSpecs
-      .filter(spec => uploadedAssets.get(spec.specGroupId)?.uploadStatus === 'uploaded')
-      .reduce((sum, spec) => sum + spec.placementCount, 0);
     const totalPlacements = groupedSpecs.reduce((sum, spec) => sum + spec.placementCount, 0);
     const uniquePublications = new Set(groupedSpecs.flatMap(spec => spec.placements.map(p => p.publicationId))).size;
     
@@ -1032,13 +1064,43 @@ export function CreativeAssetsManager({
   const enrichedSpecs = useMemo<EnrichedSpec[]>(() => {
     const specs = currentChannelSpecs.map(spec => {
       const asset = uploadedAssets.get(spec.specGroupId);
+      
+      let status: EnrichedSpec['status'];
+      let missingPlacements: EnrichedSpec['missingPlacements'];
+      
+      if (!asset) {
+        status = 'missing';
+      } else if (asset.uploadStatus !== 'uploaded') {
+        status = 'pending';
+      } else {
+        // Asset is uploaded -- check per-placement coverage
+        const appliesTo = asset.appliesTo || [];
+        if (appliesTo.length === 0) {
+          // Legacy asset with no placement assignments: treat as fully covered
+          status = 'uploaded';
+        } else {
+          const coveredKeys = new Set(
+            appliesTo.map((p: any) => `${p.publicationId}:${p.placementId}`)
+          );
+          missingPlacements = spec.placements.filter(p => {
+            const key = `${p.publicationId}:${p.placementId}`;
+            if (coveredKeys.has(key)) return false;
+            // Also check dimension-expanded variants (e.g., placementId_dim0, _dim1)
+            for (const ck of coveredKeys) {
+              if (ck.startsWith(`${p.publicationId}:${p.placementId}_dim`)) return false;
+            }
+            return true;
+          });
+          status = missingPlacements.length === 0 ? 'uploaded' : 'partial';
+        }
+      }
+      
       return {
         ...spec,
-        status: asset?.uploadStatus === 'uploaded' ? 'uploaded' as const
-              : asset ? 'pending' as const
-              : 'missing' as const,
+        status,
         fileName: asset?.file?.name || asset?.fileName || null,
-        assetId: asset?.assetId
+        assetId: asset?.assetId,
+        missingPlacements: missingPlacements?.length ? missingPlacements : undefined,
       };
     });
 
@@ -1065,8 +1127,8 @@ export function CreativeAssetsManager({
             comparison = a.placementCount - b.placementCount;
             break;
           case 'status':
-            const statusOrder = { uploaded: 0, pending: 1, missing: 2 };
-            comparison = statusOrder[a.status] - statusOrder[b.status];
+            const statusOrder: Record<string, number> = { uploaded: 0, pending: 1, partial: 2, missing: 3 };
+            comparison = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
             break;
         }
         
@@ -2257,6 +2319,65 @@ export function CreativeAssetsManager({
   
   const hasPendingDigitalAssetsWithoutClickUrl = pendingDigitalAssetsMissingClickUrl.length > 0;
   
+  const handleAssignMissingPlacements = async (specGroupId: string) => {
+    const asset = uploadedAssets.get(specGroupId);
+    const spec = enrichedSpecs.find(s => s.specGroupId === specGroupId);
+    if (!asset?.assetId || !spec?.missingPlacements?.length) return;
+
+    setAssigningPlacements(prev => new Set(prev).add(specGroupId));
+
+    try {
+      const existingPlacements = asset.appliesTo || [];
+      const combinedPlacements = [
+        ...existingPlacements,
+        ...spec.missingPlacements.map(mp => ({
+          placementId: mp.placementId,
+          publicationId: mp.publicationId,
+          publicationName: mp.publicationName,
+        })),
+      ];
+
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/creative-assets/${asset.assetId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          'associations.placements': combinedPlacements,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update placement assignments');
+
+      const newAssetsMap = new Map(uploadedAssets);
+      newAssetsMap.set(specGroupId, {
+        ...asset,
+        appliesTo: combinedPlacements,
+      });
+      onAssetsChange(newAssetsMap);
+
+      toast({
+        title: 'Placements Assigned',
+        description: `Creative now assigned to all ${combinedPlacements.length} placements.`,
+      });
+    } catch (error) {
+      console.error('Error assigning placements:', error);
+      toast({
+        title: 'Assignment Failed',
+        description: 'Failed to assign creative to missing placements. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setAssigningPlacements(prev => {
+        const next = new Set(prev);
+        next.delete(specGroupId);
+        return next;
+      });
+    }
+  };
+
   // Handle split click
   const handleSplitClick = (specGroupId: string, publicationId: number, publicationName: string) => {
     setSplitTarget({ specGroupId, publicationId, publicationName });
@@ -3421,6 +3542,12 @@ export function CreativeAssetsManager({
                             <span className="text-muted-foreground"> placements across </span>
                             <span className="font-medium">{spec.publicationCount}</span>
                             <span className="text-muted-foreground"> publication{spec.publicationCount !== 1 ? 's' : ''}</span>
+                            {spec.missingPlacements && spec.missingPlacements.length > 0 && (
+                              <div className="mt-1 flex items-center gap-1 text-xs text-amber-700">
+                                <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                                <span>{spec.missingPlacements.length} placement{spec.missingPlacements.length !== 1 ? 's' : ''} need{spec.missingPlacements.length === 1 ? 's' : ''} creative assignment</span>
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -3904,20 +4031,41 @@ export function CreativeAssetsManager({
                                       <h4 className="text-xs font-medium font-sans text-muted-foreground uppercase tracking-wide">
                                         Placements ({spec.placementCount})
                                       </h4>
-                                      {spec.isPublicationSpecific && mergeCandidates.has(spec.specGroupId) && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-7 text-xs hover:bg-transparent"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleMergeClick(spec.specGroupId);
-                                          }}
-                                        >
-                                          <Merge className="h-3 w-3 mr-1.5" />
-                                          Re-merge Requirement
-                                        </Button>
-                                      )}
+                                      <div className="flex items-center gap-1">
+                                        {spec.status === 'partial' && spec.missingPlacements?.length && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-xs"
+                                            disabled={assigningPlacements.has(spec.specGroupId)}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleAssignMissingPlacements(spec.specGroupId);
+                                            }}
+                                          >
+                                            {assigningPlacements.has(spec.specGroupId) ? (
+                                              <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                                            ) : (
+                                              <Link className="h-3 w-3 mr-1.5" />
+                                            )}
+                                            Assign to all placements
+                                          </Button>
+                                        )}
+                                        {spec.isPublicationSpecific && mergeCandidates.has(spec.specGroupId) && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 text-xs hover:bg-transparent"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleMergeClick(spec.specGroupId);
+                                            }}
+                                          >
+                                            <Merge className="h-3 w-3 mr-1.5" />
+                                            Re-merge Requirement
+                                          </Button>
+                                        )}
+                                      </div>
                                     </div>
                                     <div className="border rounded-lg overflow-hidden bg-white">
                                       <Table>
@@ -3941,14 +4089,21 @@ export function CreativeAssetsManager({
                                               </TableCell>
                                               <TableCell>
                                                 <div className="flex flex-wrap gap-1.5">
-                                                  {pubData.placements.map((placementName, idx) => (
-                                                    <span 
-                                                      key={idx}
-                                                      className="text-xs bg-muted px-2 py-1 rounded"
-                                                    >
-                                                      {placementName}
-                                                    </span>
-                                                  ))}
+                                                  {pubData.placements.map((placementName, idx) => {
+                                                    const isMissing = spec.missingPlacements?.some(
+                                                      mp => mp.publicationId === pubId && mp.placementName === placementName
+                                                    );
+                                                    return (
+                                                      <span 
+                                                        key={idx}
+                                                        className={`text-xs px-2 py-1 rounded ${isMissing ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-muted'}`}
+                                                        title={isMissing ? 'Missing creative assignment' : undefined}
+                                                      >
+                                                        {isMissing && <AlertCircle className="inline h-3 w-3 mr-1 -mt-0.5" />}
+                                                        {placementName}
+                                                      </span>
+                                                    );
+                                                  })}
                                                 </div>
                                               </TableCell>
                                               <TableCell className="text-right">
