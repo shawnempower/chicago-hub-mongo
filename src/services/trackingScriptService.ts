@@ -547,8 +547,6 @@ export async function generateScriptsForAsset(
 
     console.log(`[TrackingScripts] Generating scripts for asset "${fileName}" across ${orders.length} orders`);
 
-    const specGroupId = asset.associations?.specGroupId || asset.metadata?.specGroupId || null;
-
     // Validate and get click URL - warn if missing
     const clickUrl = asset.digitalAdProperties?.clickUrl;
     if (!clickUrl) {

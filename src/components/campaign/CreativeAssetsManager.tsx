@@ -2332,6 +2332,7 @@ export function CreativeAssetsManager({
         ...existingPlacements,
         ...spec.missingPlacements.map(mp => ({
           placementId: mp.placementId,
+          placementName: mp.placementName,
           publicationId: mp.publicationId,
           publicationName: mp.publicationName,
         })),
