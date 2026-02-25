@@ -92,6 +92,46 @@ function convertToCloudFrontUrl(s3Url: string): string {
 // Digital channels that need tracking scripts
 const DIGITAL_CHANNELS = ['website', 'newsletter', 'streaming'];
 
+/**
+ * Resolve ad dimensions for a tracking script from the placement spec rather than the
+ * creative file. The placement's expected dimensions take priority because the ad slot
+ * on the publisher's site is a fixed size -- the creative should render at that size
+ * regardless of the uploaded file's native pixel dimensions.
+ *
+ * Priority:
+ *  1. placementName parenthetical, e.g. "5 Standard Banners (300x250)"
+ *  2. specGroupId, e.g. "website::dim:300x250"
+ *  3. Creative file metadata / filename (existing fallback)
+ */
+function resolveAdDimensions(
+  placementName: string | null,
+  specGroupId: string | null,
+  creative: { specifications?: any; metadata?: any; originalFilename?: string }
+): { width: number; height: number } {
+  // 1. From placement name -- most specific for _dim expanded placements
+  if (placementName) {
+    const m = placementName.match(/\((\d+)\s*x\s*(\d+)\)/i);
+    if (m) return { width: parseInt(m[1]), height: parseInt(m[2]) };
+  }
+
+  // 2. From spec group ID
+  if (specGroupId) {
+    const m = specGroupId.match(/dim:(\d+)\s*x\s*(\d+)/i);
+    if (m) return { width: parseInt(m[1]), height: parseInt(m[2]) };
+  }
+
+  // 3. Fall back to creative file dimensions
+  const w = creative.specifications?.width || creative.metadata?.width;
+  const h = creative.specifications?.height || creative.metadata?.height;
+  if (w && h) return { width: w, height: h };
+
+  const fileName = creative.originalFilename || creative.metadata?.originalFileName || '';
+  const dimMatch = fileName.match(/(\d+)x(\d+)/i);
+  if (dimMatch) return { width: parseInt(dimMatch[1]), height: parseInt(dimMatch[2]) };
+
+  return { width: 300, height: 250 };
+}
+
 export interface GenerateScriptsResult {
   success: boolean;
   scriptsGenerated: number;
@@ -220,25 +260,8 @@ export async function generateScriptsForOrder(
 
     for (const creative of digitalCreatives) {
       const fileName = creative.originalFilename || creative.metadata?.originalFileName || 'Creative';
-      
-      // Try to get dimensions from specifications, metadata, or parse from filename
-      let width = creative.specifications?.width || creative.metadata?.width;
-      let height = creative.specifications?.height || creative.metadata?.height;
-      
-      // Parse dimensions from filename if not available (e.g., "300x250_MediumRectangle.png")
-      if (!width || !height) {
-        const dimMatch = fileName.match(/(\d+)x(\d+)/i);
-        if (dimMatch) {
-          width = parseInt(dimMatch[1]);
-          height = parseInt(dimMatch[2]);
-        } else {
-          width = 300;
-          height = 250;
-        }
-      }
-      
-      const sizeStr = `${width}x${height}`;
       const creativeId = creative.assetId || creative._id?.toString() || '';
+      const specGroupId = creative.associations?.specGroupId || creative.metadata?.specGroupId || null;
       
       // Validate and get click URL - warn if missing
       const clickUrl = creative.digitalAdProperties?.clickUrl;
@@ -266,6 +289,10 @@ export async function generateScriptsForOrder(
       for (const placement of relevantPlacements) {
         const itemPath = placement.placementId || null;
         const placementNameFromAsset = placement.placementName || null;
+
+        // Resolve dimensions from placement spec, not the creative file
+        const { width, height } = resolveAdDimensions(placementNameFromAsset, specGroupId, creative);
+        const sizeStr = `${width}x${height}`;
         
         // Skip if a script already exists for this creative+placement combo
         const existingQuery: any = {
@@ -520,22 +547,7 @@ export async function generateScriptsForAsset(
 
     console.log(`[TrackingScripts] Generating scripts for asset "${fileName}" across ${orders.length} orders`);
 
-    // Parse dimensions from asset
-    let width = asset.specifications?.width || asset.metadata?.width;
-    let height = asset.specifications?.height || asset.metadata?.height;
-    
-    // Parse dimensions from filename if not available (e.g., "300x250_MediumRectangle.png")
-    if (!width || !height) {
-      const dimMatch = fileName.match(/(\d+)x(\d+)/i);
-      if (dimMatch) {
-        width = parseInt(dimMatch[1]);
-        height = parseInt(dimMatch[2]);
-      } else {
-        // Default dimensions for display ads
-        width = 300;
-        height = 250;
-      }
-    }
+    const specGroupId = asset.associations?.specGroupId || asset.metadata?.specGroupId || null;
 
     // Validate and get click URL - warn if missing
     const clickUrl = asset.digitalAdProperties?.clickUrl;
@@ -550,7 +562,6 @@ export async function generateScriptsForAsset(
     const body = asset.digitalAdProperties?.body;
     const ctaText = asset.digitalAdProperties?.ctaText;
     const creativeId = asset.assetId || asset._id?.toString() || '';
-    const sizeStr = `${width}x${height}`;
 
     // Generate scripts - one per placement assignment on the asset
     const scriptsToInsert: any[] = [];
@@ -587,6 +598,10 @@ export async function generateScriptsForAsset(
         const itemPath = placement.placementId || null;
         const placementNameFromAsset = placement.placementName || null;
 
+        // Resolve dimensions from placement spec, not the creative file
+        const { width, height } = resolveAdDimensions(placementNameFromAsset, specGroupId, asset);
+        const sizeStr = `${width}x${height}`;
+
         // Check if a script already exists for this asset + order + placement combination
         const existingQuery: any = {
           campaignId,
@@ -610,77 +625,77 @@ export async function generateScriptsForAsset(
         // Determine channel: First from placement assignment, then asset associations, then match by dimensions
         let channel = placement.channel?.toLowerCase() || assetChannel;
       
-      // If no channel on asset, try to match to order's assetReferences by dimensions
-      if (!channel && order.assetReferences) {
-        const matchedRef = order.assetReferences.find((ref: any) => {
-          const refDims = Array.isArray(ref.dimensions) ? ref.dimensions : [ref.dimensions];
-          return refDims.some((d: string) => d === sizeStr);
-        });
-        if (matchedRef) {
-          channel = (matchedRef.channel || '').toLowerCase();
-          console.log(`[TrackingScript] Matched ${sizeStr} to placement "${matchedRef.placementName}" with channel "${channel}" for pub ${publicationId}`);
+        // If no channel on asset, try to match to order's assetReferences by dimensions
+        if (!channel && order.assetReferences) {
+          const matchedRef = order.assetReferences.find((ref: any) => {
+            const refDims = Array.isArray(ref.dimensions) ? ref.dimensions : [ref.dimensions];
+            return refDims.some((d: string) => d === sizeStr);
+          });
+          if (matchedRef) {
+            channel = (matchedRef.channel || '').toLowerCase();
+            console.log(`[TrackingScript] Matched ${sizeStr} to placement "${matchedRef.placementName}" with channel "${channel}" for pub ${publicationId}`);
+          }
         }
-      }
       
-      // Default to website if still no channel
-      if (!channel) {
-        channel = 'website';
-      }
+        // Default to website if still no channel
+        if (!channel) {
+          channel = 'website';
+        }
       
-      // Determine tracking channel type based on resolved channel
-      let trackingChannel: TrackingChannel = 'website';
-      if (channel.includes('newsletter')) {
-        trackingChannel = headline || body ? 'newsletter_text' : 'newsletter_image';
-      } else if (channel.includes('streaming')) {
-        trackingChannel = 'streaming';
-      }
+        // Determine tracking channel type based on resolved channel
+        let trackingChannel: TrackingChannel = 'website';
+        if (channel.includes('newsletter')) {
+          trackingChannel = headline || body ? 'newsletter_text' : 'newsletter_image';
+        } else if (channel.includes('streaming')) {
+          trackingChannel = 'streaming';
+        }
 
-      const channelCode = CHANNEL_TYPE_CODES[trackingChannel] || 'd';
-      const channelUrlCode = CHANNEL_URL_CODES[trackingChannel] || 'website';
+        const channelCode = CHANNEL_TYPE_CODES[trackingChannel] || 'd';
+        const channelUrlCode = CHANNEL_URL_CODES[trackingChannel] || 'website';
 
-      // Determine if this is a newsletter channel (needs email ID tracking)
-      const isNewsletter = trackingChannel.includes('newsletter');
+        // Determine if this is a newsletter channel (needs email ID tracking)
+        const isNewsletter = trackingChannel.includes('newsletter');
 
-      // Build tracking URLs with full attribution parameters
-      const urls = {
-        impressionPixel: buildTrackingUrl(TRACKING_CDN_BASE_URL, TRACKING_PIXEL_PATH, 'display', {
-          orderId,
-          campaignId,
-          publicationId,  // Using only publicationId (removed redundant publicationCode)
-          channel: channelUrlCode,
-          creativeId,
-          size: sizeStr,
-          itemPath: 'tracking-display',
-          emailId: isNewsletter ? 'EMAIL_ID' : undefined  // Placeholder for ESP merge tag
-        }),
-        clickTracker: buildTrackingUrl(TRACKING_CDN_BASE_URL, TRACKING_PIXEL_PATH, 'click', {
-          orderId,
-          campaignId,
-          publicationId,  // Using only publicationId
-          channel: channelUrlCode,
-          creativeId,
-          redirectUrl: finalClickUrl,  // CRITICAL: Include landing page URL for redirect
-          emailId: isNewsletter ? 'EMAIL_ID' : undefined
-        }),
-        creativeUrl: imageUrl || `${TRACKING_CDN_BASE_URL}/a/${creativeId}.jpg`
-      };
+        // Build tracking URLs with full attribution parameters
+        const urls = {
+          impressionPixel: buildTrackingUrl(TRACKING_CDN_BASE_URL, TRACKING_PIXEL_PATH, 'display', {
+            orderId,
+            campaignId,
+            publicationId,
+            channel: channelUrlCode,
+            creativeId,
+            size: sizeStr,
+            itemPath: itemPath || 'tracking-display',
+            emailId: isNewsletter ? 'EMAIL_ID' : undefined
+          }),
+          clickTracker: buildTrackingUrl(TRACKING_CDN_BASE_URL, TRACKING_PIXEL_PATH, 'click', {
+            orderId,
+            campaignId,
+            publicationId,
+            channel: channelUrlCode,
+            creativeId,
+            redirectUrl: finalClickUrl,
+            emailId: isNewsletter ? 'EMAIL_ID' : undefined
+          }),
+          creativeUrl: imageUrl || `${TRACKING_CDN_BASE_URL}/a/${creativeId}.jpg`
+        };
 
-      // Build creative info for tag generation
-      const creativeInfo = {
-        name: fileName || `${advertiserName} - ${sizeStr}`,
-        clickUrl: finalClickUrl,
-        imageUrl: urls.creativeUrl,
-        width,
-        height,
-        altText,
-        headline,
-        body,
-        ctaText
-      };
+        // Build creative info for tag generation
+        const creativeInfo = {
+          name: fileName || `${advertiserName} - ${sizeStr}`,
+          clickUrl: finalClickUrl,
+          imageUrl: urls.creativeUrl,
+          width,
+          height,
+          altText,
+          headline,
+          body,
+          ctaText
+        };
 
-      // Generate HTML tags based on channel
-      let fullTag = '';
-      let simplifiedTag: string | undefined;
+        // Generate HTML tags based on channel
+        let fullTag = '';
+        let simplifiedTag: string | undefined;
 
         if (trackingChannel === 'newsletter_text') {
           fullTag = generateNewsletterTextTag(creativeInfo, urls, advertiserName, campaignName);

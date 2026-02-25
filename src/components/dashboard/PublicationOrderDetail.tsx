@@ -650,53 +650,6 @@ export function PublicationOrderDetail() {
     });
   };
 
-  const [refreshingScripts, setRefreshingScripts] = useState(false);
-  
-  const handleRefreshScripts = async () => {
-    if (!order?.campaignId || !order?.publicationId) return;
-    
-    try {
-      setRefreshingScripts(true);
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(
-        `${API_BASE_URL}/tracking-scripts/refresh/${order.campaignId}/${order.publicationId}`,
-        {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-        }
-      );
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to generate scripts');
-      }
-      
-      if (result.scriptsGenerated === 0) {
-        toast({ 
-          title: 'No Scripts Generated', 
-          description: result.error || 'No digital creative assets found. Make sure image assets are uploaded for digital placements.',
-          variant: 'destructive'
-        });
-      } else {
-        toast({ 
-          title: 'Scripts Generated!', 
-          description: `Created ${result.scriptsGenerated} tracking scripts from uploaded creatives` 
-        });
-      }
-      
-      // Re-fetch tracking scripts
-      fetchTrackingScripts();
-    } catch (error) {
-      toast({ 
-        title: 'Generation Failed', 
-        description: error instanceof Error ? error.message : 'Could not generate scripts', 
-        variant: 'destructive' 
-      });
-    } finally {
-      setRefreshingScripts(false);
-    }
-  };
 
   // isDigitalChannel is now imported from config/inventoryChannels
 
@@ -1606,15 +1559,6 @@ export function PublicationOrderDetail() {
                             <p className="text-sm text-muted-foreground">Tracking scripts will appear automatically when the hub uploads assets for digital placements</p>
                           </div>
                         </div>
-                        <Button 
-                          onClick={handleRefreshScripts} 
-                          variant="outline"
-                          disabled={refreshingScripts}
-                          size="sm"
-                        >
-                          <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
-                          {refreshingScripts ? 'Checking...' : 'Check for Scripts'}
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1632,15 +1576,6 @@ export function PublicationOrderDetail() {
                             <p className="text-sm text-muted-foreground">Accept placements below to access tracking scripts and implementation tags</p>
                           </div>
                         </div>
-                        <Button 
-                          onClick={handleRefreshScripts} 
-                          variant="outline"
-                          disabled={refreshingScripts}
-                          size="sm"
-                        >
-                          <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
-                          {refreshingScripts ? 'Checking...' : 'Check for Scripts'}
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1662,15 +1597,6 @@ export function PublicationOrderDetail() {
                           <Button onClick={handleDownloadAllScripts} variant="outline" size="sm">
                             <Download className="h-4 w-4 mr-1" />
                             Download All Creative
-                          </Button>
-                          <Button 
-                            onClick={handleRefreshScripts} 
-                            variant="outline" 
-                            size="sm"
-                            disabled={refreshingScripts}
-                          >
-                            <RefreshCw className={cn("h-4 w-4 mr-1", refreshingScripts && "animate-spin")} />
-                            {refreshingScripts ? 'Refreshing...' : 'Refresh'}
                           </Button>
                           {isAdmin && (
                             <DropdownMenu>
