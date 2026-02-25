@@ -40,6 +40,7 @@ interface InventoryItemWithSelection extends HubPackageInventoryItem {
   selected?: boolean;
   publicationId?: number;
   publicationName?: string;
+  existingCount?: number;
 }
 
 interface AddPlacementModalProps {
@@ -127,11 +128,10 @@ export function AddPlacementModal({
     }
   };
 
-  // Get existing placement paths for a publication
-  const getExistingPlacementPaths = (publicationId: number): Set<string> => {
+  const getExistingPlacementPaths = (publicationId: number): string[] => {
     const pub = (existingPublications || []).find(p => p.publicationId === publicationId);
-    if (!pub?.inventoryItems) return new Set();
-    return new Set(pub.inventoryItems.map(item => item.itemPath));
+    if (!pub?.inventoryItems) return [];
+    return pub.inventoryItems.map((item: any) => item.itemPath as string);
   };
 
   // Load inventory for existing publication using packageBuilderService
@@ -169,14 +169,14 @@ export function AddPlacementModal({
         hubId
       );
 
-      // Convert to InventoryItemWithSelection and filter out items already in the order
       const existingPaths = getExistingPlacementPaths(pubId);
-      const availableItems: InventoryItemWithSelection[] = extractedItems
-        .filter(item => !existingPaths.has(item.itemPath))
-        .map(item => ({
-          ...item,
-          selected: false,
-        }));
+      const availableItems: InventoryItemWithSelection[] = extractedItems.map(item => ({
+        ...item,
+        selected: false,
+        existingCount: existingPaths.filter(
+          p => p === item.itemPath || p.startsWith(`${item.itemPath}::dup`)
+        ).length,
+      }));
       
       setExistingPubInventory(availableItems);
     } catch (error) {
@@ -530,6 +530,11 @@ export function AddPlacementModal({
                                 onFrequencyChange={handleExistingFrequencyChange}
                                 compact={true}
                               />
+                              {(item.existingCount ?? 0) > 0 && (
+                                <span className="inline-block mt-1 text-xs font-medium text-orange-700 bg-orange-100 border border-orange-300 px-2 py-0.5 rounded-full">
+                                  In order{(item.existingCount ?? 0) > 1 ? ` (${item.existingCount}x)` : ''}
+                                </span>
+                              )}
                             </div>
                           </div>
                         ))}

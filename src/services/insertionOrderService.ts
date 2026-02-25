@@ -1425,7 +1425,7 @@ export class InsertionOrderService {
    * 
    * Business Rules:
    * - Cannot add to an order where ALL placements are delivered (order is complete)
-   * - Cannot add duplicate placements (same itemPath)
+   * - Duplicate placements (same itemPath) are allowed and auto-suffixed with ::dup{N}
    * - New placements start with status 'pending'
    * - Automatically recalculates order totals
    */
@@ -1534,13 +1534,25 @@ export class InsertionOrderService {
         };
       }
 
-      // Check for duplicate placement
+      // Handle duplicate placements by auto-suffixing the itemPath
       const existingPlacements = Object.keys(placementStatuses);
-      if (existingPlacements.includes(placement.itemPath)) {
-        return {
-          success: false,
-          error: 'Placement already exists in this order'
-        };
+      let effectiveItemPath = placement.itemPath;
+      let effectiveItemName = placement.itemName;
+      const relatedKeys = existingPlacements.filter(
+        k => k === placement.itemPath || k.startsWith(`${placement.itemPath}::dup`)
+      );
+      if (relatedKeys.length > 0) {
+        let maxNum = 1;
+        for (const k of relatedKeys) {
+          const match = k.match(/::dup(\d+)$/);
+          if (match) {
+            maxNum = Math.max(maxNum, parseInt(match[1]));
+          }
+        }
+        const nextNum = maxNum + 1;
+        effectiveItemPath = `${placement.itemPath}::dup${nextNum}`;
+        effectiveItemName = `${placement.itemName} (Buy #${nextNum})`;
+        console.log(`[AddPlacement] Duplicate placement detected. Using suffixed path: ${effectiveItemPath}`);
       }
 
       // Initialize or get selectedInventory
@@ -1592,6 +1604,8 @@ export class InsertionOrderService {
       
       pub.inventoryItems.push({
         ...placement,
+        itemPath: effectiveItemPath,
+        itemName: effectiveItemName,
         isExcluded: false
       });
 
@@ -1601,7 +1615,7 @@ export class InsertionOrderService {
       // Add to placement statuses (new placements start as pending)
       const updatedPlacementStatuses = {
         ...placementStatuses,
-        [placement.itemPath]: 'pending' as const
+        [effectiveItemPath]: 'pending' as const
       };
 
       // Update order total
@@ -1617,8 +1631,8 @@ export class InsertionOrderService {
       
       assetReferences.push({
         specGroupId,
-        placementId: placement.itemPath,
-        placementName: placement.itemName,
+        placementId: effectiveItemPath,
+        placementName: effectiveItemName,
         channel: placement.channel,
         dimensions: Array.isArray(placement.format?.dimensions) 
           ? placement.format.dimensions[0] 
@@ -1653,7 +1667,7 @@ export class InsertionOrderService {
       const newGoal = computeItemDeliveryGoal(placement, durationMonths);
       const updatedDeliveryGoals = {
         ...existingGoals,
-        [placement.itemPath]: newGoal
+        [effectiveItemPath]: newGoal
       };
 
       // Update the order
@@ -1674,7 +1688,7 @@ export class InsertionOrderService {
               status: order.status,
               timestamp: new Date(),
               changedBy: 'hub_admin',
-              notes: `Placement "${placement.itemName}" (${placement.itemPath}) was added by hub admin`
+              notes: `Placement "${effectiveItemName}" (${effectiveItemPath}) was added by hub admin`
             }
           }
         },
@@ -1689,7 +1703,7 @@ export class InsertionOrderService {
       // The campaign GET endpoint rebuilds selectedInventory from active orders,
       // so orders are the single source of truth for inventory data.
 
-      console.log(`[AddPlacement] Successfully added placement "${placement.itemName}" to order. New total: ${newTotal}`);
+      console.log(`[AddPlacement] Successfully added placement "${effectiveItemName}" to order. New total: ${newTotal}`);
 
       return { success: true, updatedOrder: result };
     } catch (error) {
