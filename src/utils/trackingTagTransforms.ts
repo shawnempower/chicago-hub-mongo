@@ -103,7 +103,7 @@ export function transformForAdServer(
 <div id="ad-container-${Date.now()}" style="width:${width}px;height:${height}px;">
   <noscript>
     <!-- Fallback for no-JS -->
-    <a href="${noscriptClickUrl}"><img src="${imgUrl}" width="${width}" height="${height}" alt="${altText}" /></a>${noscriptPixelUrl ? `\n    <img src="${noscriptPixelUrl}" width="1" height="1" style="display:none;" />` : ''}
+    <a href="${noscriptClickUrl}" target="_blank" rel="noopener noreferrer"><img src="${imgUrl}" width="${width}" height="${height}" alt="${altText}" /></a>${noscriptPixelUrl ? `\n    <img src="${noscriptPixelUrl}" width="1" height="1" style="display:none;" />` : ''}
   </noscript>
 </div>
 <script>
@@ -119,7 +119,7 @@ export function transformForAdServer(
     if (fired) return;
     fired = true;
     var ts = Date.now();
-    container.innerHTML = '<a href="${clickUrl_extracted}" target="_blank">' +
+    container.innerHTML = '<a href="${clickUrl_extracted}" target="_blank" rel="noopener noreferrer">' +
       '<img src="${imgUrl}" width="${width}" height="${height}" alt="${altText}" style="border:0;" />' +
       '</a>' +
       '<img src="${pixelUrl}" width="1" height="1" style="display:none;" />';

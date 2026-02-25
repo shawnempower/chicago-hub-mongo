@@ -176,7 +176,7 @@ export function generateDisplayAdTag(
   size: string
 ): string {
   return `<!-- ${advertiserName} | ${campaignName} | ${size} -->
-<a href="${urls.clickTracker}">
+<a href="${urls.clickTracker}" target="_blank" rel="noopener noreferrer">
   <img src="${urls.creativeUrl}" 
        width="${creative.width}" height="${creative.height}" border="0" alt="${creative.altText || ''}" />
 </a>
@@ -221,7 +221,7 @@ export function generateNewsletterImageTag(
         </tr>
         <tr>
           <td>
-            <a href="${urls.clickTracker}" target="_blank" style="text-decoration:none;">
+            <a href="${urls.clickTracker}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">
               <img src="${urls.creativeUrl}" 
                    width="${creative.width}" 
                    height="${creative.height}"
@@ -263,7 +263,7 @@ export function generateNewsletterImageSimplifiedTag(
 -->
 
 <!-- Or copy this minimal HTML if your ESP supports it: -->
-<a href="${urls.clickTracker}"><img src="${urls.creativeUrl}" alt="${advertiserName}" style="max-width:100%;border:0;" border="0" /></a>
+<a href="${urls.clickTracker}" target="_blank" rel="noopener noreferrer"><img src="${urls.creativeUrl}" alt="${advertiserName}" style="max-width:100%;border:0;" border="0" /></a>
 <img src="${urls.impressionPixel}" width="1" height="1" alt="" style="display:none;" />`;
 }
 
@@ -298,7 +298,7 @@ export function generateNewsletterTextTag(
         </tr>
         <tr>
           <td style="font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:bold;color:#333333;line-height:1.3;padding-bottom:8px;">
-            <a href="${urls.clickTracker}" target="_blank" style="color:#333333;text-decoration:none;">${headline}</a>
+            <a href="${urls.clickTracker}" target="_blank" rel="noopener noreferrer" style="color:#333333;text-decoration:none;">${headline}</a>
           </td>
         </tr>
         ${body ? `<tr>
@@ -308,7 +308,7 @@ export function generateNewsletterTextTag(
         </tr>` : ''}
         <tr>
           <td>
-            <a href="${urls.clickTracker}" target="_blank" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:${DEFAULT_BRAND_HEX};text-decoration:none;">${ctaText} &rarr;</a>
+            <a href="${urls.clickTracker}" target="_blank" rel="noopener noreferrer" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:${DEFAULT_BRAND_HEX};text-decoration:none;">${ctaText} &rarr;</a>
           </td>
         </tr>
       </table>
