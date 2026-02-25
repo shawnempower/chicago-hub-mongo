@@ -100,7 +100,8 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     const publicationBreakdown = await perfCollection.aggregate([
       { $match: validEntryMatch },
       { $group: {
-        _id: { publicationId: '$publicationId', publicationName: '$publicationName' },
+        _id: '$publicationId',
+        publicationName: { $first: '$publicationName' },
         entries: { $sum: 1 },
         impressions: { $sum: '$metrics.impressions' },
         clicks: { $sum: '$metrics.clicks' },
@@ -117,7 +118,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
     
     // Look up full publication documents for all publications in the breakdown
     const publicationsCollection = db.collection(COLLECTIONS.PUBLICATIONS);
-    const allPublicationIds = publicationBreakdown.map(pub => pub._id.publicationId).filter(Boolean);
+    const allPublicationIds = publicationBreakdown.map(pub => pub._id).filter(Boolean);
     
     let publicationNamesMap: Record<number, string> = {};
     let publicationContextMap: Record<number, any> = {};
@@ -436,9 +437,8 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
           }
         }
         
-        const channelPercents = Object.values(byChannel).map(ch => ch.percent);
-        const percentComplete = channelPercents.length > 0
-          ? Math.round(channelPercents.reduce((s, p) => s + p, 0) / channelPercents.length)
+        const percentComplete = totalGoalValue > 0
+          ? Math.round((totalDelivered / totalGoalValue) * 100)
           : 0;
         
         publicationOrderMap[pubId] = {
@@ -740,14 +740,14 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
         units: ch.units,
       })),
       byPublication: publicationBreakdown.map(pub => {
-        const pubId = pub._id.publicationId;
+        const pubId = pub._id;
         const context = publicationContextMap[pubId];
         const order = publicationOrderMap[pubId];
         
         return {
           // Core performance metrics
           publicationId: pubId,
-          publicationName: pub._id.publicationName || publicationNamesMap[pubId] || `Publication ${pubId}`,
+          publicationName: pub.publicationName || publicationNamesMap[pubId] || `Publication ${pubId}`,
           entries: pub.entries,
           impressions: pub.impressions,
           clicks: pub.clicks,
