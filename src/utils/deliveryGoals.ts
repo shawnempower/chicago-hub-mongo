@@ -14,6 +14,10 @@ export interface DeliveryGoal {
 
 const DIGITAL_CHANNELS = ['website', 'display', 'streaming'];
 const CPM_PRICING_MODELS = ['cpm', 'cpv', 'cpc'];
+const FREQUENCY_BASED_MODELS = [
+  'per_day', 'per_week', 'per_spot', 'per_send',
+  'per_post', 'per_episode', 'per_ad', 'per_story',
+];
 
 /**
  * Get the monthly impression count from an inventory item.
@@ -59,6 +63,11 @@ export function computeItemDeliveryGoal(
       const sharePercent = frequency;
       goalValue = Math.round(monthlyBase * (sharePercent / 100) * durationMonths);
       description = `${monthlyBase.toLocaleString()}/mo × ${sharePercent}% SOV × ${durationMonths} mo`;
+    } else if (FREQUENCY_BASED_MODELS.includes(pricingModel)) {
+      const maxFreq = getMaxFrequencyForModel(pricingModel, item);
+      const ratio = frequency / maxFreq;
+      goalValue = Math.round(monthlyBase * ratio * durationMonths);
+      description = `${monthlyBase.toLocaleString()}/mo × ${frequency}/${maxFreq} ${pricingModel.replace('per_', '')}s × ${durationMonths} mo`;
     } else {
       goalValue = monthlyBase * durationMonths;
       description = `${monthlyBase.toLocaleString()}/mo × ${durationMonths} mo`;
@@ -97,6 +106,24 @@ export function computeDeliveryGoals(
   }
 
   return goals;
+}
+
+/**
+ * Max frequency per month for a given pricing model.
+ * Used to compute the proportional share of monthly impressions.
+ */
+function getMaxFrequencyForModel(pricingModel: string, item: any): number {
+  switch (pricingModel) {
+    case 'per_day':   return 30;
+    case 'per_week':  return 4;
+    case 'per_spot':  return item.maxFrequency || 30;
+    case 'per_send':  return item.maxFrequency || 4;
+    case 'per_post':  return item.maxFrequency || 4;
+    case 'per_episode': return item.maxFrequency || 4;
+    case 'per_ad':    return item.maxFrequency || 4;
+    case 'per_story': return item.maxFrequency || 4;
+    default:          return item.maxFrequency || 1;
+  }
 }
 
 function getUnitLabel(channel: string): string {
