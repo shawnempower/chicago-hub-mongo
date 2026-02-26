@@ -644,17 +644,32 @@ router.put('/:id', async (req: any, res: Response) => {
     const { id } = req.params;
     const updates = req.body;
 
-    // Check if user is admin or the uploader
+    // Check if user is admin, uploader, or hub user with campaign access
     const asset = await creativesService.getById(id);
     if (!asset) {
       return res.status(404).json({ error: 'Asset not found' });
     }
 
     const userProfile = await userProfilesService.getByUserId(userId);
-    const isAdmin = userProfile?.isAdmin;
+    const isAdmin = userProfile?.isAdmin || req.user.isAdmin === true || req.user.role === 'admin';
     const isUploader = asset.uploadInfo.uploadedBy === userId;
 
-    if (!isAdmin && !isUploader) {
+    let hasHubAccess = false;
+    if (!isAdmin && !isUploader && asset.associations?.campaignId) {
+      const { getDatabase } = await import('../../src/integrations/mongodb/client');
+      const { COLLECTIONS } = await import('../../src/integrations/mongodb/schemas');
+      const db = getDatabase();
+      const campaign = await db.collection(COLLECTIONS.CAMPAIGNS).findOne({
+        campaignId: asset.associations.campaignId
+      });
+      if (campaign) {
+        const assignedHubIds = req.user.permissions?.assignedHubIds || [];
+        const campaignHubId = campaign.hubId || campaign.hubInfo?.hubId;
+        hasHubAccess = !!(campaignHubId && assignedHubIds.includes(campaignHubId));
+      }
+    }
+
+    if (!isAdmin && !isUploader && !hasHubAccess) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
