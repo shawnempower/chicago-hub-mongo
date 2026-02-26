@@ -312,27 +312,48 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
         }}
       ]).toArray();
       
-      // Newsletter sends per publication: get distinct dates per (pubId, itemPath),
-      // then cluster into send bursts (gap > 2 days = new send)
+      // Newsletter sends per publication: get impressions per (pubId, itemPath, date),
+      // then cluster into send bursts (gap > 2 days = new send), filtering noise
       const pubNlDatesAgg = await perfCollection.aggregate([
         { $match: { ...pubDeliveryFilter, channel: { $regex: /^newsletter$/i } } },
         { $group: {
-          _id: { publicationId: '$publicationId', itemPath: '$itemPath' },
-          distinctDates: { $addToSet: {
-            $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
-          }}
+          _id: {
+            publicationId: '$publicationId',
+            itemPath: '$itemPath',
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$dateStart' } }
+          },
+          impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } }
+        }},
+        { $group: {
+          _id: { publicationId: '$_id.publicationId', itemPath: '$_id.itemPath' },
+          dateImpressions: { $push: { date: '$_id.date', impressions: '$impressions' } }
         }}
       ]).toArray();
 
+      // Build subscriber lookup from campaign inventory
+      const pubSubscriberMap = new Map<number, Record<string, number>>();
+      if (campaign.selectedInventory?.publications) {
+        for (const pub of campaign.selectedInventory.publications) {
+          const pid = pub.publicationId;
+          const subs: Record<string, number> = {};
+          for (const item of (pub.inventoryItems || [])) {
+            if ((item.channel || '').toLowerCase() === 'newsletter' && (item.itemPath || item.sourcePath)) {
+              subs[item.itemPath || item.sourcePath] = item.audienceMetrics?.subscribers || 0;
+            }
+          }
+          if (Object.keys(subs).length > 0) pubSubscriberMap.set(pid, subs);
+        }
+      }
+
       const pubNewsletterSendMap = new Map<number, number>();
-      const byPub = new Map<number, Array<{ _id: string; distinctDates: string[] }>>();
+      const byPub = new Map<number, Array<{ _id: string; dateImpressions: Array<{ date: string; impressions: number }> }>>();
       for (const row of pubNlDatesAgg) {
         const pid = row._id.publicationId;
         if (!byPub.has(pid)) byPub.set(pid, []);
-        byPub.get(pid)!.push({ _id: row._id.itemPath, distinctDates: row.distinctDates });
+        byPub.get(pid)!.push({ _id: row._id.itemPath, dateImpressions: row.dateImpressions });
       }
       for (const [pid, items] of byPub) {
-        pubNewsletterSendMap.set(pid, countNewsletterSends(items));
+        pubNewsletterSendMap.set(pid, countNewsletterSends(items, 2, pubSubscriberMap.get(pid)));
       }
       
       // Build lookup: pubId -> channel -> { impressions, reportCount }
@@ -384,7 +405,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
         let totalDelivered = 0;
         const byChannel: Record<string, { goal: number; delivered: number; percent: number }> = {};
         const pubPlacementStatuses = order.placementStatuses || {};
-        const validPubPlacementStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
+        const validPubPlacementStatuses = ['pending', 'accepted', 'in_production', 'delivered', 'suspended'];
         
         for (const item of inventoryItems) {
           if (item.isExcluded) continue;
@@ -499,7 +520,7 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       }).toArray();
       
       if (activeOrders.length > 0) {
-        const validStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
+        const validStatuses = ['pending', 'accepted', 'in_production', 'delivered', 'suspended'];
         const filteredPublications: any[] = [];
         
         for (const order of activeOrders) {
@@ -623,18 +644,35 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       }}
     ]).toArray();
     
-    // Newsletter sends: get distinct dates per itemPath, then cluster into
-    // send bursts (gap > 2 days = new send)
+    // Newsletter sends: get impressions per (itemPath, date), then cluster into
+    // send bursts (gap > 2 days = new send), filtering noise via min impressions
     const campaignNlDatesAgg = await perfCollection.aggregate([
       { $match: { ...campaignDeliveryFilter, channel: { $regex: /^newsletter$/i } } },
       { $group: {
-        _id: '$itemPath',
-        distinctDates: { $addToSet: {
-          $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
-        }}
+        _id: {
+          itemPath: '$itemPath',
+          date: { $dateToString: { format: '%Y-%m-%d', date: '$dateStart' } }
+        },
+        impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } }
+      }},
+      { $group: {
+        _id: '$_id.itemPath',
+        dateImpressions: { $push: { date: '$_id.date', impressions: '$impressions' } }
       }}
     ]).toArray();
-    const campaignNewsletterSendCount = countNewsletterSends(campaignNlDatesAgg);
+
+    const campaignSubscribersByItemPath: Record<string, number> = {};
+    if (campaign.selectedInventory?.publications) {
+      for (const pub of campaign.selectedInventory.publications) {
+        for (const item of (pub.inventoryItems || [])) {
+          if ((item.channel || '').toLowerCase() === 'newsletter' && (item.itemPath || item.sourcePath)) {
+            campaignSubscribersByItemPath[item.itemPath || item.sourcePath] =
+              item.audienceMetrics?.subscribers || 0;
+          }
+        }
+      }
+    }
+    const campaignNewsletterSendCount = countNewsletterSends(campaignNlDatesAgg, 2, campaignSubscribersByItemPath);
     
     // Fill in delivered amounts from relaxed delivery aggregation
     for (const ch of campaignChannelDelivery) {
@@ -1057,22 +1095,37 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
       channel === 'radio' ? 'Spots' :
       channel === 'print' ? 'Insertions' : 'Units';
 
-    // Newsletter sends: get distinct dates per itemPath, then cluster into
-    // send bursts (gap > 2 days = new send)
+    // Newsletter sends: get impressions per (itemPath, date), then cluster into
+    // send bursts (gap > 2 days = new send), filtering noise via min impressions
     const orderNlDatesAgg = await perfCollection.aggregate([
       { $match: { ...deliveryMatch, channel: { $regex: /^newsletter$/i } } },
       { $group: {
-        _id: '$itemPath',
-        distinctDates: { $addToSet: {
-          $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
-        }}
+        _id: {
+          itemPath: '$itemPath',
+          date: { $dateToString: { format: '%Y-%m-%d', date: '$dateStart' } }
+        },
+        impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } }
+      }},
+      { $group: {
+        _id: '$_id.itemPath',
+        dateImpressions: { $push: { date: '$_id.date', impressions: '$impressions' } }
       }}
     ]).toArray();
-    const orderNewsletterSendCount = countNewsletterSends(orderNlDatesAgg);
+
+    const orderSubscribersByItemPath: Record<string, number> = {};
+    if (publication?.inventoryItems) {
+      for (const item of publication.inventoryItems) {
+        if ((item.channel || '').toLowerCase() === 'newsletter' && (item.itemPath || item.sourcePath)) {
+          orderSubscribersByItemPath[item.itemPath || item.sourcePath] =
+            item.audienceMetrics?.subscribers || 0;
+        }
+      }
+    }
+    const orderNewsletterSendCount = countNewsletterSends(orderNlDatesAgg, 2, orderSubscribersByItemPath);
 
     // Build goals from inventory items, skipping rejected/rescinded placements
     const placementStatuses = order.placementStatuses || {};
-    const validPlacementStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
+    const validPlacementStatuses = ['pending', 'accepted', 'in_production', 'delivered', 'suspended'];
 
     if (publication?.inventoryItems) {
       for (const item of publication.inventoryItems) {

@@ -605,18 +605,33 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
       }}
     ]).toArray();
 
-    // Newsletter sends: get distinct dates per itemPath, then cluster into
-    // send bursts (gap > 2 days = new send)
+    // Newsletter sends: get impressions per (itemPath, date), then cluster into
+    // send bursts (gap > 2 days = new send), filtering out noise via min impressions
     const nlDatesAgg = await perfCollection.aggregate([
       { $match: { ...deliveryFilter, channel: { $regex: /^newsletter$/i } } },
       { $group: {
-        _id: '$itemPath',
-        distinctDates: { $addToSet: {
-          $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
-        }}
+        _id: {
+          itemPath: '$itemPath',
+          date: { $dateToString: { format: '%Y-%m-%d', date: '$dateStart' } }
+        },
+        impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } }
+      }},
+      { $group: {
+        _id: '$_id.itemPath',
+        dateImpressions: { $push: { date: '$_id.date', impressions: '$impressions' } }
       }}
     ]).toArray();
-    const newsletterSendCount = countNewsletterSends(nlDatesAgg);
+
+    const subscribersByItemPath: Record<string, number> = {};
+    if (publication?.inventoryItems) {
+      for (const item of publication.inventoryItems) {
+        if ((item.channel || '').toLowerCase() === 'newsletter' && (item.itemPath || item.sourcePath)) {
+          subscribersByItemPath[item.itemPath || item.sourcePath] =
+            item.audienceMetrics?.subscribers || 0;
+        }
+      }
+    }
+    const newsletterSendCount = countNewsletterSends(nlDatesAgg, 2, subscribersByItemPath);
     
     // Compute pixel health from ALL automated entries (including invalid ones)
     const pixelHealthAgg = await perfCollection.aggregate([

@@ -561,28 +561,50 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
       }
     ]).toArray();
 
-    // Newsletter sends: get distinct dates per (orderId, itemPath), then detect
-    // send bursts by clustering nearby dates (gap > 2 days = new send).
+    // Newsletter sends: get impressions per (orderId, itemPath, date), then detect
+    // send bursts by clustering nearby dates (gap > 2 days = new send), filtering noise
     const newsletterDatesAgg = await perfCollection.aggregate([
       { $match: { ...baseEntryFilter, channel: { $regex: /^newsletter$/i } } },
       { $group: {
-        _id: { orderId: '$orderId', itemPath: '$itemPath' },
-        distinctDates: { $addToSet: {
-          $dateToString: { format: '%Y-%m-%d', date: '$dateStart' }
-        }}
+        _id: {
+          orderId: '$orderId',
+          itemPath: '$itemPath',
+          date: { $dateToString: { format: '%Y-%m-%d', date: '$dateStart' } }
+        },
+        impressions: { $sum: { $ifNull: ['$metrics.impressions', 0] } }
+      }},
+      { $group: {
+        _id: { orderId: '$_id.orderId', itemPath: '$_id.itemPath' },
+        dateImpressions: { $push: { date: '$_id.date', impressions: '$impressions' } }
       }}
     ]).toArray();
 
+    // Build subscriber lookup per order from inventory items
+    const subscribersByOrder = new Map<string, Record<string, number>>();
+    for (const order of orders) {
+      const oid = order._id?.toString();
+      if (!oid) continue;
+      const pub = order.selectedInventory?.publications?.[0];
+      if (!pub?.inventoryItems) continue;
+      const subs: Record<string, number> = {};
+      for (const item of pub.inventoryItems) {
+        if ((item.channel || '').toLowerCase() === 'newsletter' && (item.itemPath || item.sourcePath)) {
+          subs[item.itemPath || item.sourcePath] = item.audienceMetrics?.subscribers || 0;
+        }
+      }
+      if (Object.keys(subs).length > 0) subscribersByOrder.set(oid, subs);
+    }
+
     // Group by orderId and count send bursts per itemPath
     const newsletterSendsByOrder = new Map<string, number>();
-    const byOrder = new Map<string, Array<{ _id: string; distinctDates: string[] }>>();
+    const byOrder = new Map<string, Array<{ _id: string; dateImpressions: Array<{ date: string; impressions: number }> }>>();
     for (const row of newsletterDatesAgg) {
       const oid = row._id.orderId;
       if (!byOrder.has(oid)) byOrder.set(oid, []);
-      byOrder.get(oid)!.push({ _id: row._id.itemPath, distinctDates: row.distinctDates });
+      byOrder.get(oid)!.push({ _id: row._id.itemPath, dateImpressions: row.dateImpressions });
     }
     for (const [oid, items] of byOrder) {
-      newsletterSendsByOrder.set(oid, countNewsletterSends(items));
+      newsletterSendsByOrder.set(oid, countNewsletterSends(items, 2, subscribersByOrder.get(oid)));
     }
 
     // Build lookup: orderId -> Map<channel, entryData>
@@ -649,7 +671,7 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
 
       // Build goals from inventory items, skipping rejected/rescinded placements
       const orderPlacementStatuses = order.placementStatuses || {};
-      const validOrderStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
+      const validOrderStatuses = ['pending', 'accepted', 'in_production', 'delivered', 'suspended'];
 
       if (publication?.inventoryItems) {
         for (const item of publication.inventoryItems) {
@@ -1820,7 +1842,7 @@ router.put('/:campaignId/:publicationId/placement-status', async (req: any, res:
       return res.status(400).json({ error: 'Placement ID and status are required' });
     }
 
-    if (!['accepted', 'rejected', 'pending', 'in_production', 'delivered'].includes(status)) {
+    if (!['accepted', 'rejected', 'pending', 'in_production', 'delivered', 'suspended'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
