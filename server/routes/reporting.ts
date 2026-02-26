@@ -1037,15 +1037,9 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
       totalReach: 0, earliestDate: null, latestDate: null,
     };
 
-    // --- Compute fresh deliverySummary from campaign inventory + entries ---
-    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
-    const campaign = await campaignsCollection.findOne(
-      { campaignId: order.campaignId },
-      { projection: { campaignId: 1, selectedInventory: 1 } }
-    );
-    const publication = campaign?.selectedInventory?.publications?.find(
-      (p: any) => p.publicationId === order.publicationId
-    );
+    // Use the order's own selectedInventory as the authoritative source for placements.
+    // The campaign's selectedInventory may be stale when placements are added to orders.
+    const publication = order.selectedInventory?.publications?.[0];
 
     let totalExpectedReports = 0;
     let totalReportsSubmitted = 0;
@@ -1146,9 +1140,8 @@ router.get('/order/:orderId/summary', async (req: any, res: Response) => {
       }
     }
 
-    const channelPercents = Object.values(byChannel).map(ch => ch.deliveryPercent);
-    const deliveryPercent = channelPercents.length > 0
-      ? Math.round(channelPercents.reduce((s, p) => s + p, 0) / channelPercents.length)
+    const deliveryPercent = totalExpectedGoal > 0
+      ? Math.round((totalDelivered / totalExpectedGoal) * 100)
       : 0;
 
     const computedDeliverySummary = {

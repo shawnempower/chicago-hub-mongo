@@ -489,11 +489,10 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
     const perfCollection = db.collection(COLLECTIONS.PERFORMANCE_ENTRIES);
     const proofsCollection = db.collection(COLLECTIONS.PROOF_OF_PERFORMANCE);
 
-    // Get all active orders (confirmed, in_production) for the publication
-    const activeStatuses = ['confirmed', 'in_production'];
     const orders = await ordersCollection.find({
       publicationId: { $in: publicationIds.map(id => parseInt(id)) },
-      status: { $in: activeStatuses }
+      status: { $ne: 'draft' },
+      deletedAt: { $exists: false }
     }).toArray();
 
     if (orders.length === 0) {
@@ -522,17 +521,6 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
         }
       });
     }
-
-    // --- Real-time delivery computation ---
-    // Fetch campaigns so we can derive goals from inventory items directly,
-    // rather than relying on a pre-computed deliverySummary cache on the order.
-    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
-    const campaignIds = [...new Set(orders.map(o => o.campaignId).filter(Boolean))];
-    const campaigns = await campaignsCollection.find(
-      { campaignId: { $in: campaignIds } },
-      { projection: { campaignId: 1, selectedInventory: 1 } }
-    ).toArray();
-    const campaignMap = new Map(campaigns.map((c: any) => [c.campaignId, c]));
 
     const orderIds = orders.map(o => o._id?.toString()).filter(Boolean);
     const digitalChannels = ['website', 'streaming'];
@@ -651,10 +639,7 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
       channel === 'print' ? 'Insertions' : 'Units';
 
     for (const order of orders) {
-      const campaign = campaignMap.get(order.campaignId);
-      const publication = campaign?.selectedInventory?.publications?.find(
-        (p: any) => p.publicationId === order.publicationId
-      );
+      const publication = order.selectedInventory?.publications?.[0];
 
       // Per-order channel tracking
       const orderChannels: Record<string, {
@@ -723,10 +708,10 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
         ch.deliveryPercent = ch.goal > 0 ? Math.round((ch.delivered / ch.goal) * 100) : 0;
       }
 
-      // Order-level pacing (average of its channel percentages)
-      const orderPercents = Object.values(orderChannels).map(ch => ch.deliveryPercent);
-      const orderPercent = orderPercents.length > 0
-        ? Math.round(orderPercents.reduce((s, p) => s + p, 0) / orderPercents.length)
+      const orderGoalTotal = Object.values(orderChannels).reduce((s, ch) => s + ch.goal, 0);
+      const orderDeliveredTotal = Object.values(orderChannels).reduce((s, ch) => s + ch.delivered, 0);
+      const orderPercent = orderGoalTotal > 0
+        ? Math.round((orderDeliveredTotal / orderGoalTotal) * 100)
         : 0;
 
       if (orderPercent >= 110) statusBreakdown.ahead++;
@@ -752,9 +737,10 @@ router.get('/delivery-summary', async (req: any, res: Response) => {
       ch.deliveryPercent = ch.goal > 0 ? Math.round((ch.delivered / ch.goal) * 100) : 0;
     }
 
-    const channelPercents = Object.values(byChannel).map(ch => ch.deliveryPercent);
-    const overallDeliveryPercent = channelPercents.length > 0
-      ? Math.round(channelPercents.reduce((s, p) => s + p, 0) / channelPercents.length)
+    const totalDeliveryGoal = Object.values(byChannel).reduce((s, ch) => s + ch.goal, 0);
+    const totalDeliveryDone = Object.values(byChannel).reduce((s, ch) => s + ch.delivered, 0);
+    const overallDeliveryPercent = totalDeliveryGoal > 0
+      ? Math.round((totalDeliveryDone / totalDeliveryGoal) * 100)
       : 0;
 
     // Count proofs
