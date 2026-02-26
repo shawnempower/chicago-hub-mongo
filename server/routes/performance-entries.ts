@@ -524,17 +524,14 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
     const db = getDatabase();
     const perfCollection = db.collection<PerformanceEntry>(COLLECTIONS.PERFORMANCE_ENTRIES);
     const ordersCollection = db.collection(COLLECTIONS.PUBLICATION_INSERTION_ORDERS);
-    const campaignsCollection = db.collection(COLLECTIONS.CAMPAIGNS);
     
     // Get current order
     const order = await ordersCollection.findOne({ _id: new ObjectId(orderId) });
     if (!order) return;
     
-    // Get campaign to access inventory items
-    const campaign = await campaignsCollection.findOne({ campaignId: order.campaignId });
-    const publication = campaign?.selectedInventory?.publications?.find(
-      (p: any) => p.publicationId === order.publicationId
-    );
+    // Use the order's own selectedInventory as the authoritative source for placements.
+    // The campaign's selectedInventory may be stale when placements are added to orders.
+    const publication = order.selectedInventory?.publications?.[0];
     
     // Calculate expected delivery by channel from stored deliveryGoals
     const expectedByChannel: Record<string, { 
@@ -782,10 +779,8 @@ export async function updateOrderDeliverySummary(orderId: string): Promise<void>
       : 0;
     const reportsPercent = Math.min(rawReportsPercent, 100);
     
-    // Calculate overall as average of channel percentages (so all channels count equally)
-    const channelPercents = Object.values(byChannel).map((ch: any) => ch.deliveryPercent || 0);
-    const deliveryPercent = channelPercents.length > 0
-      ? Math.round(channelPercents.reduce((sum, p) => sum + p, 0) / channelPercents.length)
+    const deliveryPercent = totalExpectedGoal > 0
+      ? Math.round((totalDelivered / totalExpectedGoal) * 100)
       : 0;
     
     // Update order with enhanced delivery summary

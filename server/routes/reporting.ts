@@ -659,10 +659,10 @@ router.get('/campaign/:campaignId/summary', async (req: any, res: Response) => {
       }
     }
     
-    // Calculate overall delivery % as average of channel percentages
-    const channelPercents = Object.values(deliveryProgress).map(ch => ch.deliveryPercent);
-    const overallDeliveryPercent = channelPercents.length > 0
-      ? Math.round(channelPercents.reduce((sum, p) => sum + p, 0) / channelPercents.length)
+    const totalDeliveryGoal = Object.values(deliveryProgress).reduce((s, ch) => s + ch.goal, 0);
+    const totalDeliveryDone = Object.values(deliveryProgress).reduce((s, ch) => s + ch.delivered, 0);
+    const overallDeliveryPercent = totalDeliveryGoal > 0
+      ? Math.round((totalDeliveryDone / totalDeliveryGoal) * 100)
       : 0;
     
     // Calculate pacing if campaign has goals and valid timeline dates
