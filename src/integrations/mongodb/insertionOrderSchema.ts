@@ -8,7 +8,7 @@
 import { ObjectId } from 'mongodb';
 
 export type InsertionOrderStatus = 'draft' | 'sent' | 'confirmed' | 'rejected' | 'in_production' | 'delivered';
-export type PlacementStatus = 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered';
+export type PlacementStatus = 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered' | 'suspended';
 
 /**
  * Asset reference stored on the order - just the IDs needed to look up current asset
@@ -55,6 +55,18 @@ export interface PlacementStatusHistoryEntry {
   timestamp: Date;
   changedBy: string;
   notes?: string;
+}
+
+export interface PlacementSuspensionDetail {
+  reason: string;
+  suspendedBy: string;
+  suspendedAt: Date;
+  previousStatus: PlacementStatus;
+  deliveredAtSuspension?: {
+    impressions?: number;
+    occurrences?: number;
+    deliveryPercent?: number;
+  };
 }
 
 export interface ProofOfPerformance {
@@ -173,6 +185,7 @@ export interface PublicationInsertionOrderDocument {
   // Placement-level tracking
   placementStatuses?: Record<string, PlacementStatus>;
   placementStatusHistory?: PlacementStatusHistoryEntry[];
+  suspensionDetails?: Record<string, PlacementSuspensionDetail>;
   
   // Post-campaign (legacy - use proof_of_performance collection instead)
   proofOfPerformance?: ProofOfPerformance;

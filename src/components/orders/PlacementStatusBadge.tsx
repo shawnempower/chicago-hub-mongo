@@ -7,9 +7,9 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Check, Loader2, CheckCircle2, X, Clock } from 'lucide-react';
+import { Check, Loader2, CheckCircle2, X, Clock, PauseCircle } from 'lucide-react';
 
-export type PlacementStatus = 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered';
+export type PlacementStatus = 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered' | 'suspended';
 
 interface PlacementStatusBadgeProps {
   status: PlacementStatus | string;
@@ -40,6 +40,12 @@ export function PlacementStatusBadge({ status, className = '' }: PlacementStatus
       return (
         <Badge className={`bg-red-50 text-red-700 border border-red-200 pointer-events-none ${className}`}>
           <X className="h-3 w-3 mr-1" /> Rejected
+        </Badge>
+      );
+    case 'suspended':
+      return (
+        <Badge className={`bg-orange-50 text-orange-700 border border-orange-200 pointer-events-none ${className}`}>
+          <PauseCircle className="h-3 w-3 mr-1" /> Suspended
         </Badge>
       );
     case 'pending':

@@ -38,7 +38,7 @@ interface InsertionOrder {
   sentAt?: Date;
   confirmationDate?: Date;
   uploadedAssetCount?: number;
-  placementStatuses?: Record<string, 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered'>;
+  placementStatuses?: Record<string, 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered' | 'suspended'>;
   placementCount?: number;
   campaignStartDate?: Date;
   campaignEndDate?: Date;
@@ -60,6 +60,7 @@ interface PlacementStats {
   pending: number;
   in_production: number;
   delivered: number;
+  suspended: number;
 }
 
 interface OrderStats {
@@ -93,6 +94,7 @@ export function HubOrdersManagement() {
     { value: 'unread_messages', label: 'Unread Messages' },
     { value: 'rejected', label: 'Has Rejections' },
     { value: 'pending', label: 'Has Pending' },
+    { value: 'suspended', label: 'Has Suspended' },
     { value: 'no_assets', label: 'Missing Assets' },
     { value: 'awaiting_assets', label: 'Awaiting Assets' },
   ] as const;
@@ -232,6 +234,9 @@ export function HubOrdersManagement() {
     if (statuses.includes('pending')) {
       issues.push('pending');
     }
+    if (statuses.includes('suspended')) {
+      issues.push('suspended');
+    }
     if (!order.uploadedAssetCount || order.uploadedAssetCount === 0) {
       issues.push('no_assets');
     }
@@ -252,6 +257,7 @@ export function HubOrdersManagement() {
       pending: statuses.filter(s => s === 'pending').length,
       in_production: statuses.filter(s => s === 'in_production').length,
       delivered: statuses.filter(s => s === 'delivered').length,
+      suspended: statuses.filter(s => s === 'suspended').length,
       total: statuses.length
     };
   };
@@ -262,7 +268,8 @@ export function HubOrdersManagement() {
       rejected: 0,
       pending: 0,
       in_production: 0,
-      delivered: 0
+      delivered: 0,
+      suspended: 0
     };
 
     let totalPlacements = 0;
@@ -742,6 +749,11 @@ export function HubOrdersManagement() {
                           {placementCounts.rejected > 0 && (
                             <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
                               {placementCounts.rejected} Rejected
+                            </Badge>
+                          )}
+                          {placementCounts.suspended > 0 && (
+                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
+                              {placementCounts.suspended} Suspended
                             </Badge>
                           )}
                         </div>

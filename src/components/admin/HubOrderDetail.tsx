@@ -306,7 +306,8 @@ export function HubOrderDetail() {
     rejected: 0,
     pending: 0,
     in_production: 0,
-    delivered: 0
+    delivered: 0,
+    suspended: 0
   };
 
   if (order.placementStatuses) {
@@ -315,6 +316,7 @@ export function HubOrderDetail() {
       else if (status === 'rejected') placementStats.rejected++;
       else if (status === 'in_production') placementStats.in_production++;
       else if (status === 'delivered') placementStats.delivered++;
+      else if (status === 'suspended') placementStats.suspended++;
       else placementStats.pending++;
     });
   } else {
@@ -604,6 +606,7 @@ export function HubOrderDetail() {
                               status === 'in_production' ? 'bg-blue-50 text-blue-700 border border-blue-200 pointer-events-none' :
                               status === 'accepted' ? 'bg-green-50 text-green-700 border border-green-200 pointer-events-none' :
                               status === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200 pointer-events-none' :
+                              status === 'suspended' ? 'bg-orange-50 text-orange-700 border border-orange-200 pointer-events-none' :
                               'bg-yellow-50 text-yellow-700 border border-yellow-200 pointer-events-none'
                             }
                           >
@@ -616,6 +619,18 @@ export function HubOrderDetail() {
                           return reason ? (
                             <div className="mt-2 pt-2 border-t border-dashed">
                               <p className="text-xs text-red-600"><span className="font-medium">Rejection reason:</span> {reason}</p>
+                            </div>
+                          ) : null;
+                        })()}
+                        {/* Suspension Reason */}
+                        {status === 'suspended' && (() => {
+                          const detail = (order as any).suspensionDetails?.[placementId];
+                          return detail?.reason ? (
+                            <div className="mt-2 pt-2 border-t border-dashed">
+                              <p className="text-xs text-orange-600"><span className="font-medium">Suspension reason:</span> {detail.reason}</p>
+                              {detail.suspendedAt && (
+                                <p className="text-xs text-muted-foreground mt-0.5">Suspended on {new Date(detail.suspendedAt).toLocaleDateString()}</p>
+                              )}
                             </div>
                           ) : null;
                         })()}

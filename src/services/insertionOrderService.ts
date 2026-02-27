@@ -26,6 +26,7 @@ import { computeDeliveryGoals, computeItemDeliveryGoal, getDurationMonths } from
 
 // Re-define the type here to avoid ESM export issues
 export type InsertionOrderStatus = 'draft' | 'sent' | 'confirmed' | 'rejected' | 'in_production' | 'delivered';
+export type PlacementStatusType = 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered' | 'suspended';
 
 export class InsertionOrderService {
   private get ordersCollection() {
@@ -1166,6 +1167,12 @@ export class InsertionOrderService {
       
       // Check if placement is live (in_production or delivered) - unless it's a draft order
       const placementStatus = order.placementStatuses?.[placementId];
+      if (!isDraftOrder && placementStatus === 'suspended') {
+        return {
+          success: false,
+          error: 'Cannot rescind a suspended placement. Suspended placements preserve their delivery record and earned revenue.'
+        };
+      }
       if (!isDraftOrder && (placementStatus === 'in_production' || placementStatus === 'delivered')) {
         return {
           success: false,
@@ -1420,6 +1427,125 @@ export class InsertionOrderService {
   }
 
   /**
+   * Suspend a specific placement on an order.
+   * This is an admin override that bypasses cancellation deadline restrictions.
+   * Unlike rescind, suspension preserves the placement record and honors delivered work.
+   *
+   * Business Rules:
+   * - Only allowed on accepted, in_production, or delivered placements
+   * - Requires a reason (audit trail)
+   * - Does NOT remove from selectedInventory
+   * - Snapshots delivery metrics at time of suspension
+   * - Pro-rated earnings apply (handled by earnings system automatically)
+   */
+  async suspendPlacement(
+    campaignId: string,
+    publicationId: number,
+    placementId: string,
+    reason: string,
+    userId: string
+  ): Promise<{ success: boolean; error?: string; updatedOrder?: PublicationInsertionOrderDocument }> {
+    try {
+      if (!reason || reason.trim().length === 0) {
+        return { success: false, error: 'A reason is required to suspend a placement' };
+      }
+
+      const order = await this.ordersCollection.findOne({
+        campaignId,
+        publicationId,
+        deletedAt: { $exists: false }
+      });
+
+      if (!order) {
+        return { success: false, error: 'Order not found' };
+      }
+
+      const placementStatus = order.placementStatuses?.[placementId];
+      if (!placementStatus) {
+        return { success: false, error: 'Placement not found in order' };
+      }
+
+      const suspendableStatuses = ['accepted', 'in_production', 'delivered'];
+      if (!suspendableStatuses.includes(placementStatus)) {
+        return {
+          success: false,
+          error: `Cannot suspend placement: status is "${placementStatus}". Only accepted, in_production, or delivered placements can be suspended.`
+        };
+      }
+
+      if (placementStatus === 'suspended') {
+        return { success: false, error: 'Placement is already suspended' };
+      }
+
+      // Snapshot delivery metrics from order's deliverySummary
+      const deliverySummary = (order as any).deliverySummary;
+      let deliveredAtSuspension: { impressions?: number; occurrences?: number; deliveryPercent?: number } | undefined;
+      if (deliverySummary) {
+        deliveredAtSuspension = {
+          impressions: deliverySummary.totalDelivered || 0,
+          deliveryPercent: deliverySummary.deliveryPercent || 0,
+        };
+      }
+
+      const suspensionDetail = {
+        reason: reason.trim(),
+        suspendedBy: userId,
+        suspendedAt: new Date(),
+        previousStatus: placementStatus as PlacementStatusType,
+        deliveredAtSuspension,
+      };
+
+      // Build updated objects (can't use dot notation in $set because placementId
+      // contains dots that MongoDB would interpret as nested field paths)
+      const updatedPlacementStatuses = { ...order.placementStatuses };
+      updatedPlacementStatuses[placementId] = 'suspended';
+
+      const updatedSuspensionDetails = { ...(order as any).suspensionDetails };
+      updatedSuspensionDetails[placementId] = suspensionDetail;
+
+      const result = await this.ordersCollection.findOneAndUpdate(
+        { _id: order._id },
+        {
+          $set: {
+            placementStatuses: updatedPlacementStatuses,
+            suspensionDetails: updatedSuspensionDetails,
+          },
+          $push: {
+            statusHistory: {
+              status: order.status,
+              changedAt: new Date(),
+              changedBy: userId,
+              notes: `Placement "${placementId}" suspended by admin. Reason: ${reason.trim()}`
+            },
+            placementStatusHistory: {
+              placementId,
+              status: 'suspended',
+              timestamp: new Date(),
+              changedBy: userId,
+              notes: `Suspended. Reason: ${reason.trim()}`
+            }
+          } as any
+        },
+        { returnDocument: 'after' }
+      );
+
+      if (!result) {
+        return { success: false, error: 'Failed to update order' };
+      }
+
+      console.log(`[SuspendPlacement] Placement "${placementId}" suspended on order ${order._id}. Reason: ${reason.trim()}`);
+
+      return { success: true, updatedOrder: result };
+    } catch (error) {
+      console.error('Error suspending placement:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Add a placement to an existing publication order
    * This allows hub admins to add individual placements to orders
    * 
@@ -1525,7 +1651,7 @@ export class InsertionOrderService {
       // Check if order is fully delivered (all placements delivered)
       const placementStatuses = order.placementStatuses || {};
       const allDelivered = Object.values(placementStatuses).length > 0 &&
-        Object.values(placementStatuses).every(s => s === 'delivered');
+        Object.values(placementStatuses).every(s => s === 'delivered' || s === 'suspended');
       
       if (allDelivered) {
         return {
@@ -2322,7 +2448,7 @@ export class InsertionOrderService {
           
           // Only transition if no placements are still pending
           if (pendingCount === 0) {
-            const acceptedOrBeyond = ['accepted', 'in_production', 'delivered'];
+            const acceptedOrBeyond = ['accepted', 'in_production', 'delivered', 'suspended'];
             const acceptedCount = allStatuses.filter(s => acceptedOrBeyond.includes(s)).length;
             const rejectedCount = allStatuses.filter(s => s === 'rejected').length;
             

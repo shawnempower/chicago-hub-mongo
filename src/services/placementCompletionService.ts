@@ -138,10 +138,12 @@ export class PlacementCompletionService {
         return { completed: false, reason: 'Order not found' };
       }
 
-      // Check if already delivered
       const currentStatus = order.placementStatuses?.[placementId];
       if (currentStatus === 'delivered') {
         return { completed: false, alreadyDelivered: true, reason: 'Already delivered' };
+      }
+      if (currentStatus === 'suspended') {
+        return { completed: false, reason: 'Placement is suspended' };
       }
 
       // Get campaign for dates and inventory details (needed for validation)
@@ -486,14 +488,16 @@ export class PlacementCompletionService {
     const statuses = Object.values(placementStatuses);
     if (statuses.length === 0) return null;
 
-    // If all placements are delivered, order is delivered
-    const allDelivered = statuses.every(s => s === 'delivered');
-    if (allDelivered) {
+    // Suspended placements are treated as "resolved" -- they don't block order progression
+    const activeStatuses = statuses.filter(s => s !== 'suspended');
+    if (activeStatuses.length === 0) return null;
+
+    const allDeliveredOrSuspended = activeStatuses.every(s => s === 'delivered');
+    if (allDeliveredOrSuspended) {
       return 'delivered';
     }
 
-    // If any placement is in_production or delivered, order is in_production
-    const hasLivePlacements = statuses.some(s => s === 'in_production' || s === 'delivered');
+    const hasLivePlacements = activeStatuses.some(s => s === 'in_production' || s === 'delivered');
     if (hasLivePlacements && currentOrderStatus === 'confirmed') {
       return 'in_production';
     }

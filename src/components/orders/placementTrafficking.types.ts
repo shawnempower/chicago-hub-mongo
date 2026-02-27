@@ -17,7 +17,7 @@ export interface BasePlacementInfo {
   placementId: string;
   placementName: string;
   channel: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered';
+  status: 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered' | 'suspended';
   earnings: number;  // Total earnings for this placement (calculated via calculateItemCost)
   period: {
     startDate: Date | null;

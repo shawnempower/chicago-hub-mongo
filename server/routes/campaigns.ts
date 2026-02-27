@@ -235,8 +235,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       
       if (activeOrders.length > 0) {
         // Status categories
-        const projectedStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
-        const confirmedStatuses = ['accepted', 'in_production', 'delivered'];
+        const projectedStatuses = ['pending', 'accepted', 'in_production', 'delivered', 'suspended'];
+        const confirmedStatuses = ['accepted', 'in_production', 'delivered', 'suspended'];
         const filteredPublications: any[] = [];
         
         for (const order of activeOrders) {
@@ -284,9 +284,19 @@ router.get('/:id', async (req: Request, res: Response) => {
           let pubConfirmedTotal = 0;
           
           for (const item of filteredItems) {
-            const freq = item.currentFrequency || item.quantity || 1;
-            const itemCost = calculateItemCost(item, freq, 1);
             const itemPath = item.itemPath || item.sourcePath || '';
+            const isSuspended = (placementStatuses[itemPath] as string) === 'suspended';
+
+            let itemCost: number;
+            if (isSuspended) {
+              const suspension = order.suspensionDetails?.[itemPath];
+              const deliveryPct = suspension?.deliveredAtSuspension?.deliveryPercent ?? 0;
+              const fullCost = calculateItemCost(item, item.currentFrequency || item.quantity || 1, 1);
+              itemCost = (deliveryPct / 100) * fullCost;
+            } else {
+              const freq = item.currentFrequency || item.quantity || 1;
+              itemCost = calculateItemCost(item, freq, 1);
+            }
             
             // All filtered items are projected
             pubProjectedTotal += itemCost;

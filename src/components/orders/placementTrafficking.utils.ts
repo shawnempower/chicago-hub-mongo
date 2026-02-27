@@ -27,7 +27,7 @@ interface ExtractOptions {
   campaignStartDate?: Date | null;
   campaignEndDate?: Date | null;
   trackingScripts?: TrackingScript[];
-  placementStatus?: 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered';
+  placementStatus?: 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered' | 'suspended';
   durationMonths?: number;
   assets?: Array<{
     placementId: string;

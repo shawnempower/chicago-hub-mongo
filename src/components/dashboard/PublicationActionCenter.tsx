@@ -286,8 +286,7 @@ export function PublicationActionCenter({
                 .filter(([key]) => key === itemPath || key.startsWith(itemPath + '-') || key.startsWith(itemPath + '_'))
                 .map(([, status]) => status);
               
-              // Priority: delivered > in_production > accepted > rejected > pending
-              const statusPriority = ['delivered', 'in_production', 'accepted', 'rejected', 'pending'];
+              const statusPriority = ['delivered', 'in_production', 'accepted', 'suspended', 'rejected', 'pending'];
               placementStatus = matchingStatuses.reduce((best, current) => {
                 return statusPriority.indexOf(current) < statusPriority.indexOf(best) ? current : best;
               }, 'pending');

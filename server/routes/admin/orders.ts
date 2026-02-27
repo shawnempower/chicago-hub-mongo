@@ -421,6 +421,84 @@ router.delete('/:campaignId/:publicationId/placement/:placementId', async (req: 
 });
 
 /**
+ * POST /api/admin/orders/:campaignId/:publicationId/placement/:placementId/suspend
+ * Suspend a specific placement (admin override, bypasses deadline restrictions)
+ * Requires a reason in the request body for audit tracking.
+ */
+router.post('/:campaignId/:publicationId/placement/:placementId/suspend', async (req: any, res: Response) => {
+  try {
+    const { campaignId, publicationId, placementId } = req.params;
+    const { reason } = req.body;
+    const userId = req.user?.id || 'hub_admin';
+
+    const decodedPlacementId = decodeURIComponent(placementId);
+
+    if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+      return res.status(400).json({ error: 'A reason is required to suspend a placement' });
+    }
+
+    const result = await insertionOrderService.suspendPlacement(
+      campaignId,
+      parseInt(publicationId),
+      decodedPlacementId,
+      reason.trim(),
+      userId
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    // Send notification to publication users
+    try {
+      const { getDatabase } = await import('../../../src/integrations/mongodb/client');
+      const { COLLECTIONS } = await import('../../../src/integrations/mongodb/schemas');
+      const { notificationService } = await import('../../../src/services/notificationService');
+
+      const db = getDatabase();
+      const order = result.updatedOrder;
+
+      if (order) {
+        const pubPermissions = await db.collection(COLLECTIONS.USER_PERMISSIONS).find({
+          'publications.publicationId': parseInt(publicationId)
+        }).toArray();
+
+        const placementName = decodedPlacementId
+          .split('/').pop()
+          ?.replace(/-/g, ' ')
+          .replace(/\b\w/g, (l: string) => l.toUpperCase()) || decodedPlacementId;
+
+        for (const perm of pubPermissions) {
+          await notificationService.create({
+            userId: perm.userId,
+            publicationId: parseInt(publicationId),
+            type: 'placement_suspended' as any,
+            title: 'Placement Suspended',
+            message: `"${placementName}" on your order for "${order.campaignName}" has been suspended. Reason: ${reason.trim()}`,
+            campaignId,
+            orderId: order._id?.toString() || '',
+            link: `/dashboard?tab=order-detail&campaignId=${campaignId}&publicationId=${publicationId}`
+          });
+        }
+
+        console.log(`Sent placement suspended notifications to publication users`);
+      }
+    } catch (notifyError) {
+      console.error('Error sending placement suspended notifications:', notifyError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Placement suspended successfully',
+      updatedOrder: result.updatedOrder
+    });
+  } catch (error) {
+    console.error('Error suspending placement:', error);
+    res.status(500).json({ error: 'Failed to suspend placement' });
+  }
+});
+
+/**
  * DELETE /api/admin/orders/:campaignId/:publicationId
  * Delete/rescind a single publication order by rescinding all its placements
  * Returns partial success if some placements could be removed but others couldn't

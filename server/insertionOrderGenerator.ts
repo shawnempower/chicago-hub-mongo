@@ -170,8 +170,8 @@ class InsertionOrderGenerator {
       }
       
       // Build a map of active publication IDs and their non-rejected placement paths
-      // Only include placements that are likely to be filled (pending, accepted, in_production, delivered)
-      const validStatuses = ['pending', 'accepted', 'in_production', 'delivered'];
+      // Include all placements except rejected ones (suspended placements are still shown on the IO)
+      const validStatuses = ['pending', 'accepted', 'in_production', 'delivered', 'suspended'];
       const activeOrdersMap = new Map<number, Set<string>>();
       
       for (const order of activeOrders) {

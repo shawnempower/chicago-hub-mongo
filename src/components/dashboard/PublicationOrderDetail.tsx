@@ -21,7 +21,7 @@ import {
   ChevronDown, ChevronUp, ChevronRight, Clock, Package, RefreshCw,
   Eye, Users, Newspaper, Radio, Headphones, CalendarDays, Target,
   Lock, XCircle, PlayCircle, Timer, Megaphone, MoreVertical,
-  Globe, Mail, Tv
+  Globe, Mail, Tv, PauseCircle
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
@@ -89,7 +89,7 @@ export function PublicationOrderDetail() {
   const [order, setOrder] = useState<OrderDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [placementStatuses, setPlacementStatuses] = useState<Record<string, 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered'>>({});
+  const [placementStatuses, setPlacementStatuses] = useState<Record<string, 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered' | 'suspended'>>({});
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectingPlacementId, setRejectingPlacementId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -854,7 +854,8 @@ export function PublicationOrderDetail() {
   const inProductionCount = Object.values(placementStatuses).filter(s => s === 'in_production').length;
   const deliveredCount = Object.values(placementStatuses).filter(s => s === 'delivered').length;
   const rejectedCount = Object.values(placementStatuses).filter(s => s === 'rejected').length;
-  const pendingCount = totalPlacements - acceptedCount - inProductionCount - deliveredCount - rejectedCount;
+  const suspendedCount = Object.values(placementStatuses).filter(s => s === 'suspended').length;
+  const pendingCount = totalPlacements - acceptedCount - inProductionCount - deliveredCount - rejectedCount - suspendedCount;
   
   // Channel types are now grouped dynamically in the Scripts tab
   
@@ -1534,10 +1535,9 @@ export function PublicationOrderDetail() {
         <TabsContent value="placements" className="mt-0 space-y-4">
           {/* Filter scripts to only count those for accepted/in_production/delivered placements */}
           {(() => {
-            const acceptedStatuses = ['accepted', 'in_production', 'delivered'];
+            const acceptedStatuses = ['accepted', 'in_production', 'delivered', 'suspended'];
             const visibleScripts = trackingScripts.filter(s => {
               const scriptItemPath = s.itemPath || '';
-              // Find the base itemPath (strip _dim suffix if present)
               const baseItemPath = scriptItemPath.replace(/_dim\d+$/, '');
               const status = placementStatuses[scriptItemPath] || placementStatuses[baseItemPath] || 'pending';
               return acceptedStatuses.includes(status);
@@ -1836,6 +1836,11 @@ export function PublicationOrderDetail() {
                                   <XCircle className="h-4 w-4" /> Rejected
                                 </span>
                               )}
+                              {placementStatus === 'suspended' && (
+                                <span className="text-xs text-orange-700 flex items-center gap-1">
+                                  <PauseCircle className="h-4 w-4" /> Suspended
+                                </span>
+                              )}
                             </div>
                           </div>
                           
@@ -1873,7 +1878,7 @@ export function PublicationOrderDetail() {
                             <div className="p-3 space-y-3">
                             
                             {/* Website: Note about grouped impressions */}
-                            {channel === 'website' && scripts.length > 1 && ['accepted', 'in_production', 'delivered'].includes(placementStatus) && (
+                            {channel === 'website' && scripts.length > 1 && ['accepted', 'in_production', 'delivered', 'suspended'].includes(placementStatus) && (
                               <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded px-2 py-1">
                                 <strong>Note:</strong> Distribute impressions across sizes as needed. Use the scripts below to traffic each ad size.
                               </p>
@@ -1905,8 +1910,8 @@ export function PublicationOrderDetail() {
                               </div>
                             )}
                             
-                            {/* Digital: Show Scripts (only for accepted/in_production/delivered) */}
-                            {isDigital && scripts.length > 0 && ['accepted', 'in_production', 'delivered'].includes(placementStatus) && (
+                            {/* Digital: Show Scripts (for accepted/in_production/delivered/suspended) */}
+                            {isDigital && scripts.length > 0 && ['accepted', 'in_production', 'delivered', 'suspended'].includes(placementStatus) && (
                               <Accordion type="single" collapsible className="space-y-1">
                                 {scripts.map((script) => (
                                       <AccordionItem 
@@ -2356,6 +2361,23 @@ export function PublicationOrderDetail() {
                                   <X className="h-3.5 w-3.5" /> Rejected
                                 </span>
                               )}
+
+                              {/* Suspended: Show suspension status with reason */}
+                              {placementStatus === 'suspended' && (() => {
+                                const detail = (order as any).suspensionDetails?.[itemPath];
+                                return (
+                                  <div className="space-y-1">
+                                    <span className="flex items-center gap-1 text-xs text-orange-700">
+                                      <PauseCircle className="h-3.5 w-3.5" /> Suspended
+                                    </span>
+                                    {detail?.reason && (
+                                      <p className="text-xs text-orange-600 bg-orange-50 rounded px-2 py-1">
+                                        <span className="font-medium">Reason:</span> {detail.reason}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                           </AccordionContent>
@@ -2721,11 +2743,14 @@ function PlacementWorkflow({
     : null;
   const withinCampaignWindow = !earliestAllowedDate || now >= earliestAllowedDate;
   
+  const isSuspended = placementStatus === 'suspended';
+
   // Determine if "Go Live" action should be available
   const hasRequiredAssets = isDigital ? hasScripts : hasAssets;
-  const canGoLive = placementStatus === 'accepted' && hasRequiredAssets && withinCampaignWindow;
+  const canGoLive = !isSuspended && placementStatus === 'accepted' && hasRequiredAssets && withinCampaignWindow;
   
-  // Determine step completion
+  // For suspended placements, show historical progress but disable all actions
+  const wasLive = isSuspended && (hasPerformanceEntry || hasProof);
   const steps = [
     {
       id: 'materials',
@@ -2736,15 +2761,14 @@ function PlacementWorkflow({
     {
       id: 'accepted',
       label: 'Accepted',
-      done: ['accepted', 'in_production', 'delivered'].includes(placementStatus),
+      done: ['accepted', 'in_production', 'delivered', 'suspended'].includes(placementStatus),
       icon: Check,
     },
     {
       id: 'live',
       label: 'Go Live',
-      done: ['in_production', 'delivered'].includes(placementStatus),
+      done: ['in_production', 'delivered'].includes(placementStatus) || wasLive,
       icon: PlayCircle,
-      // Only allow marking live if placement is accepted AND has required assets/scripts AND within campaign window
       action: canGoLive ? onMarkInProduction : undefined,
       actionLabel: 'Mark Live',
     },
@@ -2753,7 +2777,7 @@ function PlacementWorkflow({
       label: 'Report Performance',
       done: hasPerformanceEntry,
       icon: BarChart3,
-      action: ['in_production', 'delivered'].includes(placementStatus) && !hasPerformanceEntry ? onReportPerformance : undefined,
+      action: !isSuspended && ['in_production', 'delivered'].includes(placementStatus) && !hasPerformanceEntry ? onReportPerformance : undefined,
       actionLabel: 'Report',
     },
     {
@@ -2761,15 +2785,15 @@ function PlacementWorkflow({
       label: 'Upload Proof',
       done: hasProof,
       icon: FileText,
-      action: ['in_production', 'delivered'].includes(placementStatus) && !hasProof ? onReportPerformance : undefined,
+      action: !isSuspended && ['in_production', 'delivered'].includes(placementStatus) && !hasProof ? onReportPerformance : undefined,
       actionLabel: 'Upload',
     },
     {
       id: 'complete',
-      label: 'Complete',
+      label: isSuspended ? 'Suspended' : 'Complete',
       done: placementStatus === 'delivered',
-      icon: CheckCircle2,
-      action: placementStatus === 'in_production' ? onMarkDelivered : undefined,
+      icon: isSuspended ? PauseCircle : CheckCircle2,
+      action: !isSuspended && placementStatus === 'in_production' ? onMarkDelivered : undefined,
       actionLabel: 'Mark Complete',
     },
   ];

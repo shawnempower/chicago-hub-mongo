@@ -53,7 +53,8 @@ import {
   Check,
   Pencil,
   Send,
-  Search
+  Search,
+  PauseCircle
 } from 'lucide-react';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
@@ -146,6 +147,13 @@ export default function CampaignDetail() {
     placementId: string;
     placementName: string;
   } | null>(null);
+  const [suspendPlacementTarget, setSuspendPlacementTarget] = useState<{
+    publicationId: number;
+    publicationName: string;
+    placementId: string;
+    placementName: string;
+  } | null>(null);
+  const [suspendReason, setSuspendReason] = useState('');
   
   // Derive publications data from orders (orders are the single source of truth)
   const publicationsFromOrders = useMemo(() => {
@@ -414,6 +422,57 @@ export default function CampaignDetail() {
       toast({
         title: 'Rescind Failed',
         description: error instanceof Error ? error.message : 'Failed to rescind placement. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSuspendPlacement = async () => {
+    if (!campaign?.campaignId || !suspendPlacementTarget || !suspendReason.trim()) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const encodedPlacementId = encodeURIComponent(suspendPlacementTarget.placementId);
+      const response = await fetch(
+        `${API_BASE_URL}/admin/orders/${campaign.campaignId}/${suspendPlacementTarget.publicationId}/placement/${encodedPlacementId}/suspend`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ reason: suspendReason.trim() })
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to suspend placement');
+      }
+
+      const data = await response.json();
+
+      if (data.updatedOrder) {
+        setPublicationOrders(prev =>
+          prev.map(o => o.publicationId === suspendPlacementTarget.publicationId
+            ? data.updatedOrder
+            : o
+          )
+        );
+      }
+
+      toast({
+        title: 'Placement Suspended',
+        description: `"${suspendPlacementTarget.placementName}" has been suspended on ${suspendPlacementTarget.publicationName}'s order.`,
+      });
+      setSuspendPlacementTarget(null);
+      setSuspendReason('');
+      refetch();
+    } catch (error) {
+      console.error('Error suspending placement:', error);
+      toast({
+        title: 'Suspend Failed',
+        description: error instanceof Error ? error.message : 'Failed to suspend placement. Please try again.',
         variant: 'destructive',
       });
     }
@@ -1075,6 +1134,7 @@ export default function CampaignDetail() {
                               let inProductionCount = 0;
                               let deliveredCount = 0;
                               let rejectedCount = 0;
+                              let suspendedCount = 0;
                               
                               publicationOrders.forEach((order: any) => {
                                 const statuses = order.placementStatuses || {};
@@ -1086,14 +1146,15 @@ export default function CampaignDetail() {
                                   if (status === 'in_production') inProductionCount++;
                                   if (status === 'delivered') deliveredCount++;
                                   if (status === 'rejected') rejectedCount++;
+                                  if (status === 'suspended') suspendedCount++;
                                 });
                               });
                               
-                              const pendingCount = totalPlacements - acceptedCount - inProductionCount - deliveredCount - rejectedCount;
+                              const pendingCount = totalPlacements - acceptedCount - inProductionCount - deliveredCount - rejectedCount - suspendedCount;
                               
                               return (
                                 <>
-                                  <div className="mb-3 grid grid-cols-5 gap-2 text-xs">
+                                  <div className={`mb-3 grid gap-2 text-xs ${suspendedCount > 0 ? 'grid-cols-6' : 'grid-cols-5'}`}>
                                     <div className="bg-green-100 p-2 rounded border border-green-300">
                                       <div className="font-bold text-green-900">{acceptedCount}</div>
                                       <div className="text-green-700">Accepted</div>
@@ -1114,6 +1175,12 @@ export default function CampaignDetail() {
                                       <div className="font-bold text-red-900">{rejectedCount}</div>
                                       <div className="text-red-700">Rejected</div>
                                     </div>
+                                    {suspendedCount > 0 && (
+                                      <div className="bg-orange-100 p-2 rounded border border-orange-300">
+                                        <div className="font-bold text-orange-900">{suspendedCount}</div>
+                                        <div className="text-orange-700">Suspended</div>
+                                      </div>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <Button 
@@ -1282,6 +1349,7 @@ export default function CampaignDetail() {
                                 <SelectItem value="in_production">In Production</SelectItem>
                                 <SelectItem value="delivered">Delivered</SelectItem>
                                 <SelectItem value="rejected">Rejected</SelectItem>
+                                <SelectItem value="suspended">Suspended</SelectItem>
                               </SelectContent>
                             </Select>
                             {(publicationSearchTerm || channelFilter !== 'all' || placementStatusFilter !== 'all') && (
@@ -1425,7 +1493,8 @@ export default function CampaignDetail() {
                                               placementStatus === 'delivered' && "bg-purple-50/50",
                                               placementStatus === 'in_production' && "bg-blue-50/50",
                                               placementStatus === 'accepted' && "bg-green-50/50",
-                                              placementStatus === 'rejected' && "bg-red-50/50"
+                                              placementStatus === 'rejected' && "bg-red-50/50",
+                                              placementStatus === 'suspended' && "bg-orange-50/50"
                                             )}
                                           >
                                             <TableCell>
@@ -1471,25 +1540,43 @@ export default function CampaignDetail() {
                                               ${lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </TableCell>
                                             <TableCell className="text-center">
-                                              {!['in_production', 'delivered'].includes(placementStatus) && (
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                  onClick={() => setRescindPlacementTarget({
-                                                    publicationId: pub.publicationId,
-                                                    publicationName: pub.publicationName,
-                                                    placementId,
-                                                    placementName: item.itemName
-                                                  })}
-                                                >
-                                                  <XCircle className="h-3 w-3 mr-1" />
-                                                  Remove
-                                                </Button>
-                                              )}
-                                              {['in_production', 'delivered'].includes(placementStatus) && (
-                                                <span className="text-xs text-muted-foreground">Live</span>
-                                              )}
+                                              <div className="flex items-center justify-center gap-1">
+                                                {['pending', 'rejected'].includes(placementStatus) && (
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    onClick={() => setRescindPlacementTarget({
+                                                      publicationId: pub.publicationId,
+                                                      publicationName: pub.publicationName,
+                                                      placementId,
+                                                      placementName: item.itemName
+                                                    })}
+                                                  >
+                                                    <XCircle className="h-3 w-3 mr-1" />
+                                                    Remove
+                                                  </Button>
+                                                )}
+                                                {['accepted', 'in_production', 'delivered'].includes(placementStatus) && (
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                                    onClick={() => setSuspendPlacementTarget({
+                                                      publicationId: pub.publicationId,
+                                                      publicationName: pub.publicationName,
+                                                      placementId,
+                                                      placementName: item.itemName
+                                                    })}
+                                                  >
+                                                    <PauseCircle className="h-3 w-3 mr-1" />
+                                                    Suspend
+                                                  </Button>
+                                                )}
+                                                {placementStatus === 'suspended' && (
+                                                  <span className="text-xs text-orange-600">Suspended</span>
+                                                )}
+                                              </div>
                                             </TableCell>
                                           </TableRow>
                                         );
@@ -1586,6 +1673,59 @@ export default function CampaignDetail() {
                 className="bg-red-600 hover:bg-red-700"
               >
                 Yes, Remove Placement
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Suspend Placement Dialog */}
+        <AlertDialog open={!!suspendPlacementTarget} onOpenChange={(open) => {
+          if (!open) {
+            setSuspendPlacementTarget(null);
+            setSuspendReason('');
+          }
+        }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Suspend Placement?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>This will suspend <strong>"{suspendPlacementTarget?.placementName}"</strong> on <strong>{suspendPlacementTarget?.publicationName}</strong>'s order.</p>
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    <li>Future delivery will stop</li>
+                    <li>Already-delivered impressions are preserved and earned</li>
+                    <li>The publication will be notified with your reason</li>
+                    <li>Investment totals will be adjusted to reflect actual delivery</li>
+                  </ul>
+                  <div className="mt-3">
+                    <label className="text-sm font-medium text-foreground block mb-1.5">Reason (required)</label>
+                    <textarea
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      rows={3}
+                      placeholder="Why is this placement being suspended?"
+                      value={suspendReason}
+                      onChange={(e) => setSuspendReason(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  if (!suspendReason.trim()) {
+                    e.preventDefault();
+                    return;
+                  }
+                  handleSuspendPlacement();
+                }}
+                className={cn(
+                  "bg-orange-600 hover:bg-orange-700",
+                  !suspendReason.trim() && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                Yes, Suspend Placement
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

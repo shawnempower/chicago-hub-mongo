@@ -159,10 +159,10 @@ export interface PublicationInsertionOrder {
   hubNotes?: string; // Internal notes from hub team
   
   // Individual placement lifecycle tracking
-  placementStatuses?: Record<string, 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered'>;
+  placementStatuses?: Record<string, 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered' | 'suspended'>;
   placementStatusHistory?: Array<{
     placementId: string;
-    status: 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered';
+    status: 'pending' | 'accepted' | 'rejected' | 'in_production' | 'delivered' | 'suspended';
     timestamp: Date;
     changedBy: string;
     notes?: string;

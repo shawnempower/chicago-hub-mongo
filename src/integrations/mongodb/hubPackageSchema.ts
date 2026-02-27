@@ -362,6 +362,7 @@ export interface HubPackage {
       rejected: number;
       in_production: number;
       delivered: number;
+      suspended: number;
     };
   };
 
