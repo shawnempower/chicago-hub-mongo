@@ -2493,9 +2493,8 @@ export class InsertionOrderService {
               }
             );
             orderConfirmed = true;
-              // Scripts are already generated when order was sent - no need to regenerate here
-              // Use the "Refresh Scripts" button if new creatives were added after send
-            }
+            // Scripts are already generated when order was sent - no need to regenerate here
+            // Use the "Refresh Scripts" button if new creatives were added after send
           }
         }
       }
