@@ -2435,66 +2435,64 @@ export class InsertionOrderService {
         }
       );
 
-      // Check if all placements have been actioned for auto order status transition
+      // Check placement actions for auto order status transition
       let orderConfirmed = false;
       let orderRejected = false;
       if (order.status === 'sent') {
-        // Use the order's own placementStatuses as source of truth
         const allStatuses = Object.values(updatedStatuses) as string[];
         const totalPlacements = allStatuses.length;
         
         if (totalPlacements > 0) {
+          const acceptedOrBeyond = ['accepted', 'in_production', 'delivered', 'suspended'];
+          const acceptedCount = allStatuses.filter(s => acceptedOrBeyond.includes(s)).length;
+          const rejectedCount = allStatuses.filter(s => s === 'rejected').length;
           const pendingCount = allStatuses.filter(s => s === 'pending').length;
           
-          // Only transition if no placements are still pending
-          if (pendingCount === 0) {
-            const acceptedOrBeyond = ['accepted', 'in_production', 'delivered', 'suspended'];
-            const acceptedCount = allStatuses.filter(s => acceptedOrBeyond.includes(s)).length;
-            const rejectedCount = allStatuses.filter(s => s === 'rejected').length;
-            
-            if (rejectedCount === totalPlacements) {
-              // All placements rejected → reject the order
-              await this.ordersCollection.updateOne(
-                { _id: order._id },
-                {
-                  $set: {
+          if (rejectedCount === totalPlacements) {
+            // All placements rejected → reject the order
+            await this.ordersCollection.updateOne(
+              { _id: order._id },
+              {
+                $set: {
+                  status: 'rejected',
+                  updatedAt: new Date()
+                },
+                $push: {
+                  statusHistory: {
                     status: 'rejected',
-                    updatedAt: new Date()
-                  },
-                  $push: {
-                    statusHistory: {
-                      status: 'rejected',
-                      timestamp: new Date(),
-                      changedBy: userId,
-                      notes: 'Auto-rejected: All placements rejected by publication'
-                    }
+                    timestamp: new Date(),
+                    changedBy: userId,
+                    notes: 'Auto-rejected: All placements rejected by publication'
                   }
                 }
-              );
-              orderRejected = true;
-            } else if (acceptedCount > 0) {
-              // Mix of accepted + rejected (or all accepted) with none pending → confirm
-              const note = rejectedCount > 0
-                ? `Auto-confirmed: ${acceptedCount} placement${acceptedCount !== 1 ? 's' : ''} accepted, ${rejectedCount} rejected`
-                : 'Auto-confirmed: All placements accepted';
-              await this.ordersCollection.updateOne(
-                { _id: order._id },
-                {
-                  $set: {
+              }
+            );
+            orderRejected = true;
+          } else if (acceptedCount > 0) {
+            // At least one placement accepted → confirm the order
+            const parts: string[] = [];
+            parts.push(`${acceptedCount} accepted`);
+            if (rejectedCount > 0) parts.push(`${rejectedCount} rejected`);
+            if (pendingCount > 0) parts.push(`${pendingCount} pending`);
+            const note = `Auto-confirmed: ${parts.join(', ')}`;
+            await this.ordersCollection.updateOne(
+              { _id: order._id },
+              {
+                $set: {
+                  status: 'confirmed',
+                  confirmationDate: new Date()
+                },
+                $push: {
+                  statusHistory: {
                     status: 'confirmed',
-                    confirmationDate: new Date()
-                  },
-                  $push: {
-                    statusHistory: {
-                      status: 'confirmed',
-                      timestamp: new Date(),
-                      changedBy: userId,
-                      notes: note
-                    }
+                    timestamp: new Date(),
+                    changedBy: userId,
+                    notes: note
                   }
                 }
-              );
-              orderConfirmed = true;
+              }
+            );
+            orderConfirmed = true;
               // Scripts are already generated when order was sent - no need to regenerate here
               // Use the "Refresh Scripts" button if new creatives were added after send
             }

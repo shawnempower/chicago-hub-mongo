@@ -770,8 +770,8 @@ export class EarningsService {
     
     if (!order) return null;
     
-    // Only include confirmed orders
-    if (order.status !== 'confirmed' && order.status !== 'completed') {
+    const earningsEligibleStatuses = ['confirmed', 'in_production', 'delivered', 'completed'];
+    if (!earningsEligibleStatuses.includes(order.status)) {
       return null;
     }
     
@@ -826,6 +826,13 @@ export class EarningsService {
     // Calculate actual earnings from performance entries
     const actualByChannel: Record<string, number> = {};
     let actualTotal = 0;
+    // Track cumulative earnings per item to enforce per-item caps
+    const cumulativeByItem: Record<string, number> = {};
+    const itemCaps: Record<string, number> = {};
+    for (const item of items) {
+      const key = item.itemPath || item.sourcePath || '';
+      itemCaps[key] = item.itemPricing?.totalCost || item.campaignCost || item.itemPricing?.hubPrice || 0;
+    }
     
     for (const entry of performanceEntries) {
       const channel = entry.channel || 'other';
@@ -843,12 +850,15 @@ export class EarningsService {
       }
       
       if (matchingItem) {
-        const pricingModel = matchingItem.itemPricing?.pricingModel || 'flat';
-        // HubPackageInventoryItem stores rate in itemPricing.hubPrice
-        const rate = matchingItem.itemPricing?.hubPrice || 0;
-        const itemEstimatedCost = matchingItem.itemPricing?.totalCost || matchingItem.campaignCost || rate;
+        const itemKey = matchingItem.itemPath || matchingItem.sourcePath || '';
+        const itemCap = itemCaps[itemKey] || 0;
+        const alreadyEarned = cumulativeByItem[itemKey] || 0;
         
-        // Calculate based on pricing model
+        if (alreadyEarned >= itemCap) continue;
+        
+        const pricingModel = matchingItem.itemPricing?.pricingModel || 'flat';
+        const rate = matchingItem.itemPricing?.hubPrice || 0;
+        
         let itemEarnings = 0;
         const impressions = entry.metrics?.impressions || 0;
         const clicks = entry.metrics?.clicks || 0;
@@ -873,15 +883,15 @@ export class EarningsService {
           default:
             // For flat rate, count verified proofs or use percentage complete
             const proofCount = verifiedProofs.filter(p => p.itemPath === entry.itemPath).length;
-            // HubPackageInventoryItem uses 'quantity' for planned occurrences
             const plannedOccurrences = matchingItem.quantity || 1;
             const completionPercent = Math.min(1, proofCount / plannedOccurrences);
-            itemEarnings = completionPercent * itemEstimatedCost;
+            itemEarnings = completionPercent * itemCap;
             break;
         }
         
-        // Cap per-item earnings at the contract value
-        itemEarnings = Math.min(itemEarnings, itemEstimatedCost);
+        // Cap so cumulative earnings for this item don't exceed its contract value
+        itemEarnings = Math.min(itemEarnings, itemCap - alreadyEarned);
+        cumulativeByItem[itemKey] = alreadyEarned + itemEarnings;
         
         actualByChannel[channel] = (actualByChannel[channel] || 0) + itemEarnings;
         actualTotal += itemEarnings;
@@ -968,11 +978,10 @@ export class EarningsService {
       skip?: number;
     }
   ): Promise<any[]> {
-    // Get all confirmed orders for this publication
     const orders = await this.ordersCollection
       .find({ 
         publicationId,
-        status: { $in: ['confirmed', 'completed'] }
+        status: { $in: ['confirmed', 'in_production', 'delivered', 'completed'] }
       })
       .sort({ createdAt: -1 })
       .toArray();

@@ -64,7 +64,7 @@ export function PublicationPerformanceCard({ publication }: PublicationPerforman
   const [expanded, setExpanded] = useState(false);
   const { context, activity } = publication;
 
-  const isInProduction = ['confirmed', 'in_production', 'delivered'].includes(activity?.orderStatus || '');
+  const isInProduction = ['sent', 'confirmed', 'in_production', 'delivered'].includes(activity?.orderStatus || '');
   const deliveryPercent = activity?.deliverySummary?.percentComplete ?? 0;
   const deliveryColor = deliveryPercent >= 100 ? 'text-blue-600' :
     deliveryPercent >= 90 ? 'text-green-600' :
