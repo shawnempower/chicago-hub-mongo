@@ -307,13 +307,14 @@ export function PublicationOrderDetail() {
         const data = await response.json();
         if (data.earnings) {
           const e = data.earnings;
-          // Calculate delivery percent based on actual vs estimated
-          const deliveryPercent = e.estimatedTotal > 0 
-            ? Math.min(100, Math.round((e.actualTotal / e.estimatedTotal) * 100))
+          const estTotal = e.estimated?.total ?? 0;
+          const actTotal = e.actual?.total ?? 0;
+          const deliveryPercent = estTotal > 0
+            ? Math.min(100, Math.round((actTotal / estTotal) * 100))
             : 0;
           setOrderEarnings({
-            estimatedTotal: e.estimatedTotal || 0,
-            actualTotal: e.actualTotal || 0,
+            estimatedTotal: estTotal,
+            actualTotal: actTotal,
             amountPaid: e.amountPaid || 0,
             amountOwed: e.amountOwed || 0,
             paymentStatus: e.paymentStatus || 'pending',

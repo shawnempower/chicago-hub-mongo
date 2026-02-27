@@ -349,8 +349,8 @@ export class EarningsService {
         actualDelivery = delivery.occurrences;
       }
       
-      // Calculate actual earnings
-      const actualEarnings = calculateItemEarnings(
+      // Calculate actual earnings, capped at the item's estimated cost
+      const rawEarnings = calculateItemEarnings(
         {
           pricingModel: estimatedItem.pricingModel,
           rate: estimatedItem.rate,
@@ -359,6 +359,7 @@ export class EarningsService {
         },
         actualDelivery
       );
+      const actualEarnings = Math.min(rawEarnings, estimatedItem.estimatedEarnings || rawEarnings);
       
       actualByItem.push({
         itemPath: estimatedItem.itemPath,
@@ -375,6 +376,9 @@ export class EarningsService {
         totalDigitalImpressions += delivery.impressions;
       }
     }
+
+    // Cap total actual at contract value
+    totalActual = Math.min(totalActual, earnings.estimated.total);
 
     // Calculate variance
     const varianceAmount = totalActual - earnings.estimated.total;
@@ -400,7 +404,7 @@ export class EarningsService {
             amount: varianceAmount,
             percentage: variancePercentage,
           },
-          amountOwed: totalActual - earnings.amountPaid,
+          amountOwed: Math.max(0, totalActual - earnings.amountPaid),
           updatedAt: new Date(),
         }
       }
@@ -825,17 +829,24 @@ export class EarningsService {
     
     for (const entry of performanceEntries) {
       const channel = entry.channel || 'other';
-      // Find the matching item to get pricing info
-      const matchingItem = items.find((i: any) => 
+      // Find the matching item by path first; only fall back to channel
+      // if exactly one item exists for that channel (avoids false matches).
+      let matchingItem = items.find((i: any) => 
         i.itemPath === entry.itemPath || 
-        i.sourcePath === entry.itemPath ||
-        i.channel === channel
+        i.sourcePath === entry.itemPath
       );
+      if (!matchingItem) {
+        const channelItems = items.filter((i: any) => i.channel === channel);
+        if (channelItems.length === 1) {
+          matchingItem = channelItems[0];
+        }
+      }
       
       if (matchingItem) {
         const pricingModel = matchingItem.itemPricing?.pricingModel || 'flat';
         // HubPackageInventoryItem stores rate in itemPricing.hubPrice
         const rate = matchingItem.itemPricing?.hubPrice || 0;
+        const itemEstimatedCost = matchingItem.itemPricing?.totalCost || matchingItem.campaignCost || rate;
         
         // Calculate based on pricing model
         let itemEarnings = 0;
@@ -865,9 +876,12 @@ export class EarningsService {
             // HubPackageInventoryItem uses 'quantity' for planned occurrences
             const plannedOccurrences = matchingItem.quantity || 1;
             const completionPercent = Math.min(1, proofCount / plannedOccurrences);
-            itemEarnings = completionPercent * (matchingItem.itemPricing?.totalCost || matchingItem.campaignCost || rate);
+            itemEarnings = completionPercent * itemEstimatedCost;
             break;
         }
+        
+        // Cap per-item earnings at the contract value
+        itemEarnings = Math.min(itemEarnings, itemEstimatedCost);
         
         actualByChannel[channel] = (actualByChannel[channel] || 0) + itemEarnings;
         actualTotal += itemEarnings;
@@ -890,13 +904,20 @@ export class EarningsService {
           // HubPackageInventoryItem uses 'quantity' for planned occurrences
           const plannedOccurrences = item.quantity || 1;
           const completionPercent = Math.min(1, itemProofs.length / plannedOccurrences);
-          const itemEarnings = completionPercent * (item.itemPricing?.totalCost || item.campaignCost || 0);
+          const itemEstimatedCost = item.itemPricing?.totalCost || item.campaignCost || 0;
+          const itemEarnings = Math.min(
+            completionPercent * itemEstimatedCost,
+            itemEstimatedCost
+          );
           
           actualByChannel[channel] = (actualByChannel[channel] || 0) + itemEarnings;
           actualTotal += itemEarnings;
         }
       }
     }
+    
+    // Cap total actual earnings at the contract value
+    actualTotal = Math.min(actualTotal, estimatedTotal);
     
     // Calculate variance
     const varianceAmount = actualTotal - estimatedTotal;
